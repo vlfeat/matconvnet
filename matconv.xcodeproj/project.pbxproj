@@ -6,11 +6,40 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DBE18A7F79E008A97EE /* gconv.cu */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildRule section */
+		2D375DC918A7FE5D008A97EE /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			filePatterns = "*.cu";
+			fileType = pattern.proxy;
+			isEditable = 1;
+			outputFiles = (
+				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).mex$(MEXARCH)",
+			);
+			script = "#!/bin/bash\n\n${NVCC} -c \\\n-I${MATLABROOT}/extern/include \\\n-I${MATLABROOT}/simulink/include \\\n-DMATLAB_MEX_FILE \\\n-gencode=arch=compute_13,code=sm_13 \\\n-gencode=arch=compute_20,code=sm_20 \\\n-gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" \\\n-m 64 \\\n-I${MATLABROOT}/toolbox/distcomp/gpu/extern/include \\\n--compiler-options \\\n-fno-common,-fexceptions,-arch,x86_64,-isysroot,${SDKROOT},-mmacosx-version-min=10.8 \\\n-O2 -DNDEBUG \\\n${INPUT_FILE_PATH} -o ${DERIVED_FILE_DIR}/${INPUT_FILE_BASE}.o\n#2> >(sed 's/^\\(.*\\)(\\([0-9][0-9]*\\)): error\\(.*\\)/\\1:\\2: error\\3/g' >&2)";
+		};
+/* End PBXBuildRule section */
+
 /* Begin PBXFileReference section */
 		2D375DBB18A7F790008A97EE /* gconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = gconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
 		2D375DBE18A7F79E008A97EE /* gconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = gconv.cu; path = src/gconv.cu; sourceTree = "<group>"; };
+		2D375DC318A7FD1C008A97EE /* libgconv.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libgconv.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2D375DC018A7FD1C008A97EE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		2D375DB018A7F064008A97EE = {
@@ -19,6 +48,7 @@
 				2D375DBD18A7F796008A97EE /* src */,
 				2D375DBB18A7F790008A97EE /* gconv.m */,
 				2D375DBC18A7F790008A97EE /* Makefile */,
+				2D375DC418A7FD1C008A97EE /* Products */,
 			);
 			sourceTree = "<group>";
 		};
@@ -30,7 +60,25 @@
 			name = src;
 			sourceTree = "<group>";
 		};
+		2D375DC418A7FD1C008A97EE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2D375DC318A7FD1C008A97EE /* libgconv.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		2D375DC118A7FD1C008A97EE /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXLegacyTarget section */
 		2D375DB518A7F064008A97EE /* matconv */ = {
@@ -48,6 +96,27 @@
 		};
 /* End PBXLegacyTarget section */
 
+/* Begin PBXNativeTarget section */
+		2D375DC218A7FD1C008A97EE /* gconv */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2D375DC518A7FD1C008A97EE /* Build configuration list for PBXNativeTarget "gconv" */;
+			buildPhases = (
+				2D375DBF18A7FD1C008A97EE /* Sources */,
+				2D375DC018A7FD1C008A97EE /* Frameworks */,
+				2D375DC118A7FD1C008A97EE /* Headers */,
+			);
+			buildRules = (
+				2D375DC918A7FE5D008A97EE /* PBXBuildRule */,
+			);
+			dependencies = (
+			);
+			name = gconv;
+			productName = gconv;
+			productReference = 2D375DC318A7FD1C008A97EE /* libgconv.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+/* End PBXNativeTarget section */
+
 /* Begin PBXProject section */
 		2D375DB118A7F064008A97EE /* Project object */ = {
 			isa = PBXProject;
@@ -63,13 +132,26 @@
 				en,
 			);
 			mainGroup = 2D375DB018A7F064008A97EE;
+			productRefGroup = 2D375DC418A7FD1C008A97EE /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				2D375DB518A7F064008A97EE /* matconv */,
+				2D375DC218A7FD1C008A97EE /* gconv */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2D375DBF18A7FD1C008A97EE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		2D375DB618A7F064008A97EE /* Debug */ = {
@@ -88,6 +170,7 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				EXPORTED_SYMBOLS_FILE = "$(MATLABROOT)/extern/lib/maci64/mexFunction.map";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -104,6 +187,9 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MATLABROOT = /Applications/MATLAB_R2013a.app;
+				MEXARCH = maci64;
+				NVCC = "/Developer/NVIDIA/CUDA-5.5/bin/nvcc";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 			};
@@ -127,6 +213,7 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
+				EXPORTED_SYMBOLS_FILE = "$(MATLABROOT)/extern/lib/maci64/mexFunction.map";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -136,6 +223,9 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MATLABROOT = /Applications/MATLAB_R2013a.app;
+				MEXARCH = maci64;
+				NVCC = "/Developer/NVIDIA/CUDA-5.5/bin/nvcc";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -161,6 +251,26 @@
 			};
 			name = Release;
 		};
+		2D375DC618A7FD1C008A97EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		2D375DC718A7FD1C008A97EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -181,6 +291,14 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		2D375DC518A7FD1C008A97EE /* Build configuration list for PBXNativeTarget "gconv" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2D375DC618A7FD1C008A97EE /* Debug */,
+				2D375DC718A7FD1C008A97EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
 		};
 /* End XCConfigurationList section */
 	};

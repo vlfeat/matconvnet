@@ -3,8 +3,8 @@
 #include "mex.h"
 #include "gpu/mxGPUArray.h"
 #include <cublas_v2.h>
+#include <blas.h>
 #include <iostream>
-
 
 // Hack caffe away
 
@@ -228,23 +228,28 @@ void mexFunction(int nout, mxArray *out[],
 {
   mxClassID dataClassID ;
   mxClassID filtersClassID ;
-  mxGPUArray const *data ;
-  mxGPUArray const *filters ;
-  mxGPUArray *result ;
-  mxGPUArray *temp ;
+  mxGPUArray const *dataGpu ;
+  mxGPUArray const *filtersGpu ;
+  mxGPUArray *resultGpu ;
+  mxGPUArray *tempGpu ;
+  mxArray *resultArray ;
+  mxArray *tempArray ;
 
   cublasStatus_t stat;
   cublasHandle_t handle;
 
-  size_t height, width, dimension ;
-  size_t filterHeight, filterWidth, filterDimension ;
+  size_t height, width, depth, numImages ;
+  size_t filterHeight, filterWidth, filterDepth ;
   size_t numFilters ;
+  mwSize dataNumDimensions ;
+  mwSize filtersNumDimensions ;
   mwSize const * dataDimensions ;
   mwSize const * filtersDimensions ;
-  mwSize resultDimensions [3] ;
+  mwSize resultDimensions [4] ;
   mwSize tempDimensions [3] ;
 
   bool gpuMode = false ;
+  int verbosiy = 1 ;
 
   /* Initialize the MathWorks GPU API. */
   mxInitGPU() ;
@@ -260,7 +265,7 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Throw an error if the input is not a GPU array. */
   if (nin != 2) {
-    mexErrMsgTxt("Other than two arguments provided.") ;
+    mexErrMsgTxt("The arguments are not two.") ;
   }
 
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
@@ -269,16 +274,24 @@ void mexFunction(int nout, mxArray *out[],
     if (!mxIsGPUArray(in[IN_FILTERS])) {
       mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
     }
-    data = mxGPUCreateFromMxArray(in[IN_DATA]) ;
-    dataClassID = mxGPUGetClassID(data) ;
-    filters = mxGPUCreateFromMxArray(in[IN_FILTERS]) ;
-    filtersClassID = mxGPUGetClassID(filters) ;
+    dataGpu = mxGPUCreateFromMxArray(in[IN_DATA]) ;
+    dataClassID = mxGPUGetClassID(dataGpu) ;
+    dataNumDimensions = mxGPUGetNumberOfDimensions(dataGpu) ;
+    dataDimensions = mxGPUGetDimensions(dataGpu) ;
+    filtersGpu = mxGPUCreateFromMxArray(in[IN_FILTERS]) ;
+    filtersClassID = mxGPUGetClassID(filtersGpu) ;
+    filtersNumDimensions = mxGPUGetNumberOfDimensions(filtersGpu) ;
+    filtersDimensions = mxGPUGetDimensions(filtersGpu) ;
   } else {
-    if (!mxIsGPUArray(in[IN_FILTERS])) {
+    if (mxIsGPUArray(in[IN_FILTERS])) {
       mexErrMsgTxt("DATA is a CPU array but FILTERS is not.") ;
     }
     dataClassID = mxGetClassID(in[IN_DATA]) ;
+    dataNumDimensions = mxGetNumberOfDimensions(in[IN_DATA]) ;
+    dataDimensions = mxGetDimensions(in[IN_DATA]) ;
     filtersClassID = mxGetClassID(in[IN_FILTERS]) ;
+    filtersNumDimensions = mxGetNumberOfDimensions(in[IN_FILTERS]) ;
+    filtersDimensions = mxGetDimensions(in[IN_FILTERS]) ;
   }
 
   if (dataClassID != mxSINGLE_CLASS) {
@@ -288,26 +301,23 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("FILTERS is not of class SINGLE.");
   }
 
-  dataDimensions = mxGPUGetDimensions(data) ;
   height = dataDimensions[0] ;
   width = dataDimensions[1] ;
-  switch (mxGPUGetNumberOfDimensions(data)) {
-  case 2 : dimension = 1 ; break ;
-  case 3 : dimension = dataDimensions[2] ; break ;
+  switch (dataNumDimensions) {
+  case 2 : depth = 1 ; numImages = 1 ; break ;
+  case 3 : depth = dataDimensions[2] ; numImages = 1 ; break ;
+  case 4 : depth = dataDimensions[2] ; numImages = dataDimensions[3] ; break ;
   default:  mexErrMsgTxt("DATA has neither two or three dimensions.") ; break ;
   }
-  //mxFree(DataDimensions) ;
 
-  filtersDimensions = mxGPUGetDimensions(filters) ;
   filterHeight = filtersDimensions[0] ;
   filterWidth = filtersDimensions[1] ;
-  switch (mxGPUGetNumberOfDimensions(filters)) {
-  case 2 : filterDimension = 1 ; numFilters = 1 ; break ;
-  case 3 : filterDimension = filtersDimensions[2] ; numFilters = 1 ; break ;
-  case 4 : filterDimension = filtersDimensions[2] ; numFilters = filtersDimensions[3] ; break ;
+  switch (filtersNumDimensions) {
+  case 2 : filterDepth = 1 ; numFilters = 1 ; break ;
+  case 3 : filterDepth = filtersDimensions[2] ; numFilters = 1 ; break ;
+  case 4 : filterDepth = filtersDimensions[2] ; numFilters = filtersDimensions[3] ; break ;
   default:  mexErrMsgTxt("FILTERS has neither two, three, nor four dimensions.") ; break ;
   }
-  //mxFree(FiltersDimensions) ;
 
   if (filterWidth != filterHeight) {
     mexErrMsgTxt("Non-square FILTERS not supported yet.") ;
@@ -316,17 +326,25 @@ void mexFunction(int nout, mxArray *out[],
   resultDimensions[0] = height - filterHeight + 1 ;
   resultDimensions[1] = width - filterWidth + 1 ;
   resultDimensions[2] = numFilters ;
+  resultDimensions[3] = numImages ;
 
   tempDimensions[0] = height - filterHeight + 1 ;
   tempDimensions[1] = width - filterWidth + 1 ;
-  tempDimensions[2] = filterHeight*filterWidth*dimension ;
+  tempDimensions[2] = filterHeight*filterWidth*filterDepth ;
 
-  mexPrintf("data: %d x %d x %d\n", height, width, dimension) ;
-  mexPrintf("filters: %d x %d x %d x %d\n", filterHeight, filterWidth, filterDimension, numFilters) ;
-  mexPrintf("result: %d x %d x %d\n", resultDimensions[0], resultDimensions[1], resultDimensions[2]) ;
-  mexPrintf("temp: %d x %d x %d\n", tempDimensions[0], tempDimensions[1], tempDimensions[2]) ;
+  if (verbosiy > 0) {
+    mexPrintf("gconv: mode %s\n", gpuMode?"gpu":"cpu") ;
+    mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n", height, width, depth, numImages,
+              (double)(height*width*depth*numImages*4)/1024.0/1024.0) ;
+    mexPrintf("gconv: filters: %d x %d x %d x %d [%.1f MB]\n", filterHeight, filterWidth, filterDepth, numFilters,
+              (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/1024.0/1024.0) ;
+    mexPrintf("gconv: result: %d x %d x %d x %d [%.1f MB]\n", resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
+              (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/1024.0/1024.0) ;
+    mexPrintf("gconv: temp: %d x %d x %d [%.1f MB]\n", tempDimensions[0], tempDimensions[1], tempDimensions[2],
+              (double)(tempDimensions[0]*tempDimensions[1]*tempDimensions[2]*4)/1024.0/1024.0) ;
+  }
 
-  if (dimension != filterDimension) {
+  if (depth != filterDepth) {
     mexErrMsgTxt("DATA and FILTERS dimensions do not match.") ;
   }
 
@@ -334,58 +352,97 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("FILTERS are larger than the DATA.") ;
   }
 
-  if (filterHeight == 0 || filterWidth == 0 || filterDimension == 0) {
+  if (filterHeight == 0 || filterWidth == 0 || filterDepth == 0) {
     mexErrMsgTxt("A dimension of FILTERS is void.") ;
   }
 
-  temp = mxGPUCreateGPUArray(3, tempDimensions,
-                             mxSINGLE_CLASS,
-                             mxREAL,
-                             //MX_GPU_INITIALIZE_VALUES);
-                             MX_GPU_DO_NOT_INITIALIZE) ;
+  /* -------------------------------------------------------------- */
+  /*                                                    Do the work */
+  /* -------------------------------------------------------------- */
+  // im2col should be called im2row
 
-#if 1
-  // contrary to the name, this is im2row ... sigh
-  im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(data),
-                    dimension, height, width,
-                    filterHeight, // filter size
-                    1, // stride,
-                    (float *)mxGPUGetData(temp)) ;
-#endif
- 
-  result = mxGPUCreateGPUArray(3, resultDimensions,
-                               mxSINGLE_CLASS,
-                               mxREAL,
-                               //MX_GPU_INITIALIZE_VALUES);
-                               MX_GPU_DO_NOT_INITIALIZE) ;
+  if (gpuMode) {
+    tempGpu = mxGPUCreateGPUArray(3, tempDimensions,
+                                  mxSINGLE_CLASS,
+                                  mxREAL,
+                                  MX_GPU_DO_NOT_INITIALIZE) ;
+    resultGpu = mxGPUCreateGPUArray(4, resultDimensions,
+                                    mxSINGLE_CLASS,
+                                    mxREAL,
+                                    MX_GPU_DO_NOT_INITIALIZE) ;
+  } else {
+    tempArray = mxCreateNumericArray(3, tempDimensions,
+                                     mxSINGLE_CLASS,
+                                     mxREAL) ;
+    resultArray = mxCreateNumericArray(4, resultDimensions,
+                                       mxSINGLE_CLASS,
+                                       mxREAL) ;
+  }
 
-#if 1
-  {
+  for (int image = 0 ; image < numImages ; ++image) {
     float alpha = 1 ;
     float beta = 0 ;
-    cublasSgemm
-      (handle,
-       CUBLAS_OP_N, // not transposed
-       CUBLAS_OP_N, // not transposed
-       resultDimensions[0] * resultDimensions[1], // m: op(B) cols [= result cols]
-       numFilters, // n: op(A) rows [= results rows]
-       filterHeight*filterWidth*filterDimension, // k: op(A) cols = op(B) rows [= dot prod length]
-       &alpha,
-       (float const*)mxGPUGetDataReadOnly(temp), // A: im2col output
-       resultDimensions[0] * resultDimensions[1], // A: leading dimension
-       (float const*)mxGPUGetDataReadOnly(filters), // B: filters
-       filterHeight*filterWidth*filterDimension, // B: leading dimension
-       &beta,
-       (float*)mxGPUGetData(result), // C: output image
-       resultDimensions[0] * resultDimensions[1] // C: leading dimension
-       ) ;
-  }
+    char opA = 't' ;
+    char opB = 'n' ;
+    ptrdiff_t m = resultDimensions[0] * resultDimensions[1] ;
+    ptrdiff_t n = numFilters ;
+    ptrdiff_t k = filterHeight*filterWidth*filterDepth ;
+    ptrdiff_t dataOffset = (width*height*depth) * image ;
+    ptrdiff_t resultOffset = (resultDimensions[0]*resultDimensions[1]*resultDimensions[2]) * image ;
+
+    if (gpuMode) {
+#if 1
+      im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
+                        depth, height, width,
+                        filterHeight,
+                        1, // stride,
+                        (float *)mxGPUGetData(tempGpu)) ;
 #endif
 
-  cublasDestroy(handle);
-  out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(result) ;
-  mxGPUDestroyGPUArray(data) ;
-  mxGPUDestroyGPUArray(filters) ;
-  mxGPUDestroyGPUArray(result) ;
-  mxGPUDestroyGPUArray(temp) ;
+      // op = N (not transposed), T (transposed)
+      // C <- alpha op(A)op(B) + beta C
+      // A is m x k, B is k x n and C is m x n.
+#if 1
+      cublasSgemm(handle,
+                  (opA == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                  (opB == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                  (int)m, (int)n, (int)k,
+                  &alpha,
+                  (float const*)mxGPUGetDataReadOnly(tempGpu), (opA == 'n') ? (int)m : (int)k,
+                  (float const*)mxGPUGetDataReadOnly(filtersGpu), (opB == 'n') ? (int)k : (int)n,
+                  &beta,
+                  (float*)mxGPUGetData(resultGpu) + resultOffset, (int)m) ;
+#endif
+    } else {
+#if 1
+      im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
+                        depth, height, width,
+                        filterHeight,
+                        1, // stride,
+                        (float *)mxGetData(tempArray)) ;
+#endif
+
+#if 1
+      sgemm(&opA, &opB,
+            &m, &n, &k,
+            &alpha,
+            (float*)mxGetData(tempArray), (opA == 'n') ? &m : &k,
+            (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
+            &beta,
+            (float*)mxGetData(resultArray) + resultOffset, &m) ;
+#endif
+    }
+  }
+
+  if (gpuMode ) {
+    cublasDestroy(handle);
+    out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(resultGpu) ;
+    mxGPUDestroyGPUArray(dataGpu) ;
+    mxGPUDestroyGPUArray(filtersGpu) ;
+    mxGPUDestroyGPUArray(resultGpu) ;
+    mxGPUDestroyGPUArray(tempGpu) ;
+  } else {
+    mxDestroyArray(tempArray);
+    out[OUT_RESULT] = resultArray ;
+  }
 }
