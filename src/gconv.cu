@@ -226,6 +226,8 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
+  mxClassID dataClassID ;
+  mxClassID filtersClassID ;
   mxGPUArray const *data ;
   mxGPUArray const *filters ;
   mxGPUArray *result ;
@@ -241,6 +243,8 @@ void mexFunction(int nout, mxArray *out[],
   mwSize const * filtersDimensions ;
   mwSize resultDimensions [3] ;
   mwSize tempDimensions [3] ;
+
+  bool gpuMode = false ;
 
   /* Initialize the MathWorks GPU API. */
   mxInitGPU() ;
@@ -258,20 +262,29 @@ void mexFunction(int nout, mxArray *out[],
   if (nin != 2) {
     mexErrMsgTxt("Other than two arguments provided.") ;
   }
-  if (!mxIsGPUArray(in[IN_DATA])) {
-    mexErrMsgTxt("DATA is not a GPU array.") ;
-  }
-  if (!mxIsGPUArray(in[IN_FILTERS])) {
-    mexErrMsgTxt("FILTERS is not a GPU array.") ;
+
+  gpuMode = mxIsGPUArray(in[IN_DATA]) ;
+
+  if (gpuMode) {
+    if (!mxIsGPUArray(in[IN_FILTERS])) {
+      mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
+    }
+    data = mxGPUCreateFromMxArray(in[IN_DATA]) ;
+    dataClassID = mxGPUGetClassID(data) ;
+    filters = mxGPUCreateFromMxArray(in[IN_FILTERS]) ;
+    filtersClassID = mxGPUGetClassID(filters) ;
+  } else {
+    if (!mxIsGPUArray(in[IN_FILTERS])) {
+      mexErrMsgTxt("DATA is a CPU array but FILTERS is not.") ;
+    }
+    dataClassID = mxGetClassID(in[IN_DATA]) ;
+    filtersClassID = mxGetClassID(in[IN_FILTERS]) ;
   }
 
-  data = mxGPUCreateFromMxArray(in[IN_DATA]) ;
-  filters = mxGPUCreateFromMxArray(in[IN_FILTERS]) ;
-
-  if (mxGPUGetClassID(data) != mxSINGLE_CLASS) {
+  if (dataClassID != mxSINGLE_CLASS) {
     mexErrMsgTxt("DATA is not of class SINGLE.");
   }
-  if (mxGPUGetClassID(filters) != mxSINGLE_CLASS) {
+  if (filtersClassID != mxSINGLE_CLASS) {
     mexErrMsgTxt("FILTERS is not of class SINGLE.");
   }
 
