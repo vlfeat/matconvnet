@@ -5,6 +5,7 @@ clear all mex ;
 
 a=im2single(imread('cameraman.tif')) ;
 b=im2single(fspecial('laplacian')) ;
+%b=ones(10,'single') ;
 
 a_= gpuArray(a) ;
 b_= gpuArray(b) ;
