@@ -2,7 +2,11 @@
 
 #include "mex.h"
 #include "gpu/mxGPUArray.h"
+#include <cublas_v2.h>
 #include <iostream>
+
+
+// Hack caffe away
 
 #define FATAL std::cout
 #define LOG(x) x
@@ -19,7 +23,6 @@
     const int CAFFE_CUDA_NUM_THREADS = 512;
 #endif
 
-
 inline int CAFFE_GET_BLOCKS(const int N) {
   return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
 }
@@ -28,6 +31,7 @@ inline int CAFFE_GET_BLOCKS(const int N) {
 /*                                                          CPU variant */
 /* -------------------------------------------------------------------- */
 
+// place copies of filter-shaped volumes as rows of a matrix
 template <typename Dtype>
 void im2col_cpu(const Dtype* data_im, const int channels,
     const int height, const int width, const int ksize, const int stride,
@@ -199,7 +203,6 @@ void col2im_gpu(const Dtype* data_col, const int channels,
   CUDA_POST_KERNEL_CHECK;
 }
 
-
 // Explicit instantiation
 template void col2im_gpu<float>(const float* data_col, const int channels,
     const int height, const int width, const int psize, const int stride,
@@ -207,54 +210,6 @@ template void col2im_gpu<float>(const float* data_col, const int channels,
 template void col2im_gpu<double>(const double* data_col, const int channels,
     const int height, const int width, const int psize, const int stride,
     double* data_im);
-
-
-void convolution_gpu(mxGPUArray *A, mxGPUArray *B, mxGPUArray *C)
-{
-#if 0
-  d_A = (double const *)(mxGPUGetDataReadOnly(A));
-
-  d_B = (double *)(mxGPUGetData(B));
-
-  int const threadsPerBlock = 256;
-  int blocksPerGrid;
-
-  /*
-   * Call the kernel using the CUDA runtime API. We are using a 1-d grid here,
-   * and it would be possible for the number of elements to be too large for
-   * the grid. For this example we are not guarding against this possibility.
-   */
-  N = (int)(mxGPUGetNumberOfElements(A));
-  blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
-  TimesTwo<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, N);
-
-  const Dtype* bottom_data = bottom[0]->gpu_data();
-  Dtype* top_data = (*top)[0]->mutable_gpu_data();
-  Dtype* col_data = col_buffer_.mutable_gpu_data();
-  const Dtype* weight = this->blobs_[0]->gpu_data();
-  int weight_offset = M_ * K_;
-  int col_offset = K_ * N_;
-  int top_offset = M_ * N_;
-  for (int n = 0; n < NUM_; ++n) {
-    // First, im2col
-    im2col_gpu(bottom_data + bottom[0]->offset(n), CHANNELS_, HEIGHT_,
-        WIDTH_, KSIZE_, STRIDE_, col_data);
-    // Second, innerproduct with groups
-    for (int g = 0; g < GROUP_; ++g) {
-      caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, M_, N_, K_,
-        (Dtype)1., weight + weight_offset * g, col_data + col_offset * g,
-        (Dtype)0., top_data + (*top)[0]->offset(n) + top_offset * g);
-    }
-    // third, add bias
-    if (biasterm_) {
-      caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, NUM_OUTPUT_,
-          N_, 1, (Dtype)1., this->blobs_[1]->gpu_data(),
-          reinterpret_cast<const Dtype*>(bias_multiplier_->gpu_data()),
-          (Dtype)1., top_data + (*top)[0]->offset(n));
-    }
-  }
-#endif
-}
 
 /* ---------------------------------------------------------------- */
 /*                                                         Do stuff */
@@ -274,16 +229,27 @@ void mexFunction(int nout, mxArray *out[],
   mxGPUArray const *A ;
   mxGPUArray const *B ;
   mxGPUArray *C ;
+  mxGPUArray *T ;
+
+  cublasStatus_t stat;
+  cublasHandle_t handle;
 
   size_t height, width, dimension ;
   size_t filterHeight, filterWidth, filterDimension ;
   size_t numFilters ;
   mwSize resultDimensions [3] ;
+  mwSize tempDimensions [3] ;
   mwSize const * ADimensions ;
   mwSize const * BDimensions ;
 
+
   /* Initialize the MathWorks GPU API. */
-  mxInitGPU();
+  mxInitGPU() ;
+
+  stat = cublasCreate(&handle);
+  if (stat != CUBLAS_STATUS_SUCCESS) {
+    mexErrMsgTxt("Could not initialize cuBLAS.") ;
+  }
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
@@ -332,19 +298,18 @@ void mexFunction(int nout, mxArray *out[],
   }
   //mxFree(BDimensions) ;
 
-  /*
   resultDimensions[0] = height - filterHeight + 1 ;
   resultDimensions[1] = width - filterWidth + 1 ;
   resultDimensions[2] = numFilters ;
-  */
 
-  resultDimensions[0] = height - filterHeight + 1 ;
-  resultDimensions[1] = width - filterWidth + 1 ;
-  resultDimensions[2] = filterHeight*filterWidth*dimension ;
+  tempDimensions[0] = height - filterHeight + 1 ;
+  tempDimensions[1] = width - filterWidth + 1 ;
+  tempDimensions[2] = filterHeight*filterWidth*dimension ;
 
   mexPrintf("A: %d x %d x %d\n", height, width, dimension) ;
   mexPrintf("B: %d x %d x %d x %d\n", filterHeight, filterWidth, filterDimension, numFilters) ;
   mexPrintf("C: %d x %d x %d\n", resultDimensions[0], resultDimensions[1], resultDimensions[2]) ;
+  mexPrintf("T: %d x %d x %d\n", tempDimensions[0], tempDimensions[1], tempDimensions[2]) ;
 
   if (dimension != filterDimension) {
     mexErrMsgTxt("A and B dimensions do not match.") ;
@@ -358,23 +323,48 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("A dimension of B is void.") ;
   }
 
+  T = mxGPUCreateGPUArray(3, tempDimensions,
+                          mxSINGLE_CLASS,
+                          mxREAL,
+                          MX_GPU_DO_NOT_INITIALIZE) ;
+
+  // contrary to the name, this is im2row ... sigh
+  im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(A),
+                    dimension, height, width,
+                    filterHeight, // filter size
+                    1, // stride,
+                    (float *)mxGPUGetData(T)) ;
+
   C = mxGPUCreateGPUArray(3, resultDimensions,
                           mxSINGLE_CLASS,
                           mxREAL,
                           MX_GPU_DO_NOT_INITIALIZE) ;
 
-  im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(A),
-                    dimension, height, width,
-                    filterHeight, // filter size
-                    1, // stride,
-                    (float *)mxGPUGetData(C)) ;
+  {
+    float alpha = 1 ;
+    float beta = 0 ;
+    cublasSgemm
+      (handle,
+       CUBLAS_OP_N, // not transposed
+       CUBLAS_OP_N, // not transposed
+       resultDimensions[0] * resultDimensions[1], // m: op(B) cols [= result cols]
+       numFilters, // n: op(A) rows [= results rows]
+       filterDimension, // k: op(A) cols = op(B) rows [= dot prod length]
+       &alpha,
+       (float const*)mxGPUGetDataReadOnly(T), // A: im2col output
+       resultDimensions[0] * resultDimensions[1], // A: leading dimension
+       (float const*)mxGPUGetDataReadOnly(B), // B: filters
+       filterDimension, // B: leading dimension
+       &beta,
+       (float*)mxGPUGetData(C), // C: output image
+       resultDimensions[0] * resultDimensions[1] // C: leading dimension
+       ) ;
+  }
 
-  //  void im2col_gpu(const Dtype* data_im, const int channels,
-  //               const int height, const int width, const int ksize, const int stride,
-  //               Dtype* data_col) ;
-
+  cublasDestroy(handle);
   out[OUT_C] = mxGPUCreateMxArrayOnGPU(C) ;
   mxGPUDestroyGPUArray(A) ;
   mxGPUDestroyGPUArray(B) ;
   mxGPUDestroyGPUArray(C) ;
+  mxGPUDestroyGPUArray(T) ;
 }
