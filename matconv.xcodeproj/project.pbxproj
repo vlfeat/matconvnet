@@ -25,7 +25,7 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
-		2D375DBB18A7F790008A97EE /* gconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = gconv.m; sourceTree = "<group>"; };
+		2D375DBB18A7F790008A97EE /* gconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = gconv.m; path = src/gconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
 		2D375DBE18A7F79E008A97EE /* gconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = gconv.cu; path = src/gconv.cu; sourceTree = "<group>"; };
 		2D375DC318A7FD1C008A97EE /* libgconv.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libgconv.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -46,7 +46,6 @@
 			isa = PBXGroup;
 			children = (
 				2D375DBD18A7F796008A97EE /* src */,
-				2D375DBB18A7F790008A97EE /* gconv.m */,
 				2D375DBC18A7F790008A97EE /* Makefile */,
 				2D375DC418A7FD1C008A97EE /* Products */,
 			);
@@ -56,6 +55,7 @@
 			isa = PBXGroup;
 			children = (
 				2D375DBE18A7F79E008A97EE /* gconv.cu */,
+				2D375DBB18A7F790008A97EE /* gconv.m */,
 			);
 			name = src;
 			sourceTree = "<group>";
