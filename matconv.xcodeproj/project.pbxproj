@@ -9,7 +9,7 @@
 /* Begin PBXFileReference section */
 		2D375DBB18A7F790008A97EE /* gconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = gconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
-		2D375DBE18A7F79E008A97EE /* fast_conv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = fast_conv.cu; path = src/fast_conv.cu; sourceTree = "<group>"; };
+		2D375DBE18A7F79E008A97EE /* gconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = gconv.cu; path = src/gconv.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -25,7 +25,7 @@
 		2D375DBD18A7F796008A97EE /* src */ = {
 			isa = PBXGroup;
 			children = (
-				2D375DBE18A7F79E008A97EE /* fast_conv.cu */,
+				2D375DBE18A7F79E008A97EE /* gconv.cu */,
 			);
 			name = src;
 			sourceTree = "<group>";
