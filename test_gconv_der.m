@@ -1,11 +1,18 @@
 addpath mex
 
 gpu=false ;
-gpu=true ;
+%gpu=true ;
+numFilters = 7 ;
+height = 6 ;
+width = 9 ;
+filterSize = 5 ;
+depth = 13 ;
+numImages = 4 ;
+delta = 2.5 ;
 
 rng(0) ;
-x=randn(5,5,1,1,'single') ;
-f=ones(3,3,1,1,'single') ;
+x=randn(height,width,depth,numImages,'single') ;
+f=randn(filterSize,filterSize,depth,numFilters,'single') ;
 y=gconv(x,f) ;
 [dzdy]=randn(size(y),'single') ;
 
@@ -16,35 +23,36 @@ if gpu
 else
   [dzdf,dzdx] = gconv(x,f,dzdy) ;
 end
-  %[dzdf] = gconv(x,f,dzdy) ;
 
-% compute it numerically
+% compute the gradient numerically numerically
 dzdf_=zeros(size(dzdf));
-delta = .01;
 for i=1:numel(f)
   df = zeros(size(f)) ;
   df(i) = delta ;
   y_=gconv(x,f+df) ;
-  dzdf_(i) = dzdf_(i) + sum(sum(dzdy .* (y_ - y)/delta)) ;
+  dzdf_(i) = dzdf_(i) + sum(sum(sum(sum(dzdy .* (y_ - y)/delta)))) ;
 end
 
-disp(dzdf)
-disp(dzdf_)
-
 dzdx_=zeros(size(dzdx));
-delta = .01;
 for i=1:numel(x)
   dx = zeros(size(x)) ;
   dx(i) = delta ;
   y_=gconv(x+dx,f) ;
-  dzdx_(i) = dzdx_(i) + sum(sum(dzdy .* (y_ - y)/delta)) ;
+  dzdx_(i) = dzdx_(i) + sum(sum(sum(sum(dzdy .* (y_ - y)/delta)))) ;
 end
 
-disp(dzdf)
-disp(dzdf_)
+run ~/src/vlfeat/toolbox/vl_setup.m
+figure(1) ; clf ;
+subplot(2,2,1) ;
+a=reshape(dzdf,size(dzdf,1),size(dzdf,2),[]) ;
+b=reshape(dzdf - dzdf_,size(dzdf,1),size(dzdf,2),[]) ;
+vl_imarraysc(abs(cat(2, a, b)),'uniform',true) ;
+subplot(2,2,2) ;
+hist(abs(dzdf(:) - dzdf_(:))) ;
+subplot(2,2,3) ;
+hist(abs(dzdx(:) - dzdx_(:))) ;
 
-disp(dzdx)
-disp(dzdx_)
-
+assert(max(abs(dzdf(:) - dzdf_(:))) < 1e-4*max(abs(dzdf(:)))) ;
+assert(max(abs(dzdx(:) - dzdx_(:))) < 1e-4*max(abs(dzdx(:)))) ;
 
 
