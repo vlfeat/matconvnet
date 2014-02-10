@@ -87,7 +87,7 @@ void mexFunction(int nout, mxArray *out[],
       if (!mxIsGPUArray(in[IN_DER])) {
         mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
       }
-      derGpu = mxGPUCreateFromMxArray(in[IN_DATA]) ;
+      derGpu = mxGPUCreateFromMxArray(in[IN_DER]) ;
       derClassID = mxGPUGetClassID(derGpu) ;
       derNumDimensions = mxGPUGetNumberOfDimensions(derGpu) ;
       derDimensions = mxGPUGetDimensions(derGpu) ;
@@ -185,6 +185,9 @@ void mexFunction(int nout, mxArray *out[],
               resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
               (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/MB) ;
     if (backMode) {
+      mexPrintf("gconv: der: %d x %d x %d x %d [%.1f MB]\n",
+                derHeight, derWidth, derDepth, numDerImages,
+                (double)(derHeight*derWidth*derDepth*numDerImages*4)/MB) ;
       mexPrintf("gconv: dfilters: %d x %d x %d x %d [%.1f MB]\n",
                 dfiltersDimensions[0], dfiltersDimensions[1], dfiltersDimensions[2], dfiltersDimensions[3],
                 (double)(dfiltersDimensions[0]*dfiltersDimensions[1]*dfiltersDimensions[2]*dfiltersDimensions[3]*4)/MB) ;
@@ -195,10 +198,10 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (backMode) {
-    if (numDerImages != numImages ||
-        derHeight != tempDimensions[0] ||
+    if (derHeight != tempDimensions[0] ||
         derWidth != tempDimensions[1] ||
-        derDepth != numFilters)
+        derDepth != numFilters ||
+        numDerImages != numImages)
     {
       mexErrMsgTxt("DER dimensions are incompatible with X and FILTERS.") ;
     }
@@ -298,9 +301,22 @@ void mexFunction(int nout, mxArray *out[],
         ptrdiff_t k = tempDimensions[0]*tempDimensions[1] ;
         ptrdiff_t dataOffset = (width*height*depth) * image ;
         if (gpuMode) {
-
+          im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
+                            depth, height, width,
+                            filterHeight,
+                            1, // stride,
+                            (float *)mxGPUGetData(tempGpu)) ;
+          cublasSgemm(handle,
+                      (opA == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                      (opB == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                      (int)m, (int)n, (int)k,
+                      &alpha,
+                      (float const*)mxGPUGetDataReadOnly(tempGpu), (opA == 'n') ? (int)m : (int)k,
+                      (float const*)mxGPUGetDataReadOnly(derGpu), (opB == 'n') ? (int)k : (int)n,
+                      &beta,
+                      (float*)mxGPUGetData(dfiltersGpu), (int)m) ;
         } else {
-          im2row_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
+          im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
                             depth, height, width,
                             filterHeight,
                             1, // stride,
@@ -325,7 +341,20 @@ void mexFunction(int nout, mxArray *out[],
         ptrdiff_t dataOffset = (tempDimensions[0]*tempDimensions[1]*numFilters) * image ;
         ptrdiff_t resultOffset = (resultDimensions[0]*resultDimensions[1]*resultDimensions[2]) * image ;
         if (gpuMode) {
-
+          cublasSgemm(handle,
+                      (opA == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                      (opB == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                      (int)m, (int)n, (int)k,
+                      &alpha,
+                      (float const*)mxGPUGetDataReadOnly(derGpu) + dataOffset, (opA == 'n') ? (int)m : (int)k,
+                      (float const*)mxGPUGetDataReadOnly(filtersGpu), (opB == 'n') ? (int)k : (int)n,
+                      &beta,
+                      (float*)mxGPUGetData(tempGpu), (int)m) ;
+          col2im_gpu<float>((float*)mxGPUGetData(tempGpu),
+                            depth, height, width,
+                            filterHeight,
+                            1,
+                            (float*)mxGPUGetData(resultGpu) + resultOffset) ;
         } else {
           // overwrite temp
           sgemm(&opA, &opB,
@@ -335,7 +364,6 @@ void mexFunction(int nout, mxArray *out[],
                 (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
                 &beta,
                 (float*)mxGetData(tempArray), &m) ;
-
           col2im_cpu<float>((float*)mxGetData(tempArray),
                             depth, height, width,
                             filterHeight,

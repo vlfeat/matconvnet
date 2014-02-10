@@ -1,0 +1,135 @@
+\documentclass[12pt]{article}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage[margin=2.5cm]{geometry}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\vv}{\operatorname{vec}}
+
+
+\begin{document}
+
+Let $X,Y$ denote the input and output images respectively. Let $F$ denote the filters. We assume that $X$ and $Y$ have been reshaped into two matrices, with the first index spanning spatial dimensions and the second spanning feature channels. Thus
+\[
+ X\in\real^{(wh) \times d}, \qquad
+ Y\in\real^{(w'h') \times k}, \qquad
+ F\in\real^{(w_fh_fd) \times k}
+ \qquad
+ w' = w - w_f + 1,
+ \qquad
+ h'' = h - h_f + 1.
+\]
+where $(w,h,d)$ is the size of the input image $X$, $(w',h',k)$ is the size of the output image, $(w_f,h_f,d)$ is the size of a filter, and there are $k$ filters. The output image $Y$ is a function of $X$ and $F$ and is connected to the output energy by a function $f$:
+\[
+Y = g(X,F),
+\qquad
+z = f(Y) \in \real.
+\]
+The operation $g$ is a linear filter, applying each of the filters in $F$ to produce each of the channels in $Y$. Up to a rearrangement of the elements of $X$, this can be written as a matrix multiplication. In particular, let $\phi(X)$ be the {\tt im2row} operator, which extracts from $X$ patches of the same volumes as the filters, placing them as columns of a matrix:
+\[
+ Y = g(X,F) = \phi(X) F,\qquad 
+ \phi: \real^{(wh)\times d} \rightarrow \real^{(w'h')\times(w_fh_fd)}.
+\]
+Note that $\phi$ simply rearranges the elements of $X$ and is, therefore, a linear operator. In particular we can rewrite it as
+\[
+ \vv(\phi(X)) = H \vv(X), \qquad H \in \real^{(w'h'w_fh_fd) \times (whd)}
+\]
+for a suitable matrix $H$. The derivative of the function $f(g(X,F))$ are then given by
+\[
+\boxed{
+\frac{dz}{dF}
+=
+\phi(X)^\top\frac{d f}{d Y},
+\qquad
+\frac{d z}{d \vv(X)}
+=
+H^\top
+\vv\left(
+\frac{d f}{d Y}F^\top
+\right)
+=
+\phi^*\left(
+\frac{d f}{d Y}F^\top
+\right).
+}
+\]
+Here we define the {\tt row2im} operator $H^\top$ as the dual of {\tt im2row}:
+\[
+ \vv(\phi^*(Y)) = H^\top \vv(Y).
+\]
+Let $(l,m,k,p,d)$ be an index in the {\tt im2row} output $\phi(X)$ and $(i,j,d)$ an index in the input $X$. Here indexes are mapped as $(l,m),(k,p,d)$ to the first and second index of $\phi(X)$ and to $(i,j),d$ of $X$. With slight abuse of notation one has:
+\[
+   [\phi(X)]_{(l,m,k,p,d)}= X_{(i,j,d)}, \qquad i=l+k,\quad j=m+p.
+\]
+Likewise for the dual operator {\tt row2im}:
+\[
+   [\phi^*(Y)]_{(i,j,d)} 
+   = \sum_{k=0}^{w_f-1} \sum_{p=0}^{h_f-1} Y_{(i,j,k,p,d)}.
+\]
+
+\appendix
+\section{Derivatives}
+\begin{align*}
+\frac{d z}{d \vv(F)^\top}
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [\phi(X) F]}{d\vv(F)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [\left(
+I_k \otimes \phi(X)
+\right)
+\vv(F)]
+}{d\vv(F)^\top}
+\\
+&=
+\vv\left(\frac{d f}{d Y} \right)^\top
+\left(
+I_k \otimes \phi(X)
+\right)
+\\
+&=
+\vv\left(
+\phi(X)^\top I_k \frac{d f}{d Y} 
+\right)^\top
+\\
+&=
+\vv\left(
+\phi(X)^\top
+\frac{d f}{d Y} 
+\right)^\top
+\end{align*}
+From which
+\[
+\frac{dz}{dF}
+=
+\phi(X)^\top\frac{d f}{d Y}.
+\]
+Also
+\begin{align*}
+\frac{d z}{d \vv(X)^\top}
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d \vv [\phi(X) F]}{d\vv(X)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [(F^\top \otimes I_{w'h'})\vv(\phi(X))]}{d\vv(X)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [(F^\top \otimes I)H \vv(X)]}{d\vv(X)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top} (F^\top\otimes I)H
+\\
+&=
+\vv\left(
+\frac{d f}{d Y}F^\top
+\right)^\top H
+\end{align*}
+
+
+\end{document}
+
+
