@@ -1,7 +1,7 @@
 addpath mex
 
-gpu=false ;
-%gpu=true ;
+%gpu=false ;
+gpu=true ;
 numFilters = 7 ;
 height = 6 ;
 width = 9 ;
@@ -10,19 +10,24 @@ depth = 13 ;
 numImages = 4 ;
 delta = 2.5 ;
 
-rng(0) ;
+rng(2) ;
 x=randn(height,width,depth,numImages,'single') ;
 f=randn(filterSize,filterSize,depth,numFilters,'single') ;
 y=gconv(x,f) ;
 [dzdy]=randn(size(y),'single') ;
 
 if gpu
+  y = gconv(gpuArray(x),gpuArray(f)) ;
   [dzdf,dzdx] = gconv(gpuArray(x), gpuArray(f), gpuArray(dzdy)) ;
+  y = gather(y) ;
   dzdf = gather(dzdf) ;
   dzdx = gather(dzdx) ;
+  %y__=gconv(x,f) ;
+  %[dzdf__,dzdx__] = gconv(x,f,dzdy) ;
 else
   [dzdf,dzdx] = gconv(x,f,dzdy) ;
 end
+
 
 % compute the gradient numerically numerically
 dzdf_=zeros(size(dzdf));
