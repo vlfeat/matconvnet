@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2D06568918AA79BB006545B4 /* pooling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D06568718AA79BB006545B4 /* pooling.cpp */; };
+		2D06568A18AA79BB006545B4 /* pooling.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D06568818AA79BB006545B4 /* pooling.hpp */; };
 		2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DBE18A7F79E008A97EE /* gconv.cu */; };
 		2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DCA18A848E2008A97EE /* im2col.cpp */; };
 		2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D375DCB18A848E2008A97EE /* im2col.hpp */; };
@@ -27,12 +29,18 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
+		2D06568718AA79BB006545B4 /* pooling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pooling.cpp; path = src/bits/pooling.cpp; sourceTree = "<group>"; };
+		2D06568818AA79BB006545B4 /* pooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = pooling.hpp; path = src/bits/pooling.hpp; sourceTree = "<group>"; };
 		2D375DBB18A7F790008A97EE /* gconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = gconv.m; path = src/gconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
 		2D375DBE18A7F79E008A97EE /* gconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = gconv.cu; path = src/gconv.cu; sourceTree = "<group>"; };
 		2D375DC318A7FD1C008A97EE /* libgconv.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libgconv.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D375DCA18A848E2008A97EE /* im2col.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = im2col.cpp; path = src/bits/im2col.cpp; sourceTree = "<group>"; };
 		2D375DCB18A848E2008A97EE /* im2col.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = im2col.hpp; path = src/bits/im2col.hpp; sourceTree = "<group>"; };
+		2DADF17D18ACDB2500D16D4C /* test_gconv_der.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv_der.m; sourceTree = "<group>"; };
+		2DADF17E18ACDB2500D16D4C /* test_gconv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv.m; sourceTree = "<group>"; };
+		2DADF17F18ACDB2500D16D4C /* test_gpool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gpool.m; sourceTree = "<group>"; };
+		2DF145CF18AA61BD00D920BA /* gpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = gpool.cu; path = src/gpool.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,7 +68,11 @@
 			children = (
 				2D375DCE18A84923008A97EE /* bits */,
 				2D375DBE18A7F79E008A97EE /* gconv.cu */,
+				2DF145CF18AA61BD00D920BA /* gpool.cu */,
 				2D375DBB18A7F790008A97EE /* gconv.m */,
+				2DADF17D18ACDB2500D16D4C /* test_gconv_der.m */,
+				2DADF17E18ACDB2500D16D4C /* test_gconv.m */,
+				2DADF17F18ACDB2500D16D4C /* test_gpool.m */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -78,6 +90,8 @@
 			children = (
 				2D375DCA18A848E2008A97EE /* im2col.cpp */,
 				2D375DCB18A848E2008A97EE /* im2col.hpp */,
+				2D06568718AA79BB006545B4 /* pooling.cpp */,
+				2D06568818AA79BB006545B4 /* pooling.hpp */,
 			);
 			name = bits;
 			sourceTree = "<group>";
@@ -90,6 +104,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */,
+				2D06568A18AA79BB006545B4 /* pooling.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,6 +179,7 @@
 			files = (
 				2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */,
 				2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */,
+				2D06568918AA79BB006545B4 /* pooling.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -315,6 +331,7 @@
 				2D375DC718A7FD1C008A97EE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

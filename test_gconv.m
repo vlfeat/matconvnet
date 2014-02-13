@@ -1,4 +1,5 @@
 %clear all mex ;
+addpath mex
 
 switch 2
   case 1

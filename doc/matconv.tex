@@ -5,8 +5,11 @@
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
 
-
 \begin{document}
+
+% ------------------------------------------------------------------
+\section{Convolution}\label{s:convolution}
+% ------------------------------------------------------------------
 
 Let $X,Y$ denote the input and output images respectively. Let $F$ denote the filters. We assume that $X$ and $Y$ have been reshaped into two matrices, with the first index spanning spatial dimensions and the second spanning feature channels. Thus
 \[
@@ -66,8 +69,46 @@ Likewise for the dual operator {\tt row2im}:
    = \sum_{k=0}^{w_f-1} \sum_{p=0}^{h_f-1} Y_{(i,j,k,p,d)}.
 \]
 
-\appendix
-\section{Derivatives}
+% ------------------------------------------------------------------
+\section{Pooling}\label{s:pooling}
+% ------------------------------------------------------------------
+
+Similarly to the convolution case, we define a function:
+\[
+ Y = g(X,\wedge), \quad z = f(Y) \in \real.
+\]
+Where
+\[
+\boxed{Y = g(X,\wedge) = \operatorname{maxrow}\phi(X).}
+\]
+and $\phi(X)$ is the {\tt im2row} operator defined above. In order to write more compact formulas for the derivative, we introduce the matrix $S(X) \in \real^{(w'h')
+\times(w_fh_fd)}$ which selects the maximal element in each row of $\phi(X)$:
+\[
+  Y = \phi(X)S,
+  \qquad
+   S(X) = \operatornamewithlimits{argmax}_{S \geq 0,\ \mathbf{1}^\top S \leq \mathbf{1}^\top} \phi(X) S.
+\]
+Then the derivative is
+\[
+\boxed{
+\frac{d z}{d \vv(X)}
+=
+H^\top
+\vv\left(
+\frac{d f}{d Y}S^\top
+\right)
+=
+\phi^*\left(
+\frac{d f}{d Y}S^\top
+\right).
+}
+\]
+
+
+% ------------------------------------------------------------------
+\appendix\section{Proofs}\label{s:proofs}
+% ------------------------------------------------------------------
+
 \begin{align*}
 \frac{d z}{d \vv(F)^\top}
 &=
