@@ -2,7 +2,7 @@ MEX=/Applications/MATLAB_R2013a.app/bin/mex
 SHELL=/bin/bash
 NVCC=/Developer/NVIDIA/CUDA-5.5/bin/nvcc
 MEXARCH=maci64
-MEXOPTS=-f src/mex_gpu_opts.sh -lmwblas -lcudart -lcublas -largeArrayDims
+MEXOPTS=-f src/mex_gpu_opts.sh -lmwblas -lcudart -lcublas -largeArrayDims -v
 ifneq ($(DEBUG),)
 MEXOPTS+=-g
 endif

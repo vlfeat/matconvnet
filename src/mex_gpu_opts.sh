@@ -62,7 +62,7 @@
             MW_SDKROOT=`$MW_SDK_TEMP`
             MACOSX_DEPLOYMENT_TARGET='10.8'
             ARCHS='x86_64'
-            CFLAGS="-gencode=arch=compute_13,code=sm_13 -gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" -m 64 -I$TMW_ROOT/toolbox/distcomp/gpu/extern/include --compiler-options -fno-common,-arch,$ARCHS,-isysroot.$MW_SDKROOT,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET,-fexceptions"
+            CFLAGS="-gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" -m 64 -I$TMW_ROOT/toolbox/distcomp/gpu/extern/include --compiler-options -fno-common,-arch,$ARCHS,-isysroot.$MW_SDKROOT,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET,-fexceptions"
             CLIBS="$MLIBS -lmwgpu -lcudart"
             COPTIMFLAGS='-O2 -DNDEBUG'
             CDEBUGFLAGS='-g'
@@ -75,7 +75,7 @@
             # C++keyLinkerName:
             # C++keyLinkerVersion:
             CXX="$NVCC"
-            CXXFLAGS="-gencode=arch=compute_13,code=sm_13 -gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" -m 64 -I$TMW_ROOT/toolbox/distcomp/gpu/extern/include --compiler-options -fno-common,-fexceptions,-arch,$ARCHS,-isysroot,$MW_SDKROOT,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+            CXXFLAGS="-gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" -m 64 -I$TMW_ROOT/toolbox/distcomp/gpu/extern/include --compiler-options -fno-common,-fexceptions,-arch,$ARCHS,-isysroot,$MW_SDKROOT,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
             CXXLIBS="$MLIBS -lstdc++ -lmwgpu -lcudart"
             CXXOPTIMFLAGS='-O2 -DNDEBUG'
             CXXDEBUGFLAGS='-g'
@@ -86,6 +86,8 @@
             LDFLAGS="$LDFLAGS -bundle -Wl,-exported_symbols_list,$TMW_ROOT/extern/lib/$Arch/$MAPFILE"
             LDOPTIMFLAGS='-O'
             LDDEBUGFLAGS='-g'
+
+#         CXXFLAGS="-gencode=arch=compute_13,code=sm_13 -gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" -m 64 -I$TMW_ROOT/toolbox/distcomp/gpu/extern/include --compiler-options -fno-common,-fexceptions,-arch,$ARCHS,-isysroot,$MW_SDKROOT,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
 #
             POSTLINK_CMDS=':'
 #----------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Andrea Vedaldi. All rights reserved.
 //
 
+#include <sm_20_atomic_functions.h>
 #include "caffe-scraps.hpp"
 #include "pooling.hpp" 
 
@@ -201,42 +202,6 @@ void maxPoolingBackward_cpu<double>(double* dzdx,
 /*                                         maxPoolingBackward (GPU) */
 /* ---------------------------------------------------------------- */
 
-#if 0
-template <typename Dtype>
-__global__ void maxPoolingBackward_gpu_kernel
-(const int nthreads, const Dtype* bottom_data, const Dtype* top_diff,
- const int num, const int channels, const int height,
- const int width, const int pooled_height, const int pooled_width,
- const int ksize, const int stride, Dtype* bottom_diff)
-{
-  int index = threadIdx.x + blockIdx.x * blockDim.x;
-  if (index < nthreads) {
-    // find out the local index
-    // find out the local offset
-    int w = index % width;
-    int h = (index / width) % height;
-    int c = (index / width / height) % channels;
-    int n = index / width / height / channels;
-    int phstart = (h < ksize) ? 0 : (h - ksize) / stride + 1;
-    int phend = min(h / stride + 1, pooled_height);
-    int pwstart = (w < ksize) ? 0 : (w - ksize) / stride + 1;
-    int pwend = min(w / stride + 1, pooled_width);
-    Dtype gradient = 0;
-    Dtype bottom_datum =
-    bottom_data[((n * channels + c) * height + h) * width + w];
-    top_data += (n * channels + c) * pooled_height * pooled_width;
-    top_diff += (n * channels + c) * pooled_height * pooled_width;
-    for (int ph = phstart; ph < phend; ++ph) {
-      for (int pw = pwstart; pw < pwend; ++pw) {
-        gradient += top_diff[ph * pooled_width + pw] *
-        (bottom_datum == top_data[ph * pooled_width + pw]);
-      }
-    }
-    bottom_diff[index] = gradient;
-  }  // (if index < nthreads)
-}
-#endif
-
 template <typename Dtype>
 __global__ void maxPoolingBackward_gpu_kernel
 (const int nthreads, const Dtype* bottom_data, const Dtype* top_diff,
@@ -270,7 +235,14 @@ __global__ void maxPoolingBackward_gpu_kernel
         }
       }
     }
-    bottom_diff[bestIndex] += top_diff[index] ;
+    /* 
+      This is bad, but required to eliminate a race condition when writing
+      to bottom_diff.
+      Caffe goes the other way around, but requrires remembering the layer
+      output, or the maximal indexes.
+     */
+    atomicAdd(bottom_diff + bestIndex, top_diff[index]) ;
+    //bottom_diff[bestIndex] += top_diff[index] ;
   }
 }
 
@@ -301,6 +273,7 @@ void maxPoolingBackward_gpu<float>(float* pooled,
                                    size_t poolSize,
                                    size_t poolStride) ;
 
+#if 0
 template
 void maxPoolingBackward_gpu<double>(double* pooled,
                                     double const* data,
@@ -310,3 +283,4 @@ void maxPoolingBackward_gpu<double>(double* pooled,
                                     size_t depth,
                                     size_t poolSize,
                                     size_t poolStride) ;
+#endif

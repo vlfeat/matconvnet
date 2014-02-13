@@ -202,9 +202,9 @@ void mexFunction(int nout, mxArray *out[],
       /*                                              Backward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
-        maxPoolingBackward_gpu<float>((float*)mxGetData(resultArray) + resultOffset,
-                                      (float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                                      (float const*)mxGetData(in[IN_DER]) + derOffset,
+        maxPoolingBackward_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
+                                      (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
+                                      (float const*)mxGPUGetDataReadOnly(derGpu) + derOffset,
                                       height, width, depth,
                                       poolWidth, poolStride) ;
       } else {

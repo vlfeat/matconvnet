@@ -41,6 +41,7 @@
 		2DADF17E18ACDB2500D16D4C /* test_gconv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv.m; sourceTree = "<group>"; };
 		2DADF17F18ACDB2500D16D4C /* test_gpool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gpool.m; sourceTree = "<group>"; };
 		2DADF18018ACFA6700D16D4C /* caffe-scraps.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = "caffe-scraps.hpp"; path = "src/bits/caffe-scraps.hpp"; sourceTree = "<group>"; };
+		2DAFFA4F18AD58530014D531 /* mex_gpu_opts.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; name = mex_gpu_opts.sh; path = src/mex_gpu_opts.sh; sourceTree = "<group>"; };
 		2DF145CF18AA61BD00D920BA /* gpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = gpool.cu; path = src/gpool.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -58,8 +59,9 @@
 		2D375DB018A7F064008A97EE = {
 			isa = PBXGroup;
 			children = (
-				2D375DBD18A7F796008A97EE /* src */,
+				2DAFFA4F18AD58530014D531 /* mex_gpu_opts.sh */,
 				2D375DBC18A7F790008A97EE /* Makefile */,
+				2D375DBD18A7F796008A97EE /* src */,
 				2D375DC418A7FD1C008A97EE /* Products */,
 			);
 			sourceTree = "<group>";
