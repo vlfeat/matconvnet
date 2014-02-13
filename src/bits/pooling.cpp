@@ -225,6 +225,7 @@ __global__ void maxPoolingBackward_gpu_kernel
     Dtype bestValue = -FLT_MAX;
     int bestIndex = 0 ;
     bottom_data += (n * channels + c) * height * width;
+    bottom_diff +=(n * channels + c) * height * width;
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
         int index = h * width + w ;

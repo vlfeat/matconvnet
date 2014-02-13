@@ -8,7 +8,7 @@ switch 2
   case 1
     x=im2single(imread('cameraman.tif')) ;
   case 2
-    x=randn(5,7,1,1,'single') ;
+    x=randn(5,7,2,3,'single') ;
     % make sure that all elements in x are different. in this way,
     % we can compute numerical derivatives reliably by adding a delta < .5.
     x(:) = randperm(numel(x))' ;
