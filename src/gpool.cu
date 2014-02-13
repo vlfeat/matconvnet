@@ -25,7 +25,7 @@ void mexFunction(int nout, mxArray *out[],
   mxArray *resultArray ;
 
   size_t height, width, depth, numImages ;
-  size_t poolHeight, poolWidth, poolStride, poolPadding ;
+  size_t poolHeight, poolWidth, poolStride ;
   size_t derHeight, derWidth, derDepth, numDerImages ;
 
   mwSize dataNumDimensions ;
@@ -59,7 +59,6 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("SIZE is not a plain 2 vector.") ;
   }
   poolStride = 1 ;
-  poolPadding = 0 ;
   poolHeight = mxGetPr(in[IN_SIZE])[0] ;
   poolWidth = mxGetPr(in[IN_SIZE])[1] ;
 
@@ -185,7 +184,8 @@ void mexFunction(int nout, mxArray *out[],
     resultGpu = mxGPUCreateGPUArray(4, resultDimensions,
                                     mxSINGLE_CLASS,
                                     mxREAL,
-                                    MX_GPU_DO_NOT_INITIALIZE) ;
+                                    MX_GPU_INITIALIZE_VALUES) ;
+//                                    MX_GPU_DO_NOT_INITIALIZE) ;
   } else {
     resultArray = mxCreateNumericArray(4, resultDimensions,
                                        mxSINGLE_CLASS,
@@ -202,27 +202,32 @@ void mexFunction(int nout, mxArray *out[],
       /*                                              Backward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
-
-
+        maxPoolingBackward_gpu<float>((float*)mxGetData(resultArray) + resultOffset,
+                                      (float const*)mxGetData(in[IN_DATA]) + dataOffset,
+                                      (float const*)mxGetData(in[IN_DER]) + derOffset,
+                                      height, width, depth,
+                                      poolWidth, poolStride) ;
       } else {
-        maxPoolingBackward<float>((float*)mxGetData(resultArray) + resultOffset,
-                                  (float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                                  (float const*)mxGetData(in[IN_DER]) + derOffset,
-                                  height, width, depth,
-                                  poolWidth, poolStride) ;
+        maxPoolingBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
+                                      (float const*)mxGetData(in[IN_DATA]) + dataOffset,
+                                      (float const*)mxGetData(in[IN_DER]) + derOffset,
+                                      height, width, depth,
+                                      poolWidth, poolStride) ;
       }
     } else {
       /* ---------------------------------------------------------- */
       /*                                               Forward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
-
-
+        maxPooling_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
+                              (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
+                              height, width, depth,
+                              poolWidth, poolStride) ;
       } else {
-        maxPooling<float>((float*)mxGetData(resultArray) + resultOffset,
-                          (float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                          height, width, depth,
-                          poolWidth, poolStride) ;
+        maxPooling_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
+                              (float const*)mxGetData(in[IN_DATA]) + dataOffset,
+                              height, width, depth,
+                              poolWidth, poolStride) ;
       }
     }
   }

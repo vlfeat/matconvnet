@@ -2,20 +2,32 @@
 addpath mex
 
 pool = [3 3] ;
+gpu = true ;
 delta = 0.01 ;
 switch 2
   case 1
     x=im2single(imread('cameraman.tif')) ;
   case 2
-    x=randn(5,7,3,2,'single') ;
+    x=randn(5,7,1,1,'single') ;
     % make sure that all elements in x are different. in this way,
     % we can compute numerical derivatives reliably by adding a delta < .5.
     x(:) = randperm(numel(x))' ;
 end
 
-y = gpool(x, pool) ;
+if ~gpu
+  y = gpool(x, pool) ;
+else
+  y = gpool(gpuArray(x), pool) ;
+  y = gather(y) ;
+  y_ = gpool(x,pool) ;
+end
 dzdy = randn(size(y),'single') ;
-dzdx = gpool(x, pool, dzdy) ;
+if ~gpu
+  dzdx = gpool(x, pool, dzdy) ;
+else
+  dzdx = gpool(gpuArray(x), pool, gpuArray(dzdy)) ;
+  dzdx = gather(dzdx) ;
+end
 
 % numerical derivative
 dzdx_=zeros(size(dzdx));

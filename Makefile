@@ -24,6 +24,9 @@ mex/%.mexmaci64 : src/%.cu mex/.stamp
 	$(MEX) $(MEXOPTS) "$(<)" -o "$(@)" \
 	 2> >(sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2)
 
+mex/gconv.mexmaci64 : $(shell echo src/bits/im2col.{cpp,hpp})
+mex/gpool.mexmaci64 : $(shell echo src/bits/pooling.{cpp,hpp})
+
 info:
 	@echo "cus=$(cus)"
 	@echo "mexs=$(mexs)"

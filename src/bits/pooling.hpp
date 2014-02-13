@@ -10,12 +10,41 @@
 #define __matconv__pooling__
 
 template<typename T>
-void maxPooling(T* pooled,
-                T const data,
-                size_t width,
-                size_t height,
-                size_t depth,
-                size_t poolSize,
-                size_t poolStride) ;
+void maxPooling_cpu(T* pooled,
+                    T const data,
+                    size_t width,
+                    size_t height,
+                    size_t depth,
+                    size_t poolSize,
+                    size_t poolStride) ;
+
+template<typename T>
+void maxPoolingBackward_cpu(T* dzdx,
+                            T const* data,
+                            T const* dzdy,
+                            size_t width,
+                            size_t height,
+                            size_t depth,
+                            size_t poolSize,
+                            size_t poolStride) ;
+
+template<typename T>
+void maxPooling_gpu(T* pooled,
+                    T const data,
+                    size_t width,
+                    size_t height,
+                    size_t depth,
+                    size_t poolSize,
+                    size_t poolStride) ;
+
+template<typename T>
+void maxPoolingBackward_gpu(T* dzdx,
+                            T const* data,
+                            T const* dzdy,
+                            size_t width,
+                            size_t height,
+                            size_t depth,
+                            size_t poolSize,
+                            size_t poolStride) ;
 
 #endif /* defined(__matconv__pooling__) */

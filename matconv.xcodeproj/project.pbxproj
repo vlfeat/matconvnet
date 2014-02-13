@@ -40,6 +40,7 @@
 		2DADF17D18ACDB2500D16D4C /* test_gconv_der.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv_der.m; sourceTree = "<group>"; };
 		2DADF17E18ACDB2500D16D4C /* test_gconv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv.m; sourceTree = "<group>"; };
 		2DADF17F18ACDB2500D16D4C /* test_gpool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gpool.m; sourceTree = "<group>"; };
+		2DADF18018ACFA6700D16D4C /* caffe-scraps.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = "caffe-scraps.hpp"; path = "src/bits/caffe-scraps.hpp"; sourceTree = "<group>"; };
 		2DF145CF18AA61BD00D920BA /* gpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = gpool.cu; path = src/gpool.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -92,6 +93,7 @@
 				2D375DCB18A848E2008A97EE /* im2col.hpp */,
 				2D06568718AA79BB006545B4 /* pooling.cpp */,
 				2D06568818AA79BB006545B4 /* pooling.hpp */,
+				2DADF18018ACFA6700D16D4C /* caffe-scraps.hpp */,
 			);
 			name = bits;
 			sourceTree = "<group>";
