@@ -54,7 +54,7 @@ void mexFunction(int nout, mxArray *out[],
   if (!mxIsNumeric(in[IN_SIZE]) ||
        mxGetClassID(in[IN_SIZE]) != mxDOUBLE_CLASS ||
        mxIsComplex(in[IN_SIZE]) ||
-       mxGetNumberOfDimensions(in[IN_SIZE]) != 2)
+       mxGetNumberOfElements(in[IN_SIZE]) != 2)
   {
     mexErrMsgTxt("SIZE is not a plain 2 vector.") ;
   }
@@ -71,7 +71,7 @@ void mexFunction(int nout, mxArray *out[],
     dataDimensions = mxGPUGetDimensions(dataGpu) ;
     if (backMode) {
       if (!mxIsGPUArray(in[IN_DER])) {
-        mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
+        mexErrMsgTxt("DATA is a GPU array but DER is not.") ;
       }
       derGpu = mxGPUCreateFromMxArray(in[IN_DER]) ;
       derClassID = mxGPUGetClassID(derGpu) ;
