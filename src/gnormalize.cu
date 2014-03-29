@@ -4,7 +4,7 @@
 #include <blas.h>
 #include <iostream>
 
-//#include "bits/normalize.cpp"
+#include "bits/normalize.cpp"
 
 enum {
   IN_DATA = 0, IN_PARAM, IN_DER, IN_END
@@ -152,7 +152,13 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  if (depth < normDepth) {
+  if (normDepth < 1) {
+    mexErrMsgTxt("The normalization depth is smaller than 1.") ;
+  }
+  if (normDepth & 0x1 == 0) {
+    mexErrMsgTxt("The normalization depth is not odd.") ;
+  }
+  if (normDepth > depth) {
     mexErrMsgTxt("DATA depth cannot be smaller than normalization depth.") ;
   }
 
@@ -190,7 +196,12 @@ void mexFunction(int nout, mxArray *out[],
       /*                                               Forward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+
       } else {
+        normalize_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
+                             (float const*)mxGetData(in[IN_DATA]) + dataOffset,
+                             height, width, depth,
+                             normDepth, normKappa, normAlpha, normBeta) ;
       }
     }
   }
