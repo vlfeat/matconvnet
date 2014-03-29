@@ -8,10 +8,14 @@
 \begin{document}
 
 % ------------------------------------------------------------------
-\section{Convolution}\label{s:convolution}
+\section{Layers}
 % ------------------------------------------------------------------
 
-Let $X,Y$ denote the input and output images respectively. Let $F$ denote the filters. We assume that $X$ and $Y$ have been reshaped into two matrices, with the first index spanning spatial dimensions and the second spanning feature channels. Thus
+% ------------------------------------------------------------------
+\subsection{Convolution}\label{s:convolution}
+% ------------------------------------------------------------------
+
+Let $X,Y$ denote the input and output images (maps) respectively. Let $F$ denote the filters. We assume that $X$ and $Y$ have been reshaped into two matrices, with the first index spanning spatial dimensions and the second spanning feature channels. Thus
 \[
  X\in\real^{(wh) \times d}, \qquad
  Y\in\real^{(w'h') \times k}, \qquad
@@ -19,7 +23,7 @@ Let $X,Y$ denote the input and output images respectively. Let $F$ denote the fi
  \qquad
  w' = w - w_f + 1,
  \qquad
- h'' = h - h_f + 1.
+ h'' = h - h_f + 1,
 \]
 where $(w,h,d)$ is the size of the input image $X$, $(w',h',k)$ is the size of the output image, $(w_f,h_f,d)$ is the size of a filter, and there are $k$ filters. The output image $Y$ is a function of $X$ and $F$ and is connected to the output energy by a function $f$:
 \[
@@ -70,7 +74,7 @@ Likewise for the dual operator {\tt row2im}:
 \]
 
 % ------------------------------------------------------------------
-\section{Pooling}\label{s:pooling}
+\subsection{Max pooling}\label{s:pooling}
 % ------------------------------------------------------------------
 
 Similarly to the convolution case, we define a function:
@@ -104,6 +108,130 @@ H^\top
 }
 \]
 
+% ------------------------------------------------------------------
+\subsection{Normalization}\label{s:normalization}
+% ------------------------------------------------------------------
+
+The normalisation operation normalises the feature channels at any given spatial location $(i,j)$:
+\[
+ Y_{(i,j,k)} = X_{(i,j,k)} \left( \kappa + \alpha \sum_{t\in G(k)} X_{(i,j,t)}^2 \right)^{-\beta},
+ \qquad
+ z = f(Y),
+\]
+where $G(k) \subset \{1, 2, \dots, D\}$ is a subset of the input channels. Note that input $X$ and output $Y$ have the same dimensions. The derivative is easily computed as:
+\[
+\frac{dz}{d X_{(i,j,d)}}
+=
+\sum_{k:d\in G(k)}
+\frac{dz}{d Y_{(i,j,k)}}
+\left(
+L(i,j,d|X)^{-\beta}X_{(i,j,d)} \delta_{\{d=k\}}
+-
+2 \alpha\beta L(i,j,k|X)^{-\beta-1} X_{(i,j,k)}
+\right)
+\]
+where
+\[
+ L(i,j,k|X) = \kappa + \alpha \sum_{t\in G(k)} X_{(i,j,t)}^2.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Vectorisation}\label{s:vectorisation}
+% ------------------------------------------------------------------
+
+Vectorisation (utilised between convolutional and fully connected layers):
+\[
+ Y = \vv X, \qquad z = f(Y).
+\]
+The derivative is also a rearrangement of terms:
+\[
+\frac{dz}{dX} = \operatorname{reshape} \frac{dz}{dY}.
+\]
+
+
+% ------------------------------------------------------------------
+\subsection{ReLU}\label{s:relu}
+% ------------------------------------------------------------------
+
+Rectified linear unit:
+\[
+ Y_k = \max\{0, X_k\}, \qquad z = f(Y).
+\]
+Derivative:
+\[
+\frac{dz}{dX_k}
+=
+\frac{dz}{dY_k} \delta_{\{X_k > 0 \}}.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Fully connected layer}\label{s:fully}
+% ------------------------------------------------------------------
+
+A fully connected layer is simply a matrix multiplication:
+\[
+  \vv Y = W \vv X, \qquad z = f(Y).
+\]
+The derivatives w.r.t. input $X$ and parameters $W$ are:
+\[
+\frac{dz}{d\vv X}
+= 
+\frac{dz}{d(\vv Y)^\top} W,
+\qquad
+\frac{dz}{d W}
+= 
+\frac{df}{d \vv Y} (\vv X)^\top.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Softmax}\label{s:softmax}
+% ------------------------------------------------------------------
+
+Softmax:
+\[
+ Y_k = \frac{e^{X_i}}{\sum_{t=1}^D e^{X_t}}, \qquad z = f(Y).
+\]
+Derivative
+\[
+\frac{dz}{d X_d}
+=
+\sum_{k}
+\frac{dz}{d Y_k}
+\left(
+e^{X_d} L(X)^{-1} \delta_{\{k=d\}}
+-
+e^{X_d}
+e^{X_k} L(X)^{-2}
+\right),
+\quad
+L(X) = \sum_{t=1}^D e^{X_t}.
+\]
+Simplifyng
+\[
+\frac{dz}{d X_d}
+=
+Y_d 
+\left(
+\frac{dz}{d Y_d}
+-
+\sum_{k=1}^K
+\frac{dz}{d Y_k} Y_k.
+\right).
+\]
+
+% ------------------------------------------------------------------
+\subsection{Log-loss}\label{s:loss}
+% ------------------------------------------------------------------
+
+The log loss is:
+\[
+ y = \ell(X,c) = - \log X_c, \qquad z = f(y) = y,
+\]
+where $c \in \{1,2,\dots,D\}$ is the g.t\@. class of the image and, this being the output of the network, has $z=y$. The derivative is
+\[
+\frac{dz}{dX_c} = - \frac{1}{X_c} \delta_{\{k = c\}}.
+\]
+Note that one takes the average loss on all the training data.
 
 % ------------------------------------------------------------------
 \appendix\section{Proofs}\label{s:proofs}
