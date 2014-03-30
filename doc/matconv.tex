@@ -122,13 +122,12 @@ where $G(k) \subset \{1, 2, \dots, D\}$ is a subset of the input channels. Note 
 \[
 \frac{dz}{d X_{(i,j,d)}}
 =
+\frac{dz}{d Y_{(i,j,d)}}
+L(i,j,d|X)^{-\beta}
+-2\alpha\beta
 \sum_{k:d\in G(k)}
 \frac{dz}{d Y_{(i,j,k)}}
-\left(
-L(i,j,d|X)^{-\beta}X_{(i,j,d)} \delta_{\{d=k\}}
--
-2 \alpha\beta L(i,j,k|X)^{-\beta-1} X_{(i,j,k)}
-\right)
+L(i,j,k|X)^{-\beta-1} X_{(i,j,ki)} X_{(i,j,d)}
 \]
 where
 \[
@@ -174,7 +173,7 @@ A fully connected layer is simply a matrix multiplication:
 \]
 The derivatives w.r.t. input $X$ and parameters $W$ are:
 \[
-\frac{dz}{d\vv X}
+\frac{dz}{d\vv(X)^\top}
 = 
 \frac{dz}{d(\vv Y)^\top} W,
 \qquad
