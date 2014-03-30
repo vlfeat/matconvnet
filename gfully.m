@@ -1,9 +1,9 @@
-function [Y,dzdW] = gfully(X, W, dzdY)
+function [y,dzdw] = gfully(x, w, dzdy)
 
-Y = W * X ;
+y = w * x ;
 
 if nargin <= 2, return ; end
 
-% backwad
-Y = dzdY'*W ;
-dzdW = dzdY * X' ;
+% backward
+y = (dzdy' * w)' ;
+dzdw = dzdy * x' ;

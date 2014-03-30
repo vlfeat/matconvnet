@@ -1,4 +1,4 @@
-for l=6
+for l=3
   switch l
     case 1
       disp('testing gloss') ;
@@ -55,12 +55,33 @@ for l=6
       
     case 6
       disp('testing gnormalize') ;
-      param = [2, .1, .2, .75] ;
-      x = randn(5,4,3,2,'single') ;
+      param = [3, .1, .5, .75] ;
+      x = randn(3,2,10,4,'single') ;
       y = gnormalize(x,param) ;
       dzdy = randn(size(y),'single') ;
       dzdx = gnormalize(x,param,dzdy) ;
       testder(@(x) gnormalize(x,param), x, dzdy, dzdx) ;
+      
+    case 7
+      disp('testing gvec') ;
+      x = randn(3,2,10,4,'single') ;
+      y = gvec(x) ;
+      dzdy = randn(size(y),'single') ;
+      dzdx = gvec(x,dzdy) ;
+      testder(@(x) gvec(x), x, dzdy, dzdx) ;
+      
+    case 8
+      disp('testing relu') ;
+       x = randn(5,5,1,1,'single') ;
+      % make sure that all elements in x are different. in this way,
+      % we can compute numerical derivatives reliably by adding a delta < .5.
+      x(:) = randperm(numel(x))' - round(numel(x)/2) ;
+      % avoid non-diff value for test
+      x(x==0)=1 ;
+      y = grelu(x) ;
+      dzdy = randn(size(y),'single') ;
+      dzdx = grelu(x,dzdy) ;
+      testder(@(x) grelu(x), x, dzdy, dzdx) ;
   end
 end
 
