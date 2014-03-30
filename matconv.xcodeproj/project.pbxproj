@@ -12,6 +12,8 @@
 		2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DBE18A7F79E008A97EE /* gconv.cu */; };
 		2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DCA18A848E2008A97EE /* im2col.cpp */; };
 		2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D375DCB18A848E2008A97EE /* im2col.hpp */; };
+		2DADAFF718E6430500165C90 /* normalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DADAFF518E6430500165C90 /* normalize.cpp */; };
+		2DADAFF818E6430500165C90 /* normalize.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DADAFF618E6430500165C90 /* normalize.hpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -37,6 +39,9 @@
 		2D375DC318A7FD1C008A97EE /* libgconv.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libgconv.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D375DCA18A848E2008A97EE /* im2col.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = im2col.cpp; path = src/bits/im2col.cpp; sourceTree = "<group>"; };
 		2D375DCB18A848E2008A97EE /* im2col.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = im2col.hpp; path = src/bits/im2col.hpp; sourceTree = "<group>"; };
+		2DADAFF418E63E7800165C90 /* gnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = gnormalize.cu; path = src/gnormalize.cu; sourceTree = "<group>"; };
+		2DADAFF518E6430500165C90 /* normalize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = normalize.cpp; path = src/bits/normalize.cpp; sourceTree = "<group>"; };
+		2DADAFF618E6430500165C90 /* normalize.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = normalize.hpp; path = src/bits/normalize.hpp; sourceTree = "<group>"; };
 		2DADF17D18ACDB2500D16D4C /* test_gconv_der.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv_der.m; sourceTree = "<group>"; };
 		2DADF17E18ACDB2500D16D4C /* test_gconv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gconv.m; sourceTree = "<group>"; };
 		2DADF17F18ACDB2500D16D4C /* test_gpool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test_gpool.m; sourceTree = "<group>"; };
@@ -72,6 +77,7 @@
 				2D375DCE18A84923008A97EE /* bits */,
 				2D375DBE18A7F79E008A97EE /* gconv.cu */,
 				2DF145CF18AA61BD00D920BA /* gpool.cu */,
+				2DADAFF418E63E7800165C90 /* gnormalize.cu */,
 				2D375DBB18A7F790008A97EE /* gconv.m */,
 				2DADF17D18ACDB2500D16D4C /* test_gconv_der.m */,
 				2DADF17E18ACDB2500D16D4C /* test_gconv.m */,
@@ -95,6 +101,8 @@
 				2D375DCB18A848E2008A97EE /* im2col.hpp */,
 				2D06568718AA79BB006545B4 /* pooling.cpp */,
 				2D06568818AA79BB006545B4 /* pooling.hpp */,
+				2DADAFF518E6430500165C90 /* normalize.cpp */,
+				2DADAFF618E6430500165C90 /* normalize.hpp */,
 				2DADF18018ACFA6700D16D4C /* caffe-scraps.hpp */,
 			);
 			name = bits;
@@ -109,6 +117,7 @@
 			files = (
 				2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */,
 				2D06568A18AA79BB006545B4 /* pooling.hpp in Headers */,
+				2DADAFF818E6430500165C90 /* normalize.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -184,6 +193,7 @@
 				2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */,
 				2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */,
 				2D06568918AA79BB006545B4 /* pooling.cpp in Sources */,
+				2DADAFF718E6430500165C90 /* normalize.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
