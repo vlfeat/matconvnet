@@ -26,6 +26,7 @@ mex/%.mexmaci64 : src/%.cu mex/.stamp
 
 mex/gconv.mexmaci64 : $(shell echo src/bits/im2col.{cpp,hpp})
 mex/gpool.mexmaci64 : $(shell echo src/bits/pooling.{cpp,hpp})
+mex/gnormalize.mexmaci64 : $(shell echo src/bits/normalize.{cpp,hpp})
 
 info:
 	@echo "cus=$(cus)"
