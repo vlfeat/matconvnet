@@ -12,6 +12,10 @@
 /*                                                  normalize (CPU) */
 /* ---------------------------------------------------------------- */
 
+#define xat(t) x[(t) * offset]
+#define yat(t) y[(t) * offset]
+#define zat(t) z[(t) * offset]
+
 template<typename T>
 void normalize_cpu(T* normalized,
                    T const* data,
@@ -22,39 +26,22 @@ void normalize_cpu(T* normalized,
                    T kappa, T alpha, T beta)
 {
   int m = ((signed)normDepth-1)/2 ;
+  int offset = width*height ;
   for (int h = 0 ; h < height ; ++h) {
     for (int w = 0 ; w < width ; ++w) {
-      int c ;
+      int t ;
       T const* x = data + w + h * width ;
       T* y = normalized + w + h * width ;
       T acc = 0 ;
-      /* window [0, m-1] */
-      for (c = 0 ; c < m ; ++c) {
-        T ap = *x++ ;
-        acc += ap*ap ;
-      }
-      /* window [0, ..., t, ..., t+m] + t, 0<=t<m */
-      for ( ; c < 2*m-1 ; ++c) {
-        T a = *(x - m) ;
-        T ap = *x++ ;
-        acc += ap*ap ;
-        *y++ = a * pow(kappa + alpha * acc, -beta) ;
-      }
-      /* window [t+m, ..., t, ..., t+m] + t, m<=t<depth-m */
-      for ( ; c < depth-m ; ++c) {
-        T am = *(x - 2*m - 1) ;
-        T a  = *(x - m) ;
-        T ap = *x++ ;
+      for (t = -m ; t < (signed)depth + m ; ++t) {
+        T ap = 0 ;
+        T am = 0 ;
+        if (t-m-1 >= 0) { am = xat(t-m-1) ; }
+        if (t+m < depth) { ap = xat(t+m) ; }
         acc += ap*ap - am*am ;
-        *y++ = a * pow(kappa + alpha * acc, -beta) ;
-      }
-      /* window [t+m, ..., t, ..., m-1] + t, depth-m<=t<depth-1 */
-      for ( ; c < depth ; ++c) {
-        T am = *(x - 2*m - 1) ;
-        T a  = *(x - m) ;
-        x++ ;
-        acc -= am*am ;
-        *y++ = a * pow(kappa + alpha * acc, -beta) ;
+        if (0 <= t && t < depth) {
+          yat(t) = xat(t) * pow(kappa + alpha * acc, -beta) ;
+        }
       }
     }
   }
@@ -77,3 +64,74 @@ void normalize_cpu<double>(double* normalized,
                            size_t depth,
                            size_t normDetph,
                            double kappa, double alpha, double beta) ;
+
+
+/* ---------------------------------------------------------------- */
+/*                                                  normalize (CPU) */
+/* ---------------------------------------------------------------- */
+
+template<typename T>
+void normalizeBackward_cpu(T* normalized,
+                           T const* data,
+                           T const* dzdy,
+                           size_t width,
+                           size_t height,
+                           size_t depth,
+                           size_t normDepth,
+                           T kappa, T alpha, T beta)
+{
+  int m = ((signed)normDepth-1)/2 ;
+  int offset = width*height ;
+  T ab2 = 2*alpha*beta ;
+  for (int h = 0 ; h < height ; ++h) {
+    for (int w = 0 ; w < width ; ++w) {
+      int t, q ;
+      T const* x = data + w + h * width ;
+      T* y = normalized + w + h * width ;
+      T const* z = dzdy + w + h * width ;
+      T acc = 0 ;
+      for (t = 0 ; t < (signed)depth ; ++t) {
+        yat(t) = 0 ;
+      }
+      for (t = -m ; t < (signed)depth + m ; ++t) {
+        int q1 = t-m ;
+        int q2 = t+m ;
+        T ap = 0 ;
+        T am = 0 ;
+        if (t-m-1 >= 0) { am = xat(t-m-1) ; } else { q1 = 0 ; }
+        if (t+m < depth) { ap = xat(t+m) ; } else { q2 = depth - 1 ; }
+        acc += ap*ap - am*am ;
+        T L = kappa + alpha * acc ;
+        T Lbeta = pow(L, -beta) ;
+        T Lbeta1 = Lbeta / L ;
+
+        if (0 <= t && t < depth) {
+          yat(t) += zat(t) * Lbeta ;
+          for (q = q1 ; q <= q2 ; ++ q) {
+            yat(q) -= zat(t) * xat(t) * xat(q) * ab2 * Lbeta1 ;
+          }
+        }
+      }
+    }
+  }
+}
+
+template
+void normalizeBackward_cpu<float>(float* normalized,
+                                  float const* data,
+                                  float const* dzdy,
+                                  size_t width,
+                                  size_t height,
+                                  size_t depth,
+                                  size_t normDetph,
+                                  float kappa, float alpha, float beta) ;
+
+template
+void normalizeBackward_cpu<double>(double* normalized,
+                                   double const* data,
+                                   double const* dzdy,
+                                   size_t width,
+                                   size_t height,
+                                   size_t depth,
+                                   size_t normDetph,
+                                   double kappa, double alpha, double beta) ;
