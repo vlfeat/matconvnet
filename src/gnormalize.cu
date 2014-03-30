@@ -62,9 +62,9 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("PARAM is not a plain 4 vector.") ;
   }
   normDepth = (size_t) mxGetPr(in[IN_PARAM])[0]  ;
-  normKappa = (size_t) mxGetPr(in[IN_PARAM])[1]  ;
-  normAlpha = (size_t) mxGetPr(in[IN_PARAM])[2]  ;
-  normBeta = (size_t) mxGetPr(in[IN_PARAM])[3]  ;
+  normKappa = mxGetPr(in[IN_PARAM])[1]  ;
+  normAlpha = mxGetPr(in[IN_PARAM])[2]  ;
+  normBeta = mxGetPr(in[IN_PARAM])[3]  ;
 
   if (gpuMode) {
     mxInitGPU() ;
@@ -155,7 +155,7 @@ void mexFunction(int nout, mxArray *out[],
   if (normDepth < 1) {
     mexErrMsgTxt("The normalization depth is smaller than 1.") ;
   }
-  if (normDepth & 0x1 == 0) {
+  if ((normDepth & 0x1) == 0) {
     mexErrMsgTxt("The normalization depth is not odd.") ;
   }
   if (normDepth > depth) {
@@ -190,6 +190,11 @@ void mexFunction(int nout, mxArray *out[],
       /* ---------------------------------------------------------- */
       if (gpuMode) {
       } else {
+        normalizeBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
+                                     (float const*)mxGetData(in[IN_DATA]) + dataOffset,
+                                     (float const*)mxGetData(in[IN_DER]) + derOffset,
+                                     height, width, depth,
+                                     normDepth, normKappa, normAlpha, normBeta) ;
       }
     } else {
       /* ---------------------------------------------------------- */
