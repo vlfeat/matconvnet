@@ -82,9 +82,9 @@ for l=1:8
 
     case 8
       disp('testing relu') ;
-       x = randn(5,5,1,1,'single') ;
       % make sure that all elements in x are different. in this way,
       % we can compute numerical derivatives reliably by adding a delta < .5.
+      x = randn(5,5,1,1,'single') ;
       x(:) = randperm(numel(x))' - round(numel(x)/2) ;
       % avoid non-diff value for test
       x(x==0)=1 ;

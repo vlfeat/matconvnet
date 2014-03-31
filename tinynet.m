@@ -16,9 +16,9 @@ for i=1:n
   res(i).time = tic ;
   switch l.type
     case 'conv'
-      res(i+1).x = gconv(res(i).x, l.w) ;      
+      res(i+1).x = gconv(res(i).x, l.filters, 'pad', l.pad, 'stride', l.stride) ;      
     case 'pool'
-      res(i+1).x = gpool(res(i).x, l.pool) ;
+      res(i+1).x = gpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
     case 'normalize'    
       res(i+1).x = gnormalize(res(i).x, l.param) ;
     case 'fully'
@@ -44,9 +44,11 @@ if doder
     res(i).backwardTime = tic ;
     switch l.type
       case 'conv'
-        [res(i).dzdw, res(i).dzdx] = gconv(res(i).x, l.w, res(i+1).dzdx) ;
+        [res(i).dzdw, res(i).dzdx] = gconv(res(i).x, l.filters, res(i+1).dzdx, ...
+          'pad', l.pad, 'stride', l.stride) ;
       case 'pool'
-        res(i).dzdx = gpool(res(i).x, l.pool, res(i+1).dzdx) ;
+        res(i).dzdx = gpool(res(i).x, l.pool, res(i+1).dzdx, ...
+          'pad', l.pad, 'stride', l.stride) ;
       case 'normalize'
         res(i).dzdx = gnormalize(res(i).x, l.param, res(i+1).dzdx) ;
       case 'fully'

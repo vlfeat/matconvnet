@@ -64,6 +64,7 @@ void mexFunction(int nout, mxArray *out[],
   size_t derHeight, derWidth, derDepth, numDerImages ;
   int stride = 1 ;
   int pad = 0 ;
+  int numGroups = 1 ;
   mwSize dataNumDimensions ;
   mwSize filtersNumDimensions ;
   mwSize derNumDimensions ;
@@ -230,7 +231,7 @@ void mexFunction(int nout, mxArray *out[],
   if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
     mexPrintf("gconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gconv: stride: %d, pad: %d\n", stride, pad) ;
+    mexPrintf("gconv: stride: %d, pad: %d\n", stride, pad, numGroups) ;
     mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
@@ -347,7 +348,6 @@ void mexFunction(int nout, mxArray *out[],
                       &beta,
                       (float*)mxGPUGetData(dfiltersGpu), (int)m) ;
         } else {
-#if 1
           im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
                             depth, width, height,
                             filterHeight,
@@ -360,7 +360,6 @@ void mexFunction(int nout, mxArray *out[],
                 (float*)mxGetData(in[IN_DER]) + derOffset,(opB == 'n') ? &k : &n,
                 &beta,
                 (float*)mxGetData(dfiltersArray), &m) ;
-#endif
         }
       }
       /* derivative w.r.t. input image dz/dX */
@@ -396,15 +395,11 @@ void mexFunction(int nout, mxArray *out[],
                 (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
                 &beta,
                 (float*)mxGetData(tempArray), &m) ;
-#if 1
-
           col2im_cpu<float>((float*)mxGetData(tempArray),
                             depth, width, height,
                             filterHeight,
                             stride, pad,
                             (float*)mxGetData(resultArray) + resultOffset) ;
-#endif
-
         }
       }
     } else {
@@ -441,7 +436,6 @@ void mexFunction(int nout, mxArray *out[],
                     (float*)mxGPUGetData(resultGpu) + resultOffset, (int)m) ;
 
       } else {
-#if 1
         if (opA == 't') {
 #if 0
           im2row_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
@@ -464,7 +458,6 @@ void mexFunction(int nout, mxArray *out[],
               (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
               &beta,
               (float*)mxGetData(resultArray) + resultOffset, &m) ;
-#endif
       }
     }
   }
