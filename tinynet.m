@@ -23,7 +23,7 @@ for i=1:n
     case 'normalize'    
       res(i+1).x = gnormalize(res(i).x, l.param) ;
     case 'fully'
-      res(i+1).x = gfully(res(i).x, l.w) ;
+      res(i+1).x = gfully(res(i).x, l.w) + l.b ;
     case 'softmax'
       res(i+1).x = gsoftmax(res(i).x) ;
     case 'loss'
