@@ -6,7 +6,23 @@
 #include <blas.h>
 #include <iostream>
 
+#include "bits/mexutils.h"
 #include "bits/im2col.cpp"
+
+/* option codes */
+enum {
+  opt_stride = 0,
+  opt_pad,
+  opt_verbose
+} ;
+
+/* options */
+vlmxOption  options [] = {
+  {"Stride",           1,   opt_stride            },
+  {"Pad",              1,   opt_pad               },
+  {"Verbose",          0,   opt_verbose           },
+  {0,                  0,   0                     }
+} ;
 
 enum {
   IN_DATA = 0, IN_FILTERS, IN_DER, IN_END
@@ -15,6 +31,12 @@ enum {
 enum {
   OUT_RESULT = 0, OUT_RESULT2, OUT_END
 } ;
+
+
+inline vl_uindex divup(vl_uindex i, vl_uindex d)
+{
+  return (i + d - 1) / d ;
+}
 
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
@@ -40,6 +62,8 @@ void mexFunction(int nout, mxArray *out[],
   size_t height, width, depth, numImages ;
   size_t filterHeight, filterWidth, filterDepth, numFilters ;
   size_t derHeight, derWidth, derDepth, numDerImages ;
+  int stride = 1 ;
+  int pad = 0 ;
   mwSize dataNumDimensions ;
   mwSize filtersNumDimensions ;
   mwSize derNumDimensions ;
@@ -52,18 +76,49 @@ void mexFunction(int nout, mxArray *out[],
 
   bool gpuMode = false ;
   bool backMode = false ;
-  int verbosiy = 1 ;
+
+  int verbosity = 0 ;
+  int opt ;
+  int next = IN_END ;
+  mxArray const *optarg ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
   /* -------------------------------------------------------------- */
 
-  /* Throw an error if the input is not a GPU array. */
-  if (nin != 2 && nin != 3) {
-    mexErrMsgTxt("The arguments are neither two or three.") ;
+  if (nin < 2) {
+    mexErrMsgTxt("The arguments are less than two.") ;
   }
 
-  backMode = (nin == 3) ;
+  if (nin > 2 && vlmxIsString(in[2],-1)) {
+    next = 2 ;
+    backMode = 0 ;
+  } else {
+    backMode = (nin >= 3) ;
+  }
+
+  while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
+    switch (opt) {
+      case opt_verbose :
+        ++ verbosity ;
+        break ;
+
+      case opt_stride :
+        if (!vlmxIsPlainScalar(optarg) || (stride = (int) *mxGetPr(optarg)) < 1) {
+          mexErrMsgTxt("STRIDE must be a positive integer.") ;
+        }
+        break ;
+
+      case opt_pad :
+        if (!vlmxIsPlainScalar(optarg) || (pad = (int) *mxGetPr(optarg)) < 0) {
+          mexErrMsgTxt("PAD must be a non-negative integer.") ;
+        }
+        break ;
+
+      default: break ;
+    }
+  }
+
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
 
   if (gpuMode) {
@@ -153,8 +208,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (!backMode) {
-    resultDimensions[0] = height - filterHeight + 1 ;
-    resultDimensions[1] = width - filterWidth + 1 ;
+    resultDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
+    resultDimensions[1] = (width + 2*pad - filterHeight)/stride + 1 ;
     resultDimensions[2] = numFilters ;
     resultDimensions[3] = numImages ;
   } else {
@@ -168,13 +223,14 @@ void mexFunction(int nout, mxArray *out[],
     dfiltersDimensions[3] = numFilters ;
   }
 
-  tempDimensions[0] = height - filterHeight + 1 ;
-  tempDimensions[1] = width - filterWidth + 1 ;
+  tempDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
+  tempDimensions[1] = (width + 2*pad - filterHeight)/stride + 1 ;
   tempDimensions[2] = filterHeight*filterWidth*filterDepth ;
 
-  if (verbosiy > 0) {
+  if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
     mexPrintf("gconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("gconf: stride: %d, pad: %d\n", stride, pad) ;
     mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
@@ -277,9 +333,9 @@ void mexFunction(int nout, mxArray *out[],
         /* derivative w.r.t. filters dz/dF */
         if (gpuMode) {
           im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
-                            depth, height, width,
+                            depth, width, height,
                             filterHeight,
-                            1, // stride,
+                            stride, pad,
                             (float *)mxGPUGetData(tempGpu)) ;
           cublasSgemm(handle,
                       (opA == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
@@ -291,10 +347,11 @@ void mexFunction(int nout, mxArray *out[],
                       &beta,
                       (float*)mxGPUGetData(dfiltersGpu), (int)m) ;
         } else {
+#if 1
           im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                            depth, height, width,
+                            depth, width, height,
                             filterHeight,
-                            1, // stride,
+                            stride, pad,
                             (float *)mxGetData(tempArray)) ;
           sgemm(&opA, &opB,
                 &m, &n, &k,
@@ -303,6 +360,7 @@ void mexFunction(int nout, mxArray *out[],
                 (float*)mxGetData(in[IN_DER]) + derOffset,(opB == 'n') ? &k : &n,
                 &beta,
                 (float*)mxGetData(dfiltersArray), &m) ;
+#endif
         }
       }
       /* derivative w.r.t. input image dz/dX */
@@ -325,9 +383,9 @@ void mexFunction(int nout, mxArray *out[],
                       &beta,
                       (float*)mxGPUGetData(tempGpu), (int)m) ;
           col2im_gpu<float>((float*)mxGPUGetData(tempGpu),
-                            depth, height, width,
+                            depth, width, height,
                             filterHeight,
-                            1,
+                            stride, pad,
                             (float*)mxGPUGetData(resultGpu) + resultOffset) ;
         } else {
           // overwrite temp
@@ -338,11 +396,15 @@ void mexFunction(int nout, mxArray *out[],
                 (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
                 &beta,
                 (float*)mxGetData(tempArray), &m) ;
+#if 1
+
           col2im_cpu<float>((float*)mxGetData(tempArray),
-                            depth, height, width,
+                            depth, width, height,
                             filterHeight,
-                            1,
+                            stride, pad,
                             (float*)mxGetData(resultArray) + resultOffset) ;
+#endif
+
         }
       }
     } else {
@@ -361,9 +423,9 @@ void mexFunction(int nout, mxArray *out[],
 
       if (gpuMode) {
         im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
-                          depth, height, width,
+                          depth, width, height,
                           filterHeight,
-                          1, // stride,
+                          stride, pad,
                           (float *)mxGPUGetData(tempGpu)) ;
         // op = N (not transposed), T (transposed)
         // C <- alpha op(A)op(B) + beta C
@@ -379,17 +441,20 @@ void mexFunction(int nout, mxArray *out[],
                     (float*)mxGPUGetData(resultGpu) + resultOffset, (int)m) ;
 
       } else {
+#if 1
         if (opA == 't') {
+#if 0
           im2row_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                            depth, height, width,
+                            depth, width, height,
                             filterHeight,
-                            1, // stride,
+                            stride, pad,
                             (float *)mxGetData(tempArray)) ;
+#endif
         } else {
           im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                            depth, height, width,
+                            depth, width, height,
                             filterHeight,
-                            1, // stride,
+                            stride, pad,
                             (float *)mxGetData(tempArray)) ;
         }
         sgemm(&opA, &opB,
@@ -399,9 +464,11 @@ void mexFunction(int nout, mxArray *out[],
               (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
               &beta,
               (float*)mxGetData(resultArray) + resultOffset, &m) ;
+#endif
       }
     }
   }
+
 
   /* -------------------------------------------------------------- */
   /*                                                        Cleanup */

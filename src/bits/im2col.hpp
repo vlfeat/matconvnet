@@ -11,28 +11,35 @@
 
 template <typename Dtype>
 void im2col_cpu(const Dtype* data_im, const int channels,
-                const int height, const int width, const int ksize, const int stride,
+                const int height, const int width, const int ksize,
+                const int pad, const int stride,
                 Dtype* data_col) ;
 
+#if 0
 template <typename Dtype>
 void im2row_cpu(const Dtype* data_im,
                 const int channels, const int height, const int width,
-                const int ksize, const int stride,
+                const int ksize,
+                const int pad, const int stride,
                 Dtype* data_col) ;
+#endif
 
 template <typename Dtype>
 void col2im_cpu(const Dtype* data_col, const int channels,
-                const int height, const int width, const int ksize, const int stride,
+                const int height, const int width, const int ksize,
+                const int pad, const int stride,
                 Dtype* data_im) ;
 
 template <typename Dtype>
 void im2col_gpu(const Dtype* data_im, const int channels,
-                const int height, const int width, const int ksize, const int stride,
+                const int height, const int width, const int ksize,
+                const int pad, const int stride,
                 Dtype* data_col) ;
 
 template <typename Dtype>
 void col2im_gpu(const Dtype* data_col, const int channels,
-                const int height, const int width, const int ksize, const int stride,
+                const int height, const int width, const int ksize,
+                const int pad, const int stride,
                 Dtype* data_im) ;
 
 #endif /* defined(__matconv__im2col__) */

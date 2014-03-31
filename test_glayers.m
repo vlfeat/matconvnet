@@ -1,4 +1,4 @@
-for l=3
+for l=4
   switch l
     case 1
       disp('testing gloss') ;
@@ -9,7 +9,7 @@ for l=3
       dzdy = randn(size(y)) ;
       dzdx = gloss(x,c,dzdy) ;
       testder(@(x) gloss(x,c), x, dzdy, dzdx) ;
-      
+
     case 2
       disp('testing gsoftmax') ;
       n = 10 ;
@@ -19,7 +19,7 @@ for l=3
       dzdy = randn(size(y))
       dzdx = gsoftmax(x, dzdy) ;
       testder(@(x) gsoftmax(x), x, dzdy, dzdx) ;
-      
+
     case 3
       disp('testing gfully') ;
       m = 10;
@@ -31,17 +31,29 @@ for l=3
       [dzdx,dzdw] = gfully(x,w,dzdy) ;
       testder(@(x) gfully(x,w), x, dzdy, dzdx) ;
       testder(@(w) gfully(x,w), w, dzdy, dzdw) ;
-      
+
     case 4
       disp('testing gconv') ;
       x = randn(16,10,4,2,'single') ;
       w = randn(3,3,4,5,'single') ;
-      y = gconv(x,w) ;
+      y = gconv(x,w,'verbose') ;
       dzdy = randn(size(y),'single') ;
-      [dzdw,dzdx] = gconv(x,w,dzdy) ;
+      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose') ;
       testder(@(x) gconv(x,w), x, dzdy, dzdx) ;
       testder(@(w) gconv(x,w), w, dzdy, dzdw) ;
-      
+
+      y = gconv(x,w,'verbose','stride',2) ;
+      dzdy = randn(size(y),'single') ;
+      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose','stride',2) ;
+      testder(@(x) gconv(x,w,'stride',2), x, dzdy, dzdx) ;
+      testder(@(w) gconv(x,w,'stride',2), w, dzdy, dzdw) ;
+
+      y = gconv(x,w,'verbose','pad',1) ;
+      dzdy = randn(size(y),'single') ;
+      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose','pad',1) ;
+      testder(@(x) gconv(x,w,'pad',1), x, dzdy, dzdx) ;
+      testder(@(w) gconv(x,w,'pad',1), w, dzdy, dzdw) ;
+
     case 5
       disp('testing gpool') ;
       x = randn(5,4,3,2,'single') ;
@@ -52,7 +64,7 @@ for l=3
       dzdy = randn(size(y),'single') ;
       dzdx = gpool(x,[3,3],dzdy) ;
       testder(@(x) gpool(x,[3,3]), x, dzdy, dzdx) ;
-      
+
     case 6
       disp('testing gnormalize') ;
       param = [3, .1, .5, .75] ;
@@ -61,7 +73,7 @@ for l=3
       dzdy = randn(size(y),'single') ;
       dzdx = gnormalize(x,param,dzdy) ;
       testder(@(x) gnormalize(x,param), x, dzdy, dzdx) ;
-      
+
     case 7
       disp('testing gvec') ;
       x = randn(3,2,10,4,'single') ;
@@ -69,7 +81,7 @@ for l=3
       dzdy = randn(size(y),'single') ;
       dzdx = gvec(x,dzdy) ;
       testder(@(x) gvec(x), x, dzdy, dzdx) ;
-      
+
     case 8
       disp('testing relu') ;
        x = randn(5,5,1,1,'single') ;
@@ -84,5 +96,3 @@ for l=3
       testder(@(x) grelu(x), x, dzdy, dzdx) ;
   end
 end
-
-        

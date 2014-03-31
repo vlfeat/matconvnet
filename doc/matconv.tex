@@ -73,6 +73,25 @@ Likewise for the dual operator {\tt row2im}:
    = \sum_{k=0}^{w_f-1} \sum_{p=0}^{h_f-1} Y_{(i,j,k,p,d)}.
 \]
 
+\paragraph{Sizes, strides, and padding.}
+Suppose we have $w$ pixels in the $x$ direction and a filter of size $w_f$. Then the filter is contained in the signal
+\[
+  w' = w - w_f + 1
+\]
+times (for all possible translations), provided that $w\geq w_f$. If the signal is padded with $p$ pixels to the left and to the right, then
+\[
+  w' = w + 2p - w_f + 1.
+\]
+If the filter output is subsampled every $\delta$ steps, then samples are at $i = \delta i'$. We must have
+\[
+0\leq i = \delta i' \leq w'-1
+\qquad
+\Rightarrow
+\qquad
+0 \leq i' \leq \lfloor \frac{w + 2p - w_f}{\delta} \rfloor.
+\]
+
+
 % ------------------------------------------------------------------
 \subsection{Max pooling}\label{s:pooling}
 % ------------------------------------------------------------------
