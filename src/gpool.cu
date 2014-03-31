@@ -4,7 +4,23 @@
 #include <blas.h>
 #include <iostream>
 
+#include "bits/mexutils.h"
 #include "bits/pooling.cpp"
+
+/* option codes */
+enum {
+  opt_stride = 0,
+  opt_pad,
+  opt_verbose
+} ;
+
+/* options */
+vlmxOption  options [] = {
+  {"Stride",           1,   opt_stride            },
+  {"Pad",              1,   opt_pad               },
+  {"Verbose",          0,   opt_verbose           },
+  {0,                  0,   0                     }
+} ;
 
 enum {
   IN_DATA = 0, IN_SIZE, IN_DER, IN_END
@@ -25,8 +41,10 @@ void mexFunction(int nout, mxArray *out[],
   mxArray *resultArray ;
 
   size_t height, width, depth, numImages ;
-  size_t poolHeight, poolWidth, poolStride ;
+  size_t poolHeight, poolWidth ;
   size_t derHeight, derWidth, derDepth, numDerImages ;
+  int stride = 1 ;
+  int pad = 0 ;
 
   mwSize dataNumDimensions ;
   mwSize derNumDimensions ;
@@ -37,18 +55,50 @@ void mexFunction(int nout, mxArray *out[],
 
   bool gpuMode = false ;
   bool backMode = false ;
-  int verbosiy = 1 ;
+
+  int verbosity = 0 ;
+  int opt ;
+  int next = IN_END ;
+  mxArray const *optarg ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
   /* -------------------------------------------------------------- */
 
   /* Throw an error if the input is not a GPU array. */
-  if (nin != 2 && nin != 3) {
-    mexErrMsgTxt("The arguments are neither two or three.") ;
+  if (nin < 2) {
+    mexErrMsgTxt("The arguments are less than two.") ;
   }
 
-  backMode = (nin == 3) ;
+  if (nin > 2 && vlmxIsString(in[2],-1)) {
+    next = 2 ;
+    backMode = 0 ;
+  } else {
+    backMode = (nin >= 3) ;
+  }
+
+  while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
+    switch (opt) {
+      case opt_verbose :
+        ++ verbosity ;
+        break ;
+
+      case opt_stride :
+        if (!vlmxIsPlainScalar(optarg) || (stride = (int) *mxGetPr(optarg)) < 1) {
+          mexErrMsgTxt("STRIDE must be a positive integer.") ;
+        }
+        break ;
+
+      case opt_pad :
+        if (!vlmxIsPlainScalar(optarg) || (pad = (int) *mxGetPr(optarg)) < 0) {
+          mexErrMsgTxt("PAD must be a non-negative integer.") ;
+        }
+        break ;
+
+      default: break ;
+    }
+  }
+
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
 
   if (!mxIsNumeric(in[IN_SIZE]) ||
@@ -58,7 +108,6 @@ void mexFunction(int nout, mxArray *out[],
   {
     mexErrMsgTxt("SIZE is not a plain 2 vector.") ;
   }
-  poolStride = 1 ;
   poolHeight = mxGetPr(in[IN_SIZE])[0] ;
   poolWidth = mxGetPr(in[IN_SIZE])[1] ;
 
@@ -117,12 +166,12 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (poolWidth != poolHeight) {
-    mexErrMsgTxt("Non-square FILTERS not supported yet.") ;
+    mexErrMsgTxt("Non-square POOL not supported yet.") ;
   }
 
   if (!backMode) {
-    resultDimensions[0] = height - poolHeight + 1 ;
-    resultDimensions[1] = width - poolWidth + 1 ;
+    resultDimensions[0] = (height + 2*pad - poolHeight)/stride + 1 ;
+    resultDimensions[1] = (width + 2*pad - poolWidth)/stride + 1 ;
     resultDimensions[2] = depth ;
     resultDimensions[3] = numImages ;
   } else {
@@ -132,22 +181,23 @@ void mexFunction(int nout, mxArray *out[],
     resultDimensions[3] = numImages ;
   }
 
-  tempDimensions[0] = height - poolHeight + 1 ;
-  tempDimensions[1] = width - poolWidth + 1 ;
+  tempDimensions[0] = (height + 2*pad - poolHeight)/stride + 1 ;
+  tempDimensions[1] = (width + 2*pad - poolHeight)/stride + 1 ;
   tempDimensions[2] = poolHeight*poolWidth*depth ;
 
-  if (verbosiy > 0) {
+  if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
-    mexPrintf("gconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("gpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("gpool: stride: %d, pad: %d\n", stride, pad) ;
+    mexPrintf("gpool: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
-    mexPrintf("gconv: pooling: %d x %d\n", poolHeight, poolWidth);
-    mexPrintf("gconv: result: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("gpool: pooling: %d x %d\n", poolHeight, poolWidth);
+    mexPrintf("gpool: result: %d x %d x %d x %d [%.1f MB]\n",
               resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
               (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/MB) ;
     if (backMode) {
-      mexPrintf("gconv: der: %d x %d x %d x %d [%.1f MB]\n",
+      mexPrintf("gpool: der: %d x %d x %d x %d [%.1f MB]\n",
                 derHeight, derWidth, derDepth, numDerImages,
                 (double)(derHeight*derWidth*derDepth*numDerImages*4)/MB) ;
     }
@@ -173,6 +223,10 @@ void mexFunction(int nout, mxArray *out[],
 
   if (poolHeight == 0 || poolWidth == 0) {
     mexErrMsgTxt("A dimension of the pooling SIZE is void.") ;
+  }
+
+  if (pad >= poolWidth) {
+    mexErrMsgTxt("PAD is larger or equal than the pooling size") ;
   }
 
   /* -------------------------------------------------------------- */
@@ -206,13 +260,13 @@ void mexFunction(int nout, mxArray *out[],
                                       (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
                                       (float const*)mxGPUGetDataReadOnly(derGpu) + derOffset,
                                       height, width, depth,
-                                      poolWidth, poolStride) ;
+                                      poolWidth, stride, pad) ;
       } else {
         maxPoolingBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                                       (float const*)mxGetData(in[IN_DATA]) + dataOffset,
                                       (float const*)mxGetData(in[IN_DER]) + derOffset,
                                       height, width, depth,
-                                      poolWidth, poolStride) ;
+                                      poolWidth, stride, pad) ;
       }
     } else {
       /* ---------------------------------------------------------- */
@@ -222,12 +276,12 @@ void mexFunction(int nout, mxArray *out[],
         maxPooling_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
                               (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
                               height, width, depth,
-                              poolWidth, poolStride) ;
+                              poolWidth, stride, pad) ;
       } else {
         maxPooling_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                               (float const*)mxGetData(in[IN_DATA]) + dataOffset,
                               height, width, depth,
-                              poolWidth, poolStride) ;
+                              poolWidth, stride, pad) ;
       }
     }
   }

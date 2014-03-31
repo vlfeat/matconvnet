@@ -230,7 +230,7 @@ void mexFunction(int nout, mxArray *out[],
   if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
     mexPrintf("gconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gconf: stride: %d, pad: %d\n", stride, pad) ;
+    mexPrintf("gconv: stride: %d, pad: %d\n", stride, pad) ;
     mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;

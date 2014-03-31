@@ -1,4 +1,4 @@
-for l=4
+for l=1:8
   switch l
     case 1
       disp('testing gloss') ;
@@ -34,36 +34,34 @@ for l=4
 
     case 4
       disp('testing gconv') ;
-      x = randn(16,10,4,2,'single') ;
+      x = randn(16,15,4,2,'single') ;
       w = randn(3,3,4,5,'single') ;
-      y = gconv(x,w,'verbose') ;
-      dzdy = randn(size(y),'single') ;
-      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose') ;
-      testder(@(x) gconv(x,w), x, dzdy, dzdx) ;
-      testder(@(w) gconv(x,w), w, dzdy, dzdw) ;
-
-      y = gconv(x,w,'verbose','stride',2) ;
-      dzdy = randn(size(y),'single') ;
-      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose','stride',2) ;
-      testder(@(x) gconv(x,w,'stride',2), x, dzdy, dzdx) ;
-      testder(@(w) gconv(x,w,'stride',2), w, dzdy, dzdw) ;
-
-      y = gconv(x,w,'verbose','pad',1) ;
-      dzdy = randn(size(y),'single') ;
-      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose','pad',1) ;
-      testder(@(x) gconv(x,w,'pad',1), x, dzdy, dzdx) ;
-      testder(@(w) gconv(x,w,'pad',1), w, dzdy, dzdw) ;
-
-    case 5
+      for pad=0:2
+        for stride=1:4
+          y = gconv(x,w,'verbose','stride',stride,'pad',pad) ;
+          dzdy = randn(size(y),'single') ;
+          [dzdw,dzdx] = gconv(x,w,dzdy,'verbose','stride',stride,'pad',pad) ;
+          testder(@(x) gconv(x,w,'stride',stride,'pad',pad), x, dzdy, dzdx, 1e-2) ;
+          testder(@(w) gconv(x,w,'stride',stride,'pad',pad), w, dzdy, dzdw, 1e-2) ;
+        end
+      end
+  
+    case 5    
       disp('testing gpool') ;
-      x = randn(5,4,3,2,'single') ;
+      pool = [3,3] ;
       % make sure that all elements in x are different. in this way,
       % we can compute numerical derivatives reliably by adding a delta < .5.
+      x = randn(15,14,3,2,'single') ;
       x(:) = randperm(numel(x))' ;
-      y = gpool(x,[3,3]) ;
-      dzdy = randn(size(y),'single') ;
-      dzdx = gpool(x,[3,3],dzdy) ;
-      testder(@(x) gpool(x,[3,3]), x, dzdy, dzdx) ;
+      for pad=0:2
+        for stride=1:4
+          y = gpool(x,pool,'verbose','stride',stride,'pad',pad) ;
+          dzdy = randn(size(y),'single') ;
+          dzdx = gpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
+          testder(@(x) gpool(x,pool,'stride',stride,'pad',pad), ...
+            x, dzdy, dzdx, 1e-2) ;
+        end
+      end
 
     case 6
       disp('testing gnormalize') ;

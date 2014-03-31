@@ -16,7 +16,8 @@ void maxPooling_cpu(T* pooled,
                     size_t height,
                     size_t depth,
                     size_t poolSize,
-                    size_t poolStride) ;
+                    size_t stride,
+                    size_t pad) ;
 
 template<typename T>
 void maxPoolingBackward_cpu(T* dzdx,
@@ -26,7 +27,8 @@ void maxPoolingBackward_cpu(T* dzdx,
                             size_t height,
                             size_t depth,
                             size_t poolSize,
-                            size_t poolStride) ;
+                            size_t stride,
+                            size_t pad) ;
 
 template<typename T>
 void maxPooling_gpu(T* pooled,
@@ -35,7 +37,8 @@ void maxPooling_gpu(T* pooled,
                     size_t height,
                     size_t depth,
                     size_t poolSize,
-                    size_t poolStride) ;
+                    size_t stride,
+                    size_t pad) ;
 
 template<typename T>
 void maxPoolingBackward_gpu(T* dzdx,
@@ -45,6 +48,7 @@ void maxPoolingBackward_gpu(T* dzdx,
                             size_t height,
                             size_t depth,
                             size_t poolSize,
-                            size_t poolStride) ;
+                            size_t stride,
+                            size_t pad) ;
 
 #endif /* defined(__matconv__pooling__) */

@@ -21,16 +21,17 @@ void maxPooling_cpu(T* pooled,
                     size_t height,
                     size_t depth,
                     size_t poolSize,
-                    size_t poolStride)
+                    size_t stride,
+                    size_t pad)
 {
-  int pooledWidth = (width - poolSize)/poolStride + 1 ;
-  int pooledHeight = (height - poolSize)/poolStride + 1 ;
+  int pooledWidth = (width + 2 * pad - poolSize)/stride + 1 ;
+  int pooledHeight = (height + 2 * pad - poolSize)/stride + 1 ;
 
   for (int c = 0; c < depth; ++c) {
     for (int ph = 0; ph < pooledHeight; ++ph) {
       for (int pw = 0; pw < pooledWidth; ++pw) {
-        int hstart = ph * poolStride;
-        int wstart = pw * poolStride;
+        int hstart = std::max(ph * (signed)stride - (signed)pad, 0) ;
+        int wstart = std::max(pw * (signed)stride - (signed)pad, 0) ;
         int hend = std::min(hstart + poolSize, height);
         int wend = std::min(wstart + poolSize, width);
         for (int h = hstart; h < hend; ++h) {
@@ -53,7 +54,8 @@ void maxPooling_cpu<float>(float* pooled,
                            size_t height,
                            size_t depth,
                            size_t poolSize,
-                           size_t poolStride) ;
+                           size_t stride,
+                           size_t pad) ;
 
 template
 void maxPooling_cpu<double>(double* pooled,
@@ -62,7 +64,8 @@ void maxPooling_cpu<double>(double* pooled,
                             size_t height,
                             size_t depth,
                             size_t poolSize,
-                            size_t poolStride) ;
+                            size_t stride,
+                            size_t pad) ;
 
 /* ---------------------------------------------------------------- */
 /*                                                 maxPooling (GPU) */
@@ -73,7 +76,7 @@ __global__ void maxPooling_gpu_kernel
 (const int nthreads, const Dtype* bottom_data,
  const int num, const int channels, const int height,
  const int width, const int pooled_height, const int pooled_width,
- const int ksize, const int stride, Dtype* top_data)
+ const int ksize, const int stride, const int pad, Dtype* top_data)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   if (index < nthreads) {
@@ -84,10 +87,10 @@ __global__ void maxPooling_gpu_kernel
     int c = (index / pooled_width / pooled_height) % channels;
     int n = index / pooled_width / pooled_height / channels;
     // pooled patch start and end
-    int hstart = ph * stride;
-    int hend = min(hstart + ksize, height);
-    int wstart = pw * stride;
-    int wend = min(wstart + ksize, width);
+    int wstart = max(pw * stride, 0) ;
+    int hstart = max(ph * stride, 0) ;
+    int wend = min(wstart + ksize, width) ;
+    int hend = min(hstart + ksize, height) ;
     Dtype maxval = -FLT_MAX;
     bottom_data += (n * channels + c) * height * width;
     for (int h = hstart; h < hend; ++h) {
@@ -106,13 +109,14 @@ void maxPooling_gpu(T* pooled,
                     size_t height,
                     size_t depth,
                     size_t poolSize,
-                    size_t poolStride)
+                    size_t stride,
+                    size_t pad)
 {
-  int pooledWidth = (width - poolSize)/poolStride + 1 ;
-  int pooledHeight = (height - poolSize)/poolStride + 1 ;
+  int pooledWidth = (width + 2*pad - poolSize)/stride + 1 ;
+  int pooledHeight = (height + 2*pad - poolSize)/stride + 1 ;
   int count = pooledWidth * pooledHeight * depth ;
   maxPooling_gpu_kernel<T><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>
-  (count, data, 1, depth, height, width, pooledHeight, pooledWidth, poolSize, poolStride, pooled) ;
+  (count, data, 1, depth, height, width, pooledHeight, pooledWidth, poolSize, stride, pad, pooled) ;
 }
 
 template
@@ -122,7 +126,8 @@ void maxPooling_gpu<float>(float* pooled,
                            size_t height,
                            size_t depth,
                            size_t poolSize,
-                           size_t poolStride) ;
+                           size_t stride,
+                           size_t pad) ;
 
 template
 void maxPooling_gpu<double>(double* pooled,
@@ -131,7 +136,8 @@ void maxPooling_gpu<double>(double* pooled,
                             size_t height,
                             size_t depth,
                             size_t poolSize,
-                            size_t poolStride) ;
+                            size_t stride,
+                            size_t pad) ;
 
 /* ---------------------------------------------------------------- */
 /*                                         maxPoolingBackward (CPU) */
@@ -145,16 +151,17 @@ void maxPoolingBackward_cpu(T* dzdx,
                             size_t height,
                             size_t depth,
                             size_t poolSize,
-                            size_t poolStride)
+                            size_t stride,
+                            size_t pad)
 {
-  int pooledWidth = (width - poolSize)/poolStride + 1 ;
-  int pooledHeight = (height - poolSize)/poolStride + 1 ;
+  int pooledWidth = (width + 2*pad - poolSize)/stride + 1 ;
+  int pooledHeight = (height + 2*pad - poolSize)/stride + 1 ;
 
   for (int c = 0; c < depth; ++c) {
     for (int ph = 0; ph < pooledHeight; ++ph) {
       for (int pw = 0; pw < pooledWidth; ++pw) {
-        int hstart = ph * poolStride;
-        int wstart = pw * poolStride;
+        int hstart = std::max(ph * (signed)stride - (signed)pad, 0) ;
+        int wstart = std::max(pw * (signed)stride - (signed)pad, 0) ;
         int hend = std::min(hstart + poolSize, height);
         int wend = std::min(wstart + poolSize, width);
         int bestIndex = hstart * width + wstart ;
@@ -186,7 +193,8 @@ void maxPoolingBackward_cpu<float>(float* dzdx,
                                    size_t height,
                                    size_t depth,
                                    size_t poolSize,
-                                   size_t poolStride) ;
+                                   size_t stride,
+                                   size_t pad) ;
 
 template
 void maxPoolingBackward_cpu<double>(double* dzdx,
@@ -196,7 +204,8 @@ void maxPoolingBackward_cpu<double>(double* dzdx,
                                     size_t height,
                                     size_t depth,
                                     size_t poolSize,
-                                    size_t poolStride) ;
+                                    size_t stride,
+                                    size_t pad) ;
 
 /* ---------------------------------------------------------------- */
 /*                                         maxPoolingBackward (GPU) */
@@ -207,7 +216,8 @@ __global__ void maxPoolingBackward_gpu_kernel
 (const int nthreads, const Dtype* bottom_data, const Dtype* top_diff,
  const int num, const int channels, const int height,
  const int width, const int pooled_height, const int pooled_width,
- const int ksize, const int stride, Dtype* bottom_diff)
+ const int ksize, const int stride, const int pad,
+ Dtype* bottom_diff)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   if (index < nthreads) {
@@ -218,10 +228,10 @@ __global__ void maxPoolingBackward_gpu_kernel
     int c = (index / pooled_width / pooled_height) % channels;
     int n = index / pooled_width / pooled_height / channels;
     // pooled patch start and end
-    int hstart = ph * stride;
-    int hend = min(hstart + ksize, height);
-    int wstart = pw * stride;
-    int wend = min(wstart + ksize, width);
+    int wstart = max(pw * stride, 0) ;
+    int hstart = max(ph * stride, 0) ;
+    int wend = min(wstart + ksize, width) ;
+    int hend = min(hstart + ksize, height) ;
     Dtype bestValue = -FLT_MAX;
     int bestIndex = 0 ;
     bottom_data += (n * channels + c) * height * width;
@@ -249,19 +259,20 @@ __global__ void maxPoolingBackward_gpu_kernel
 
 template<typename T>
 void maxPoolingBackward_gpu(T* dzdx,
-                    T const* data,
-                    T const* dzdy,
-                    size_t width,
-                    size_t height,
-                    size_t depth,
-                    size_t poolSize,
-                    size_t poolStride)
+                            T const* data,
+                            T const* dzdy,
+                            size_t width,
+                            size_t height,
+                            size_t depth,
+                            size_t poolSize,
+                            size_t stride,
+                            size_t pad)
 {
-  int pooledWidth = (width - poolSize)/poolStride + 1 ;
-  int pooledHeight = (height - poolSize)/poolStride + 1 ;
+  int pooledWidth = (width + 2*pad - poolSize)/stride + 1 ;
+  int pooledHeight = (height + 2*pad - poolSize)/stride + 1 ;
   int count = pooledWidth * pooledHeight * depth ;
   maxPoolingBackward_gpu_kernel<T><<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>
-  (count, data, dzdy, 1, depth, height, width, pooledHeight, pooledWidth, poolSize, poolStride, dzdx) ;
+  (count, data, dzdy, 1, depth, height, width, pooledHeight, pooledWidth, poolSize, stride, pad, dzdx) ;
 }
 
 template
@@ -272,7 +283,8 @@ void maxPoolingBackward_gpu<float>(float* pooled,
                                    size_t height,
                                    size_t depth,
                                    size_t poolSize,
-                                   size_t poolStride) ;
+                                   size_t stride,
+                                   size_t pad) ;
 
 #if 0
 template
@@ -283,5 +295,6 @@ void maxPoolingBackward_gpu<double>(double* pooled,
                                     size_t height,
                                     size_t depth,
                                     size_t poolSize,
-                                    size_t poolStride) ;
+                                    size_t stride,
+                                    size_t pad) ;
 #endif

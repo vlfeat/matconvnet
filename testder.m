@@ -1,6 +1,8 @@
-function testder(g,x,dzdy,dzdx)
+function testder(g,x,dzdy,dzdx,delta)
 
-delta = 1e-3 ;
+if nargin < 5
+  delta = 1e-4 ;
+end
 
 y = g(x) ;
 dzdx_=zeros(size(dzdx));
