@@ -16,7 +16,8 @@ for i=1:n
   res(i).time = tic ;
   switch l.type
     case 'conv'
-      res(i+1).x = gconv(res(i).x, l.filters, 'pad', l.pad, 'stride', l.stride) ;      
+      res(i+1).x = gconv(res(i).x, l.filters, 'pad', l.pad, 'stride', l.stride) ;
+      res(i+1).x = bsxfun(@plus, res(i+1).x, permute(l.biases, [2 3 1])) ;
     case 'pool'
       res(i+1).x = gpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
     case 'normalize'    

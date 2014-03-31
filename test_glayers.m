@@ -46,6 +46,30 @@ for l=1:8
         end
       end
   
+      disp('testing gconv stride correctness') ;
+      x = randn(9,9,1,1,'single') ;
+      w = randn(3,3,1,1,'single') ;
+      y = gconv(x,w,'verbose') ;
+      y_ = gconv(x,w,'verbose','stride',2) ;
+      assert(isequal(y(1:2:end,1:2:end,:,:),y_)) ;
+
+      dzdy = randn(size(y),'single') ;
+      dzdy(2:2:end,:,:,:) = 0 ;
+      dzdy(:,2:2:end,:,:) = 0 ;
+      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose') ;
+      [dzdw_,dzdx_] = gconv(x,w,dzdy(1:2:end,1:2:end,:,:),'verbose','stride',2) ;
+      assert(all(all(abs(dzdx-dzdx_) < 1e-3))) ;
+
+      disp('testing gconv pad correctness') ;
+      y_ = gconv(x,w,'verbose','pad',1) ;
+      assert(isequal(y_(2:end-1,2:end-1,:,:),y)) ;
+
+      dzdy = randn(size(y),'single') ;
+      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose') ;
+      [dzdw_,dzdx_] = gconv(x,w,padarray(dzdy,[1 1],0,'both'),'verbose','pad',1) ;
+      assert(all(all(abs(dzdx-dzdx_) < 1e-3))) ;
+      assert(all(all(abs(dzdw-dzdw_) < 1e-3))) ;
+      
     case 5    
       disp('testing gpool') ;
       pool = [3,3] ;

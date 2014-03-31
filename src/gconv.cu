@@ -208,6 +208,15 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("Non-square FILTERS not supported yet.") ;
   }
 
+  /* grouped filters */
+  numGroups = depth / filterDepth ;
+  if (numGroups * filterDepth != depth) {
+    mexErrMsgTxt("The filter depth does not divide the image depth.") ;
+  }
+  if (numFilters % numGroups != 0) {
+    mexErrMsgTxt("The number of filter groups (%d) does not divide the total number of filters.") ;
+  }
+
   if (!backMode) {
     resultDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
     resultDimensions[1] = (width + 2*pad - filterHeight)/stride + 1 ;
@@ -226,12 +235,12 @@ void mexFunction(int nout, mxArray *out[],
 
   tempDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
   tempDimensions[1] = (width + 2*pad - filterHeight)/stride + 1 ;
-  tempDimensions[2] = filterHeight*filterWidth*filterDepth ;
+  tempDimensions[2] = filterHeight*filterWidth*filterDepth*numGroups ;
 
   if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
     mexPrintf("gconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gconv: stride: %d, pad: %d\n", stride, pad, numGroups) ;
+    mexPrintf("gconv: stride: %d, pad: %d, numGroups: %d\n", stride, pad, numGroups) ;
     mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
@@ -262,10 +271,6 @@ void mexFunction(int nout, mxArray *out[],
     {
       mexErrMsgTxt("DER dimensions are incompatible with X and FILTERS.") ;
     }
-  }
-
-  if (depth != filterDepth) {
-    mexErrMsgTxt("DATA and FILTERS dimensions do not match.") ;
   }
 
   if (height < filterHeight ||  width < filterWidth) {
@@ -328,7 +333,7 @@ void mexFunction(int nout, mxArray *out[],
         float beta = 1 ;
         char opA = 't' ;
         char opB = 'n' ;
-        ptrdiff_t m = tempDimensions[2] ; /* = filter volume */
+        ptrdiff_t m = filterWidth*filterHeight*filterDepth ; /* = filter volume */
         ptrdiff_t n = numFilters ;
         ptrdiff_t k = tempDimensions[0]*tempDimensions[1] ;
         /* derivative w.r.t. filters dz/dF */
@@ -353,13 +358,21 @@ void mexFunction(int nout, mxArray *out[],
                             filterHeight,
                             stride, pad,
                             (float *)mxGetData(tempArray)) ;
-          sgemm(&opA, &opB,
-                &m, &n, &k,
-                &alpha,
-                (float*)mxGetData(tempArray), (opA == 'n') ? &m : &k,
-                (float*)mxGetData(in[IN_DER]) + derOffset,(opB == 'n') ? &k : &n,
-                &beta,
-                (float*)mxGetData(dfiltersArray), &m) ;
+          for (int g = 0 ; g < numGroups ; ++ g) {
+            ptrdiff_t filterOffset = filterWidth*filterHeight*filterDepth * g ;
+            ptrdiff_t tempOffset = k*filterDepth * g ;
+            ptrdiff_t derGroupOffset
+            = tempDimensions[0]*tempDimensions[1]*numFilters/numGroups * g ;
+            sgemm(&opA, &opB,
+                  &m, &n, &k,
+                  &alpha,
+                  (float*)mxGetData(tempArray) + tempOffset,
+                  (opA == 'n') ? &m : &k,
+                  (float*)mxGetData(in[IN_DER]) + derOffset + derGroupOffset,
+                  (opB == 'n') ? &k : &n,
+                  &beta,
+                  (float*)mxGetData(dfiltersArray) + filterOffset, &m) ;
+          }
         }
       }
       /* derivative w.r.t. input image dz/dX */
@@ -387,14 +400,22 @@ void mexFunction(int nout, mxArray *out[],
                             stride, pad,
                             (float*)mxGPUGetData(resultGpu) + resultOffset) ;
         } else {
-          // overwrite temp
-          sgemm(&opA, &opB,
-                &m, &n, &k,
-                &alpha,
-                (float*)mxGetData(in[IN_DER]) + derOffset, (opA == 'n') ? &m : &k,
-                (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
-                &beta,
-                (float*)mxGetData(tempArray), &m) ;
+          for (int g = 0 ; g < numGroups ; ++ g) {
+            ptrdiff_t filterOffset = filterWidth*filterHeight*filterDepth * g ;
+            ptrdiff_t tempOffset = k*filterDepth * g ;
+            ptrdiff_t derGroupOffset
+            = tempDimensions[0]*tempDimensions[1]*numFilters/numGroups * g ;
+            // overwrite temp
+            sgemm(&opA, &opB,
+                  &m, &n, &k,
+                  &alpha,
+                  (float*)mxGetData(in[IN_DER]) + derOffset + derGroupOffset,
+                  (opA == 'n') ? &m : &k,
+                  (float*)mxGetData(in[IN_FILTERS]) + filterOffset,
+                  (opB == 'n') ? &k : &n,
+                  &beta,
+                  (float*)mxGetData(tempArray) + tempOffset, &m) ;
+          }
           col2im_cpu<float>((float*)mxGetData(tempArray),
                             depth, width, height,
                             filterHeight,
@@ -411,7 +432,7 @@ void mexFunction(int nout, mxArray *out[],
       char opA = 'n' ;
       char opB = 'n' ;
       ptrdiff_t m = resultDimensions[0]*resultDimensions[1] ;
-      ptrdiff_t n = numFilters ;
+      ptrdiff_t n = numFilters/numGroups ;
       ptrdiff_t k = filterHeight*filterWidth*filterDepth ;
       ptrdiff_t dataOffset = (width*height*depth) * image ;
       ptrdiff_t resultOffset = (resultDimensions[0]*resultDimensions[1]*resultDimensions[2]) * image ;
@@ -422,19 +443,26 @@ void mexFunction(int nout, mxArray *out[],
                           filterHeight,
                           stride, pad,
                           (float *)mxGPUGetData(tempGpu)) ;
-        // op = N (not transposed), T (transposed)
-        // C <- alpha op(A)op(B) + beta C
-        // A is m x k, B is k x n and C is m x n.
-        cublasSgemm(handle,
-                    (opA == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
-                    (opB == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
-                    (int)m, (int)n, (int)k,
-                    &alpha,
-                    (float const*)mxGPUGetDataReadOnly(tempGpu), (opA == 'n') ? (int)m : (int)k,
-                    (float const*)mxGPUGetDataReadOnly(filtersGpu), (opB == 'n') ? (int)k : (int)n,
-                    &beta,
-                    (float*)mxGPUGetData(resultGpu) + resultOffset, (int)m) ;
-
+        for (int g = 0 ; g < numGroups ; ++ g) {
+          ptrdiff_t filterOffset = n * k * g ;
+          ptrdiff_t tempOffset = m * k * g ;
+          ptrdiff_t resultGroupOffset = m * n * g  ;
+          // op = N (not transposed), T (transposed)
+          // C <- alpha op(A)op(B) + beta C
+          // A is m x k, B is k x n and C is m x n.
+          cublasSgemm(handle,
+                      (opA == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                      (opB == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T,
+                      (int)m, (int)n, (int)k,
+                      &alpha,
+                      (float const*)mxGPUGetDataReadOnly(tempGpu) + tempOffset,
+                      (opA == 'n') ? (int)m : (int)k,
+                      (float const*)mxGPUGetDataReadOnly(filtersGpu) + filterOffset,
+                      (opB == 'n') ? (int)k : (int)n,
+                      &beta,
+                      (float*)mxGPUGetData(resultGpu) + resultOffset + resultGroupOffset,
+                      (int)m) ;
+        }
       } else {
         if (opA == 't') {
 #if 0
@@ -451,13 +479,18 @@ void mexFunction(int nout, mxArray *out[],
                             stride, pad,
                             (float *)mxGetData(tempArray)) ;
         }
-        sgemm(&opA, &opB,
-              &m, &n, &k,
-              &alpha,
-              (float*)mxGetData(tempArray), (opA == 'n') ? &m : &k,
-              (float*)mxGetData(in[IN_FILTERS]),(opB == 'n') ? &k : &n,
-              &beta,
-              (float*)mxGetData(resultArray) + resultOffset, &m) ;
+        for (int g = 0 ; g < numGroups ; ++ g) {
+          ptrdiff_t filterOffset = n * k * g ;
+          ptrdiff_t tempOffset = m * k * g ;
+          ptrdiff_t resultGroupOffset = m * n * g  ;
+          sgemm(&opA, &opB,
+                &m, &n, &k,
+                &alpha,
+                (float*)mxGetData(tempArray) + tempOffset, (opA == 'n') ? &m : &k,
+                (float*)mxGetData(in[IN_FILTERS]) + filterOffset, (opB == 'n') ? &k : &n,
+                &beta,
+                (float*)mxGetData(resultArray) + resultOffset + resultGroupOffset, &m) ;
+        }
       }
     }
   }
