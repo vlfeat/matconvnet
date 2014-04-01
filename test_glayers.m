@@ -70,6 +70,21 @@ for l=1:8
       assert(all(all(abs(dzdx-dzdx_) < 1e-3))) ;
       assert(all(all(abs(dzdw-dzdw_) < 1e-3))) ;
       
+      disp('testing gconv filter groups') ;
+      w_ = randn(3,3,10,2,'single') ;
+      w = cat(4, w_(:,:,1:5,1), w_(:,:,6:10,2)) ;
+      w_(:,:,1:5,2) = 0 ;
+      w_(:,:,6:10,1) = 0 ;
+      x = randn(9,9,10,1,'single') ;
+      y = gconv(x,w,'verbose') ;
+      y_ = gconv(x,w_,'verbose') ;
+      assert(isequal(y,y_)) ;
+      
+      dzdy = randn(size(y),'single') ;
+      [dzdw,dzdx] = gconv(x,w,dzdy,'verbose') ;
+      testder(@(x) gconv(x,w), x, dzdy, dzdx, 1e-2) ;
+      testder(@(w) gconv(x,w), w, dzdy, dzdw, 1e-2) ;
+                
     case 5    
       disp('testing gpool') ;
       pool = [3,3] ;

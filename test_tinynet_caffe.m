@@ -7,18 +7,15 @@ end
 net.layers{4}.param = [5 1 1e-4/5 0.75] ;
 net.layers{8}.param = [5 1 1e-4/5 0.75] ;
 
-%im = randn(224,224,3,1,'single') ;
+% forward pass
 res = tinynet(net, im) ;
 
-figure(1) ; clf ;
-%subplot(1,2,1) ; vl_imarraysc(res(3).x) ; colormap gray ; axis equal ;
-%subplot(1,2,2) ; vl_imarraysc(data{2}) ; colormap gray ; axis equal ;
-%subplot(1,2,1) ; vl_imarraysc(res(4).x) ; colormap gray ; axis equal ;
-%subplot(1,2,2) ; vl_imarraysc(data{3}) ; colormap gray ; axis equal ;
-subplot(1,2,1) ; vl_imarraysc(res(8).x) ; colormap gray ; axis equal ;
-subplot(1,2,2) ; vl_imarraysc(data{6}) ; colormap gray ; axis equal ;
+% backward pass
+dzdy = 1 ;
+res_ = tinynet(net, im, dzdy) ;
 
-assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ;
+% Block 0 (input)
+assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ; % input image
 
 % Block 1
 assert(max(res(2).x(:)-data{2}(:)) < 1e-3) ; % output conv
