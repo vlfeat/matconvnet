@@ -108,9 +108,9 @@ for l=1:8
       disp('testing gnormalize') ;
       param = [3, .1, .5, .75] ;
       x = randn(3,2,10,4,'single') ;
-      y = gnormalize(x,param) ;
+      y = gnormalize(x,param,'verbose') ;
       dzdy = randn(size(y),'single') ;
-      dzdx = gnormalize(x,param,dzdy) ;
+      dzdx = gnormalize(x,param,dzdy,'verbose') ;
       testder(@(x) gnormalize(x,param), x, dzdy, dzdx) ;
 
     case 7

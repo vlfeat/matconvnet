@@ -4,7 +4,19 @@
 #include <blas.h>
 #include <iostream>
 
+#include "bits/mexutils.h"
 #include "bits/normalize.cpp"
+
+/* option codes */
+enum {
+  opt_verbose = 0
+} ;
+
+/* options */
+vlmxOption  options [] = {
+  {"Verbose",          0,   opt_verbose           },
+  {0,                  0,   0                     }
+} ;
 
 enum {
   IN_DATA = 0, IN_PARAM, IN_DER, IN_END
@@ -40,18 +52,36 @@ void mexFunction(int nout, mxArray *out[],
 
   bool gpuMode = false ;
   bool backMode = false ;
-  int verbosiy = 1 ;
+
+  int verbosity = 0 ;
+  int opt ;
+  int next = IN_END ;
+  mxArray const *optarg ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
   /* -------------------------------------------------------------- */
 
-  /* Throw an error if the input is not a GPU array. */
-  if (nin != 2 && nin != 3) {
-    mexErrMsgTxt("The arguments are neither two or three.") ;
+  if (nin < 2) {
+    mexErrMsgTxt("The arguments are less than two.") ;
   }
 
-  backMode = (nin == 3) ;
+  if (nin > 2 && vlmxIsString(in[2],-1)) {
+    next = 2 ;
+    backMode = 0 ;
+  } else {
+    backMode = (nin >= 3) ;
+  }
+
+  while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
+    switch (opt) {
+      case opt_verbose :
+        ++ verbosity ;
+        break ;
+      default: break ;
+    }
+  }
+
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
 
   if (!mxIsNumeric(in[IN_PARAM]) ||
@@ -124,7 +154,7 @@ void mexFunction(int nout, mxArray *out[],
   resultDimensions[2] = depth ;
   resultDimensions[3] = numImages ;
 
-  if (verbosiy > 0) {
+  if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
     mexPrintf("gnormalize: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
     mexPrintf("gnormalize: data: %d x %d x %d x %d [%.1f MB]\n",

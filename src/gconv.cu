@@ -32,7 +32,6 @@ enum {
   OUT_RESULT = 0, OUT_RESULT2, OUT_END
 } ;
 
-
 inline vl_uindex divup(vl_uindex i, vl_uindex d)
 {
   return (i + d - 1) / d ;
