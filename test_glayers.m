@@ -16,7 +16,7 @@ for l=1:8
       delta = 1e-6 ;
       x = randn(n,1) ;
       y = gsoftmax(x) ;
-      dzdy = randn(size(y))
+      dzdy = randn(size(y)) ;
       dzdx = gsoftmax(x, dzdy) ;
       testder(@(x) gsoftmax(x), x, dzdy, dzdx) ;
 
@@ -25,12 +25,14 @@ for l=1:8
       m = 10;
       n = 15 ;
       x = randn(n,1) ;
+      b = randn(m,1) ;
       w = randn(m,n) ;
-      y = gfully(x,w) ;
-      dzdy = randn(size(y))
-      [dzdx,dzdw] = gfully(x,w,dzdy) ;
-      testder(@(x) gfully(x,w), x, dzdy, dzdx) ;
-      testder(@(w) gfully(x,w), w, dzdy, dzdw) ;
+      y = gfully(x,w,b) ;
+      dzdy = randn(size(y)) ;
+      [dzdx,dzdw,dzdb] = gfully(x,w,b,dzdy) ;
+      testder(@(x) gfully(x,w,b), x, dzdy, dzdx) ;
+      testder(@(w) gfully(x,w,b), w, dzdy, dzdw) ;
+      testder(@(b) gfully(x,w,b), b, dzdy, dzdb) ;
 
     case 4
       disp('testing gconv') ;

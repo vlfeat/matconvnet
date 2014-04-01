@@ -3,19 +3,11 @@ if ~exist('net')
   load('tinynet_caffe_data.mat') ;
 end
 
-% patch
-net.layers{4}.param = [5 1 1e-4/5 0.75] ;
-net.layers{8}.param = [5 1 1e-4/5 0.75] ;
-
 % forward pass
 res = tinynet(net, im) ;
 
-% backward pass
-dzdy = 1 ;
-res_ = tinynet(net, im, dzdy) ;
-
 % Block 0 (input)
-assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ; % input image
+assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ; % input image 
 
 % Block 1
 assert(max(res(2).x(:)-data{2}(:)) < 1e-3) ; % output conv
@@ -49,7 +41,31 @@ assert(max(res(20).x(:)-data{17}(:)) < 1e-3) ; % output relu+fully
 assert(max(res(22).x(:)-data{18}(:)) < 1e-3) ; % output relu+fully
 
 % Block 10
-assert(max(res(24).x(:)-data{19}(:)) < 1e-3) ; % output relu+softmax
+assert(max(res(23).x(:)-data{19}(:)) < 1e-3) ; % output softmax
+
+% Backward pass
+dzdy = zeros(1000,1,'single') ;
+dzdy(286) = 1 ;
+res = tinynet(net, im, dzdy) ;
+
+% Derivatives
+assert(max(res(1).dzdx(:)-diff{1}(:)) < 1e-3) ;
+assert(max(res(22).dzdx(:)-diff{18}(:)) < 1e-3) ;
+assert(max(res(23).dzdx(:)-diff{19}(:)) < 1e-3) ; % softmax
+
+for i = 1:2
+  assert(max(res(1).dzdw{i}(:)-pdiff{2}{i}(:)) < 1e-3) ;
+  assert(max(res(5).dzdw{i}(:)-pdiff{6}{i}(:)) < 1e-3) ;
+  assert(max(res(9).dzdw{i}(:)-pdiff{10}{i}(:)) < 1e-3) ;
+  assert(max(res(11).dzdw{i}(:)-pdiff{12}{i}(:)) < 1e-3) ;
+  assert(max(res(13).dzdw{i}(:)-pdiff{14}{i}(:)) < 1e-3) ;
+end
+for i = 1:2
+  assert(max(res(17).dzdw{i}(:)-pdiff{16}{i}(:)) < 1e-3) ;
+  assert(max(res(19).dzdw{i}(:)-pdiff{17}{i}(:)) < 1e-3) ;
+  assert(max(res(21).dzdw{i}(:)-pdiff{18}{i}(:)) < 1e-3) ;
+end
+
 
 
 

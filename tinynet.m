@@ -23,7 +23,7 @@ for i=1:n
     case 'normalize'    
       res(i+1).x = gnormalize(res(i).x, l.param) ;
     case 'fully'
-      res(i+1).x = gfully(res(i).x, l.w) + l.b ;
+      res(i+1).x = gfully(res(i).x, l.w, l.b) ;
     case 'softmax'
       res(i+1).x = gsoftmax(res(i).x) ;
     case 'loss'
@@ -45,15 +45,22 @@ if doder
     res(i).backwardTime = tic ;
     switch l.type
       case 'conv'
-        [res(i).dzdw, res(i).dzdx] = gconv(res(i).x, l.filters, res(i+1).dzdx, ...
+        [dzdw, dzdx] = gconv(res(i).x, l.filters, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride) ;
+        dzdb = squeeze(sum(sum(res(i+1).dzdx))) ;
+        res(i).dzdx = dzdx;
+        res(i).dzdw = {dzdw,dzdb} ;
+        clear dzdx dzdw dzdb ;
       case 'pool'
         res(i).dzdx = gpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride) ;
       case 'normalize'
         res(i).dzdx = gnormalize(res(i).x, l.param, res(i+1).dzdx) ;
       case 'fully'
-        [res(i).dzdx, res(i).dzdw] = gfully(res(i).x, l.w, res(i+1).dzdx) ;
+        [dzdx, dzdw, dzdb] = gfully(res(i).x, l.w, l.b, res(i+1).dzdx) ;
+        res(i).dzdx = dzdx ;
+        res(i).dzdw = {dzdw, dzdb} ;
+        clear dzdx dzdw dzdb ;
       case 'softmax'
         res(i).dzdx = gsoftmax(res(i).x, res(i+1).dzdx) ;
       case 'loss'
