@@ -7,4 +7,4 @@ if nargin <= 3, return ; end
 % backward
 y = (dzdy' * w)' ;
 dzdw = dzdy * x' ;
-dzdb = dzdy ;
+dzdb = sum(dzdy,2) ;

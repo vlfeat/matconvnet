@@ -20,7 +20,7 @@ for i=1:n
       res(i+1).x = bsxfun(@plus, res(i+1).x, permute(l.biases, [2 3 1])) ;
     case 'pool'
       res(i+1).x = gpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
-    case 'normalize'    
+    case 'normalize'
       res(i+1).x = gnormalize(res(i).x, l.param) ;
     case 'fully'
       res(i+1).x = gfully(res(i).x, l.w, l.b) ;
@@ -47,7 +47,7 @@ if doder
       case 'conv'
         [dzdw, dzdx] = gconv(res(i).x, l.filters, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride) ;
-        dzdb = squeeze(sum(sum(res(i+1).dzdx))) ;
+        dzdb = squeeze(sum(sum(sum(res(i+1).dzdx,4),2),1)) ;
         res(i).dzdx = dzdx;
         res(i).dzdw = {dzdw,dzdb} ;
         clear dzdx dzdw dzdb ;

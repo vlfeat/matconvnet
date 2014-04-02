@@ -7,7 +7,7 @@ end
 res = tinynet(net, im) ;
 
 % Block 0 (input)
-assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ; % input image 
+assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ; % input image
 
 % Block 1
 assert(max(res(2).x(:)-data{2}(:)) < 1e-3) ; % output conv
@@ -65,8 +65,3 @@ for i = 1:2
   assert(max(res(19).dzdw{i}(:)-pdiff{17}{i}(:)) < 1e-3) ;
   assert(max(res(21).dzdw{i}(:)-pdiff{18}{i}(:)) < 1e-3) ;
 end
-
-
-
-
-

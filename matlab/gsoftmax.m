@@ -1,10 +1,10 @@
 function Y = gsoftmax(X,dzdY)
 
-E = exp(X) ;
+E = exp(bsxfun(@minus, X, max(X,[],1))) ;
 L = sum(E) ;
-Y = E / L ;
-  
+Y = bsxfun(@rdivide, E, L) ;
+
 if nargin <= 1, return ; end
 
 % backward
-Y = Y .* (dzdY - sum(dzdY .* Y)) ;
+Y = Y .* bsxfun(@minus, dzdY, sum(dzdY .* Y,1)) ;
