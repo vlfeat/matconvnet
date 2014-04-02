@@ -1,7 +1,7 @@
 %clear all mex ;
 addpath mex
 
-switch 2
+switch 1
   case 1
     a=im2single(imread('cameraman.tif')) ;
     b=im2single(fspecial('laplacian')) ;
@@ -19,6 +19,7 @@ for t=1:5; c=gconv(a,b) ; end
 cpu_time = toc(cpu_time) ;
 
 % do it on the GPU
+if 0
 a_= gpuArray(a) ;
 b_= gpuArray(b) ;
 c_=gconv(a_,b_) ;
@@ -26,14 +27,18 @@ gpu_time = tic ;
 for t=1:5; c_= gconv(a_,b_) ; end
 gpu_time = toc(gpu_time) ;
 c = gather(c_) ;
+end
+c= gconv(a,b,'verbose','stride',2) ;
 
 
 figure(1) ; clf ;
 subplot(2,2,1) ; imagesc(a(:,:,1)) ; axis equal ;
 subplot(2,2,2) ; imagesc(b(:,:,1)) ; axis equal ;
-subplot(2,2,3) ; imagesc(c(:,:,1)) ; axis equal ; title(sprintf('gpu:%f', gpu_time)) ;
-subplot(2,2,4) ; imagesc(c_cpu(:,:,1)) ; axis equal ; title(sprintf('cpu:%f', cpu_time)) ;
+subplot(2,2,3) ; imagesc(c(:,:,1)) ; axis equal ; %title(sprintf('gpu:%f', gpu_time)) ;
+subplot(2,2,4) ; imagesc(c_cpu(:,:,1)) ; axis equal ;% title(sprintf('cpu:%f', cpu_time)) ;
 colormap gray ;
 
+if 0
 fprintf('difference: %g\n', max(abs(c(:)-c_cpu(:)))) ;
 fprintf('speedup: %f\n',cpu_time/gpu_time) ;
+end
