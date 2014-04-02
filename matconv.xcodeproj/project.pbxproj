@@ -59,6 +59,8 @@
 		2DD3FAD718EC0E9000053032 /* test_tinynet_caffe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = test_tinynet_caffe.m; path = matlab/xtest/test_tinynet_caffe.m; sourceTree = "<group>"; };
 		2DD3FAD818EC0E9000053032 /* test_tinynet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = test_tinynet.m; path = matlab/xtest/test_tinynet.m; sourceTree = "<group>"; };
 		2DD3FAD918EC0E9000053032 /* testder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = testder.m; path = matlab/xtest/testder.m; sourceTree = "<group>"; };
+		2DD3FADA18EC118700053032 /* vlg_root.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vlg_root.m; path = matlab/vlg_root.m; sourceTree = "<group>"; };
+		2DD3FADB18EC118700053032 /* vlg_setup.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vlg_setup.m; path = matlab/vlg_setup.m; sourceTree = "<group>"; };
 		2DF145CF18AA61BD00D920BA /* gpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = gpool.cu; path = matlab/src/gpool.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -77,8 +79,8 @@
 			isa = PBXGroup;
 			children = (
 				2D375DBC18A7F790008A97EE /* Makefile */,
-				2DD3FACA18EC0E4C00053032 /* matlab */,
 				2D375DBD18A7F796008A97EE /* src */,
+				2DD3FACA18EC0E4C00053032 /* matlab */,
 				2D375DC418A7FD1C008A97EE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -121,6 +123,8 @@
 		2DD3FACA18EC0E4C00053032 /* matlab */ = {
 			isa = PBXGroup;
 			children = (
+				2DD3FADA18EC118700053032 /* vlg_root.m */,
+				2DD3FADB18EC118700053032 /* vlg_setup.m */,
 				2DD3FAD118EC0E8100053032 /* xtest */,
 				2DD3FACB18EC0E7B00053032 /* gfully.m */,
 				2DD3FACC18EC0E7B00053032 /* gloss.m */,

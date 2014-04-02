@@ -1,6 +1,6 @@
 if ~exist('net')
-  net = load('tinynet_caffe.mat') ;
-  load('tinynet_caffe_data.mat') ;
+  net = load(fullfile(vlg_root, 'data', 'tinynet_caffe.mat')) ;
+  load(fullfile(vlg_root, 'data', 'tinynet_caffe_data.mat')) ;
 end
 
 % forward pass
