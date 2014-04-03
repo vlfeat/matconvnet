@@ -87,10 +87,10 @@ __global__ void maxPooling_gpu_kernel
     int c = (index / pooled_width / pooled_height) % channels;
     int n = index / pooled_width / pooled_height / channels;
     // pooled patch start and end
-    int wstart = max(pw * stride, 0) ;
-    int hstart = max(ph * stride, 0) ;
-    int wend = min(wstart + ksize, width) ;
-    int hend = min(hstart + ksize, height) ;
+    int wstart = max(pw * stride - pad, 0) ;
+    int hstart = max(ph * stride - pad, 0) ;
+    int wend = min(pw * stride - pad + ksize, width) ;
+    int hend = min(ph * stride - pad + ksize, height) ;
     Dtype maxval = -FLT_MAX;
     bottom_data += (n * channels + c) * height * width;
     for (int h = hstart; h < hend; ++h) {
@@ -228,14 +228,14 @@ __global__ void maxPoolingBackward_gpu_kernel
     int c = (index / pooled_width / pooled_height) % channels;
     int n = index / pooled_width / pooled_height / channels;
     // pooled patch start and end
-    int wstart = max(pw * stride, 0) ;
-    int hstart = max(ph * stride, 0) ;
-    int wend = min(wstart + ksize, width) ;
-    int hend = min(hstart + ksize, height) ;
+    int wstart = max(pw * stride - pad, 0) ;
+    int hstart = max(ph * stride - pad, 0) ;
+    int wend = min(pw * stride - pad + ksize, width) ;
+    int hend = min(ph * stride - pad + ksize, height) ;
     Dtype bestValue = -FLT_MAX;
     int bestIndex = 0 ;
     bottom_data += (n * channels + c) * height * width;
-    bottom_diff +=(n * channels + c) * height * width;
+    bottom_diff += (n * channels + c) * height * width;
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
         int index = h * width + w ;
