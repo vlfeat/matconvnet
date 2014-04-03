@@ -1,15 +1,18 @@
 function testder(g,x,dzdy,dzdx,delta)
 
 if nargin < 5
-  delta = 1e-4 ;
+  delta = 1e-2 ;
 end
 
-y = g(x) ;
+dzdy = gather(dzdy) ;
+dzdx = gather(dzdx) ;
+
+y = gather(g(x)) ;
 dzdx_=zeros(size(dzdx));
 for i=1:numel(x)
-  dx = zeros(size(x)) ;
-  dx(i) = delta ;
-  y_=g(x+dx) ;
+  x_ = x ;
+  x_(i) = x_(i) + delta ;
+  y_ = gather(g(x_)) ;
   factors = dzdy .* (y_ - y)/delta ;
   dzdx_(i) = dzdx_(i) + sum(factors(:)) ;
 end

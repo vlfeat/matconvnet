@@ -363,9 +363,9 @@ void mexFunction(int nout, mxArray *out[],
                       (int)k, (int)n, (int)m,
                       &alpha,
                       (float const*)mxGPUGetDataReadOnly(tempGpu) + tempOffset, (int)m,
-                      (float const*)mxGPUGetDataReadOnly(derGpu) + derImOffset, (int)m,
+                      (float const*)mxGPUGetDataReadOnly(derGpu) + derImOffset + derGroupOffset, (int)m,
                       &beta,
-                      (float*)mxGPUGetData(dfiltersGpu), (int)k) ;
+                      (float*)mxGPUGetData(dfiltersGpu) + filterOffset, (int)k) ;
         } else {
           sgemm("t", "n",
                 &k, &n, &m,
