@@ -3,65 +3,53 @@ if ~exist('net')
   load(fullfile(vlg_root, 'data', 'tinynet_caffe_data.mat')) ;
 end
 
-% forward pass
-res = tinynet(net, im) ;
+for gpu = [false true]
+  dzdy = zeros(1000,1,'single') ;
+  dzdy(286) = 1 ;
+  if gpu
+    net_ = tinynet_move(net, 'gpu') ;
+    im_ = gpuArray(im) ;
+    dzdy_ = gpuArray(dzdy) ;
+    res = tinynet(net_, im_, dzdy_) ;
+  else
+    res = tinynet(net, im, dzdy) ;
+  end
+  pairs = [1  1  % 1:  data
+           3  2  % 2:  conv + relu
+           4  3  % 3:  pool
+           5  4  % 4:  normalize
+           7  6  % 5:  pad + conv + relu
+           8  7  % 6:  pool
+           9  8  % 7:  normalize
+           11 10 % 8:  pad + conv + relu
+           13 12 % 9:  pad + conv + relu
+           15 14 % 10: pad + conv + relu
+           16 15 % 11: pool
+           19 16 % 12: vec+fully+relu
+           21 17 % 13: fully+relu
+           22 18 % 14: fully
+           23 19 % 15: softmax
+          ] ;
 
-% Block 0 (input)
-assert(max(res(1).x(:)-data{1}(:)) < 1e-3) ; % input image
+  % Values x
+  for i=1:size(pairs,1)
+    testsim(res(pairs(i,1)).x(:), data{pairs(i,2)}(:)) ;
+  end
 
-% Block 1
-assert(max(res(2).x(:)-data{2}(:)) < 1e-3) ; % output conv
-assert(max(res(4).x(:)-data{3}(:)) < 1e-3) ; % otuput relu+pool
-assert(max(res(5).x(:)-data{4}(:)) < 1e-3) ; % output norm
+  % Derivatives dzdx
+  for i=1:size(pairs,1)
+    testsim(res(pairs(i,1)).dzdx(:), diff{pairs(i,2)}(:)) ;
+  end
 
-% Block 2
-assert(max(res(6).x(:)-data{6}(:)) < 1e-3) ; % output conv
-assert(max(res(8).x(:)-data{7}(:)) < 1e-3) ; % output relu+pool
-assert(max(res(9).x(:)-data{8}(:)) < 1e-3) ; % output norm
-
-% Block 3
-assert(max(res(10).x(:)-data{10}(:)) < 1e-3) ; % output conv
-
-% Block 4
-assert(max(res(12).x(:)-data{12}(:)) < 1e-3) ; % output relu+conv
-
-% Block 5
-assert(max(res(14).x(:)-data{14}(:)) < 1e-3) ; % output relu+conv
-
-% Block 6
-assert(max(res(16).x(:)-data{15}(:)) < 1e-3) ; % output vec+fully
-
-% Block 7
-assert(max(res(18).x(:)-data{16}(:)) < 1e-3) ; % output relu+fully
-
-% Block 8
-assert(max(res(20).x(:)-data{17}(:)) < 1e-3) ; % output relu+fully
-
-% Block 9
-assert(max(res(22).x(:)-data{18}(:)) < 1e-3) ; % output relu+fully
-
-% Block 10
-assert(max(res(23).x(:)-data{19}(:)) < 1e-3) ; % output softmax
-
-% Backward pass
-dzdy = zeros(1000,1,'single') ;
-dzdy(286) = 1 ;
-res = tinynet(net, im, dzdy) ;
-
-% Derivatives
-assert(max(res(1).dzdx(:)-diff{1}(:)) < 1e-3) ;
-assert(max(res(22).dzdx(:)-diff{18}(:)) < 1e-3) ;
-assert(max(res(23).dzdx(:)-diff{19}(:)) < 1e-3) ; % softmax
-
-for i = 1:2
-  assert(max(res(1).dzdw{i}(:)-pdiff{2}{i}(:)) < 1e-3) ;
-  assert(max(res(5).dzdw{i}(:)-pdiff{6}{i}(:)) < 1e-3) ;
-  assert(max(res(9).dzdw{i}(:)-pdiff{10}{i}(:)) < 1e-3) ;
-  assert(max(res(11).dzdw{i}(:)-pdiff{12}{i}(:)) < 1e-3) ;
-  assert(max(res(13).dzdw{i}(:)-pdiff{14}{i}(:)) < 1e-3) ;
-end
-for i = 1:2
-  assert(max(res(17).dzdw{i}(:)-pdiff{16}{i}(:)) < 1e-3) ;
-  assert(max(res(19).dzdw{i}(:)-pdiff{17}{i}(:)) < 1e-3) ;
-  assert(max(res(21).dzdw{i}(:)-pdiff{18}{i}(:)) < 1e-3) ;
+  % Derivatives dzdw
+  for i = 1:2
+    testsim(res(1).dzdw{i}(:),pdiff{2}{i}(:)) ;
+    testsim(res(5).dzdw{i}(:),pdiff{6}{i}(:)) ;
+    testsim(res(9).dzdw{i}(:),pdiff{10}{i}(:)) ;
+    testsim(res(11).dzdw{i}(:),pdiff{12}{i}(:)) ;
+    testsim(res(13).dzdw{i}(:),pdiff{14}{i}(:)) ;
+    testsim(res(17).dzdw{i}(:),pdiff{16}{i}(:)) ;
+    testsim(res(19).dzdw{i}(:),pdiff{17}{i}(:)) ;
+    testsim(res(21).dzdw{i}(:),pdiff{18}{i}(:)) ;
+  end
 end
