@@ -35,6 +35,7 @@ for i=1:n
     otherwise
       error('Unknown layer type %s', l.type);
   end
+  wait(gpuDevice) ;
   res(i).time = toc(res(i).time) ;
 end
 
@@ -70,7 +71,7 @@ if doder
       case 'relu'
         res(i).dzdx = grelu(res(i).x, res(i+1).dzdx) ;
     end
+    wait(gpuDevice) ;
     res(i).backwardTime = toc(res(i).backwardTime) ;
-
   end
 end
