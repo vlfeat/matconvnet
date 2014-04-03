@@ -57,7 +57,6 @@ for i=1:n
 end
 res = tinynet(net, im, dzdy) ;
 
-
 for i=numel(res):-1:1
   if i==numel(res)
     name = 'output' ;

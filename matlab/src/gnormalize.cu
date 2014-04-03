@@ -43,7 +43,6 @@ void mexFunction(int nout, mxArray *out[],
   double normKappa ;
   double normBeta ;
 
-
   mwSize dataNumDimensions ;
   mwSize derNumDimensions ;
   mwSize const * dataDimensions ;
@@ -219,6 +218,11 @@ void mexFunction(int nout, mxArray *out[],
       /*                                              Backward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+        normalizeBackward_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
+                                     (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
+                                     (float const*)mxGPUGetDataReadOnly(derGpu) + derOffset,
+                                     height, width, depth,
+                                     normDepth, normKappa, normAlpha, normBeta) ;
       } else {
         normalizeBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                                      (float const*)mxGetData(in[IN_DATA]) + dataOffset,
@@ -231,7 +235,10 @@ void mexFunction(int nout, mxArray *out[],
       /*                                               Forward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
-
+        normalize_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
+                             (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
+                             height, width, depth,
+                             normDepth, normKappa, normAlpha, normBeta) ;
       } else {
         normalize_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                              (float const*)mxGetData(in[IN_DATA]) + dataOffset,

@@ -20,9 +20,12 @@ for i=1:size(x,1)
   end
 end
 
-x = x(:) ;
-y = y(:) ;
-y_ = y_(:) ;
+y__ = gnormalize(gpuArray(x),param,'verbose') ;
+dzdx__ = gnormalize(gpuArray(x), param, gpuArray(dzdy)) ;
 
-
-[y y_]
+if 0
+  x = x(:) ;
+  y = y(:) ;
+  y_ = y_(:) ;
+  [y y_]
+end

@@ -7,7 +7,7 @@ else
   grand = @(varargin) rand(varargin{:}) ;
 end
 
-for l=[1:4 8]
+for l=1:8
   switch l
     case 1
       disp('testing gloss') ;
@@ -121,6 +121,20 @@ for l=[1:4 8]
       dzdy = grandn(size(y),'single') ;
       dzdx = gnormalize(x,param,dzdy,'verbose') ;
       testder(@(x) gnormalize(x,param), x, dzdy, dzdx) ;
+
+      y_ = zeros(size(y),'single') ;
+      x_ = gather(x) ;
+      for i=1:size(x,1)
+        for j=1:size(x,2)
+          for n=1:size(x,4)
+            t = zeros(1,1,size(x,3),1) ;
+            t(1,1,:,1) = (param(2) + param(3)*conv(squeeze(x_(i,j,:,n)).^2, ...
+                                                   ones(param(1),1), 'same')).^(-param(4)) ;
+            y_(i,j,:,n) = x_(i,j,:,n) .* t ;
+          end
+        end
+      end
+      assert(all(all(all(all(gather(abs(y-y_)) < 1e-3))))) ;
 
     case 7
       disp('testing gvec') ;
