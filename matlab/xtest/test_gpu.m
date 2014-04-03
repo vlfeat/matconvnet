@@ -2,9 +2,11 @@ speedup = [] ;
 psize = [] ;
 T = 20 ;
 
-for n=2.^(8:12)
+for n=2.^(8:10)
+  m = 1 ;
+  m = n ;
   A = randn(n,'single');
-  B = randn(n,'single');
+  B = randn(n,m,'single');
   A_ = gpuArray(A) ;
   B_ = gpuArray(B) ;
 
@@ -15,14 +17,14 @@ for n=2.^(8:12)
   cpu_time = tic ;
   for i=1:T
     C = A*B ;
-    A = B*C ;
+    B = A*C ;
   end
   cpu_time = toc(cpu_time) ;
 
   gpu_time = tic ;
   for i=1:T
     C_ = A_*B_ ;
-    A_ = B_*C_ ;
+    B_ = A_*C_ ;
   end
   wait(gpuDevice) ;
   gpu_time = toc(gpu_time) ;
