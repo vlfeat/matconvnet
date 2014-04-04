@@ -12,6 +12,7 @@
 		2D375DC818A7FE3F008A97EE /* gconv.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DBE18A7F79E008A97EE /* gconv.cu */; };
 		2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DCA18A848E2008A97EE /* im2col.cpp */; };
 		2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D375DCB18A848E2008A97EE /* im2col.hpp */; };
+		2D95CDA518EDE3A50076E3A2 /* im2col_gpu.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */; };
 		2DADAFF718E6430500165C90 /* normalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DADAFF518E6430500165C90 /* normalize.cpp */; };
 		2DADAFF818E6430500165C90 /* normalize.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DADAFF618E6430500165C90 /* normalize.hpp */; };
 /* End PBXBuildFile section */
@@ -39,11 +40,14 @@
 		2D375DC318A7FD1C008A97EE /* libgconv.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libgconv.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D375DCA18A848E2008A97EE /* im2col.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = im2col.cpp; path = matlab/src/bits/im2col.cpp; sourceTree = "<group>"; };
 		2D375DCB18A848E2008A97EE /* im2col.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = im2col.hpp; path = matlab/src/bits/im2col.hpp; sourceTree = "<group>"; };
+		2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = im2col_gpu.cu; path = matlab/src/bits/im2col_gpu.cu; sourceTree = "<group>"; };
+		2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = pooling_gpu.cu; path = matlab/src/bits/pooling_gpu.cu; sourceTree = "<group>"; };
+		2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = normalize_gpu.cu; path = matlab/src/bits/normalize_gpu.cu; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* gnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = gnormalize.cu; path = matlab/src/gnormalize.cu; sourceTree = "<group>"; };
 		2DADAFF518E6430500165C90 /* normalize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = normalize.cpp; path = matlab/src/bits/normalize.cpp; sourceTree = "<group>"; };
 		2DADAFF618E6430500165C90 /* normalize.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = normalize.hpp; path = matlab/src/bits/normalize.hpp; sourceTree = "<group>"; };
 		2DADAFF918E8D61D00165C90 /* mexutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = mexutils.h; path = matlab/src/bits/mexutils.h; sourceTree = "<group>"; };
-		2DADF18018ACFA6700D16D4C /* caffe-scraps.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = "caffe-scraps.hpp"; path = "matlab/src/bits/caffe-scraps.hpp"; sourceTree = "<group>"; };
+		2DADF18018ACFA6700D16D4C /* gpu.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = gpu.hpp; path = matlab/src/bits/gpu.hpp; sourceTree = "<group>"; };
 		2DAFFA4F18AD58530014D531 /* mex_gpu_opts.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; name = mex_gpu_opts.sh; path = matlab/src/mex_gpu_opts.sh; sourceTree = "<group>"; };
 		2DD3FACB18EC0E7B00053032 /* gfully.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = gfully.m; path = matlab/gfully.m; sourceTree = "<group>"; };
 		2DD3FACC18EC0E7B00053032 /* gloss.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = gloss.m; path = matlab/gloss.m; sourceTree = "<group>"; };
@@ -108,14 +112,17 @@
 		2D375DCE18A84923008A97EE /* bits */ = {
 			isa = PBXGroup;
 			children = (
+				2DADF18018ACFA6700D16D4C /* gpu.hpp */,
 				2DADAFF918E8D61D00165C90 /* mexutils.h */,
 				2D375DCA18A848E2008A97EE /* im2col.cpp */,
+				2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */,
 				2D375DCB18A848E2008A97EE /* im2col.hpp */,
 				2D06568718AA79BB006545B4 /* pooling.cpp */,
+				2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */,
 				2D06568818AA79BB006545B4 /* pooling.hpp */,
 				2DADAFF518E6430500165C90 /* normalize.cpp */,
+				2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */,
 				2DADAFF618E6430500165C90 /* normalize.hpp */,
-				2DADF18018ACFA6700D16D4C /* caffe-scraps.hpp */,
 			);
 			name = bits;
 			sourceTree = "<group>";
@@ -238,6 +245,7 @@
 				2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */,
 				2D06568918AA79BB006545B4 /* pooling.cpp in Sources */,
 				2DADAFF718E6430500165C90 /* normalize.cpp in Sources */,
+				2D95CDA518EDE3A50076E3A2 /* im2col_gpu.cu in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

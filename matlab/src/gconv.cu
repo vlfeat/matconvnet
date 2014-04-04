@@ -1,13 +1,22 @@
-/* rip-off convolution from decaf and port it to MATLAB and gpuArrays */
+/** @file gconv.cu
+ ** @brief Convolution block
+ ** @author Andrea Vedaldi
+ **/
 
 #include "mex.h"
+#ifdef ENABLE_GPU
 #include "gpu/mxGPUArray.h"
-#include <cublas_v2.h>
+#endif
+#include "bits/mexutils.h"
+#include "bits/im2col.hpp"
+
 #include <blas.h>
 #include <iostream>
+#include <assert.h>
 
-#include "bits/mexutils.h"
-#include "bits/im2col.cpp"
+#ifdef ENABLE_GPU
+#include <cublas_v2.h>
+#endif
 
 /* option codes */
 enum {
@@ -32,31 +41,27 @@ enum {
   OUT_RESULT = 0, OUT_RESULT2, OUT_END
 } ;
 
-inline vl_uindex divup(vl_uindex i, vl_uindex d)
-{
-  return (i + d - 1) / d ;
-}
-
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   mxClassID dataClassID ;
   mxClassID filtersClassID ;
   mxClassID derClassID ;
+
+#if ENABLE_GPU
   mxGPUArray const *dataGpu ;
   mxGPUArray const *filtersGpu ;
   mxGPUArray const *derGpu ;
-
   mxGPUArray *resultGpu ;
   mxGPUArray *dfiltersGpu ;
   mxGPUArray *tempGpu ;
+  cublasStatus_t stat;
+  cublasHandle_t handle;
+#endif
 
   mxArray *resultArray ;
   mxArray *dfiltersArray ;
   mxArray *tempArray ;
-
-  cublasStatus_t stat;
-  cublasHandle_t handle;
 
   size_t height, width, depth, numImages ;
   size_t filterHeight, filterWidth, filterDepth, numFilters ;
@@ -119,9 +124,17 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
+#if ENABLE_GPU
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
+#else
+  gpuMode = false ;
+  if (mxIsGPUArray(in[IN_DATA])) {
+    mexErrMsgTxt("GPU support not compiled.") ;
+  }
+#endif
 
   if (gpuMode) {
+#ifdef ENABLE_GPU
     if (!mxIsGPUArray(in[IN_FILTERS])) {
       mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
     }
@@ -147,6 +160,9 @@ void mexFunction(int nout, mxArray *out[],
       derNumDimensions = mxGPUGetNumberOfDimensions(derGpu) ;
       derDimensions = mxGPUGetDimensions(derGpu) ;
     }
+#else
+    assert(false) ;
+#endif
   } else {
     if (mxIsGPUArray(in[IN_FILTERS])) {
       mexErrMsgTxt("DATA is a CPU array but FILTERS is not.") ;
@@ -285,6 +301,7 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   if (gpuMode) {
+#ifdef ENABLE_GPU
     tempGpu = mxGPUCreateGPUArray(3, tempDimensions,
                                   mxSINGLE_CLASS,
                                   mxREAL,
@@ -302,6 +319,9 @@ void mexFunction(int nout, mxArray *out[],
                                         mxREAL,
                                         MX_GPU_INITIALIZE_VALUES) ;
     }
+#else
+    assert(false) ;
+#endif
   } else {
     tempArray = mxCreateNumericArray(3, tempDimensions,
                                      mxSINGLE_CLASS,
@@ -339,11 +359,15 @@ void mexFunction(int nout, mxArray *out[],
 
       /* derivative w.r.t. filters dz/dF */
       if (gpuMode) {
+#ifdef ENABLE_GPU
         im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataImOffset,
                           depth, width, height,
                           filterHeight,
                           stride, pad,
                           (float *)mxGPUGetData(tempGpu)) ;
+#else
+        assert(false) ;
+#endif
       } else {
         im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataImOffset,
                           depth, width, height,
@@ -358,6 +382,7 @@ void mexFunction(int nout, mxArray *out[],
         float alpha = 1 ;
         float beta = 1 ;
         if (gpuMode) {
+#ifdef ENABLE_GPU
           cublasSgemm(handle,
                       CUBLAS_OP_T, CUBLAS_OP_N,
                       (int)k, (int)n, (int)m,
@@ -366,6 +391,9 @@ void mexFunction(int nout, mxArray *out[],
                       (float const*)mxGPUGetDataReadOnly(derGpu) + derImOffset + derGroupOffset, (int)m,
                       &beta,
                       (float*)mxGPUGetData(dfiltersGpu) + filterOffset, (int)k) ;
+#else
+          assert(false) ;
+#endif
         } else {
           sgemm("t", "n",
                 &k, &n, &m,
@@ -386,6 +414,7 @@ void mexFunction(int nout, mxArray *out[],
           float alpha = 1 ;
           float beta = 0 ;
           if (gpuMode) {
+#ifdef ENABLE_GPU
             cublasSgemm(handle,
                         CUBLAS_OP_N, CUBLAS_OP_T,
                         (int)m, (int)k, (int)n,
@@ -394,6 +423,9 @@ void mexFunction(int nout, mxArray *out[],
                         (float const*)mxGPUGetDataReadOnly(filtersGpu) + filterOffset, (int)k,
                         &beta,
                         (float*)mxGPUGetData(tempGpu) + tempOffset, (int)m) ;
+#else
+            assert(false) ;
+#endif
           } else {
             sgemm("n", "t",
                   &m, &k, &n,
@@ -404,12 +436,16 @@ void mexFunction(int nout, mxArray *out[],
                   (float*)mxGetData(tempArray) + tempOffset, &m) ;
           }
         }
-        if (gpuMode ) {
+        if (gpuMode) {
+#ifdef ENABLE_GPU
           col2im_gpu<float>((float*)mxGPUGetData(tempGpu),
                             depth, width, height,
                             filterHeight,
                             stride, pad,
                             (float*)mxGPUGetData(resultGpu) + resImOffset) ;
+#else
+          assert(false) ;
+#endif
         } else {
           col2im_cpu<float>((float*)mxGetData(tempArray),
                             depth, width, height,
@@ -423,11 +459,15 @@ void mexFunction(int nout, mxArray *out[],
       /*                                               Forward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+#ifdef ENABLE_GPU
         im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataImOffset,
                           depth, width, height,
                           filterHeight,
                           stride, pad,
                           (float *)mxGPUGetData(tempGpu)) ;
+#else
+        assert(false) ;
+#endif
       } else {
         im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataImOffset,
                           depth, width, height,
@@ -442,6 +482,7 @@ void mexFunction(int nout, mxArray *out[],
         float alpha = 1 ;
         float beta = 0 ;
         if (gpuMode) {
+#ifdef ENABLE_GPU
           cublasSgemm(handle,
                       CUBLAS_OP_N, CUBLAS_OP_N,
                       (int)m, (int)n, (int)k,
@@ -450,6 +491,9 @@ void mexFunction(int nout, mxArray *out[],
                       (float const*)mxGPUGetDataReadOnly(filtersGpu) + filterOffset, (int)k,
                       &beta,
                       (float*)mxGPUGetData(resultGpu) + resImOffset + resultGroupOffset, (int)m) ;
+#else
+          assert(false) ;
+#endif
         } else {
           sgemm("n", "n",
                 &m, &n, &k,
@@ -468,6 +512,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
   if (gpuMode) {
+#ifdef ENABLE_GPU
     if (backMode) {
       out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(dfiltersGpu) ;
       if (nout > 1) {
@@ -482,6 +527,9 @@ void mexFunction(int nout, mxArray *out[],
     if (backMode) { mxGPUDestroyGPUArray(dfiltersGpu) ; }
     mxGPUDestroyGPUArray(tempGpu) ;
     cublasDestroy(handle);
+#else
+    assert(false) ;
+#endif
   } else {
     mxDestroyArray(tempArray);
     if (backMode) {

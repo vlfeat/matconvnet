@@ -9,6 +9,8 @@
 #ifndef matconv_caffe_scraps_h
 #define matconv_caffe_scraps_h
 
+#include <iostream>
+
 #define FATAL std::cout
 #define LOG(x) x
 
@@ -24,7 +26,8 @@ const int CAFFE_CUDA_NUM_THREADS = 1024;
 const int CAFFE_CUDA_NUM_THREADS = 512;
 #endif
 
-inline int CAFFE_GET_BLOCKS(const int N) {
+inline int CAFFE_GET_BLOCKS(const int N)
+{
   return (N + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS;
 }
 

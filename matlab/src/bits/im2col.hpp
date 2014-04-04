@@ -1,10 +1,7 @@
-//
-//  im2col.h
-//  matconv
-//
-//  Created by Andrea Vedaldi on 09/02/2014.
-//  Copyright (c) 2014 Andrea Vedaldi. All rights reserved.
-//
+/** @file im2col.hpp
+ ** @brief Image to columns and back
+ ** @author Andrea Vedaldi
+ **/
 
 #ifndef __matconv__im2col__
 #define __matconv__im2col__
@@ -30,6 +27,8 @@ void col2im_cpu(const Dtype* data_col, const int channels,
                 const int pad, const int stride,
                 Dtype* data_im) ;
 
+
+#ifdef ENABLE_GPU
 template <typename Dtype>
 void im2col_gpu(const Dtype* data_im, const int channels,
                 const int height, const int width, const int ksize,
@@ -41,5 +40,6 @@ void col2im_gpu(const Dtype* data_col, const int channels,
                 const int height, const int width, const int ksize,
                 const int pad, const int stride,
                 Dtype* data_im) ;
+#endif
 
 #endif /* defined(__matconv__im2col__) */

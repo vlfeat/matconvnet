@@ -1,13 +1,12 @@
-//
-//  pooling.h
-//  matconv
-//
-//  Created by Andrea Vedaldi on 11/02/2014.
-//  Copyright (c) 2014 Andrea Vedaldi. All rights reserved.
-//
+/** @file pooling.hpp
+ ** @brief Max pooling filters
+ ** @author Andrea Vedaldi
+ **/
 
 #ifndef __matconv__pooling__
 #define __matconv__pooling__
+
+#include <cstddef>
 
 template<typename T>
 void maxPooling_cpu(T* pooled,
@@ -30,6 +29,7 @@ void maxPoolingBackward_cpu(T* dzdx,
                             size_t stride,
                             size_t pad) ;
 
+#ifdef ENABLE_GPU
 template<typename T>
 void maxPooling_gpu(T* pooled,
                     T const data,
@@ -50,5 +50,6 @@ void maxPoolingBackward_gpu(T* dzdx,
                             size_t poolSize,
                             size_t stride,
                             size_t pad) ;
+#endif
 
 #endif /* defined(__matconv__pooling__) */

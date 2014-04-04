@@ -24,7 +24,7 @@ typedef mwSize vl_size ;
 typedef int unsigned  vl_uint  ;
 typedef int vl_bool ;
 typedef ptrdiff_t vl_index ;
-typedef ptrdiff_t unsigned vl_uindex ;
+typedef size_t vl_uindex ;
 #define VL_INLINE inline
 #define VL_TRUE 1
 #define VL_FALSE 0

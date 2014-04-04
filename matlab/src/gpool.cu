@@ -1,11 +1,16 @@
-#include "mex.h"
-#include "gpu/mxGPUArray.h"
-#include <cublas_v2.h>
-#include <blas.h>
-#include <iostream>
+/** @file gpool.cu
+ ** @brief Max-pooling block
+ ** @author Andrea Vedaldi
+ **/
 
+#include "mex.h"
+#ifdef ENABLE_GPU
+#include "gpu/mxGPUArray.h"
+#endif
 #include "bits/mexutils.h"
-#include "bits/pooling.cpp"
+#include "bits/pooling.hpp"
+#include <blas.h>
+#include <assert.h>
 
 /* option codes */
 enum {
