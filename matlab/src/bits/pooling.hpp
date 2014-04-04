@@ -10,7 +10,7 @@
 
 template<typename T>
 void maxPooling_cpu(T* pooled,
-                    T const data,
+                    T const* data,
                     size_t width,
                     size_t height,
                     size_t depth,
@@ -32,7 +32,7 @@ void maxPoolingBackward_cpu(T* dzdx,
 #ifdef ENABLE_GPU
 template<typename T>
 void maxPooling_gpu(T* pooled,
-                    T const data,
+                    T const* data,
                     size_t width,
                     size_t height,
                     size_t depth,

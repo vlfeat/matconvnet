@@ -1,7 +1,7 @@
 function testder(g,x,dzdy,dzdx,delta)
 
 if nargin < 5
-  delta = 1e-2 ;
+  delta = 1e-3 ;
 end
 
 dzdy = gather(dzdy) ;

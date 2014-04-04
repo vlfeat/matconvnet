@@ -1,4 +1,6 @@
-gpu = true ;
+function test_glayers(gpu)
+
+if nargin < 1, gpu = true ; end
 if gpu
   grandn = @(varargin) gpuArray.randn(varargin{:}) ;
   grand = @(varargin) gpuArray.rand(varargin{:}) ;
