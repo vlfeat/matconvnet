@@ -1,4 +1,4 @@
-n = 2 ;
+n = 3 ;
 T = 40 ;
 
 net = load(fullfile(vlg_root, 'data', 'tinynet_caffe.mat')) ;

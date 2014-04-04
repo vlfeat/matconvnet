@@ -1,10 +1,11 @@
 SHELL=/bin/bash
-MEX=/Applications/MATLAB_R2013a.app/bin/mex
+MEX=mex
+#/Applications/MATLAB_R2013a.app/bin/mex
 NVCC=/Developer/NVIDIA/CUDA-5.5/bin/nvcc
 NVCCOPTS=-gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
 MEXARCH=maci64
 ENABLE_GPU=yes
-MEXOPTS=-lmwblas -largeArrayDims -g
+MEXOPTS=-lmwblas -largeArrayDims
 MEXOPTS_GPU=$(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
 ifneq ($(DEBUG),)
 MEXOPTS+=-g
@@ -36,7 +37,6 @@ cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
 
 .PHONY: all, distclean, clean, info
-.PRECIOUS: %.o
 
 all: $(mex_tgt)
 
@@ -67,11 +67,7 @@ else
 	MW_NVCC_PATH='$(NVCC)' $(MEX) $(MEXOPTS_GPU) "$(<)" -o "$(@)" $(cpp_tgt) $(nvcc_filter)
 endif
 
-# MW_NVCC_PATH='$(NVCC)' $(MEX) -c $(MEXOPTS_GPU) "$(<)" -o "$(@)" $(nvcc_filter)
-#matlab/mex/gconv.mexmaci64 : $(shell echo matlab/src/bits/im2col.{cpp,hpp})
-#matlab/mex/gpool.mexmaci64 : $(shell echo matlab/src/bits/pooling.{cpp,hpp})
-#matlab/mex/gnormalize.mexmaci64 : $(shell echo matlab/src/bits/normalize.{cpp,hpp})
-
+# Other targets
 info:
 	@echo "mex_src=$(mex_src)"
 	@echo "mex_tgt=$(mex_tgt)"
