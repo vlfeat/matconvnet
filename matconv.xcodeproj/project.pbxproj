@@ -182,9 +182,24 @@
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "";
 			dependencies = (
 			);
 			name = matconv;
+			passBuildSettingsInEnvironment = 1;
+			productName = matconv;
+		};
+		2D95CDAA18EEB2630076E3A2 /* matconv no gpu */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "ENABLE_GPU=\"\" $(ACTION)";
+			buildConfigurationList = 2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "matconv no gpu" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = "matconv no gpu";
 			passBuildSettingsInEnvironment = 1;
 			productName = matconv;
 		};
@@ -231,6 +246,7 @@
 			projectRoot = "";
 			targets = (
 				2D375DB518A7F064008A97EE /* matconv */,
+				2D95CDAA18EEB2630076E3A2 /* matconv no gpu */,
 				2D375DC218A7FD1C008A97EE /* gconv */,
 			);
 		};
@@ -369,6 +385,27 @@
 			};
 			name = Release;
 		};
+		2D95CDAC18EEB2630076E3A2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "matconv copy";
+			};
+			name = Debug;
+		};
+		2D95CDAD18EEB2630076E3A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "matconv copy";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -395,6 +432,15 @@
 			buildConfigurations = (
 				2D375DC618A7FD1C008A97EE /* Debug */,
 				2D375DC718A7FD1C008A97EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "matconv no gpu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2D95CDAC18EEB2630076E3A2 /* Debug */,
+				2D95CDAD18EEB2630076E3A2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

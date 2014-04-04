@@ -48,17 +48,6 @@ void mexFunction(int nout, mxArray *out[],
   mxClassID filtersClassID ;
   mxClassID derClassID ;
 
-#if ENABLE_GPU
-  mxGPUArray const *dataGpu ;
-  mxGPUArray const *filtersGpu ;
-  mxGPUArray const *derGpu ;
-  mxGPUArray *resultGpu ;
-  mxGPUArray *dfiltersGpu ;
-  mxGPUArray *tempGpu ;
-  cublasStatus_t stat;
-  cublasHandle_t handle;
-#endif
-
   mxArray *resultArray ;
   mxArray *dfiltersArray ;
   mxArray *tempArray ;
@@ -79,7 +68,19 @@ void mexFunction(int nout, mxArray *out[],
   mwSize dfiltersDimensions [4] ;
   mwSize tempDimensions [3] ;
 
+#if ENABLE_GPU
+  mxGPUArray const *dataGpu ;
+  mxGPUArray const *filtersGpu ;
+  mxGPUArray const *derGpu ;
+  mxGPUArray *resultGpu ;
+  mxGPUArray *dfiltersGpu ;
+  mxGPUArray *tempGpu ;
+  cublasStatus_t stat;
+  cublasHandle_t handle;
   bool gpuMode = false ;
+#else
+  bool const gpuMode = false ;
+#endif
   bool backMode = false ;
 
   int verbosity = 0 ;
@@ -127,9 +128,8 @@ void mexFunction(int nout, mxArray *out[],
 #if ENABLE_GPU
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
 #else
-  gpuMode = false ;
-  if (mxIsGPUArray(in[IN_DATA])) {
-    mexErrMsgTxt("GPU support not compiled.") ;
+  if (!mxIsNumeric(in[IN_DATA])) {
+    mexErrMsgTxt("DATA must be numeric (note: GPU support not compiled).") ;
   }
 #endif
 
@@ -164,7 +164,7 @@ void mexFunction(int nout, mxArray *out[],
     assert(false) ;
 #endif
   } else {
-    if (mxIsGPUArray(in[IN_FILTERS])) {
+    if (!mxIsNumeric(in[IN_FILTERS])) {
       mexErrMsgTxt("DATA is a CPU array but FILTERS is not.") ;
     }
     dataClassID = mxGetClassID(in[IN_DATA]) ;
@@ -351,6 +351,8 @@ void mexFunction(int nout, mxArray *out[],
     ptrdiff_t m = tempDimensions[0]*tempDimensions[1] ; /* num output pixels */
     ptrdiff_t n = numFilters/numGroups ; /* num filters per group */
     ptrdiff_t k = filterHeight*filterWidth*filterDepth ; /* filter volume */
+    char OP_N = 'n' ;
+    char OP_T = 't' ;
 
     if (backMode) {
       /* ---------------------------------------------------------- */
@@ -395,7 +397,7 @@ void mexFunction(int nout, mxArray *out[],
           assert(false) ;
 #endif
         } else {
-          sgemm("t", "n",
+          sgemm(&OP_T, &OP_N,
                 &k, &n, &m,
                 &alpha,
                 (float*)mxGetData(tempArray) + tempOffset, &m,
@@ -427,7 +429,7 @@ void mexFunction(int nout, mxArray *out[],
             assert(false) ;
 #endif
           } else {
-            sgemm("n", "t",
+            sgemm(&OP_N, &OP_T,
                   &m, &k, &n,
                   &alpha,
                   (float*)mxGetData(in[IN_DER]) + derImOffset + derGroupOffset, &m,
@@ -495,7 +497,7 @@ void mexFunction(int nout, mxArray *out[],
           assert(false) ;
 #endif
         } else {
-          sgemm("n", "n",
+          sgemm(&OP_N, &OP_N,
                 &m, &n, &k,
                 &alpha,
                 (float*)mxGetData(tempArray) + tempOffset, &m,

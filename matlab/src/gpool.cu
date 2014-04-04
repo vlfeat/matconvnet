@@ -40,9 +40,6 @@ void mexFunction(int nout, mxArray *out[],
 {
   mxClassID dataClassID ;
   mxClassID derClassID ;
-  mxGPUArray const *dataGpu ;
-  mxGPUArray const *derGpu ;
-  mxGPUArray *resultGpu ;
   mxArray *resultArray ;
 
   size_t height, width, depth, numImages ;
@@ -58,7 +55,14 @@ void mexFunction(int nout, mxArray *out[],
   mwSize resultDimensions [4] ;
   mwSize tempDimensions [3] ;
 
+#ifdef ENABLE_GPU
+  mxGPUArray const *dataGpu ;
+  mxGPUArray const *derGpu ;
+  mxGPUArray *resultGpu ;
   bool gpuMode = false ;
+#else
+  bool const gpuMode = false ;
+#endif
   bool backMode = false ;
 
   int verbosity = 0 ;
@@ -104,7 +108,13 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
+#if ENABLE_GPU
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
+#else
+  if (!mxIsNumeric(in[IN_DATA])) {
+    mexErrMsgTxt("DATA must be numeric (note: GPU support not compiled).") ;
+  }
+#endif
 
   if (!mxIsNumeric(in[IN_SIZE]) ||
        mxGetClassID(in[IN_SIZE]) != mxDOUBLE_CLASS ||
@@ -116,8 +126,8 @@ void mexFunction(int nout, mxArray *out[],
   poolHeight = mxGetPr(in[IN_SIZE])[0] ;
   poolWidth = mxGetPr(in[IN_SIZE])[1] ;
 
-
   if (gpuMode) {
+#ifdef ENABLE_GPU
     mxInitGPU() ;
     dataGpu = mxGPUCreateFromMxArray(in[IN_DATA]) ;
     dataClassID = mxGPUGetClassID(dataGpu) ;
@@ -132,11 +142,17 @@ void mexFunction(int nout, mxArray *out[],
       derNumDimensions = mxGPUGetNumberOfDimensions(derGpu) ;
       derDimensions = mxGPUGetDimensions(derGpu) ;
     }
+#else
+    assert(false) ;
+#endif
   } else {
     dataClassID = mxGetClassID(in[IN_DATA]) ;
     dataNumDimensions = mxGetNumberOfDimensions(in[IN_DATA]) ;
     dataDimensions = mxGetDimensions(in[IN_DATA]) ;
     if (backMode) {
+      if (!mxIsNumeric(in[IN_DER])) {
+        mexErrMsgTxt("DATA is a numeric array but DER is not.") ;
+      }
       derClassID = mxGetClassID(in[IN_DER]) ;
       derNumDimensions = mxGetNumberOfDimensions(in[IN_DER]) ;
       derDimensions = mxGetDimensions(in[IN_DER]) ;
@@ -240,11 +256,15 @@ void mexFunction(int nout, mxArray *out[],
   // im2col should be called im2row
 
   if (gpuMode) {
+#ifdef ENABLE_GPU
     resultGpu = mxGPUCreateGPUArray(4, resultDimensions,
                                     mxSINGLE_CLASS,
                                     mxREAL,
                                     MX_GPU_INITIALIZE_VALUES) ;
 //                                    MX_GPU_DO_NOT_INITIALIZE) ;
+#else
+    assert(false) ;
+#endif
   } else {
     resultArray = mxCreateNumericArray(4, resultDimensions,
                                        mxSINGLE_CLASS,
@@ -253,19 +273,24 @@ void mexFunction(int nout, mxArray *out[],
 
   for (int image = 0 ; image < numImages ; ++image) {
     ptrdiff_t dataOffset = (width*height*depth) * image ;
-    ptrdiff_t derOffset = (derDimensions[0]*derDimensions[1]*derDimensions[2]) * image ;
     ptrdiff_t resultOffset = (resultDimensions[0]*resultDimensions[1]*resultDimensions[2]) * image ;
 
     if (backMode) {
+      ptrdiff_t derOffset = (derDimensions[0]*derDimensions[1]*derDimensions[2]) * image ;
+
       /* ---------------------------------------------------------- */
       /*                                              Backward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+#ifdef ENABLE_GPU
         maxPoolingBackward_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
                                       (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
                                       (float const*)mxGPUGetDataReadOnly(derGpu) + derOffset,
                                       height, width, depth,
                                       poolWidth, stride, pad) ;
+#else
+        assert(false) ;
+#endif
       } else {
         maxPoolingBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                                       (float const*)mxGetData(in[IN_DATA]) + dataOffset,
@@ -278,10 +303,14 @@ void mexFunction(int nout, mxArray *out[],
       /*                                               Forward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+#ifdef ENABLE_GPU
         maxPooling_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
                               (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
                               height, width, depth,
                               poolWidth, stride, pad) ;
+#else
+        assert(false) ;
+#endif
       } else {
         maxPooling_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                               (float const*)mxGetData(in[IN_DATA]) + dataOffset,
@@ -295,9 +324,13 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
   if (gpuMode) {
+#ifdef ENABLE_GPU
     out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(resultGpu) ;
     mxGPUDestroyGPUArray(dataGpu) ;
     mxGPUDestroyGPUArray(resultGpu) ;
+#else
+    assert(false) ;
+#endif
   } else {
     out[OUT_RESULT] = resultArray ;
   }

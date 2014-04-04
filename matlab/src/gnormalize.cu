@@ -35,9 +35,7 @@ void mexFunction(int nout, mxArray *out[],
 {
   mxClassID dataClassID ;
   mxClassID derClassID ;
-  mxGPUArray const *dataGpu ;
-  mxGPUArray const *derGpu ;
-  mxGPUArray *resultGpu ;
+
   mxArray *resultArray ;
 
   size_t height, width, depth, numImages ;
@@ -53,7 +51,14 @@ void mexFunction(int nout, mxArray *out[],
   mwSize const * derDimensions ;
   mwSize resultDimensions [4] ;
 
+#if ENABLE_GPU
+  mxGPUArray const *dataGpu ;
+  mxGPUArray const *derGpu ;
+  mxGPUArray *resultGpu ;
   bool gpuMode = false ;
+#else
+  bool const gpuMode = false ;
+#endif
   bool backMode = false ;
 
   int verbosity = 0 ;
@@ -85,7 +90,13 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
+#if ENABLE_GPU
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
+#else
+  if (!mxIsNumeric(in[IN_DATA])) {
+    mexErrMsgTxt("DATA must be numeric (note: GPU support not compiled).") ;
+  }
+#endif
 
   if (!mxIsNumeric(in[IN_PARAM]) ||
        mxGetClassID(in[IN_PARAM]) != mxDOUBLE_CLASS ||
@@ -100,6 +111,7 @@ void mexFunction(int nout, mxArray *out[],
   normBeta = mxGetPr(in[IN_PARAM])[3]  ;
 
   if (gpuMode) {
+#ifdef ENABLE_GPU
     mxInitGPU() ;
     dataGpu = mxGPUCreateFromMxArray(in[IN_DATA]) ;
     dataClassID = mxGPUGetClassID(dataGpu) ;
@@ -114,6 +126,9 @@ void mexFunction(int nout, mxArray *out[],
       derNumDimensions = mxGPUGetNumberOfDimensions(derGpu) ;
       derDimensions = mxGPUGetDimensions(derGpu) ;
     }
+#else
+    assert(false) ;
+#endif
   } else {
     dataClassID = mxGetClassID(in[IN_DATA]) ;
     dataNumDimensions = mxGetNumberOfDimensions(in[IN_DATA]) ;
@@ -201,11 +216,15 @@ void mexFunction(int nout, mxArray *out[],
   // im2col should be called im2row
 
   if (gpuMode) {
+#ifdef ENABLE_GPU
     resultGpu = mxGPUCreateGPUArray(4, resultDimensions,
                                     mxSINGLE_CLASS,
                                     mxREAL,
                                     MX_GPU_INITIALIZE_VALUES) ;
 //                                    MX_GPU_DO_NOT_INITIALIZE) ;
+#else
+    assert(false) ;
+#endif
   } else {
     resultArray = mxCreateNumericArray(4, resultDimensions,
                                        mxSINGLE_CLASS,
@@ -214,19 +233,24 @@ void mexFunction(int nout, mxArray *out[],
 
   for (int image = 0 ; image < numImages ; ++image) {
     ptrdiff_t dataOffset = (width*height*depth) * image ;
-    ptrdiff_t derOffset = (derDimensions[0]*derDimensions[1]*derDimensions[2]) * image ;
     ptrdiff_t resultOffset = (resultDimensions[0]*resultDimensions[1]*resultDimensions[2]) * image ;
 
     if (backMode) {
+      ptrdiff_t derOffset = (derDimensions[0]*derDimensions[1]*derDimensions[2]) * image ;
+      
       /* ---------------------------------------------------------- */
       /*                                              Backward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+#ifdef ENABLE_GPU
         normalizeBackward_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
                                      (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
                                      (float const*)mxGPUGetDataReadOnly(derGpu) + derOffset,
                                      height, width, depth,
                                      normDepth, normKappa, normAlpha, normBeta) ;
+#else
+        assert(false) ;
+#endif
       } else {
         normalizeBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                                      (float const*)mxGetData(in[IN_DATA]) + dataOffset,
@@ -239,10 +263,14 @@ void mexFunction(int nout, mxArray *out[],
       /*                                               Forward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
+#ifdef ENABLE_GPU
         normalize_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
                              (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
                              height, width, depth,
                              normDepth, normKappa, normAlpha, normBeta) ;
+#else
+        assert(false) ;
+#endif
       } else {
         normalize_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
                              (float const*)mxGetData(in[IN_DATA]) + dataOffset,
@@ -256,9 +284,13 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
   if (gpuMode) {
+#ifdef ENABLE_GPU
     out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(resultGpu) ;
     mxGPUDestroyGPUArray(dataGpu) ;
     mxGPUDestroyGPUArray(resultGpu) ;
+#else
+    assert(false) ;
+#endif
   } else {
     out[OUT_RESULT] = resultArray ;
   }

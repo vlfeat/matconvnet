@@ -4,8 +4,8 @@ NVCC=/Developer/NVIDIA/CUDA-5.5/bin/nvcc
 NVCCOPTS=-gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
 MEXARCH=maci64
 ENABLE_GPU=yes
-MEXOPTS=-lmwblas -largeArrayDims $(if $(ENABLE_GPU),-DENABLE_GPU,)
-MEXOPTS_GPU=$(MEXOPTS) -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas -v
+MEXOPTS=-lmwblas -largeArrayDims -g
+MEXOPTS_GPU=$(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
 ifneq ($(DEBUG),)
 MEXOPTS+=-g
 endif
@@ -57,12 +57,12 @@ matlab/mex/%.mexmaci64 : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
 
 matlab/mex/%.mexmaci64 : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
 ifeq ($(ENABLE_GPU),)
-	echo "#include \"$(notdir $(<))\"" >> "$(dir $(<)/$(%).cpp)"
-	MW_NVCC_PATH='$(NVCC)' $(MEX) $(MEXOPTS) \
-	  "$(dir $(<)/$(%).cpp)"  $(cpp_tgt) \
+	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
+	$(MEX) $(MEXOPTS) \
+	  "matlab/mex/$(*).cpp" $(cpp_tgt) \
 	  -o "$(@)" \
 	  $(nvcc_filter)
-	rm -f "$(dir $(<)/$(%).cpp)"
+	rm -f "matlab/mex/$(*).cpp"
 else
 	MW_NVCC_PATH='$(NVCC)' $(MEX) $(MEXOPTS_GPU) "$(<)" -o "$(@)" $(cpp_tgt) $(nvcc_filter)
 endif
