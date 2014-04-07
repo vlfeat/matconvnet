@@ -1,3 +1,5 @@
+function test_tinynet_caffe()
+
 if ~exist('net')
   net = load(fullfile(vlg_root, 'data', 'tinynet_caffe.mat')) ;
   load(fullfile(vlg_root, 'data', 'tinynet_caffe_data.mat')) ;

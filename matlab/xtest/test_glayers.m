@@ -1,6 +1,6 @@
 function test_glayers(gpu)
 
-if nargin < 1, gpu = true ; end
+if nargin < 1, gpu = false ; end
 if gpu
   grandn = @(varargin) gpuArray.randn(varargin{:}) ;
   grand = @(varargin) gpuArray.rand(varargin{:}) ;
@@ -117,26 +117,37 @@ for l=1:8
 
     case 6
       disp('testing gnormalize') ;
-      param = [3, .1, .5, .75] ;
-      x = grandn(3,2,10,4,'single') ;
-      y = gnormalize(x,param,'verbose') ;
-      dzdy = grandn(size(y),'single') ;
-      dzdx = gnormalize(x,param,dzdy,'verbose') ;
-      testder(@(x) gnormalize(x,param), x, dzdy, dzdx) ;
+      for d=1:17
+        param = [d, .1, .5, .75] ;
+        x = grandn(3,2,10,4,'single') ;
+        y = gnormalize(x,param,'verbose') ;
+        dzdy = grandn(size(y),'single') ;
+        dzdx = gnormalize(x,param,dzdy,'verbose') ;
+        testder(@(x) gnormalize(x,param), x, dzdy, dzdx) ;
+      end
 
-      y_ = zeros(size(y),'single') ;
-      x_ = gather(x) ;
-      for i=1:size(x,1)
-        for j=1:size(x,2)
-          for n=1:size(x,4)
-            t = zeros(1,1,size(x,3),1) ;
-            t(1,1,:,1) = (param(2) + param(3)*conv(squeeze(x_(i,j,:,n)).^2, ...
-                                                   ones(param(1),1), 'same')).^(-param(4)) ;
-            y_(i,j,:,n) = x_(i,j,:,n) .* t ;
+      for d=1:7
+        param(1) = d ;
+        y = gnormalize(gather(x),param) ;
+        y_ = zeros(size(y),'single') ;
+        x_ = gather(x) ;
+        for i=1:size(x,1)
+          for j=1:size(x,2)
+            for n=1:size(x,4)
+              t = zeros(1,1,size(x,3),1) ;
+              t(1,1,:,1) = (param(2) + param(3)*conv(squeeze(x_(i,j,:,n)).^2, ...
+                ones(param(1),1), 'same')).^(-param(4)) ;
+              y_(i,j,:,n) = x_(i,j,:,n) .* t ;
+            end
           end
         end
+        assert(all(all(all(all(gather(abs(y-y_)) < 1e-3))))) ;
       end
-      assert(all(all(all(all(gather(abs(y-y_)) < 1e-3))))) ;
+      
+      x = grandn(1,1,10,1,'single') ;
+      y = gnormalize(x, [20, 0, 1, .5]) ;
+      y = gather(y) ;
+      assert(abs(sum(y(:).^2)-1) < 1e-3) ;      
 
     case 7
       disp('testing gvec') ;

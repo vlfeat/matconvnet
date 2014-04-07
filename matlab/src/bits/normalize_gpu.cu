@@ -30,7 +30,8 @@ void normalize_gpu_kernel (int count,
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   if (index < count) {
-    int m = ((signed)normDepth-1)/2 ;
+    int m1 = ((signed)normDepth-1)/2 ;
+    int m2 = normDepth - m1 - 1 ;
     int offset = width*height ;
     int h = index / width ;
     int w = index % width ;
@@ -38,11 +39,11 @@ void normalize_gpu_kernel (int count,
     T const* x = data + w + h * width ;
     T* y = normalized + w + h * width ;
     T acc = 0 ;
-    for (t = -m ; t < (signed)depth + m ; ++t) {
+    for (t = -m2 ; t < (signed)depth ; ++t) {
       T ap = 0 ;
       T am = 0 ;
-      if (t-m-1 >= 0) { am = xat(t-m-1) ; }
-      if (t+m < depth) { ap = xat(t+m) ; }
+      if (t-m1-1 >= 0) { am = xat(t-m1-1) ; }
+      if (t+m2 < depth) { ap = xat(t+m2) ; }
       acc += ap*ap - am*am ;
       if (0 <= t && t < depth) {
         yat(t) = xat(t) * pow(kappa + alpha * acc, -beta) ;
@@ -102,8 +103,8 @@ void normalizeBackward_gpu_kernel(int count,
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   if (index < count) {
-    int m = ((signed)normDepth-1)/2 ;
-    int offset = width*height ;
+    int m1 = ((signed)normDepth-1)/2 ;
+    int m2 = normDepth - m1 - 1 ;    int offset = width*height ;
     T ab2 = 2*alpha*beta ;
     int h = index / width ;
     int w = index % width ;
@@ -115,13 +116,13 @@ void normalizeBackward_gpu_kernel(int count,
     for (t = 0 ; t < (signed)depth ; ++t) {
       yat(t) = 0 ;
     }
-    for (t = -m ; t < (signed)depth + m ; ++t) {
-      int q1 = t-m ;
-      int q2 = t+m ;
+    for (t = -m2 ; t < (signed)depth ; ++t) {
+      int q1 = t-m1 ;
+      int q2 = t+m2 ;
       T ap = 0 ;
       T am = 0 ;
-      if (t-m-1 >= 0) { am = xat(t-m-1) ; } else { q1 = 0 ; }
-      if (t+m < depth) { ap = xat(t+m) ; } else { q2 = depth - 1 ; }
+      if (t-m1-1 >= 0) { am = xat(t-m1-1) ; } else { q1 = 0 ; }
+      if (t+m2 < depth) { ap = xat(t+m2) ; } else { q2 = depth - 1 ; }
       acc += ap*ap - am*am ;
       T L = kappa + alpha * acc ;
       T Lbeta = pow(L, -beta) ;

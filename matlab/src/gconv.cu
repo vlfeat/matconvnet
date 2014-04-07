@@ -225,12 +225,6 @@ void mexFunction(int nout, mxArray *out[],
 
   /* grouped filters */
   numGroups = depth / filterDepth ;
-  if (numGroups * filterDepth != depth) {
-    mexErrMsgTxt("The filter depth does not divide the image depth.") ;
-  }
-  if (numFilters % numGroups != 0) {
-    mexErrMsgTxt("The number of filter groups (%d) does not divide the total number of filters.") ;
-  }
 
   if (!backMode) {
     resultDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
@@ -286,6 +280,14 @@ void mexFunction(int nout, mxArray *out[],
     {
       mexErrMsgTxt("DER dimensions are incompatible with X and FILTERS.") ;
     }
+  }
+
+  if (numGroups * filterDepth != depth) {
+    mexErrMsgTxt("The filter depth does not divide the image depth.") ;
+  }
+
+  if (numFilters % numGroups != 0) {
+    mexErrMsgTxt("The number of filter groups does not divide the total number of filters.") ;
   }
 
   if (height < filterHeight ||  width < filterWidth) {

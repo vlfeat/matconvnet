@@ -203,12 +203,6 @@ void mexFunction(int nout, mxArray *out[],
   if (normDepth < 1) {
     mexErrMsgTxt("The normalization depth is smaller than 1.") ;
   }
-  if ((normDepth & 0x1) == 0) {
-    mexErrMsgTxt("The normalization depth is not odd.") ;
-  }
-  if (normDepth > depth) {
-    mexErrMsgTxt("DATA depth cannot be smaller than normalization depth.") ;
-  }
 
   /* -------------------------------------------------------------- */
   /*                                                    Do the work */
