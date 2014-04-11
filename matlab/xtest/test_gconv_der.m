@@ -1,18 +1,19 @@
 addpath mex
 
-%gpu=false ;
-gpu=true ;
+gpu=false ;
+% gpu=true ;
 numFilters = 7 ;
 height = 6 ;
 width = 9 ;
-filterSize = 5 ;
+filterHeight = 5 ;
+filterWidth = 2 ;
 depth = 13 ;
 numImages = 4 ;
 delta = 2.5 ;
 
 rng(2) ;
 x=randn(height,width,depth,numImages,'single') ;
-f=randn(filterSize,filterSize,depth,numFilters,'single') ;
+f=randn(filterHeight,filterWidth,depth,numFilters,'single') ;
 y=gconv(x,f) ;
 [dzdy]=randn(size(y),'single') ;
 
@@ -46,7 +47,7 @@ for i=1:numel(x)
   dzdx_(i) = dzdx_(i) + sum(sum(sum(sum(dzdy .* (y_ - y)/delta)))) ;
 end
 
-run ~/src/vlfeat/toolbox/vl_setup.m
+% run ~/src/vlfeat/toolbox/vl_setup.m
 figure(1) ; clf ;
 subplot(2,2,1) ;
 a=reshape(dzdf,size(dzdf,1),size(dzdf,2),[]) ;

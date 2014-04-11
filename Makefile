@@ -1,9 +1,9 @@
 SHELL=/bin/bash
-MEX  ?= mex
+MEX  ?= /Applications/MATLAB_R2013a.app/bin/mex
 NVCC ?= /Developer/NVIDIA/CUDA-5.5/bin/nvcc
 NVCCOPTS = -gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
 MEXARCH = maci64
-ENABLE_GPU = yes
+ENABLE_GPU = 
 MEXOPTS = -lmwblas -largeArrayDims
 MEXOPTS_GPU= $(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
 ifneq ($(DEBUG),)

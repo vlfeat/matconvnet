@@ -219,7 +219,8 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  if (filterWidth != filterHeight) {
+    
+  if (filterWidth != filterHeight && gpuMode) {
     mexErrMsgTxt("Non-square FILTERS not supported yet.") ;
   }
 
@@ -228,7 +229,7 @@ void mexFunction(int nout, mxArray *out[],
 
   if (!backMode) {
     resultDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
-    resultDimensions[1] = (width + 2*pad - filterHeight)/stride + 1 ;
+    resultDimensions[1] = (width + 2*pad - filterWidth)/stride + 1 ;
     resultDimensions[2] = numFilters ;
     resultDimensions[3] = numImages ;
   } else {
@@ -243,7 +244,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   tempDimensions[0] = (height + 2*pad - filterHeight)/stride + 1 ;
-  tempDimensions[1] = (width + 2*pad - filterHeight)/stride + 1 ;
+  tempDimensions[1] = (width + 2*pad - filterWidth)/stride + 1 ;
   tempDimensions[2] = filterHeight*filterWidth*filterDepth*numGroups ;
 
   if (verbosity > 0) {
@@ -375,7 +376,7 @@ void mexFunction(int nout, mxArray *out[],
       } else {
         im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataImOffset,
                           depth, width, height,
-                          filterHeight,
+                          filterWidth, filterHeight,
                           stride, pad,
                           (float *)mxGetData(tempArray)) ;
       }
@@ -453,7 +454,7 @@ void mexFunction(int nout, mxArray *out[],
         } else {
           col2im_cpu<float>((float*)mxGetData(tempArray),
                             depth, width, height,
-                            filterHeight,
+                            filterWidth, filterHeight,
                             stride, pad,
                             (float*)mxGetData(resultArray) + resImOffset) ;
         }
@@ -475,7 +476,7 @@ void mexFunction(int nout, mxArray *out[],
       } else {
         im2col_cpu<float>((float const*)mxGetData(in[IN_DATA]) + dataImOffset,
                           depth, width, height,
-                          filterHeight,
+                          filterWidth, filterHeight,
                           stride, pad,
                           (float *)mxGetData(tempArray)) ;
       }

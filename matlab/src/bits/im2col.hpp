@@ -8,7 +8,7 @@
 
 template <typename Dtype>
 void im2col_cpu(const Dtype* data_im, const int channels,
-                const int height, const int width, const int ksize,
+                const int height, const int width, const int kheight, const int kwidth,
                 const int pad, const int stride,
                 Dtype* data_col) ;
 
@@ -16,14 +16,14 @@ void im2col_cpu(const Dtype* data_im, const int channels,
 template <typename Dtype>
 void im2row_cpu(const Dtype* data_im,
                 const int channels, const int height, const int width,
-                const int ksize,
+                const int kheight, const int kwidth,
                 const int pad, const int stride,
                 Dtype* data_col) ;
 #endif
 
 template <typename Dtype>
 void col2im_cpu(const Dtype* data_col, const int channels,
-                const int height, const int width, const int ksize,
+                const int height, const int width, const int kheight, const int kwidth,
                 const int pad, const int stride,
                 Dtype* data_im) ;
 

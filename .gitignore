@@ -5,3 +5,11 @@ mex
 matconv.pdf
 data
 *.o
+
+doc/.texpadtmp/matconv.aux
+
+doc/.texpadtmp/matconv.log
+
+doc/.texpadtmp/matconv.synctex.gz
+
+matconv.xcodeproj/project.xcworkspace/xcshareddata/matconv.xccheckout
