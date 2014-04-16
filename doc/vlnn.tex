@@ -1,0 +1,425 @@
+\documentclass[12pt]{article}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{tikz}
+\usepackage{pgfplots} 
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\vv}{\operatorname{vec}}
+\newcommand{\vlnn}{\textsf{VLNN}\xspace}
+
+\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] \tikzstyle{data} = []
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+
+% ------------------------------------------------------------------
+\begin{document}
+\title{VisionLab Neural Networks for MATLAB}
+\author{Andrea Vedaldi}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\section{Introduction}
+% ------------------------------------------------------------------
+
+\vlnn is a simple MATLAB toolbox implementing the latest generation of Convolutional Neural Networks (CNN) for computer vision applications. Its main features are:
+\begin{itemize}
+\item \emph{Flexibility.} Neural network layers are implemented in a straightforward manner, often directly in MATLAB code, so that they are easy to modify, extend, or integrate with new ones. Other toolboxes hide the neural network layers behind a wall of compiled code; here the granularity is much finer.
+\item \emph{Power.} The implementation can run the latest features such as Krizhevsky~\textit{et al.}~\cite{krizhevsky12imagenet}, including the DeCAF and Caffe variants. Pre-learned features for different tasks can be easily downloaded.
+\item \emph{Efficiency.} The implementation is quite efficient, supporting both CPU and GPU computation (in the latest versions of MALTAB).
+\end{itemize}
+This library will be in the future merged with VLFeat~(\url{http://www.vlfeat.org/}).
+
+% ------------------------------------------------------------------
+\subsection{Credits}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\section{}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\section{Layers}
+% ------------------------------------------------------------------
+
+In the simplest case, a CNN is a sequence of computational layers. Let $x_1,x_2,\dots,x_L$ be the output of each layer in the network, where $x_1$ is a pseudo-output used to store the input data processed by the network. Each output $x_l$ depends on the previous output $x_{l-1}$ through a function $f_l$ and parameter $w_l$ as $x_l = f_l(x_{l-1},w_l)$; schematically:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]\node (x1)  [data] {$x_1$};
+\node (f2) [block,right of=x1]{$f_2$};
+\node (f3) [block,right of=f2,node distance=3cm]{$f_3$};
+\node (dots) [right of=f3]{...};
+\node (fL) [block,right of=dots]{$f_L$};
+\node (xL)  [data, right of=fL] {$x_L$};
+\node (w2) [data, below of=f2] {$w_2$};
+\node (w3) [data, below of=f3] {$w_3$};
+\node (wL) [data, below of=fL] {$w_L$};
+\draw [->] (x1.east) -- (f2.west) {};
+\draw [->] (f2.east) -- node {$x_2$} (f3.west);
+\draw [->] (f3.east) -- node {$x_3$} (dots.west) {};
+\draw [->] (dots.east) -- node {$x_{L-1}$} (fL.west) {};
+\draw [->] (fL.east) -- (xL.west) {};
+\draw [->] (w2.north) -- (f2.south) {};
+\draw [->] (w3.north) -- (f3.south) {};
+\draw [->] (wL.north) -- (fL.south) {};
+\end{tikzpicture}
+\end{center}
+Given an input $x_1$, evaluating the network is a simple matter of evaluating all the intermediate stages in order to compute an overall function $x_L = f(x_1;w_2,\dots,w_L)$. Usually, we are also interested in computing the derivative of the function with respect to any of the parameter $w_l$ or the input $x_1$. To do this, it is convenient to focus the attention only on layer $l$ of the network as follows:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]\node (x1)  [data] {$x_1$};
+\node (e) [block,right of=x1]{$e$};
+\node (fl) [block,right of=e,node distance=3cm]{$f_l$};
+\node (g) [block,right of=fl,node distance=3cm]{$g$};
+\node (xL)  [data, right of=g] {$x_L$};
+\node (wl) [data, below of=fl] {$w_l$};
+\draw [->] (x1.east) -- (e.west) {};
+\draw [->] (e.east) -- node {$x_{l-1}$} (fl.west) {};
+\draw [->] (fl.east) -- node {$x_{l}$} (g.west) {};
+\draw [->] (g.east) -- (xL.west) {};
+\draw [->] (wl.north) -- (fl.south) {};
+\end{tikzpicture}
+\end{center}
+Here the first part of the network is coalesced in a function $e$ and the second part in a function $g$. We see now that computing the derivative w.r.t. $w_l$ amounts to computing
+\[
+ \frac{df}{dw_l^\top} = \frac{d}{dw_l^\top} g(f_l(e(x_1), w_l)) =  \frac{dg}{dx_l^\top} \frac{df_l}{dw_l^\top}
+ \]
+where the derivatives are evaluated at the current value of the variables $x_{l-1}=e(x_1)$ and $x_l = f_l(x_{l-1})$, computed in the forward pass of the network evaluation. This expression requires multiplying the derivative of the layer $f_l$ w.r.t. its parameter $w_l$ with the derivative of the function $g$ w.r.t. its input $x_l$. Hence, in order to apply this computation recursively from the output of the network back to its input, we also need to compute the derivative with respect to the intermediate data $x_l$
+\[
+ \frac{d}{dx_{l-1}^\top} g(f_l(x_l)) = \frac{dg}{dx_l^\top} \frac{df_l}{dx_{l-1}^\top}.
+\]
+which requires the derivative of the layer $f_l$ with respect to the input $x_{l-1}$ as well.
+
+Simplifying the notation and concentrating further on a single layer, the derivative computations involve the following scheme:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]\node (x) [data] {$x$};
+\node (f) [block, right of=x] {$f$};\node (w) [data, below of=f] {$w$};
+\node (g) [block, right of=f,node distance=3cm] {$g$};
+\node (z) [data, right of=g] {$z$};
+\draw [->] (x.east) -- (f.west) {};
+\draw [->] (f.east) -- node {$y$} (g.west) {};
+\draw [->] (g.east) -- (z.west) {};
+\draw [->] (w.north) -- (f.south) {};
+\end{tikzpicture}
+\end{center}
+where $f$ denotes a layer, $x$ its input, $w$ its parameter, $z$ the output of the network, and $g$ the function linking the output of the layer to the output of the network. The goal is then to compute:
+\[
+  \frac{dz}{dx^\top} =  \frac{dz}{dy^\top} \frac{df}{dx^\top}, 
+  \qquad
+  \frac{dz}{dx^\top} =  \frac{dz}{dy^\top} \frac{df}{dw^\top},
+\]
+which requires the derivative $dz/dy^\top$ of the function $g$. Hence, in MATLAB a network layer is implemented as a map \verb!y = nnmap(x,w)! that takes as input arrays \verb!x! and \verb!w! representing the input and parameters of the layer and returns an array \verb!y! as output. Furthermore, the function can take a third optional argument \verb!dzdy! representing the derivative of the output of the network w.r.t. $y$ and returns the corresponding derivatives \verb![dzdx,dzdw] = nnmap(x,w,dzdy)!. The output of the network $z\in\real$ is supposed to be scalar; hence \verb!dzdx! has the same layout as \verb!x!, in the sense that each element of the array \verb!dzdx! contains the derivative of the scalar $z$ w.r.t. the corresponding element of \verb!x!, and similarly for the parameter. A function can take additional optional arguments, specified as a property-value list; it can take no parameters (e.g. a rectified linear unit), in which case \verb!w! is empty; it can take multiple inputs and parameters, in which case \verb!x!, \verb!w!, \verb!dzdx!, \verb!dzdw! are cell arrays containing a corresponding number of arrays.
+
+% ------------------------------------------------------------------
+\subsection{Convolution}\label{s:convolution}
+% ------------------------------------------------------------------
+
+Let $X,Y$ denote the input and output images (maps) respectively. Let $F$ denote the filters. We assume that $X$ and $Y$ have been reshaped into two matrices, with the first index spanning spatial dimensions and the second spanning feature channels. Thus
+\[
+ X\in\real^{(wh) \times d}, \qquad
+ Y\in\real^{(w'h') \times k}, \qquad
+ F\in\real^{(w_fh_fd) \times k}
+ \qquad
+ w' = w - w_f + 1,
+ \qquad
+ h'' = h - h_f + 1,
+\]
+where $(w,h,d)$ is the size of the input image $X$, $(w',h',k)$ is the size of the output image, $(w_f,h_f,d)$ is the size of a filter, and there are $k$ filters. The output image $Y$ is a function of $X$ and $F$ and is connected to the output energy by a function $f$:
+\[
+Y = g(X,F),
+\qquad
+z = f(Y) \in \real.
+\]
+The operation $g$ is a linear filter, applying each of the filters in $F$ to produce each of the channels in $Y$. Up to a rearrangement of the elements of $X$, this can be written as a matrix multiplication. In particular, let $\phi(X)$ be the {\tt im2row} operator, which extracts from $X$ patches of the same volumes as the filters, placing them as columns of a matrix:
+\[
+ Y = g(X,F) = \phi(X) F,\qquad 
+ \phi: \real^{(wh)\times d} \rightarrow \real^{(w'h')\times(w_fh_fd)}.
+\]
+Note that $\phi$ simply rearranges the elements of $X$ and is, therefore, a linear operator. In particular we can rewrite it as
+\[
+ \vv(\phi(X)) = H \vv(X), \qquad H \in \real^{(w'h'w_fh_fd) \times (whd)}
+\]
+for a suitable matrix $H$. The derivative of the function $f(g(X,F))$ are then given by
+\[
+\boxed{
+\frac{dz}{dF}
+=
+\phi(X)^\top\frac{d f}{d Y},
+\qquad
+\frac{d z}{d \vv(X)}
+=
+H^\top
+\vv\left(
+\frac{d f}{d Y}F^\top
+\right)
+=
+\phi^*\left(
+\frac{d f}{d Y}F^\top
+\right).
+}
+\]
+Here we define the {\tt row2im} operator $H^\top$ as the dual of {\tt im2row}:
+\[
+ \vv(\phi^*(Y)) = H^\top \vv(Y).
+\]
+Let $(l,m,k,p,d)$ be an index in the {\tt im2row} output $\phi(X)$ and $(i,j,d)$ an index in the input $X$. Here indexes are mapped as $(l,m),(k,p,d)$ to the first and second index of $\phi(X)$ and to $(i,j),d$ of $X$. With slight abuse of notation one has:
+\[
+   [\phi(X)]_{(l,m,k,p,d)}= X_{(i,j,d)}, \qquad i=l+k,\quad j=m+p.
+\]
+Likewise for the dual operator {\tt row2im}:
+\[
+   [\phi^*(Y)]_{(i,j,d)} 
+   = \sum_{k=0}^{w_f-1} \sum_{p=0}^{h_f-1} Y_{(i,j,k,p,d)}.
+\]
+
+\paragraph{Sizes, strides, and padding.}
+Suppose we have $w$ pixels in the $x$ direction and a filter of size $w_f$. Then the filter is contained in the signal
+\[
+  w' = w - w_f + 1
+\]
+times (for all possible translations), provided that $w\geq w_f$. If the signal is padded with $p$ pixels to the left and to the right, then
+\[
+  w' = w + 2p - w_f + 1.
+\]
+If the filter output is subsampled every $\delta$ steps, then samples are at $i = \delta i'$. We must have
+\[
+0\leq i = \delta i' \leq w'-1
+\qquad
+\Rightarrow
+\qquad
+0 \leq i' \leq \lfloor \frac{w + 2p - w_f}{\delta} \rfloor.
+\]
+
+
+% ------------------------------------------------------------------
+\subsection{Max pooling}\label{s:pooling}
+% ------------------------------------------------------------------
+
+Similarly to the convolution case, we define a function:
+\[
+ Y = g(X,\wedge), \quad z = f(Y) \in \real.
+\]
+Where
+\[
+\boxed{Y = g(X,\wedge) = \operatorname{maxrow}\phi(X).}
+\]
+and $\phi(X)$ is the {\tt im2row} operator defined above. In order to write more compact formulas for the derivative, we introduce the matrix $S(X) \in \real^{(w'h')
+\times(w_fh_fd)}$ which selects the maximal element in each row of $\phi(X)$:
+\[
+  Y = \phi(X)S,
+  \qquad
+   S(X) = \operatornamewithlimits{argmax}_{S \geq 0,\ \mathbf{1}^\top S \leq \mathbf{1}^\top} \phi(X) S.
+\]
+Then the derivative is
+\[
+\boxed{
+\frac{d z}{d \vv(X)}
+=
+H^\top
+\vv\left(
+\frac{d f}{d Y}S^\top
+\right)
+=
+\phi^*\left(
+\frac{d f}{d Y}S^\top
+\right).
+}
+\]
+
+% ------------------------------------------------------------------
+\subsection{Normalization}\label{s:normalization}
+% ------------------------------------------------------------------
+
+The normalisation operation normalises the feature channels at any given spatial location $(i,j)$:
+\[
+ Y_{(i,j,k)} = X_{(i,j,k)} \left( \kappa + \alpha \sum_{t\in G(k)} X_{(i,j,t)}^2 \right)^{-\beta},
+ \qquad
+ z = f(Y),
+\]
+where $G(k) \subset \{1, 2, \dots, D\}$ is a subset of the input channels. Note that input $X$ and output $Y$ have the same dimensions. The derivative is easily computed as:
+\[
+\frac{dz}{d X_{(i,j,d)}}
+=
+\frac{dz}{d Y_{(i,j,d)}}
+L(i,j,d|X)^{-\beta}
+-2\alpha\beta
+\sum_{k:d\in G(k)}
+\frac{dz}{d Y_{(i,j,k)}}
+L(i,j,k|X)^{-\beta-1} X_{(i,j,ki)} X_{(i,j,d)}
+\]
+where
+\[
+ L(i,j,k|X) = \kappa + \alpha \sum_{t\in G(k)} X_{(i,j,t)}^2.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Vectorisation}\label{s:vectorisation}
+% ------------------------------------------------------------------
+
+Vectorisation (utilised between convolutional and fully connected layers):
+\[
+ Y = \vv X, \qquad z = f(Y).
+\]
+The derivative is also a rearrangement of terms:
+\[
+\frac{dz}{dX} = \operatorname{reshape} \frac{dz}{dY}.
+\]
+
+
+% ------------------------------------------------------------------
+\subsection{ReLU}\label{s:relu}
+% ------------------------------------------------------------------
+
+Rectified linear unit:
+\[
+ Y_k = \max\{0, X_k\}, \qquad z = f(Y).
+\]
+Derivative:
+\[
+\frac{dz}{dX_k}
+=
+\frac{dz}{dY_k} \delta_{\{X_k > 0 \}}.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Fully connected layer}\label{s:fully}
+% ------------------------------------------------------------------
+
+A fully connected layer is simply a matrix multiplication:
+\[
+  \vv Y = W \vv X, \qquad z = f(Y).
+\]
+The derivatives w.r.t. input $X$ and parameters $W$ are:
+\[
+\frac{dz}{d\vv(X)^\top}
+= 
+\frac{dz}{d(\vv Y)^\top} W,
+\qquad
+\frac{dz}{d W}
+= 
+\frac{df}{d \vv Y} (\vv X)^\top.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Softmax}\label{s:softmax}
+% ------------------------------------------------------------------
+
+Softmax:
+\[
+ Y_k = \frac{e^{X_i}}{\sum_{t=1}^D e^{X_t}}, \qquad z = f(Y).
+\]
+Derivative
+\[
+\frac{dz}{d X_d}
+=
+\sum_{k}
+\frac{dz}{d Y_k}
+\left(
+e^{X_d} L(X)^{-1} \delta_{\{k=d\}}
+-
+e^{X_d}
+e^{X_k} L(X)^{-2}
+\right),
+\quad
+L(X) = \sum_{t=1}^D e^{X_t}.
+\]
+Simplifyng
+\[
+\frac{dz}{d X_d}
+=
+Y_d 
+\left(
+\frac{dz}{d Y_d}
+-
+\sum_{k=1}^K
+\frac{dz}{d Y_k} Y_k.
+\right).
+\]
+
+% ------------------------------------------------------------------
+\subsection{Log-loss}\label{s:loss}
+% ------------------------------------------------------------------
+
+The log loss is:
+\[
+ y = \ell(X,c) = - \log X_c, \qquad z = f(y) = y,
+\]
+where $c \in \{1,2,\dots,D\}$ is the g.t\@. class of the image and, this being the output of the network, has $z=y$. The derivative is
+\[
+\frac{dz}{dX_c} = - \frac{1}{X_c} \delta_{\{k = c\}}.
+\]
+Note that one takes the average loss on all the training data.
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+
+% ------------------------------------------------------------------
+\appendix\section{Proofs}\label{s:proofs}
+% ------------------------------------------------------------------
+
+\begin{align*}
+\frac{d z}{d \vv(F)^\top}
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [\phi(X) F]}{d\vv(F)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [\left(
+I_k \otimes \phi(X)
+\right)
+\vv(F)]
+}{d\vv(F)^\top}
+\\
+&=
+\vv\left(\frac{d f}{d Y} \right)^\top
+\left(
+I_k \otimes \phi(X)
+\right)
+\\
+&=
+\vv\left(
+\phi(X)^\top I_k \frac{d f}{d Y} 
+\right)^\top
+\\
+&=
+\vv\left(
+\phi(X)^\top
+\frac{d f}{d Y} 
+\right)^\top
+\end{align*}
+From which
+\[
+\frac{dz}{dF}
+=
+\phi(X)^\top\frac{d f}{d Y}.
+\]
+Also
+\begin{align*}
+\frac{d z}{d \vv(X)^\top}
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d \vv [\phi(X) F]}{d\vv(X)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [(F^\top \otimes I_{w'h'})\vv(\phi(X))]}{d\vv(X)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top}
+\frac{d [(F^\top \otimes I)H \vv(X)]}{d\vv(X)^\top}
+\\
+&=
+\frac{d f}{d \vv(Y)^\top} (F^\top\otimes I)H
+\\
+&=
+\vv\left(
+\frac{d f}{d Y}F^\top
+\right)^\top H
+\end{align*}
+
+
+\end{document}
+
+

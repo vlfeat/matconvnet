@@ -46,6 +46,15 @@ for l=1:9
       vl_testder(@(b) vl_nnfull(x,w,b), b, dzdy, dzdb) ;
 
     case 4
+      disp('testing vl_nnconv with non square filters') ;
+      w = grandn(3,5,10,2,'single') ;
+      x = grandn(9,18,10,1,'single') ;
+      y = vl_nnconv(x,w,'verbose') ;
+      dzdy = grandn(size(y),'single') ;
+      [dzdw,dzdx] = vl_nnconv(x,w,dzdy,'verbose') ;
+      vl_testder(@(x) vl_nnconv(x,w), x, dzdy, dzdx, 1e-2) ;
+      vl_testder(@(w) vl_nnconv(x,w), w, dzdy, dzdw, 1e-2) ;      
+      
       disp('testing vl_nnconv stride correctness') ;
       x = grandn(9,9,1,1,'single') ;
       w = grandn(3,3,1,1,'single') ;
