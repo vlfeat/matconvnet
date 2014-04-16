@@ -249,26 +249,26 @@ void mexFunction(int nout, mxArray *out[],
 
   if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
-    mexPrintf("gconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gconv: stride: %d, pad: %d, numGroups: %d\n", stride, pad, numGroups) ;
-    mexPrintf("gconv: data: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnconv: stride: %d, pad: %d, numGroups: %d\n", stride, pad, numGroups) ;
+    mexPrintf("vl_nnconv: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
-    mexPrintf("gconv: filters: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnconv: filters: %d x %d x %d x %d [%.1f MB]\n",
               filterHeight, filterWidth, filterDepth, numFilters,
               (double)(filterHeight*filterWidth*filterDepth*numFilters*4)/MB) ;
-    mexPrintf("gconv: result: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnconv: result: %d x %d x %d x %d [%.1f MB]\n",
               resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
               (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/MB) ;
     if (backMode) {
-      mexPrintf("gconv: der: %d x %d x %d x %d [%.1f MB]\n",
+      mexPrintf("vl_nnconv: der: %d x %d x %d x %d [%.1f MB]\n",
                 derHeight, derWidth, derDepth, numDerImages,
                 (double)(derHeight*derWidth*derDepth*numDerImages*4)/MB) ;
-      mexPrintf("gconv: dfilters: %d x %d x %d x %d [%.1f MB]\n",
+      mexPrintf("vl_nnconv: dfilters: %d x %d x %d x %d [%.1f MB]\n",
                 dfiltersDimensions[0], dfiltersDimensions[1], dfiltersDimensions[2], dfiltersDimensions[3],
                 (double)(dfiltersDimensions[0]*dfiltersDimensions[1]*dfiltersDimensions[2]*dfiltersDimensions[3]*4)/MB) ;
     }
-    mexPrintf("gconv: temp: %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnconv: temp: %d x %d x %d [%.1f MB]\n",
               tempDimensions[0], tempDimensions[1], tempDimensions[2],
               (double)(tempDimensions[0]*tempDimensions[1]*tempDimensions[2]*4)/MB) ;
   }

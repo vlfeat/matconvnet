@@ -208,17 +208,17 @@ void mexFunction(int nout, mxArray *out[],
 
   if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
-    mexPrintf("gpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gpool: stride: %d, pad: %d\n", stride, pad) ;
-    mexPrintf("gpool: data: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnpool: stride: %d, pad: %d\n", stride, pad) ;
+    mexPrintf("vl_nnpool: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
-    mexPrintf("gpool: pooling: %d x %d\n", poolHeight, poolWidth);
-    mexPrintf("gpool: result: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
+    mexPrintf("vl_nnpool: result: %d x %d x %d x %d [%.1f MB]\n",
               resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
               (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/MB) ;
     if (backMode) {
-      mexPrintf("gpool: der: %d x %d x %d x %d [%.1f MB]\n",
+      mexPrintf("vl_nnpool: der: %d x %d x %d x %d [%.1f MB]\n",
                 derHeight, derWidth, derDepth, numDerImages,
                 (double)(derHeight*derWidth*derDepth*numDerImages*4)/MB) ;
     }

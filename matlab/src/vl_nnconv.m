@@ -1,0 +1,39 @@
+% VL_NNCONV  Neural-network convolution
+%    Y = VL_NNCONV(X, F) computes the convolution of the image stack X
+%    with the filter bank F.
+%
+%    [DXDY, DXDF] = VL_NNCONV(X, F, DZDY) computes the derivatives of
+%    the nework output Z w.r.t. he data and parameters.
+%
+%    X is a SINGLE array of dimension H x W x D x N where (H,W) are image
+%    height and width, D is the image depth (number of feature channels) and
+%    N the number of of images in the stack
+%
+%    F is a SINGLE array fo dimension FW x FH x D x K where (FH,FW) are
+%    the filter height and width and K the number o filters in the bank.
+%
+%    VL_NNCONV(..., 'option', value, ...) takes the following options:
+%
+%    Stride:: [1]
+%      The output stride (downsampling factor).
+%
+%    Pad:: [0]
+%      The amount of input padding. Input images are padded with zeros
+%      by this number of pixels before the convolution is computed.
+%
+%    The filter size must be not larger than the padded image, i.e.
+%
+%      1 <= FH <= H + 2*PAD,   1 <= FW <= 2*PAD.
+%
+%    The output a is a SINGLE array of dimension YH x YW x K x N of
+%    N images with K challens and size:
+%
+%      YH = (H + 2*PAD - FH)/STRIDE + 1,
+%      YW = (H + 2*PAD - FW)/STRIDE + 1.
+%
+%    The derivative DZDY has the same dimension of the output Y,
+%    the derivative DZDX has the same dimension as the input X, and
+%    the derivative DZDF has the the same dimenson as F.
+
+% Author: Andrea Vedaldi
+% Author: Max Jaderberg

@@ -174,17 +174,17 @@ void mexFunction(int nout, mxArray *out[],
 
   if (verbosity > 0) {
     double const MB = 1024.0*1024.0 ;
-    mexPrintf("gnormalize: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("gnormalize: data: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnnormalize: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnnormalize: data: %d x %d x %d x %d [%.1f MB]\n",
               height, width, depth, numImages,
               (double)(height*width*depth*numImages*4)/MB) ;
-    mexPrintf("gnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
+    mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
               normDepth, normKappa, normAlpha, normBeta) ;
-    mexPrintf("gnormalize: result: %d x %d x %d x %d [%.1f MB]\n",
+    mexPrintf("vl_nnnormalize: result: %d x %d x %d x %d [%.1f MB]\n",
               resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
               (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/MB) ;
     if (backMode) {
-      mexPrintf("gnormalize: der: %d x %d x %d x %d [%.1f MB]\n",
+      mexPrintf("vl_nnnormalize: der: %d x %d x %d x %d [%.1f MB]\n",
                 derHeight, derWidth, derDepth, numDerImages,
                 (double)(derHeight*derWidth*derDepth*numDerImages*4)/MB) ;
     }
