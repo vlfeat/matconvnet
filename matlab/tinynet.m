@@ -32,6 +32,8 @@ for i=1:n
       res(i+1).x = gvec(res(i).x) ;
     case 'relu'
       res(i+1).x = grelu(res(i).x) ;
+    case 'noffset'
+      res(i+1).x = gnoffset(res(i).x, l.param) ;
     otherwise
       error('Unknown layer type %s', l.type);
   end
@@ -74,6 +76,8 @@ if doder
         res(i).dzdx = gvec(res(i).x, res(i+1).dzdx) ;
       case 'relu'
         res(i).dzdx = grelu(res(i).x, res(i+1).dzdx) ;
+      case 'noffset'
+        res(i).dzdx = gnoffset(res(i).x, l.param, res(i+1).dzdx) ;
     end
     try
         wait(gpuDevice) ;

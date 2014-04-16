@@ -9,7 +9,7 @@ else
   grand = @(varargin) rand(varargin{:}) ;
 end
 
-for l=1:8
+for l=1:9
   switch l
     case 1
       disp('testing gloss') ;
@@ -170,5 +170,14 @@ for l=1:8
       dzdy = grandn(size(y),'single') ;
       dzdx = grelu(x,dzdy) ;
       testder(@(x) grelu(x), x, dzdy, dzdx) ;
+      
+    case 9
+       disp('testing gnoffset') ;       
+       param = [.34, .5] ;
+       x = grandn(4,5,10,3,'single') ;
+       y = gnoffset(x,param) ;
+       dzdy = grandn(size(y),'single') ;
+       dzdx = gnoffset(x,param,dzdy) ;
+       testder(@(x) gnoffset(x,param), x, dzdy, dzdx) ;
   end
 end
