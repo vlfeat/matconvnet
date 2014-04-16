@@ -13,7 +13,8 @@
 template <typename Dtype>
 __global__ void
 im2col_gpu_kernel(const int n, const Dtype* data_im,
-                  const int height, const int width, const int ksize,
+                  const int height, const int width,
+                  const int kheight, const int kwidth,
                   const int stride, const int pad,
                   const int height_col, const int width_col, Dtype* data_col)
 {
@@ -24,17 +25,19 @@ im2col_gpu_kernel(const int n, const Dtype* data_im,
     index /= width_col;
     int y_out = index % height_col;
     int channel_in = index / height_col;
-    int channel_out = channel_in * ksize * ksize;
-
+    int channel_out = channel_in * kheight * kwidth ;
     int y_in = y_out * stride - pad;
     int x_in = x_out * stride - pad;
 
     data_col += (channel_out * height_col + y_out) * width_col + x_out;
     data_im += (channel_in * height + y_in) * width + x_in;
 
-    for (int i = 0; i < ksize; ++i) {
-      for (int j = 0; j < ksize; ++j) {
-        if (y_in + i >= 0 && y_in + i < height && x_in + j >= 0 && x_in + j < width) {
+    for (int i = 0; i < kheight ; ++i) {
+      for (int j = 0; j < kwidth ; ++j) {
+        if (y_in + i >= 0 &&
+            y_in + i < height &&
+            x_in + j >= 0 &&
+            x_in + j < width) {
           *data_col = data_im[i * width + j];
         } else {
           *data_col = 0;
@@ -47,30 +50,37 @@ im2col_gpu_kernel(const int n, const Dtype* data_im,
 
 template <typename Dtype>
 void im2col_gpu(const Dtype* data_im, const int channels,
-                const int height, const int width, const int ksize,
+                const int height, const int width,
+                const int kheight, const int kwidth,
                 const int stride, const int pad,
                 Dtype* data_col)
 {
   // We are going to launch channels * height_col * width_col kernels, each
   // kernel responsible for copying a single-channel grid.
-  int height_col = (height + 2 * pad - ksize) / stride + 1;
-  int width_col = (width + 2 * pad - ksize) / stride + 1;
+  int height_col = (height + 2 * pad - kheight) / stride + 1;
+  int width_col = (width + 2 * pad - kwidth) / stride + 1;
   int num_kernels = channels * height_col * width_col;
 
   im2col_gpu_kernel<Dtype> <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>
-  (num_kernels, data_im, height, width, ksize, stride, pad, height_col, width_col, data_col);
+  (num_kernels, data_im,
+   height, width,
+   kheight, kwidth,
+   stride, pad,
+   height_col, width_col, data_col) ;
 
-  CUDA_POST_KERNEL_CHECK;
+  CUDA_POST_KERNEL_CHECK ;
 }
 
 // Explicit instantiation
 template void im2col_gpu<float>(const float* data_im, const int channels,
-                                const int height, const int width, const int ksize,
+                                const int height, const int width,
+                                const int kheight, const int kwidth,
                                 const int stride, const int pad,
                                 float* data_col);
 
 template void im2col_gpu<double>(const double* data_im, const int channels,
-                                 const int height, const int width, const int ksize,
+                                 const int height, const int width,
+                                 const int kheight, const int kwidth,
                                  const int stride, const int pad,
                                  double* data_col);
 
@@ -81,7 +91,8 @@ template void im2col_gpu<double>(const double* data_im, const int channels,
 template <typename Dtype>
 __global__ void col2im_gpu_kernel(const int n, const Dtype* data_col,
                                   const int height, const int width,
-                                  const int channels, const int ksize,
+                                  const int channels,
+                                  const int kheight, const int kwidth,
                                   const int stride, const int pad,
                                   const int height_col, const int width_col,
                                   Dtype* data_im)
@@ -110,20 +121,20 @@ __global__ void col2im_gpu_kernel(const int n, const Dtype* data_col,
      (xc,yc) in the columnised data. patch(xc,yc) includes all input image
      pixels in the interval:
 
-     x1 <= x <= x2,   x1(xc) = stride * xc - pad,   x2(xc) = x1(xc) + ksize - 1,
-     y1 <= y <= y2,   y1(yc) = stride * yc - pad,   y2(yc) = y1(yc) + ksize - 1.
+     x1 <= x <= x2,   x1(xc) = stride * xc - pad,   x2(xc) = x1(xc) + kwidth - 1,
+     y1 <= y <= y2,   y1(yc) = stride * yc - pad,   y2(yc) = y1(yc) + kheight - 1.
 
      Hence pixel (x,y) is integrated in patch(xc,yc) if, and only if,
 
-     (x + pad - ksize + 1) / stride <= xc <= (x + pad) / stride.
+     (x + pad - kwidth + 1) / stride <= xc <= (x + pad) / stride.
 
      Here to find the minimum and maximum value of xc we need to take the ceil
      of the left-hand side and the floor of the right hand side. With C integer
      math:
 
-     xc1 <= xc <= xc2,  xc1 = (x + pad - ksize + 1 + stride - 1)/stride
-     = (x + pad - ksize)/stride + 1,
-     xc2 =(x + pad) / stride
+     xc1 <= xc <= xc2,  xc1 = (x + pad - kwidth + 1 + stride - 1)/stride
+                            = (x + pad - kwidth)/stride + 1,
+     xc2 = (x + pad) / stride
 
      Some care must be given to the first expression for xc1 as this works
      only if the numerator is non-negative (division is otherwise
@@ -136,77 +147,67 @@ __global__ void col2im_gpu_kernel(const int n, const Dtype* data_col,
 
      This result in an additional patch-relative offset of
 
-     doffset(dx,dy,c) = (x + pad - xc*stride)
-     + (y + pad - yc*stride)*ksize
-     + c*ksize*ksize
-     = (x + pad) + (y+pad)*ksize + c*(ksize*ksize)
-     - xc*stride - yc*stride*ksize.
+     doffset(dx,dy,c) 
+        = (x + pad - xc*stride)
+          + (y + pad - yc*stride)*kwidth
+          + c*kwidth*kheight
+        = (x + pad) 
+          + (y+pad)*kwidth + c*(kwidth*kheight)
+          - xc*stride - yc*stride*kwidth.
 
      Thus pixel (x,y) in patch(xc,yc) should be read in the columnised
      output with a total offset of
 
      offset(x,y,xc,yc,c)
-     = xc + yc * widht_col + doffset(dx,dy,c) * width_col*height_col
-     = ((x + pad) + (y+pad)*ksize + c*(ksize*ksize)) * width_col*height_col
-     + xc * (1 - stride * width_col*height_col)
-     + yc * (1 - stride * ksize*height_col) * width_col.
+        = xc + yc * widht_col + doffset(dx,dy,c) * width_col*height_col
+        = ((x+pad) + (y+pad)*kwidth + c*(kwidth*kheight)) * width_col*height_col
+          + xc * (1 - stride * width_col*height_col)
+          + yc * (1 - stride * kwidth*height_col) * width_col.
      */
-    int xc1 = (x + pad - ksize >= 0) ? (x + pad - ksize) / stride + 1 : 0 ;
-    int yc1 = (y + pad - ksize >= 0) ? (y + pad - ksize) / stride + 1 : 0 ;
+    int xc1 = (x + pad - kwidth >= 0) ? (x + pad - kwidth) / stride + 1 : 0 ;
+    int yc1 = (y + pad - kheight >= 0) ? (y + pad - kheight) / stride + 1 : 0 ;
     int xc2 = min((x + pad) / stride, width_col - 1) ;
     int yc2 = min((y + pad) / stride, height_col - 1) ;
-    int offset = (c * ksize * ksize + (y+pad) * ksize + (x+pad)) * height_col * width_col;
+    int offset = (c * kwidth * kheight + (y+pad) * kwidth + (x+pad)) * height_col * width_col;
     int deltax = (1 - stride * height_col * width_col);
-    int deltay = (1 - stride * ksize * height_col) * width_col;
+    int deltay = (1 - stride * kwidth * height_col) * width_col;
 
     for (int yc = yc1 ; yc <= yc2 ; ++ yc) {
       for (int xc = xc1 ; xc <= xc2 ; ++ xc) {
         val += data_col[offset + yc * deltay + xc * deltax];
       }
     }
-
-#if 0
-    int x_col_start = (x < ksize) ? 0 : (x - ksize) / stride + 1;
-    int x_col_end = min(x / stride + 1, width_col);
-    int y_col_start = (y < ksize) ? 0 : (y - ksize) / stride + 1;
-    int y_col_end = min(y / stride + 1, height_col);
-    // scan all the filter applications ?
-    int offset = (c * ksize * ksize + y * ksize + x) * height_col * width_col;
-    int coeff_y_col = (1 - stride * ksize * height_col) * width_col;
-    int coeff_x_col = (1 - stride * height_col * width_col);
-    for (int y_col = y_col_start; y_col < y_col_end; ++y_col) {
-      for (int x_col = x_col_start; x_col < x_col_end; ++x_col) {
-        val += data_col[offset + y_col * coeff_y_col + x_col * coeff_x_col];
-      }
-    }
-#endif
-
     data_im[index] = val;
   }
 }
 
 template <typename Dtype>
 void col2im_gpu(const Dtype* data_col, const int channels,
-                const int height, const int width, const int ksize,
+                const int height, const int width,
+                const int kheight, const int kwidth,
                 const int stride, const int pad,
                 Dtype* data_im)
 {
-  int height_col = (height + 2 * pad - ksize) / stride + 1;
-  int width_col = (width + 2 * pad - ksize) / stride + 1;
+  int height_col = (height + 2 * pad - kheight) / stride + 1;
+  int width_col = (width + 2 * pad - kwidth) / stride + 1;
   int num_kernels = channels * height * width;
   col2im_gpu_kernel<Dtype> <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>
-  (num_kernels, data_col, height, width, channels,
-   ksize, stride, pad,
+  (num_kernels, data_col,
+   height, width, channels,
+   kheight, kwidth,
+   stride, pad,
    height_col, width_col, data_im);
   CUDA_POST_KERNEL_CHECK;
 }
 
 template void col2im_gpu<float>(const float* data_col, const int channels,
-                                const int height, const int width, const int ksize,
+                                const int height, const int width,
+                                const int kheight, const int kwidth,
                                 const int stride, const int pad,
                                 float* data_im);
 
 template void col2im_gpu<double>(const double* data_col, const int channels,
-                                 const int height, const int width, const int ksize,
+                                 const int height, const int width,
+                                 const int kheight, const int kwidth,
                                  const int stride, const int pad,
                                  double* data_im);

@@ -31,13 +31,15 @@ void col2im_cpu(const Dtype* data_col, const int channels,
 #ifdef ENABLE_GPU
 template <typename Dtype>
 void im2col_gpu(const Dtype* data_im, const int channels,
-                const int height, const int width, const int ksize,
+                const int height, const int width,
+                const int kheight, const int kwidth,
                 const int pad, const int stride,
                 Dtype* data_col) ;
 
 template <typename Dtype>
 void col2im_gpu(const Dtype* data_col, const int channels,
-                const int height, const int width, const int ksize,
+                const int height, const int width,
+                const int kheight, const int kwidth,
                 const int pad, const int stride,
                 Dtype* data_im) ;
 #endif

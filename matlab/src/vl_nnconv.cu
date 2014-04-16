@@ -219,11 +219,6 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-    
-  if (filterWidth != filterHeight && gpuMode) {
-    mexErrMsgTxt("Non-square FILTERS not supported yet.") ;
-  }
-
   /* grouped filters */
   numGroups = depth / filterDepth ;
 
@@ -367,7 +362,7 @@ void mexFunction(int nout, mxArray *out[],
 #ifdef ENABLE_GPU
         im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataImOffset,
                           depth, width, height,
-                          filterHeight,
+                          filterWidth, filterHeight,
                           stride, pad,
                           (float *)mxGPUGetData(tempGpu)) ;
 #else
@@ -445,7 +440,7 @@ void mexFunction(int nout, mxArray *out[],
 #ifdef ENABLE_GPU
           col2im_gpu<float>((float*)mxGPUGetData(tempGpu),
                             depth, width, height,
-                            filterHeight,
+                            filterWidth, filterHeight,
                             stride, pad,
                             (float*)mxGPUGetData(resultGpu) + resImOffset) ;
 #else
@@ -467,7 +462,7 @@ void mexFunction(int nout, mxArray *out[],
 #ifdef ENABLE_GPU
         im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(dataGpu) + dataImOffset,
                           depth, width, height,
-                          filterHeight,
+                          filterWidth, filterHeight,
                           stride, pad,
                           (float *)mxGPUGetData(tempGpu)) ;
 #else

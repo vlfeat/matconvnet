@@ -13,7 +13,8 @@
 template <typename Dtype>
 void im2col_cpu(const Dtype* data_im,
                 const int channels, const int height, const int width,
-                const int kheight, const int kwidth, const int stride, const int pad,
+                const int kheight, const int kwidth,
+                const int stride, const int pad,
                 Dtype* data_col)
 {
   // the input is an image array of size H,W,C
@@ -31,7 +32,10 @@ void im2col_cpu(const Dtype* data_im,
         const int y_im = y * stride + h_offset - pad;
         const int x_im = x * stride + w_offset - pad;
         // check if we are copying from the padded (outside the image) area
-        if (y_im >=0 && y_im < height && x_im >=0 && x_im < width) {
+        if (y_im >=0 &&
+            y_im < height &&
+            x_im >=0 &&
+            x_im < width) {
           data_col[(c * height_col + y) * width_col + x] =
             data_im[(c_im * height + y_im) * width + x_im] ;
         } else {
