@@ -1,13 +1,15 @@
 % VL_NNCONV  Neural-network convolution
-%    Y = VL_NNCONV(X, F) computes the convolution of the image stack X
-%    with the filter bank F.
+%    Y = VL_NNCONV(X, F, B) computes the convolution of the image stack X
+%    with the filter bank F and biases B. If B is the empty matrix,
+%    then no biases are added.
 %
-%    [DXDY, DXDF] = VL_NNCONV(X, F, DZDY) computes the derivatives of
-%    the nework output Z w.r.t. he data and parameters.
+%    [DXDY, DXDF, DXDB] = VL_NNCONV(X, F, B, DZDY) computes the derivatives of
+%    the nework output Z w.r.t. the data and parameters. If B is the empty
+%    matrix, then DXDB is also empty.
 %
-%    X is a SINGLE array of dimension H x W x D x N where (H,W) are image
-%    height and width, D is the image depth (number of feature channels) and
-%    N the number of of images in the stack
+%    X is a SINGLE array of dimension H x W x D x N where (H,W) are the
+%    height and width of the map stack, D is the image depth (number of feature channels) and
+%    N the number of of images in the stack.
 %
 %    F is a SINGLE array fo dimension FW x FH x D x K where (FH,FW) are
 %    the filter height and width and K the number o filters in the bank.
@@ -28,8 +30,8 @@
 %    The output a is a SINGLE array of dimension YH x YW x K x N of
 %    N images with K challens and size:
 %
-%      YH = (H + 2*PAD - FH)/STRIDE + 1,
-%      YW = (H + 2*PAD - FW)/STRIDE + 1.
+%      YH = floor((H + 2*PAD - FH)/STRIDE) + 1,
+%      YW = floor((W + 2*PAD - FW)/STRIDE) + 1.
 %
 %    The derivative DZDY has the same dimension of the output Y,
 %    the derivative DZDX has the same dimension as the input X, and
