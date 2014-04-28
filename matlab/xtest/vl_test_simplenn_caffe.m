@@ -30,8 +30,8 @@ for gpu = [false true]
            13 12 % 9:  pad + conv + relu
            15 14 % 10: pad + conv + relu
            16 15 % 11: pool
-           18 16 % 12: vec + fully + relu
-           20 17 % 13: fully+relu
+           18 16 % 12: fully + relu
+           20 17 % 13: fully + relu
            21 18 % 14: fully
            22 19 % 15: softmax
           ] ;
@@ -42,7 +42,7 @@ for gpu = [false true]
   end
 
   % Derivatives dzdx
-  for i=1:size(pairs,1)
+  for i=size(pairs,1):-1:1
     vl_testsim(res(pairs(i,1)).dzdx(:), diff{pairs(i,2)}(:)) ;
   end
 

@@ -391,7 +391,7 @@ void mexFunction(int nout, mxArray *out[],
     feature_map_init_with_geom (&temp, gpuMode, temp.geom, false);
   }
   if (backMode && computeDerData) {
-    feature_map_init_with_geom(&derData, gpuMode, derData.geom, false) ;
+    feature_map_init_with_geom(&derData, gpuMode, derData.geom, fullyConnectedMode) ;
   }
   if (backMode && computeDerFilters) {
     feature_map_init_with_geom(&derFilters, gpuMode, derFilters.geom, true) ;

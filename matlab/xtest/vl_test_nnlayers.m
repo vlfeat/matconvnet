@@ -25,7 +25,7 @@ for l=1:9
       disp('testing vl_nnsoftmax') ;
       n = 10 ;
       delta = 1e-6 ;
-      x = grandn(n,1) ;
+      x = grandn(1,1,n,1) ;
       y = vl_nnsoftmax(x) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnsoftmax(x, dzdy) ;
