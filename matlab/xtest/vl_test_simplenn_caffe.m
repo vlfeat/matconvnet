@@ -53,8 +53,8 @@ for gpu = [false true]
     vl_testsim(res(9).dzdw{i}(:),pdiff{10}{i}(:)) ;
     vl_testsim(res(11).dzdw{i}(:),pdiff{12}{i}(:)) ;
     vl_testsim(res(13).dzdw{i}(:),pdiff{14}{i}(:)) ;
-    vl_testsim(res(17).dzdw{i}(:),pdiff{16}{i}(:)) ;
-    vl_testsim(res(19).dzdw{i}(:),pdiff{17}{i}(:)) ;
-    vl_testsim(res(21).dzdw{i}(:),pdiff{18}{i}(:)) ;
+    vl_testsim(res(16).dzdw{i}(:),pdiff{16}{i}(:)) ;
+    vl_testsim(res(18).dzdw{i}(:),pdiff{17}{i}(:)) ;
+    vl_testsim(res(20).dzdw{i}(:),pdiff{18}{i}(:)) ;
   end
 end
