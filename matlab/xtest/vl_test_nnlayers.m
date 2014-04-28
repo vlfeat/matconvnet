@@ -49,46 +49,62 @@ for l=1:9
       disp('testing vl_nnconv with non square filters') ;
       w = grandn(3,5,10,2,'single') ;
       x = grandn(9,18,10,1,'single') ;
-      y = vl_nnconv(x,w,'verbose') ;
+      y = vl_nnconv(x,w,[],'verbose') ;
       dzdy = grandn(size(y),'single') ;
-      [dzdw,dzdx] = vl_nnconv(x,w,dzdy,'verbose') ;
-      vl_testder(@(x) vl_nnconv(x,w), x, dzdy, dzdx, 1e-2) ;
-      vl_testder(@(w) vl_nnconv(x,w), w, dzdy, dzdw, 1e-2) ;      
-      
+      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
+      vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, 1e-2) ;
+      vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, 1e-2) ;
+
+      if 0
+      disp('testing vl_nnconv with fully connected filters') ;
+      w = grandn(9,18,10,2,'single') ;
+      b = grandn(2,1,'single') ;
+      x = grandn(9,18,10,1,'single') ;
+      y = vl_nnconv(x,w,b,'verbose') ;
+      keyboard
+      dzdy = grandn(size(y),'single') ;
+      [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose') ;
+      vl_testder(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, 1e-2) ;
+      vl_testder(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, 1e-2) ;
+      vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, 1e-2) ;
+      end
+
       disp('testing vl_nnconv stride correctness') ;
       x = grandn(9,9,1,1,'single') ;
       w = grandn(3,3,1,1,'single') ;
-      y = vl_nnconv(x,w,'verbose') ;
-      y_ = vl_nnconv(x,w,'verbose','stride',2) ;
+      y = vl_nnconv(x,w,[],'verbose') ;
+      y_ = vl_nnconv(x,w,[],'verbose','stride',2) ;
       assert(isequal(y(1:2:end,1:2:end,:,:),y_)) ;
 
       dzdy = grandn(size(y),'single') ;
       dzdy(2:2:end,:,:,:) = 0 ;
       dzdy(:,2:2:end,:,:) = 0 ;
-      [dzdw,dzdx] = vl_nnconv(x,w,dzdy,'verbose') ;
-      [dzdw_,dzdx_] = vl_nnconv(x,w,dzdy(1:2:end,1:2:end,:,:),'verbose','stride',2) ;
+      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
+      [dzdx_,dzdw_] = vl_nnconv(x,w,[],dzdy(1:2:end,1:2:end,:,:),'verbose','stride',2) ;
       assert(all(all(gather(abs(dzdx-dzdx_)) < 1e-3))) ;
 
       disp('testing vl_nnconv pad correctness') ;
-      y_ = vl_nnconv(x,w,'verbose','pad',1) ;
+      y_ = vl_nnconv(x,w,[],'verbose','pad',1) ;
       assert(isequal(y_(2:end-1,2:end-1,:,:),y)) ;
 
       dzdy = grandn(size(y),'single') ;
-      [dzdw,dzdx] = vl_nnconv(x,w,dzdy,'verbose') ;
-      [dzdw_,dzdx_] = vl_nnconv(x,w,padarray(dzdy,[1 1],0,'both'),'verbose','pad',1) ;
+      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
+      [dzdx_,dzdw_] = vl_nnconv(x,w,[],padarray(dzdy,[1 1],0,'both'),'verbose','pad',1) ;
       assert(all(all(gather(abs(dzdx-dzdx_)) < 1e-3))) ;
       assert(all(all(gather(abs(dzdw-dzdw_)) < 1e-3))) ;
 
       disp('testing vl_nnconv pad and stride combo') ;
       x = grandn(16,15,4,2,'single') ;
       w = grandn(3,3,4,5,'single') ;
+      b = grandn(5,1,'single') ;
       for pad=0:2
         for stride=1:4
-          y = vl_nnconv(x,w,'verbose','stride',stride,'pad',pad) ;
+          y = vl_nnconv(x,w,b,'verbose','stride',stride,'pad',pad) ;
           dzdy = grandn(size(y),'single') ;
-          [dzdw,dzdx] = vl_nnconv(x,w,dzdy,'verbose','stride',stride,'pad',pad) ;
-          vl_testder(@(x) vl_nnconv(x,w,'stride',stride,'pad',pad), x, dzdy, dzdx, 1e-2) ;
-          vl_testder(@(w) vl_nnconv(x,w,'stride',stride,'pad',pad), w, dzdy, dzdw, 1e-2) ;
+          [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose','stride',stride,'pad',pad) ;
+          vl_testder(@(x) vl_nnconv(x,w,b,'stride',stride,'pad',pad), x, dzdy, dzdx, 1e-2) ;
+          vl_testder(@(w) vl_nnconv(x,w,b,'stride',stride,'pad',pad), w, dzdy, dzdw, 1e-2) ;
+          vl_testder(@(b) vl_nnconv(x,w,b,'stride',stride,'pad',pad), b, dzdy, dzdb, 1e-2) ;
         end
       end
 
@@ -98,14 +114,14 @@ for l=1:9
       w_(:,:,1:5,2) = 0 ;
       w_(:,:,6:10,1) = 0 ;
       x = grandn(9,9,10,1,'single') ;
-      y = vl_nnconv(x,w,'verbose') ;
-      y_ = vl_nnconv(x,w_,'verbose') ;
+      y = vl_nnconv(x,w,[],'verbose') ;
+      y_ = vl_nnconv(x,w_,[],'verbose') ;
       assert(isequal(y,y_)) ;
 
       dzdy = grandn(size(y),'single') ;
-      [dzdw,dzdx] = vl_nnconv(x,w,dzdy,'verbose') ;
-      vl_testder(@(x) vl_nnconv(x,w), x, dzdy, dzdx, 1e-2) ;
-      vl_testder(@(w) vl_nnconv(x,w), w, dzdy, dzdw, 1e-2) ;
+      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
+      vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, 1e-2) ;
+      vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, 1e-2) ;
 
     case 5
       disp('testing vl_nnpool') ;

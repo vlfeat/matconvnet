@@ -9,11 +9,11 @@ function Y = gsoftmax(X,dzdY)
 
 % Author: Andrea Vedaldi
 
-E = exp(bsxfun(@minus, X, max(X,[],1))) ;
+E = exp(bsxfun(@minus, X, max(X,[],3))) ;
 L = sum(E) ;
 Y = bsxfun(@rdivide, E, L) ;
 
 if nargin <= 1, return ; end
 
 % backward
-Y = Y .* bsxfun(@minus, dzdY, sum(dzdY .* Y,1)) ;
+Y = Y .* bsxfun(@minus, dzdY, sum(dzdY .* Y, 3)) ;

@@ -16,24 +16,23 @@ for i=1:n
   res(i).time = tic ;
   switch l.type
     case 'conv'
-      res(i+1).x = gconv(res(i).x, l.filters, 'pad', l.pad, 'stride', l.stride) ;
-      res(i+1).x = bsxfun(@plus, res(i+1).x, permute(l.biases, [2 3 1])) ;
+      res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, 'pad', l.pad, 'stride', l.stride) ;
     case 'pool'
-      res(i+1).x = gpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
+      res(i+1).x = vl_nnpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
     case 'normalize'
-      res(i+1).x = gnormalize(res(i).x, l.param) ;
+      res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
     case 'fully'
-      res(i+1).x = gfully(res(i).x, l.w, l.b) ;
+      res(i+1).x = vl_nnfull(res(i).x, l.w, l.b) ;
     case 'softmax'
-      res(i+1).x = gsoftmax(res(i).x) ;
+      res(i+1).x = vl_nnsoftmax(res(i).x) ;
     case 'loss'
-      res(i+1).x = gloss(res(i).x, l.class) ;
+      res(i+1).x = vl_nnloss(res(i).x, l.class) ;
     case 'vec'
-      res(i+1).x = gvec(res(i).x) ;
+      res(i+1).x = vl_nnvec(res(i).x) ;
     case 'relu'
-      res(i+1).x = grelu(res(i).x) ;
+      res(i+1).x = vl_nnrelu(res(i).x) ;
     case 'noffset'
-      res(i+1).x = gnoffset(res(i).x, l.param) ;
+      res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
     otherwise
       error('Unknown layer type %s', l.type);
   end
@@ -52,32 +51,32 @@ if doder
     res(i).backwardTime = tic ;
     switch l.type
       case 'conv'
-        [dzdw, dzdx] = gconv(res(i).x, l.filters, res(i+1).dzdx, ...
+        [dzdx, dzdw, dzdb] = vl_nnconv(res(i).x, l.filters, l.biases, ...
+          res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride) ;
-        dzdb = squeeze(sum(sum(sum(res(i+1).dzdx,4),2),1)) ;
         res(i).dzdx = dzdx;
         res(i).dzdw = {dzdw,dzdb} ;
         clear dzdx dzdw dzdb ;
       case 'pool'
-        res(i).dzdx = gpool(res(i).x, l.pool, res(i+1).dzdx, ...
+        res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride) ;
       case 'normalize'
-        res(i).dzdx = gnormalize(res(i).x, l.param, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
       case 'fully'
-        [dzdx, dzdw, dzdb] = gfully(res(i).x, l.w, l.b, res(i+1).dzdx) ;
+        [dzdx, dzdw, dzdb] = vl_nnfull(res(i).x, l.w, l.b, res(i+1).dzdx) ;
         res(i).dzdx = dzdx ;
         res(i).dzdw = {dzdw, dzdb} ;
         clear dzdx dzdw dzdb ;
       case 'softmax'
-        res(i).dzdx = gsoftmax(res(i).x, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnsoftmax(res(i).x, res(i+1).dzdx) ;
       case 'loss'
-        res(i).dzdx = gloss(res(i).x, l.class, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'vec'
-        res(i).dzdx = gvec(res(i).x, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnvec(res(i).x, res(i+1).dzdx) ;
       case 'relu'
-        res(i).dzdx = grelu(res(i).x, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
-        res(i).dzdx = gnoffset(res(i).x, l.param, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnoffset(res(i).x, l.param, res(i+1).dzdx) ;
     end
     try
         wait(gpuDevice) ;

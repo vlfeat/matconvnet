@@ -40,11 +40,11 @@ vlmxOption  options [] = {
 typedef struct FeatureMapGeometry_
 {
   mxClassID classID ;
-  mwSize height ;
-  mwSize width ;
-  mwSize depth ;
-  mwSize size ;
-  mwSize numElements ;
+  ptrdiff_t height ;
+  ptrdiff_t width ;
+  ptrdiff_t depth ;
+  ptrdiff_t size ;
+  ptrdiff_t numElements ;
 } FeatureMapGeometry ;
 
 typedef struct FeatureMap_
@@ -137,7 +137,7 @@ void feature_map_init_with_geom_and_ones (FeatureMap * map, bool gpuMode,
 #ifdef ENABLE_GPU
   map->gpuArray = NULL ;
   if (gpuMode) {
-    map->gpuArray = mxGPUCreateFromMxArray (map->array) ;
+    map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray (map->array) ;
   }
 #endif
 }
@@ -492,7 +492,7 @@ void mexFunction(int nout, mxArray *out[],
                       (float const*)mxGPUGetDataReadOnly(derOutput.gpuArray) + derOutputOffset, (int)m,
                       (float const*)mxGPUGetDataReadOnly(allOnes.gpuArray), (int)incx,
                       &beta,
-                      (float*)mxGPUGetData.gpuArray), (int)incy) ;
+                      (float*)mxGPUGetData(derBiases.gpuArray), (int)incy) ;
 #else
           assert(false) ;
 #endif
@@ -525,7 +525,7 @@ void mexFunction(int nout, mxArray *out[],
                         (float const*)mxGPUGetDataReadOnly(derOutput.gpuArray) + derOutputOffset + derOutputGrpOffset, (int)m,
                         (float const*)mxGPUGetDataReadOnly(filters.gpuArray) + filterGrpOffset, (int)k,
                         &beta,
-                        (float*)mxGPUGetData(fullyConnectedMode ? derData.gpuArray : temp.gpuArray) + tempGrpOffset :
+                        (float*)mxGPUGetData(fullyConnectedMode ? derData.gpuArray : temp.gpuArray) + tempGrpOffset,
                         (int)m) ;
 #else
             assert(false) ;
@@ -544,7 +544,7 @@ void mexFunction(int nout, mxArray *out[],
         if (!fullyConnectedMode) {
           if (gpuMode) {
 #ifdef ENABLE_GPU
-            col2im_gpu<float>((float*)mxGPUGetData(temp.gpuArray),
+            col2im_gpu<float>((float*)mxGPUGetDataReadOnly(temp.gpuArray),
                               data.geom.depth, data.geom.width, data.geom.height,
                               filters.geom.width, filters.geom.height,
                               stride, pad,
@@ -622,7 +622,7 @@ void mexFunction(int nout, mxArray *out[],
 #ifdef ENABLE_GPU
             cublasSgemm(handle,
                         CUBLAS_OP_N, CUBLAS_OP_N,
-                        (int)m, (int)n, (int)q,
+                        (int)m, (int)biases.geom.numElements, (int)q,
                         &alpha,
                         (float const*)mxGPUGetDataReadOnly(allOnes.gpuArray) , (int)m,
                         (float const*)mxGPUGetDataReadOnly(biases.gpuArray), (int)q,
@@ -633,7 +633,7 @@ void mexFunction(int nout, mxArray *out[],
 #endif
           } else {
             sgemm(&OP_N, &OP_N,
-                  &m, &n, &q,
+                  &m, &biases.geom.numElements, &q,
                   &alpha,
                   (float*)mxGetData(allOnes.array), &m,
                   (float*)mxGetData(biases.array), &q,

@@ -9,20 +9,24 @@ switch 1
 end
 
 % do it on the CPU
-c_cpu = gconv(a,b) ;
+c_cpu = vl_nnconv(a,b,[]) ;
 cpu_time = tic ;
-c_cpu = gconv(a,b) ;
-for t=1:5; c=gconv(a,b) ; end
+c_cpu = vl_nnconv(a,b,[]) ;
+for t=1:5; c=vl_nnconv(a,b,[]) ; end
 cpu_time = toc(cpu_time) ;
 
 % do it on the GPU
+if 0
 a_= gpuArray(a) ;
 b_= gpuArray(b) ;
 c_=gconv(a_,b_) ;
 gpu_time = tic ;
-for t=1:5; c_= gconv(a_,b_) ; end
+for t=1:5; c_= vl_nnconv(a_,b_,[]) ; end
 gpu_time = toc(gpu_time) ;
 c = gather(c_) ;
+else
+  c= c_cpu ;
+end
 
 figure(1) ; clf ;
 subplot(2,2,1) ; imagesc(a(:,:,1)) ; axis equal ;
