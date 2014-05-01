@@ -21,14 +21,10 @@ for i=1:n
       res(i+1).x = vl_nnpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
     case 'normalize'
       res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
-    case 'fully'
-      res(i+1).x = vl_nnfull(res(i).x, l.w, l.b) ;
     case 'softmax'
       res(i+1).x = vl_nnsoftmax(res(i).x) ;
     case 'loss'
       res(i+1).x = vl_nnloss(res(i).x, l.class) ;
-    case 'vec'
-      res(i+1).x = vl_nnvec(res(i).x) ;
     case 'relu'
       res(i+1).x = vl_nnrelu(res(i).x) ;
     case 'noffset'
@@ -62,17 +58,10 @@ if doder
           'pad', l.pad, 'stride', l.stride) ;
       case 'normalize'
         res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
-      case 'fully'
-        [dzdx, dzdw, dzdb] = vl_nnfull(res(i).x, l.w, l.b, res(i+1).dzdx) ;
-        res(i).dzdx = dzdx ;
-        res(i).dzdw = {dzdw, dzdb} ;
-        clear dzdx dzdw dzdb ;
       case 'softmax'
         res(i).dzdx = vl_nnsoftmax(res(i).x, res(i+1).dzdx) ;
       case 'loss'
         res(i).dzdx = vl_nnloss(res(i).x, l.class, res(i+1).dzdx) ;
-      case 'vec'
-        res(i).dzdx = vl_nnvec(res(i).x, res(i+1).dzdx) ;
       case 'relu'
         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
