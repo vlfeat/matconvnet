@@ -12,15 +12,35 @@ end
 for l=1:9
   switch l
     case 1
-      disp('testing vl_nnloss') ;
-      n = 10 ;
-      c = 10 ;
-      x = grand(n,1) ; % non-negative
+      disp('testing vl_nnloss multiple images convolutional') ;
+      C = 10 ;
+      c = [7 2 1] ;
+      n = 3 ;
+      x = grand(3,4,C,n) + 0.001 ; % non-negative
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx) ;
-
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, 1e-8) ;
+            
+      disp('testing vl_nnloss multiple images') ;
+      C = 10 ;
+      c = [7 2 1] ;
+      n = 3 ;
+      x = grand(1,1,C,n) + 0.001 ; % non-negative
+      y = vl_nnloss(x,c) ;
+      dzdy = grandn(size(y)) ;
+      dzdx = vl_nnloss(x,c,dzdy) ;
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, 1e-8) ;
+      
+      disp('testing vl_nnloss') ;
+      C = 10 ;
+      c = 7 ;
+      x = grand(1,1,C,1) + 0.001 ; % non-negative
+      y = vl_nnloss(x,c) ;
+      dzdy = grandn(size(y)) ;
+      dzdx = vl_nnloss(x,c,dzdy) ;
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, 1e-8) ;
+            
     case 2
       disp('testing vl_nnsoftmax') ;
       n = 10 ;
