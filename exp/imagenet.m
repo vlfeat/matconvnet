@@ -1,7 +1,10 @@
 function imagenet()
 run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+run ~/src/vlfeat/toolbox/vl_setup.m ;
+
 opts.expDir = 'data/imagenet-exp' ;
 opts.dataDir = 'data/imagenet' ;
+opts.imdbPath = fullfile(opts.expDir, 'imdb.mat') ;
 opts.numEpochs = 100 ;
 opts.batchSize = 4 ;
 opts.useGpu = false ;
@@ -10,10 +13,32 @@ opts.lite = true ;
 mkdir(opts.expDir) ;
 
 % -------------------------------------------------------------------------
+%                                                   Database initialization
+% -------------------------------------------------------------------------
+
+if exist(opts.imdbPath,'file')
+  imdb = load(opts.imdbPath) ;
+else
+  imdb = imdbFromImageNet(opts) ;
+  imdb.averageImage = [] ;
+  train = find(imdb.images.set == 1) ;
+  bs = 100 ;
+  for t=1:bs:numel(train)
+    batch = train(t:min(t+bs-1, numel(train))) ;
+    fprintf('computing average image: processing batch starting with image %d\n', batch(1)) ;
+    im{t} = mean(getBatch(opts, imdb, [], batch), 4) ;    
+  end
+  imdb.averageImage = mean(cat(4, im{:}),4) ;
+  save(opts.imdbPath, '-struct', 'imdb') ;
+  clear im ;
+end
+
+% -------------------------------------------------------------------------
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
 net = initializeNetwork(opts);
+net.normalization.averageImage = imdb.averageImage ;
 
 for i=1:numel(net.layers)
   if ~strcmp(net.layers{i}.type,'conv'), continue; end
@@ -28,19 +53,6 @@ end
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
-
-if 0
-  % generate fake database
-  n = 100 ;
-  v = 10 ;
-  t = 10 ;
-  imdb.images.id = ones(1, n+v+t) ;
-  imdb.images.label = randi(1000, n+v+t) ;
-  imdb.images.set = [ones(1,n) 2*ones(1,v) 3*ones(1,t)] ;
-  imdb.images.name = cell(1, n+v+t) ;
-else
-  imdb = imdbFromImageNet(opts) ;
-end
 
 train = find(imdb.images.set==1) ;
 val = find(imdb.images.set==2) ;
@@ -58,8 +70,8 @@ for epoch=1:opts.numEpochs
     % get next image batch and labels
     batch = train(t:min(t+opts.batchSize-1, numel(train))) ;
     fprintf('training: epoch %02d: processing batch starting with image %d\n', epoch, batch(1)) ;
-    [im, labels] = getBatch(opts, imdb, batch) ;
-    
+    [im, labels] = getBatch(opts, imdb, net, batch) ;
+        
     % backprop
     net.layers{end}.class = labels ;
     res = vl_simplenn(net, im, 1) ;
@@ -73,11 +85,11 @@ for epoch=1:opts.numEpochs
       ly.filtersMomentum = ...
         0.9 * ly.filtersMomentum - ...
         0.0005 * opts.learningRate * ly.filters - ...
-        opts.learningRate * res(l).dzdw{1} ;
+        opts.learningRate/numel(batch) * res(l).dzdw{1} ;
       ly.biasesMomentum = ...
         0.9 * ly.biasesMomentum - ...
         0.0005 * opts.learningRate * ly.biases - ...
-        opts.learningRate * res(l).dzdw{2} ;
+        opts.learningRate/numel(batch) * res(l).dzdw{2} ;
       
       ly.filters = ly.filters + ly.filtersMomentum ;
       ly.biases = ly.biases + ly.biasesMomentum ;
@@ -89,7 +101,7 @@ for epoch=1:opts.numEpochs
   for t=1:opts.batchSize:numel(val)
     batch = val(t:min(t+opts.batchSize-1, numel(val))) ;
     fprintf('validation: epoch %02d: processing batch starting with image %d\n', epoch, batch(1)) ;
-    [im, labels] = getBatch(opts, imdb, batch) ;
+    [im, labels] = getBatch(opts, imdb, [], batch) ;
     
     net.layers{end}.class = labels ;
     res = vl_simplenn(net, im) ;
@@ -102,17 +114,43 @@ for epoch=1:opts.numEpochs
   save(sprintf(modelPath,epoch), 'net', 'trainScores', 'valScores') ;
   
   figure(1) ; clf ;
+  subplot(1,2,1) ;
   plot(trainScores, 'k--') ; hold on ;
   plot(valScores, 'b-') ; 
   xlabel('epoch') ; ylabel('energy') ; legend('train', 'val') ; grid on ;
-  drawnow ;
+  subplot(1,2,2) ;
+  vl_imarraysc(net.layers{1}.filters) ;
+  axis equal ;
+  colormap gray ;
+  drawnow ;  
   print(1, modelFigPath, '-dpdf') ;  
 end
 
 % -------------------------------------------------------------------------
-function [im, labels] = getBatch(opts, imdb, batch)
+function [im, labels] = getBatch(opts, imdb, net, batch)
 % -------------------------------------------------------------------------
-im = randn(227, 227, 3, numel(batch), 'single') ;
+im = zeros(227, 227, 3, numel(batch), 'single') ;
+for i=1:numel(batch)
+  imt = imread(fullfile(imdb.imageDir, imdb.images.name{batch(i)})) ;
+  if size(imt,3) == 1, imt = cat(3, imt, imt, imt) ; end
+  w = size(imt,2) ;
+  h = size(imt,1) ;
+  if w > h
+    imt = imresize(im2single(imt), [227, NaN]) ;
+  else
+    imt = imresize(im2single(imt), [NaN, 227]) ;
+  end
+  w = size(imt,2) ;
+  h = size(imt,1) ;
+  sx = (1:227) + round(w/2 - 227/2) ;
+  sy = (1:227) + round(h/2 - 227/2) ;
+  im(:,:,:,i) = max(0,min(1,imt(sy,sx,:))) ;
+  
+  % apply network normalization
+  if ~isempty(net)
+    im(:,:,:,i) = im(:,:,:,i) - net.normalization.averageImage ;
+  end
+end
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
@@ -209,7 +247,6 @@ net.layers{end+1} = struct('type', 'softmax') ;
 
 % Block 10 loss
 net.layers{end+1} = struct('type', 'loss') ;
-
 
 % -------------------------------------------------------------------------
 function imdb = imdbFromImageNet(opts)
