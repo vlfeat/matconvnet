@@ -32,12 +32,14 @@ net.layers{end+1} = struct('type','relu') ;
 net.layers{end+1} = struct('type','normalize', 'param', [5 .1 .01 .75]) ;
 
 % fully connected layers
-net.layers{end+1} = struct('type','vec') ;
-net.layers{end+1} = struct('type','fully', 'w', randn(64, (h-8)*(w-8)*30, 'single'), 'b', randn(64,1,'single')) ;
+net.layers{end+1} = struct('type','conv', 'filters', randn(h-8, w-8, 30, 64, 'single'), 'biases', randn(1,64,'single'), ...
+  'stride', 1, 'pad', 0) ;
 net.layers{end+1} = struct('type','relu') ;
-net.layers{end+1} = struct('type','fully', 'w', randn(64, 64, 'single'), 'b', randn(64,1,'single')) ;
+net.layers{end+1} = struct('type','conv', 'filters', randn(1,1, 64, 64, 'single'), 'biases', randn(1,64,'single'), ...
+  'stride', 1, 'pad', 0) ;
 net.layers{end+1} = struct('type','relu') ;
-net.layers{end+1} = struct('type','fully', 'w', randn(32, 64, 'single'), 'b', randn(32,1,'single')) ;
+net.layers{end+1} = struct('type','conv', 'filters', randn(1,1, 64, 32, 'single'), 'biases', randn(1,32,'single'), ...
+  'stride', 1, 'pad', 0) ;
 
 % softmax and loss
 net.layers{end+1} = struct('type', 'softmax') ;
@@ -51,13 +53,13 @@ net.layers{end+1} = struct('type', 'softmax') ;
 im = randn(h,w,3,n,'single') ;
 
 % forward-backward passes
-dzdy = randn(32,n)  ;
+dzdy = randn(1,1,32,n)  ;
 for i=1:n
-  res_{i} = tinynet(net, im(:,:,:,i), dzdy(:,i)) ;
+  res_{i} = vl_simplenn(net, im(:,:,:,i), dzdy(:,:,:,i)) ;
 end
-res = tinynet(net, im, dzdy) ;
+res = vl_simplenn(net, im, dzdy) ;
 
-for i=numel(res):-1:1
+for i=1:numel(res)
   if i==numel(res)
     name = 'output' ;
   else
@@ -72,20 +74,14 @@ for i=numel(res):-1:1
       for j = 1:numel(res_)
         dw_ = dw_ + res_{j}(i).dzdw{k} ;
       end
-      assert(max(reshape(abs(dw_ - dw{k}), 1,[])) < 1e-4) ;
+      vl_testsim(dw_, dw{k}) ;
     end
   end
   for j=1:numel(res_)
     x_ = res_{j}(i).x ;
-    dx_ = res_{j}(i).dzdx ;
-    if size(x, 4) > 1
-      assert(max(reshape(abs(x_ - x(:,:,:,j)), 1,[])) < 1e-4) ;
-      assert(max(reshape(abs(dx_ - dx(:,:,:,j)), 1,[])) < 1e-4) ;
-      fprintf('layer (%2d,%d,%10s) ok\n', i,j,name) ;
-    else
-      assert(max(abs(x_ - x(:,j))) < 1e-4) ;
-      assert(max(abs(dx_ - dx(:,j))) < 1e-4) ;
-      fprintf('layer (%2d,%d,%10s) ok\n', i,j,name) ;
-    end
+    dx_ = res_{j}(i).dzdx ;    
+    vl_testsim(x_, x(:,:,:,j)) ;
+    vl_testsim(dx_, dx(:,:,:,j)) ;
+    fprintf('layer (%2d,%d,%10s) ok\n', i,j,name) ;
   end
 end

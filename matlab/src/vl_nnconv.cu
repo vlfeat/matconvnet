@@ -525,7 +525,8 @@ void mexFunction(int nout, mxArray *out[],
                         (float const*)mxGPUGetDataReadOnly(derOutput.gpuArray) + derOutputOffset + derOutputGrpOffset, (int)m,
                         (float const*)mxGPUGetDataReadOnly(filters.gpuArray) + filterGrpOffset, (int)k,
                         &beta,
-                        (float*)mxGPUGetData(fullyConnectedMode ? derData.gpuArray : temp.gpuArray) + tempGrpOffset,
+                        (float*)mxGPUGetData(fullyConnectedMode ? derData.gpuArray : temp.gpuArray)
+                        + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
                         (int)m) ;
 #else
             assert(false) ;
@@ -537,7 +538,8 @@ void mexFunction(int nout, mxArray *out[],
                   (float*)mxGetData(derOutput.array) + derOutputOffset + derOutputGrpOffset, &m,
                   (float*)mxGetData(filters.array) + filterGrpOffset, &k,
                   &beta,
-                  (float*)mxGetData(fullyConnectedMode ? derData.array : temp.array) + tempGrpOffset,
+                  (float*)mxGetData(fullyConnectedMode ? derData.array : temp.array)
+                  + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
                   &m) ;
           }
         }
@@ -597,7 +599,8 @@ void mexFunction(int nout, mxArray *out[],
                         CUBLAS_OP_N, CUBLAS_OP_N,
                         (int)m, (int)n, (int)k,
                         &alpha,
-                        (float const*)mxGPUGetDataReadOnly(fullyConnectedMode ? data.gpuArray : temp.gpuArray) + tempGrpOffset, (int)m,
+                        (float const*)mxGPUGetDataReadOnly(fullyConnectedMode ? data.gpuArray  : temp.gpuArray)
+                        + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, (int)m,
                         (float const*)mxGPUGetDataReadOnly(filters.gpuArray) + filterGrpOffset, (int)k,
                         &beta,
                         (float*)mxGPUGetData(output.gpuArray) + outputOffset + outputGrpOffset, (int)m) ;
@@ -608,7 +611,8 @@ void mexFunction(int nout, mxArray *out[],
             sgemm(&OP_N, &OP_N,
                   &m, &n, &k,
                   &alpha,
-                  (float*)mxGetData(fullyConnectedMode ? data.array : temp.array) + tempGrpOffset, &m,
+                  (float*)mxGetData(fullyConnectedMode ? data.array : temp.array)
+                  + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, &m,
                   (float*)mxGetData(filters.array) + filterGrpOffset, &k,
                   &beta,
                   (float*)mxGetData(output.array) + outputOffset + outputGrpOffset, &m) ;

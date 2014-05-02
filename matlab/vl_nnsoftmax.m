@@ -1,4 +1,4 @@
-function Y = gsoftmax(X,dzdY)
+function Y = vl_nnsoftmax(X,dzdY)
 % VL_NNSOFTMAX  Neural-network softmax
 %  Y = VL_NNSOFTMAX(X) computes the softmax operator of the vector stack
 %  X. X has dimension D x N, packing N vectors of dimension D.
