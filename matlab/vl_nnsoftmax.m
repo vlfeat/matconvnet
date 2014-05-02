@@ -10,7 +10,7 @@ function Y = vl_nnsoftmax(X,dzdY)
 % Author: Andrea Vedaldi
 
 E = exp(bsxfun(@minus, X, max(X,[],3))) ;
-L = sum(E) ;
+L = sum(E,3) ;
 Y = bsxfun(@rdivide, E, L) ;
 
 if nargin <= 1, return ; end

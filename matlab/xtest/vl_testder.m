@@ -16,5 +16,5 @@ for i=1:numel(x)
   factors = dzdy .* (y_ - y)/delta ;
   dzdx_(i) = dzdx_(i) + sum(factors(:)) ;
 end
-assert(max(abs(dzdx(:) - dzdx_(:))) < 1e-1) ;
+vl_testsim(dzdx, dzdx_);
 
