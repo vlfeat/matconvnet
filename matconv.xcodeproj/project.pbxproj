@@ -49,11 +49,9 @@
 		2DADAFF918E8D61D00165C90 /* mexutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = mexutils.h; path = matlab/src/bits/mexutils.h; sourceTree = "<group>"; };
 		2DADF18018ACFA6700D16D4C /* gpu.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = gpu.hpp; path = matlab/src/bits/gpu.hpp; sourceTree = "<group>"; };
 		2DAFFA4F18AD58530014D531 /* mex_gpu_opts.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; name = mex_gpu_opts.sh; path = matlab/src/mex_gpu_opts.sh; sourceTree = "<group>"; };
-		2DD3FACB18EC0E7B00053032 /* vl_nnfull.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnfull.m; path = matlab/vl_nnfull.m; sourceTree = "<group>"; };
 		2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnloss.m; path = matlab/vl_nnloss.m; sourceTree = "<group>"; };
 		2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnrelu.m; path = matlab/vl_nnrelu.m; sourceTree = "<group>"; };
 		2DD3FACE18EC0E7B00053032 /* vl_nnsoftmax.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnsoftmax.m; path = matlab/vl_nnsoftmax.m; sourceTree = "<group>"; };
-		2DD3FACF18EC0E7B00053032 /* vl_nnvec.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnvec.m; path = matlab/vl_nnvec.m; sourceTree = "<group>"; };
 		2DD3FAD018EC0E7B00053032 /* vl_simplenn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_simplenn.m; path = matlab/vl_simplenn.m; sourceTree = "<group>"; };
 		2DD3FAD218EC0E9000053032 /* vl_test_nnconv_der.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_test_nnconv_der.m; path = matlab/xtest/vl_test_nnconv_der.m; sourceTree = "<group>"; };
 		2DD3FAD318EC0E9000053032 /* vl_test_nnconv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_test_nnconv.m; path = matlab/xtest/vl_test_nnconv.m; sourceTree = "<group>"; };
@@ -131,11 +129,9 @@
 			isa = PBXGroup;
 			children = (
 				2D375DBB18A7F790008A97EE /* vl_nnconv.m */,
-				2DD3FACB18EC0E7B00053032 /* vl_nnfull.m */,
 				2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */,
 				2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */,
 				2DD3FACE18EC0E7B00053032 /* vl_nnsoftmax.m */,
-				2DD3FACF18EC0E7B00053032 /* vl_nnvec.m */,
 				2DD3FADA18EC118700053032 /* vl_rootnn.m */,
 				2DD3FADB18EC118700053032 /* vl_setupnn.m */,
 				2DD3FAD018EC0E7B00053032 /* vl_simplenn.m */,
