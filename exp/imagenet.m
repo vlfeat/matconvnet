@@ -7,9 +7,9 @@ opts.dataDir = 'data/imagenet' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat') ;
 opts.numEpochs = 100 ;
 opts.batchSize = 4 ;
-opts.useGpu = true ;
-opts.learningRate = 0.01 ;
-opts.continue = false ;
+opts.useGpu = false ;
+opts.learningRate = 0.001*5 ;
+opts.continue = true ;
 opts.lite = true ;
 mkdir(opts.expDir) ;
 
@@ -112,7 +112,7 @@ for epoch=1:opts.numEpochs
     end
     figure(100) ;clf;   
     plot(bound);drawnow ;
-    if any(bound>15), keyboard; end
+    %if any(bound>15), keyboard; end
     
     % 13 is the last convolutional layer
     % 16 is the first fc layer
