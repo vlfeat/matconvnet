@@ -74,29 +74,23 @@ for l=1:8
       end
       
     case 4
-      disp('testing vl_nnconv with non square filters') ;
-      w = grandn(3,5,10,2,'single') ;
-      x = grandn(9,18,10,1,'single') ;
-      y = vl_nnconv(x,w,[],'verbose') ;
-      dzdy = grandn(size(y),'single') ;
-      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
-      vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, 1e-2) ;
-      vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, 1e-2) ;
-
-      if 0
-      disp('testing vl_nnconv with fully connected filters') ;
-      w = grandn(9,18,10,2,'single') ;
-      b = grandn(2,1,'single') ;
-      x = grandn(9,18,10,1,'single') ;
-      y = vl_nnconv(x,w,b,'verbose') ;
-      keyboard
-      dzdy = grandn(size(y),'single') ;
-      [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose') ;
-      vl_testder(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, 1e-2) ;
-      vl_testder(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, 1e-2) ;
-      vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, 1e-2) ;
+      disp('testing vl_nnconv with suqare, non square, and fully connected filters') ;
+      n = 3 ;
+      fn = 5 ;
+      for fw=[1 3 5 18]
+        for fh=[1 2 3 9]
+          w = grandn(fh,fw,10,fn,'single') ;
+          b = grandn(1,fn,'single') ;
+          x = grandn(9,18,10,n,'single') ;
+          y = vl_nnconv(x,w,[],'verbose') ;
+          dzdy = grandn(size(y),'single') ;
+          [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose') ;
+          vl_testder(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, 1e-2) ;
+          vl_testder(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, 1e-2) ;
+          vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, 1e-2) ;
+        end
       end
-
+      
       disp('testing vl_nnconv stride correctness') ;
       x = grandn(9,9,1,1,'single') ;
       w = grandn(3,3,1,1,'single') ;
@@ -137,19 +131,25 @@ for l=1:8
       end
 
       disp('testing vl_nnconv filter groups') ;
-      w_ = grandn(3,3,10,2,'single') ;
-      w = cat(4, w_(:,:,1:5,1), w_(:,:,6:10,2)) ;
-      w_(:,:,1:5,2) = 0 ;
-      w_(:,:,6:10,1) = 0 ;
-      x = grandn(9,9,10,1,'single') ;
-      y = vl_nnconv(x,w,[],'verbose') ;
-      y_ = vl_nnconv(x,w_,[],'verbose') ;
-      vl_testsim(y,y_) ;
-
-      dzdy = grandn(size(y),'single') ;
-      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
-      vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, 1e-2) ;
-      vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, 1e-2) ;
+      n = 3 ;
+      C = 10 ;      
+      for fw=[1 3 9]
+        for fh=[4 13]
+          w_ = grandn(fh,fw,9,3,'single') ;
+          w = cat(4, w_(:,:,1:3,1), w_(:,:,4:6,2), w_(:,:,7:9,3)) ;
+          w_(:,:,4:9,1) = 0 ;
+          w_(:,:,[1:3, 7:9],2) = 0 ;
+          w_(:,:,1:6,3) = 0 ;
+          x = grandn(13,9,9,n,'single') ;
+          y = vl_nnconv(x,w,[],'verbose') ;
+          y_ = vl_nnconv(x,w_,[],'verbose') ;
+          vl_testsim(y,y_) ;
+          dzdy = grandn(size(y),'single') ;
+          [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
+          vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, 1e-2) ;
+          vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, 1e-2) ;
+        end
+      end
 
     case 5
       disp('testing vl_nnpool') ;

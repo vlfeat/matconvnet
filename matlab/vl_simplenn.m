@@ -25,6 +25,8 @@ for i=1:n
       res(i+1).x = vl_nnsoftmax(res(i).x) ;
     case 'loss'
       res(i+1).x = vl_nnloss(res(i).x, l.class) ;
+    case 'softmaxloss'
+      res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
     case 'relu'
       res(i+1).x = vl_nnrelu(res(i).x) ;
     case 'noffset'
@@ -33,7 +35,7 @@ for i=1:n
       error('Unknown layer type %s', l.type);
   end
   try
-    wait(gpuDevice) ;
+    %wait(gpuDevice) ;
   catch
     % no gpuDevice
   end
@@ -62,13 +64,15 @@ if doder
         res(i).dzdx = vl_nnsoftmax(res(i).x, res(i+1).dzdx) ;
       case 'loss'
         res(i).dzdx = vl_nnloss(res(i).x, l.class, res(i+1).dzdx) ;
+      case 'softmaxloss'
+        res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'relu'
         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
         res(i).dzdx = vl_nnoffset(res(i).x, l.param, res(i+1).dzdx) ;
     end
     try
-        wait(gpuDevice) ;
+        %wait(gpuDevice) ;
     catch
         % no gpuDevice
     end

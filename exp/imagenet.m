@@ -7,8 +7,9 @@ opts.dataDir = 'data/imagenet' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat') ;
 opts.numEpochs = 100 ;
 opts.batchSize = 4 ;
-opts.useGpu = false ;
+opts.useGpu = true ;
 opts.learningRate = 0.01 ;
+opts.continue = false ;
 opts.lite = true ;
 mkdir(opts.expDir) ;
 
@@ -47,7 +48,12 @@ for i=1:numel(net.layers)
 end
 
 if opts.useGpu
-  net = vl_simplenn_move(net, 'gpu') ;
+  net = vl_simplenn_move(net, 'gpu') ;  
+  for i=1:numel(net.layers)
+    if ~strcmp(net.layers{i}.type,'conv'), continue; end
+    net.layers{i}.filtersMomentum = gpuArray(net.layers{i}.filtersMomentum) ;
+    net.layers{i}.biasesMomentum = gpuArray(net.layers{i}.biasesMomentum) ;
+  end
 end
 
 % -------------------------------------------------------------------------
@@ -57,66 +63,87 @@ end
 train = find(imdb.images.set==1) ;
 val = find(imdb.images.set==2) ;
 
+rng(0) ;
+train = train(randperm(numel(train))) ;
+val = val(randperm(numel(val))) ;
+
 for epoch=1:opts.numEpochs
+  % fast-forward to where we stopped
   modelPath = fullfile(opts.expDir, 'net-epoch-%d.mat') ;
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
-  if exist(sprintf(modelPath, epoch+1),'file'), continue ; end
-  if exist(sprintf(modelPath, epoch), 'file')
-    sprintf('resuming from epoch %d\n', epoch) ;
-    load(sprintf(modelPath, epoch), 'net', 'valScores') ;
+  if opts.continue & exist(sprintf(modelPath, epoch),'file'), continue ; end
+  if opts.continue & epoch > 1 & exist(sprintf(modelPath, epoch-1), 'file')
+    fprintf('resuming from loading epoch %d\n', epoch-1) ;
+    load(sprintf(modelPath, epoch-1), 'net', 'valScores') ;
   end
   
+  objective = 0 ;
   for t=1:opts.batchSize:numel(train)
     % get next image batch and labels
     batch = train(t:min(t+opts.batchSize-1, numel(train))) ;
-    fprintf('training: epoch %02d: processing batch starting with image %d\n', epoch, batch(1)) ;
-    [im, labels] = getBatch(opts, imdb, net, batch) ;
+    batch_time = tic ;
+    fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
+      fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
+    [im, labels] = getBatch(opts, imdb, net, batch) ;    
         
     % backprop
     net.layers{end}.class = labels ;
     res = vl_simplenn(net, im, 1) ;
-    imdb.images.score(batch) = res(end-1).x(1,1,labels+(0:1000:1000*numel(batch)-1)) ;
+    objective = objective + double(gather(res(end).x)) ;
     
-    % gradient descent
+    % gradient step
     for l=1:numel(net.layers)
       ly = net.layers{l} ;
       if ~strcmp(ly.type, 'conv'), continue ; end
+            
+      ly.filtersMomentum = 0.9 * ly.filtersMomentum ...
+        - 0.0005 * opts.learningRate * ly.filters ...
+        - opts.learningRate/numel(batch) * res(l).dzdw{1} ;
       
-      ly.filtersMomentum = ...
-        0.9 * ly.filtersMomentum - ...
-        0.0005 * opts.learningRate * ly.filters - ...
-        opts.learningRate/numel(batch) * res(l).dzdw{1} ;
-      ly.biasesMomentum = ...
-        0.9 * ly.biasesMomentum - ...
-        0.0005 * opts.learningRate * ly.biases - ...
-        opts.learningRate/numel(batch) * res(l).dzdw{2} ;
+      ly.biasesMomentum = 0.9 * ly.biasesMomentum ...
+        - 0.0005 * opts.learningRate * ly.biases ...
+        - opts.learningRate/numel(batch) * res(l).dzdw{2} ;
       
       ly.filters = ly.filters + ly.filtersMomentum ;
       ly.biases = ly.biases + ly.biasesMomentum ;
       net.layers{l} = ly ;
-    end        
+      
+      bound(l) = max(ly.filters(:)) ;
+    end
+    figure(100) ;clf;   
+    plot(bound);drawnow ;
+    if any(bound>15), keyboard; end
+    
+    % 13 is the last convolutional layer
+    % 16 is the first fc layer
+    
+    
+    batch_time = toc(batch_time) ;
+    fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
   end % next batch
   
   % evaluation on validation set
+  valObjective = 0 ;
   for t=1:opts.batchSize:numel(val)
     batch = val(t:min(t+opts.batchSize-1, numel(val))) ;
-    fprintf('validation: epoch %02d: processing batch starting with image %d\n', epoch, batch(1)) ;
+    fprintf('validation: epoch %02d: processing batch %3d of %3d\n', epoch, ...
+      fix(t/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;
     [im, labels] = getBatch(opts, imdb, [], batch) ;
     
     net.layers{end}.class = labels ;
     res = vl_simplenn(net, im) ;
-    imdb.images.score(batch) = res(end-1).x(1,1,labels+(0:1000:1000*numel(batch)-1)) ;
+    valObjective = valObjective + double(gather(res(end).x)) ;
   end
   
   % save
-  trainScores(epoch) = mean(imdb.images.score(train)) ;
-  valScores(epoch) = mean(imdb.images.score(val)) ;
+  trainScores(epoch) = objective / numel(train) ;
+  valScores(epoch) = valObjective / numel(val) ;
   save(sprintf(modelPath,epoch), 'net', 'trainScores', 'valScores') ;
   
   figure(1) ; clf ;
   subplot(1,2,1) ;
-  plot(trainScores, 'k--') ; hold on ;
-  plot(valScores, 'b-') ; 
+  plot(1:epoch, trainScores, 'k--') ; hold on ;
+  plot(1:epoch, valScores, 'b-') ; 
   xlabel('epoch') ; ylabel('energy') ; legend('train', 'val') ; grid on ;
   subplot(1,2,2) ;
   vl_imarraysc(net.layers{1}.filters) ;
@@ -135,10 +162,12 @@ for i=1:numel(batch)
   if size(imt,3) == 1, imt = cat(3, imt, imt, imt) ; end
   w = size(imt,2) ;
   h = size(imt,1) ;
+  % todo: replace with im2signel once scaling issues have been
+  % understood
   if w > h
-    imt = imresize(im2single(imt), [227, NaN]) ;
+    imt = imresize(single(imt), [227, NaN]) ;
   else
-    imt = imresize(im2single(imt), [NaN, 227]) ;
+    imt = imresize(single(imt), [NaN, 227]) ;
   end
   w = size(imt,2) ;
   h = size(imt,1) ;
@@ -151,17 +180,22 @@ for i=1:numel(batch)
     im(:,:,:,i) = im(:,:,:,i) - net.normalization.averageImage ;
   end
 end
+if opts.useGpu
+  im = gpuArray(im) ;
+end
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
 function net = initializeNetwork(opt)
 % -------------------------------------------------------------------------
 
+scal = 1 ;
+
 net.layers = {} ;
 
 % Block 1
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(11, 11, 3, 96, 'single'), ...
+                           'filters', 0.01/scal * randn(11, 11, 3, 96, 'single'), ...
                            'biases', ones(1, 96, 'single'), ...
                            'stride', 4, ...
                            'pad', 0) ;
@@ -177,7 +211,7 @@ net.layers{end+1} = struct('type', 'normalize', ...
 
 % Block 2
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(5, 5, 48, 256, 'single'), ...
+                           'filters', 0.01/scal * randn(5, 5, 48, 256, 'single'), ...
                            'biases', ones(1, 256, 'single'), ...
                            'stride', 1, ...
                            'pad', 2) ;
@@ -193,7 +227,7 @@ net.layers{end+1} = struct('type', 'normalize', ...
 
 % Block 3
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(3,3,256,384,'single'), ...
+                           'filters', 0.01/scal * randn(3,3,256,384,'single'), ...
                            'biases', ones(1,384,'single'), ...
                            'stride', 1, ...
                            'pad', 1) ;
@@ -201,7 +235,7 @@ net.layers{end+1} = struct('type', 'relu') ;
 
 % Block 4
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(3,3,192,384,'single'), ...
+                           'filters', 0.01/scal * randn(3,3,192,384,'single'), ...
                            'biases', ones(1,384,'single'), ...
                            'stride', 1, ...
                            'pad', 1) ;
@@ -209,7 +243,7 @@ net.layers{end+1} = struct('type', 'relu') ;
 
 % Block 5
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(3,3,192,256,'single'), ...
+                           'filters', 0.01/scal * randn(3,3,192,256,'single'), ...
                            'biases', ones(1,256,'single'), ...
                            'stride', 1, ...
                            'pad', 1) ;
@@ -221,7 +255,7 @@ net.layers{end+1} = struct('type', 'pool', ...
 
 % Block 6
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(6,6,256,4096,'single'),...
+                           'filters', 0.01/scal * randn(6,6,256,4096,'single'),...
                            'biases', ones(1,4096,'single'), ...
                            'stride', 1, ...
                            'pad', 0) ;
@@ -229,7 +263,7 @@ net.layers{end+1} = struct('type', 'relu') ;
 
 % Block 7
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(1,1,4096,4096,'single'),...
+                           'filters', 0.01/scal * randn(1,1,4096,4096,'single'),...
                            'biases', ones(1,4096,'single'), ...
                            'stride', 1, ...
                            'pad', 0) ;
@@ -237,16 +271,18 @@ net.layers{end+1} = struct('type', 'relu') ;
 
 % Block 8
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01*randn(1,1,4096,1000,'single'), ...
+                           'filters', 0.01/scal * randn(1,1,4096,1000,'single'), ...
                            'biases', zeros(1, 1000, 'single'), ...
                            'stride', 1, ...
                            'pad', 0) ;
 
 % Block 9
-net.layers{end+1} = struct('type', 'softmax') ;
-
-% Block 10 loss
-net.layers{end+1} = struct('type', 'loss') ;
+if 0
+  net.layers{end+1} = struct('type', 'softmax') ;
+  net.layers{end+1} = struct('type', 'loss') ;
+else
+  net.layers{end+1} = struct('type', 'softmaxloss') ;
+end
 
 % -------------------------------------------------------------------------
 function imdb = imdbFromImageNet(opts)
