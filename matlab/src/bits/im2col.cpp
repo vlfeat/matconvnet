@@ -6,6 +6,26 @@
 #include "im2col.hpp"
 #include <string.h>
 
+
+static inline int floor_divide(int a, int b) {
+  if (a >= 0) return a/b;
+  else return (a-b+1)/b;
+}
+
+static inline int ceil_divide(int a, int b) {
+  if (a >= 0) return (a + b - 1)/b ;
+  else return a/b ;
+}
+
+static inline int max(int a, int b) {
+  return (a>=b) ? a:b ;
+}
+
+static inline int min(int a, int b) {
+  return (a<=b) ? a:b ;
+}
+
+
 /* ---------------------------------------------------------------- */
 /*                                                     im2col (CPU) */
 /* ---------------------------------------------------------------- */
@@ -27,6 +47,8 @@ void im2col_cpu(const Dtype* data_im,
     int w_offset = c % kwidth;
     int h_offset = (c / kwidth) % kheight;
     int c_im = c / kheight / kwidth;
+
+#if 0
     for (int y = 0; y < height_col; ++y) {
       for (int x = 0; x < width_col; ++x) {
         const int y_im = y * stride + h_offset - pad;
@@ -43,6 +65,41 @@ void im2col_cpu(const Dtype* data_im,
         }
       }
     }
+#else
+    int y0 =  max(0, ceil_divide(pad - h_offset, stride)) ;
+    int y1 =  min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
+
+    for (int y = 0 ; y < y0 ; ++y) {
+      for (int x = 0 ; x < width_col ; ++x) {
+        data_col[(c * height_col + y) * width_col + x] = 0 ;
+      }
+    }
+    for (int y = y0 ; y < y1 ; ++y) {
+      int x0 =  max(0, ceil_divide(pad - w_offset, stride)) ;
+      int x1 =  min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
+      const int y_im = y * stride + h_offset - pad;
+      const int x_im = x0 * stride + w_offset - pad;
+      Dtype * a = data_col + (c * height_col + y) * width_col + x0 ;
+      Dtype const * b = data_im + (c_im * height + y_im) * width + x_im ;
+
+      for (int x = 0 ; x < x0 ; ++x) {
+        data_col[(c * height_col + y) * width_col + x] = 0 ;
+      }
+      for (int x = x0 ; x < x1 ; ++x) {
+        *a = *b ;
+        a += 1 ;
+        b += stride ;
+      }
+      for (int x = x1 ; x < width_col ; ++x) {
+        data_col[(c * height_col + y) * width_col + x] = 0 ;
+      }
+    }
+    for (int y = y1 ; y < height_col ; ++y) {
+      for (int x = 0 ; x < width_col ; ++x) {
+        data_col[(c * height_col + y) * width_col + x] = 0 ;
+      }
+    }
+#endif
   }
 }
 
@@ -115,6 +172,8 @@ void col2im_cpu(const Dtype* data_col, const int channels,
     int h_offset = (c / kwidth) % kheight;
     int c_im = c / kwidth / kheight;
     /* now scan all the filter applications */
+
+#if 0
     for (int y = 0; y < height_col; ++y) {
       for (int x = 0; x < width_col; ++x) {
         const int y_im = y * stride + h_offset - pad ;
@@ -125,6 +184,31 @@ void col2im_cpu(const Dtype* data_col, const int channels,
         }
       }
     }
+#else
+    /* y stride + h_offset - p >= 0
+       y >= max(0, (p - h_offset)/stride) [should pick ceil]
+
+       all quantities are integer
+       y stride + h_offset - pad < height
+       y < (height + pad - h_offset)/stride
+       y <= ceil_divide(height + pad - h_offset,stride)-1
+
+       y < min(height_col, (height + pad - h_offset)/stride)
+    */
+    int y0 =  max(0, ceil_divide(pad - h_offset, stride)) ;
+    int x0 =  max(0, ceil_divide(pad - w_offset, stride)) ;
+    int y1 =  min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
+    int x1 =  min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
+
+    for (int y = y0 ; y < y1 ; ++y) {
+      for (int x = x0; x < x1 ; ++x) {
+        const int y_im = y * stride + h_offset - pad ;
+        const int x_im = x * stride + w_offset - pad ;
+        data_im[(c_im * height + y_im) * width + x_im] +=
+          data_col[(c * height_col + y) * width_col + x];
+      }
+    }
+#endif
   }
 }
 
