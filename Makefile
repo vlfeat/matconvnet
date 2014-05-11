@@ -1,14 +1,17 @@
-SHELL=/bin/bash
-MEX  ?= /Applications/MATLAB_R2013a.app/bin/mex
+ENABLE_GPU =
+SHELL = /bin/bash
+MEX ?= mex
+MEXARCH ?= $(shell mexext)
+
 NVCC ?= /Developer/NVIDIA/CUDA-5.5/bin/nvcc
 NVCCOPTS = -gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
-MEXARCH = maci64
-ENABLE_GPU = 
 MEXOPTS = -lmwblas -largeArrayDims
-MEXOPTS_GPU= $(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
 ifneq ($(DEBUG),)
-MEXOPTS += -g
+MEXOPTS += -g -O
+NVCCOPTS += -g -O
 endif
+
+MEXOPTS_GPU= $(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
 nvcc_filter=2> >(sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2)
 
 cpp_src:=matlab/src/bits/im2col.cpp
@@ -29,8 +32,8 @@ cpp_src+=matlab/src/bits/normalize_gpu.cu
 endif
 
 mex_tgt:=$(subst matlab/src/,matlab/mex/,$(mex_src))
-mex_tgt:=$(patsubst %.cpp,%.mex$(MEXARCH),$(mex_tgt))
-mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
+mex_tgt:=$(patsubst %.cpp,%.$(MEXARCH),$(mex_tgt))
+mex_tgt:=$(patsubst %.cu,%.$(MEXARCH),$(mex_tgt))
 
 cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
@@ -51,10 +54,10 @@ matlab/src/bits/%.o : matlab/src/bits/%.cu
 	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
 
 # MEX files
-matlab/mex/%.mexmaci64 : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
+matlab/mex/%.$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
 	$(MEX) $(MEXOPTS) "$(<)" -o "$(@)" $(cu_tgt) $(nvcc_filter)
 
-matlab/mex/%.mexmaci64 : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
+matlab/mex/%.$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
 ifeq ($(ENABLE_GPU),)
 	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
 	$(MEX) $(MEXOPTS) \
