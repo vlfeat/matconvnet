@@ -85,9 +85,9 @@ for l=1:8
           y = vl_nnconv(x,w,[],'verbose') ;
           dzdy = grandn(size(y),'single') ;
           [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose') ;
+          vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, 1e-2) ;
           vl_testder(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, 1e-2) ;
           vl_testder(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, 1e-2) ;
-          vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, 1e-2) ;
         end
       end
       

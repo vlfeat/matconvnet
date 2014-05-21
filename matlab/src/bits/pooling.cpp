@@ -3,7 +3,7 @@
  ** @author Andrea Vedaldi
  **/
 
-#include "pooling.hpp" 
+#include "pooling.hpp"
 #include <algorithm>
 #include <cmath>
 

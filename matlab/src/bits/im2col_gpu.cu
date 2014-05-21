@@ -147,11 +147,11 @@ __global__ void col2im_gpu_kernel(const int n, const Dtype* data_col,
 
      This result in an additional patch-relative offset of
 
-     doffset(dx,dy,c) 
+     doffset(dx,dy,c)
         = (x + pad - xc*stride)
           + (y + pad - yc*stride)*kwidth
           + c*kwidth*kheight
-        = (x + pad) 
+        = (x + pad)
           + (y+pad)*kwidth + c*(kwidth*kheight)
           - xc*stride - yc*stride*kwidth.
 

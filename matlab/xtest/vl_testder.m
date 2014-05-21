@@ -1,4 +1,4 @@
-function testder(g,x,dzdy,dzdx,delta)
+function vl_testder(g,x,dzdy,dzdx,delta)
 
 if nargin < 5
   delta = 1e-3 ;
