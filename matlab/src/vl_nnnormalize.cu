@@ -7,9 +7,14 @@
 #ifdef ENABLE_GPU
 #include "gpu/mxGPUArray.h"
 #endif
+#include <blas.h>
+#ifdef ENABLE_GPU
+#include <cublas_v2.h>
+#endif
 #include "bits/mexutils.h"
 #include "bits/normalize.hpp"
 #include <assert.h>
+
 
 /* option codes */
 enum {

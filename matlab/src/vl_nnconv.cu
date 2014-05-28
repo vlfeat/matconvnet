@@ -10,10 +10,10 @@
 #include "bits/mexutils.h"
 #include "bits/im2col.hpp"
 
-#include <blas.h>
 #include <iostream>
 #include <assert.h>
 
+#include <blas.h>
 #ifdef ENABLE_GPU
 #include <cublas_v2.h>
 #endif

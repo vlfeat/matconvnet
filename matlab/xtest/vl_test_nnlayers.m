@@ -1,12 +1,14 @@
 function vl_test_nnlayers(gpu)
 
+range = 100 ;
+
 if nargin < 1, gpu = false ; end
 if gpu
-  grandn = @(varargin) gpuArray.randn(varargin{:}) ;
-  grand = @(varargin) gpuArray.rand(varargin{:}) ;
+  grandn = @(varargin) range * gpuArray.randn(varargin{:}) ;
+  grand = @(varargin) range * gpuArray.rand(varargin{:}) ;
 else
-  grandn = @(varargin) randn(varargin{:}) ;
-  grand = @(varargin) rand(varargin{:}) ;
+  grandn = @(varargin) range * randn(varargin{:}) ;
+  grand = @(varargin) range * rand(varargin{:}) ;
 end
 
 rng(1) ;
@@ -18,16 +20,26 @@ for l=1:8
       C = 10 ;
       c = [7 2 1] ;
       n = 3 ;
-      x = grand(3,4,C,n) + 0.001 ; % non-negative
+
+      % compare direct and indirect composition; this cannot
+      % take large ranges
+      x = grand(3,4,C,n)/range + 0.001 ; % non-negative
       y = vl_nnsoftmaxloss(x,c) ;
       y_ = vl_nnloss(vl_nnsoftmax(x),c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnsoftmaxloss(x,c,dzdy) ;
       dzdx_ = vl_nnsoftmax(x,vl_nnloss(vl_nnsoftmax(x),c,dzdy)) ;
-      %vl_testsim(y,y_) ;
+      vl_testsim(y,y_,0.1) ;
       vl_testsim(dzdx, dzdx_) ;
       vl_testder(@(x) vl_nnsoftmaxloss(x,c), x, dzdy, dzdx, 1e-6) ;
-    
+
+      % now larger input range
+      x = grand(3,4,C,n) + range * 0.001 ; % non-negative
+      y = vl_nnsoftmaxloss(x,c) ;
+      dzdy = grandn(size(y)) ;
+      dzdx = vl_nnsoftmaxloss(x,c,dzdy) ;
+      vl_testder(@(x) vl_nnsoftmaxloss(x,c), x, dzdy, dzdx, range * 1e-6) ;
+
     case 2
       disp('testing vl_nnloss multiple images convolutional') ;
       C = 10 ;
@@ -37,8 +49,8 @@ for l=1:8
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, 1e-8) ;
-            
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+
       disp('testing vl_nnloss multiple images') ;
       C = 10 ;
       c = [7 2 1] ;
@@ -47,8 +59,8 @@ for l=1:8
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, 1e-8) ;
-      
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+
       disp('testing vl_nnloss') ;
       C = 10 ;
       c = 7 ;
@@ -56,8 +68,8 @@ for l=1:8
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, 1e-8) ;
-            
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+
     case 3
       disp('testing vl_nnsoftmax') ;
       d = 10 ;
@@ -65,14 +77,14 @@ for l=1:8
       delta = 1e-6 ;
       for h=1:3
         for w=1:2
-          x = grandn(h,w,d,n) ;
+          x = grandn(h,w,d,n)/range ;
           y = vl_nnsoftmax(x) ;
           dzdy = grandn(size(y)) ;
           dzdx = vl_nnsoftmax(x, dzdy) ;
-          vl_testder(@(x) vl_nnsoftmax(x), x, dzdy, dzdx) ;
+          vl_testder(@(x) vl_nnsoftmax(x), x, dzdy, dzdx, 1e-2) ;
         end
       end
-      
+
     case 4
       disp('testing vl_nnconv with suqare, non square, and fully connected filters') ;
       n = 3 ;
@@ -85,12 +97,12 @@ for l=1:8
           y = vl_nnconv(x,w,[],'verbose') ;
           dzdy = grandn(size(y),'single') ;
           [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose') ;
-          vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, 1e-2) ;
-          vl_testder(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, 1e-2) ;
-          vl_testder(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, 1e-2) ;
+          vl_testder(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, range * 1e-2) ;
+          vl_testder(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, range * 1e-2) ;
+          vl_testder(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, range * 1e-2) ;
         end
       end
-      
+
       disp('testing vl_nnconv stride correctness') ;
       x = grandn(9,9,1,1,'single') ;
       w = grandn(3,3,1,1,'single') ;
@@ -112,8 +124,8 @@ for l=1:8
       dzdy = grandn(size(y),'single') ;
       [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
       [dzdx_,dzdw_] = vl_nnconv(x,w,[],padarray(dzdy,[1 1],0,'both'),'verbose','pad',1) ;
-      assert(all(all(gather(abs(dzdx-dzdx_)) < 1e-3))) ;
-      assert(all(all(gather(abs(dzdw-dzdw_)) < 1e-3))) ;
+      vl_testsim(dzdx,dzdx_) ;
+      vl_testsim(dzdw,dzdw_) ;
 
       disp('testing vl_nnconv pad and stride combo') ;
       x = grandn(16,15,4,2,'single') ;
@@ -124,15 +136,15 @@ for l=1:8
           y = vl_nnconv(x,w,b,'verbose','stride',stride,'pad',pad) ;
           dzdy = grandn(size(y),'single') ;
           [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,'verbose','stride',stride,'pad',pad) ;
-          vl_testder(@(x) vl_nnconv(x,w,b,'stride',stride,'pad',pad), x, dzdy, dzdx, 1e-2) ;
-          vl_testder(@(w) vl_nnconv(x,w,b,'stride',stride,'pad',pad), w, dzdy, dzdw, 1e-2) ;
-          vl_testder(@(b) vl_nnconv(x,w,b,'stride',stride,'pad',pad), b, dzdy, dzdb, 1e-2) ;
+          vl_testder(@(x) vl_nnconv(x,w,b,'stride',stride,'pad',pad), x, dzdy, dzdx, range * 1e-2) ;
+          vl_testder(@(w) vl_nnconv(x,w,b,'stride',stride,'pad',pad), w, dzdy, dzdw, range * 1e-2) ;
+          vl_testder(@(b) vl_nnconv(x,w,b,'stride',stride,'pad',pad), b, dzdy, dzdb, range * 1e-2) ;
         end
       end
 
       disp('testing vl_nnconv filter groups') ;
       n = 3 ;
-      C = 10 ;      
+      C = 10 ;
       for fw=[1 3 9]
         for fh=[4 13]
           w_ = grandn(fh,fw,9,3,'single') ;
@@ -146,8 +158,8 @@ for l=1:8
           vl_testsim(y,y_) ;
           dzdy = grandn(size(y),'single') ;
           [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
-          vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, 1e-2) ;
-          vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, 1e-2) ;
+          vl_testder(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, range * 1e-2) ;
+          vl_testder(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, range * 1e-2) ;
         end
       end
 
@@ -164,19 +176,20 @@ for l=1:8
           dzdy = grandn(size(y),'single') ;
           dzdx = vl_nnpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
           vl_testder(@(x) vl_nnpool(x,pool,'stride',stride,'pad',pad), ...
-            x, dzdy, dzdx, 1e-2) ;
+            x, dzdy, dzdx, range * 1e-2) ;
         end
       end
 
     case 6
       disp('testing vl_nnnormalize') ;
-      for d=1:17
+      % the derivative for d=1 is not very stable numerically
+      for d=2:17
         param = [d, .1, .5, .75] ;
         x = grandn(3,2,10,4,'single') ;
         y = vl_nnnormalize(x,param,'verbose') ;
         dzdy = grandn(size(y),'single') ;
         dzdx = vl_nnnormalize(x,param,dzdy,'verbose') ;
-        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx) ;
+        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 1e-3) ;
       end
 
       for d=1:7
@@ -194,13 +207,12 @@ for l=1:8
             end
           end
         end
-        assert(all(all(all(all(gather(abs(y-y_)) < 1e-3))))) ;
+        vl_testsim(y,y_) ;
       end
 
       x = grandn(1,1,10,1,'single') ;
       y = vl_nnnormalize(x, [20, 0, 1, .5]) ;
-      y = gather(y) ;
-      assert(abs(sum(y(:).^2)-1) < 1e-3) ;
+      vl_testsim(sum(y(:).^2), 1, 1e-2) ;
 
     case 7
       disp('testing relu') ;
@@ -223,6 +235,6 @@ for l=1:8
        y = vl_nnoffset(x,param) ;
        dzdy = grandn(size(y),'single') ;
        dzdx = vl_nnoffset(x,param,dzdy) ;
-       vl_testder(@(x) vl_nnoffset(x,param), x, dzdy, dzdx) ;
+       vl_testder(@(x) vl_nnoffset(x,param), x, dzdy, dzdx, 1e-3*range) ;
   end
 end
