@@ -8,77 +8,116 @@
 #include <cmath>
 #include <blas.h>
 #include <string.h>
+#include <x86intrin.h>
 
 /* ---------------------------------------------------------------- */
 /*                                                  normalize (CPU) */
 /* ---------------------------------------------------------------- */
 
 #pragma GCC optimize ("fast-math")
-/* #define VL_NNNORMALIZE_FAST */
+#pragma GCC optimize ("tree-vectorize")
+//#pragma GCC target ("veclibabi=svml")
+//#pragma GCC target "sse4"
+
+#define VL_NNNORMALIZE_FAST
 #define max(a,b) (((a)>=(b))?a:b)
 #define xat(t) x[(t) * offset]
 #define yat(t) y[(t) * offset]
 #define zat(t) z[(t) * offset]
 
-inline float pow_forward(float a, float b) { return __builtin_powf(a,b) ; }
-inline double pow_forward(double a, double b) { return __builtin_pow(a,b) ; }
-
 #ifndef VL_NNNORMALIZE_FAST
 inline double fast_pow(double a, double b) { return pow(a,b) ; }
 inline float fast_pow(float a, float b) { return powf(a,b) ; }
 #else
+//#define VERY_FAST
+#ifndef VERY_FAST
+inline double fast_pow(double x, double y)
+{
+  double z ;
+  double const plog3 = 0.164042561333445 ;
+  double const plog2 = -0.606737602222409 ;
+  double const plog1 = 1.442695040888963 ;
+  double const pexp3 = 0.079441541679836 ;
+  double const pexp2 = 0.227411277760219 ;
+  double const pexp1 = 0.693147180559945 ;
+  typedef long long int int_t;
+  const int_t offset = 1023L << 52 ;
+
+  int_t ix = *(int_t*)&x - offset ;
+  int_t imx = (ix & ((1L<<52)-1L)) + offset;
+  double fx = (double)(ix >> 52) ;
+  double mx = *((double*)&imx) - 1 ;
+  double mx2 = mx*mx ;
+  double mx3 = mx2*mx ;
+  double t = y * (fx + mx*plog1 + mx2*plog2 + mx3*plog3) ;
+   //  double t = y * (fx + mx) ;
+
+  double fz = floor(t) ;
+  double rz = t - fz ;
+  double rz2 = rz*rz ;
+  double rz3 = rz2*rz ;
+  double tz = fz + rz*pexp1 + rz2*pexp2 + rz3*pexp3 ;
+   // double tz = fz + rz ;
+
+   //  mexPrintf("%g %g -- ix %ld imx %ld fx %g mx %g t %g\n", x,y, ix,imx, fx, mx, t) ;
+  *((int_t*)&z) = (int_t)(tz * (1L<<52)) + offset ;
+  //z = exp(t * log(2.0)) ;
+  return z ;
+}
+#else
 inline double fast_pow(double a, double b)
 {
-  union {
-    double d;
-    int x[2];
-  } u = { a };
-  const int offset = 1023 << 20 ;
-  u.x[1] = (int)(b * (u.x[1] - offset) + offset) ;
-  u.x[0] = 0;
-  return u.d;
-}
-inline float fast_pow(float a, float b)
-{
-  union {
-    float d;
-    int x ;
-  } u = { a };
-  const int offset = 127 << 23 ;
-  u.x = (int)(b * (u.x - offset) + offset) ;
-  return u.d;
+  double z ;
+  typedef long long int int_t;
+  const int_t offset = 1023L << 52 ;
+  int_t ai = *((int_t*)&a) ;
+  *((int_t*)&z) = (int_t)(b * (ai - offset)) + offset ;
+  return z ;
 }
 #endif
 
-inline void sbmv_forward(char * uplo,
-                         ptrdiff_t *n,
-                         ptrdiff_t *k,
-                         float * alpha,
-                         float * a,
-                         ptrdiff_t *lda,
-                         float * x,
-                         ptrdiff_t *incx,
-                         float * beta,
-                         float * y,
-                         ptrdiff_t *incy)
+#ifndef VERY_FAST
+inline float fast_pow(float x, float y)
 {
-  ssbmv(uplo,n,k,alpha,a,lda,x,incx,beta,y,incy) ;
-}
+  float z ;
+  float const plog3 = 0.164042561333445F ;
+  float const plog2 = -0.606737602222409F ;
+  float const plog1 = 1.442695040888963F ;
+  float const pexp3 = 0.079441541679836F ;
+  float const pexp2 = 0.227411277760219F ;
+  float const pexp1 = 0.693147180559945F ;
+  typedef int int_t;
+  const int_t offset = 127 << 23 ;
 
-inline void sbmv_forward(char * uplo,
-                         ptrdiff_t *n,
-                         ptrdiff_t *k,
-                         double * alpha,
-                         double * a,
-                         ptrdiff_t *lda,
-                         double * x,
-                         ptrdiff_t *incx,
-                         double * beta,
-                         double * y,
-                         ptrdiff_t *incy)
-{
-  dsbmv(uplo,n,k,alpha,a,lda,x,incx,beta,y,incy) ;
+  int_t ix = *(int_t*)&x - offset ;
+  int_t imx = (ix & ((1<<23)-1)) + offset;
+  float fx = (float)(ix >> 23) ;
+  float mx = *((float*)&imx) - 1 ;
+  float mx2 = mx*mx ;
+  float mx3 = mx2*mx ;
+  float t = y * (fx + mx*plog1 + mx2*plog2 + mx3*plog3) ;
+
+  float fz = floor(t) ;
+  float rz = t - fz ;
+  float rz2 = rz*rz ;
+  float rz3 = rz2*rz ;
+  float tz = fz + rz*pexp1 + rz2*pexp2 + rz3*pexp3 ;
+
+  *((int_t*)&z) = (int_t)(tz * (1<<23)) + offset ;
+  return z ;
 }
+#else
+inline float fast_pow(float a, float b)
+{
+  float z ;
+  typedef int int_t;
+  const int_t offset = 127 << 23 ;
+  int_t ai = *((int_t*)&a) ;
+  *((int_t*)&z) = (int_t)(b * (ai - offset)) + offset ;
+  return z ;
+}
+#endif
+#endif
 
 template<typename T>
 void normalize_cpu(T* normalized,
@@ -106,55 +145,11 @@ void normalize_cpu(T* normalized,
         if (t+m2 < depth) { ap = xat(t+m2) ; }
         acc += ap*ap - am*am ;
         if (0 <= t && t < depth) {
-          yat(t) = xat(t) * pow(kappa + alpha * acc, -beta) ;
+          yat(t) = xat(t) * fast_pow(kappa + alpha * acc, -beta) ;
         }
       }
     }
   }
-#elif 0
-  T * acc = (T*) calloc(sizeof(T), width*height) ;
-  for (t = -m2 ; t < (signed)depth ; ++t) {
-    int tm = t - m1 - 1 ;
-    int tp = t + m2 ;
-    char L = 'L' ;
-    ptrdiff_t bandSize = 0 ;
-    ptrdiff_t n = width*height ;
-    ptrdiff_t p = 1 ;
-    T one = 1 ;
-    T minusOne = -1 ;
-
-    if (tp < depth) {
-      T const* xap = data + offset * (t+m2) ;
-      sbmv_forward(&L, &n, &bandSize,
-                    &one, /* alpha*/
-                   (T*) xap, &p, /* A, lda */
-                   (T*) xap, &p, /* x, incx */
-                   &one, /* beta */
-                   acc, &p) ; /* y, incy */
-    }
-
-    if (0 <= tm) {
-      T const* xam = data + offset * (t-m1-1) ;
-      sbmv_forward(&L, &n, &bandSize,
-                   &minusOne, /* alpha*/
-                   (T*) xam, &p, /* A, lda */
-                   (T*) xam, &p, /* x, incx */
-                   &one, /* one */
-                   acc, &p) ; /* y, incy */
-    }
-
-    if (0 <= t && t < depth) {
-      T const* xx = data + offset * t ;
-      T* xy = normalized + offset * t ;
-      T* end = acc + n ;
-      for(T *xacc = acc ; xacc != end ; ++xacc, ++xx, ++xy) {
-        //        (*xy) = (*xx) * pow_forward(kappa + alpha * (*xacc), -beta) ;
-        (*xy) = (*xx) * fast_pow(kappa + alpha * (*xacc), -beta) ;
-      }
-    }
-
-  }
-  free(acc) ;
 #else
   T * acc = (T*) calloc(sizeof(T), width*height) ;
   for (t = -m2 ; t < (signed)depth ; ++t) {
@@ -184,7 +179,6 @@ void normalize_cpu(T* normalized,
       T const* xx = data + offset * t ;
       T* xy = normalized + offset * t ;
       for(T *xacc = acc ; xacc != end ; ++xacc, ++xx, ++xy) {
-        //        (*xy) = (*xx) * pow_forward(kappa + alpha * (*xacc), -beta) ;
         (*xy) = (*xx) * fast_pow(kappa + alpha * (*xacc), -beta) ;
       }
     }
@@ -202,6 +196,7 @@ void normalize_cpu<float>(float* normalized,
                           size_t normDetph,
                           float kappa, float alpha, float beta) ;
 
+#if 0
 template
 void normalize_cpu<double>(double* normalized,
                            double const* data,
@@ -210,6 +205,7 @@ void normalize_cpu<double>(double* normalized,
                            size_t depth,
                            size_t normDetph,
                            double kappa, double alpha, double beta) ;
+#endif
 
 
 /* ---------------------------------------------------------------- */
@@ -251,7 +247,7 @@ void normalizeBackward_cpu(T* normalized,
         if (t+m2 < depth) { ap = xat(t+m2) ; } else { q2 = depth - 1 ; }
         acc += ap*ap - am*am ;
         T L = kappa + alpha * acc ;
-        T Lbeta = pow(L, -beta) ;
+        T Lbeta = fast_pow(L, -beta) ;
         T Lbeta1 = Lbeta / L ;
 
         if (0 <= t && t < depth) {
@@ -263,58 +259,6 @@ void normalizeBackward_cpu(T* normalized,
       }
     }
   }
-#elif 0
-  T * acc = (T*) calloc(sizeof(T), width*height) ;
-  memset(normalized, 0, sizeof(T) * height*width) ;
-  for (t = -m2 ; t < (signed)depth ; ++t) {
-    int tm = t - m1 - 1 ;
-    int tp = t + m2 ;
-    int q1 = t - m1 ;
-    int q2 = t + m2 ;
-    T const* xam = data + offset * (t-m1-1) ;
-    T const* xap = data + offset * (t+m2) ;
-    T *end = acc + width*height ;
-
-    if (0 <= tm & tp < depth) {
-      for(T *xacc = acc ; xacc != end ; ++xacc, ++xam, ++xap) {
-        T am = *xam ;
-        T ap = *xap ;
-        *xacc += ap*ap - am*am ;
-      }
-    } else if (0 > tm & tp < depth) {
-      q1 = 0 ;
-      for(T *xacc = acc ; xacc != end ; ++xacc, ++xap) {
-        T ap = *xap ;
-        *xacc += ap*ap ;
-      }
-    } else if (0 <= tm & tp >= depth) {
-      q2 = depth - 1 ;
-      for(T *xacc = acc ; xacc != end ; ++xacc, ++xam) {
-        T am = *xam ;
-        *xacc -= am*am ;
-      }
-    } else {
-      q1 = 0 ;
-      q2 = depth - 1 ;
-    }
-    if (0 <= t && t < depth) {
-      T const* dataPt = data + offset * t ;
-      T* normalizedPt = normalized + offset * t ;
-      T const * xz = dzdy + offset * t ;
-      for(T *xacc = acc ; xacc != end ; ++xacc, ++xx, ++xy, ++xz) {
-        T L = kappa + alpha * (*xacc) ;
-        T Lbeta = fast_pow(L, -beta) ;
-        T Lbeta1 = Lbeta / L ;
-        T z = *xz ;
-        T coeff = z * ab2 * Lbeta1 * (*xx) ;
-        *xy += z * Lbeta ;
-        for (q = q1-t ; q <= q2-t ; ++ q) {
-          xy[q * offset] -= coeff * xx[q* offset]  ;
-        }
-      }
-    }
-  }
-  free(acc) ;
 #else
   T * acc = (T*) calloc(sizeof(T), width*height) ;
   T * acc2 = (T*) malloc(sizeof(T) * width*height*depth) ;
@@ -374,7 +318,6 @@ void normalizeBackward_cpu(T* normalized,
     T const* __restrict acc22_ = acc2 + offset * q2 ;
     T const* __restrict acc21_ = acc2 + offset * q1 ;
     T * __restrict normalized_ = normalized + offset * t ;
-#if 1
     if (q1 >= 0) {
       for( ; data_ != end ; ++data_, ++acc22_, ++acc21_, ++normalized_) {
         *normalized_ -= (*acc22_ - *acc21_) * (*data_) ;
@@ -384,7 +327,6 @@ void normalizeBackward_cpu(T* normalized,
         *normalized_ -= (*acc22_) * (*data_) ;
       }
     }
-#endif
   }
   free(acc) ;
   free(acc2) ;
@@ -401,6 +343,7 @@ void normalizeBackward_cpu<float>(float* normalized,
                                   size_t normDetph,
                                   float kappa, float alpha, float beta) ;
 
+#if 0
 template
 void normalizeBackward_cpu<double>(double* normalized,
                                    double const* data,
@@ -410,4 +353,4 @@ void normalizeBackward_cpu<double>(double* normalized,
                                    size_t depth,
                                    size_t normDetph,
                                    double kappa, double alpha, double beta) ;
-
+#endif
