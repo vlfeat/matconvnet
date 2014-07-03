@@ -39,14 +39,13 @@ vlmxOption  options [] = {
   {0,                  0,   0                      }
 } ;
 
-
 extern "C" bool mxUnshareArray(mxArray *array_ptr, bool noDeepCopy);
 
 /* ---------------------------------------------------------------- */
 /*                                                 Helper functions */
 /* ---------------------------------------------------------------- */
 
-typedef struct FeatureMapGeometry_
+typedef struct PackedDataGeometry_
 {
   mxClassID classID ;
   ptrdiff_t height ;
@@ -54,9 +53,9 @@ typedef struct FeatureMapGeometry_
   ptrdiff_t depth ;
   ptrdiff_t size ;
   ptrdiff_t numElements ;
-} FeatureMapGeometry ;
+} PackedDataGeometry ;
 
-typedef struct FeatureMap_
+typedef struct PackedData_
 {
   bool isOwner ;
   mwSize memory ;
@@ -64,11 +63,11 @@ typedef struct FeatureMap_
 #ifdef ENABLE_GPU
   mxGPUArray * gpuArray ;
 #endif
-  FeatureMapGeometry geom ;
-} FeatureMap ;
+  PackedDataGeometry geom ;
+} PackedData ;
 
-
-int compare_geom(FeatureMapGeometry * a, FeatureMapGeometry *b)
+int
+compare_geom(PackedDataGeometry * a, PackedDataGeometry *b)
 {
   return
     (a->height == b->height) &&
@@ -77,16 +76,27 @@ int compare_geom(FeatureMapGeometry * a, FeatureMapGeometry *b)
     (a->size   == b->size) ;
 }
 
-void feature_map_display (FeatureMap const * map, char const * name)
+void
+packed_data_display (PackedData const * map, char const * name)
 {
   double const MB = 1024.0 * 1024.0 ;
   mexPrintf("vl_nnconv: %s: %d x %d x %d x %d [%.1f MB]\n",
             name,
             map->geom.height, map->geom.width, map->geom.depth, map->geom.size,
-            map->memory) ;
+            map->memory / MB) ;
 }
 
-void feature_map_init_with_array (FeatureMap * map, bool gpuMode, mxArray const* array)
+/* 
+ This function takes an array as input and initializes a corresponding PackedData structure.
+ The structure will hold a pointer to the array. In GPU mode, the function expects the
+ array to contain a GPU array; if so, a pointer to the latter is extracted as well.
+ 
+ The self->isOwner flag is set to @c false to indicate the fact that the structure
+ is just a wrapper around an existing MATLAB array.
+ */
+
+void
+packed_data_init_with_array (PackedData * map, bool gpuMode, mxArray const* array)
 {
   mwSize const * dimensions ;
   mwSize numDimensions ;
@@ -97,6 +107,7 @@ void feature_map_init_with_array (FeatureMap * map, bool gpuMode, mxArray const*
 
   map->isOwner = false ;
   map->array = (mxArray*)array ;
+
 #ifdef ENABLE_GPU
   map->gpuArray = NULL ;
   if (gpuMode) {
@@ -126,8 +137,21 @@ void feature_map_init_with_array (FeatureMap * map, bool gpuMode, mxArray const*
   map->memory = map->geom.height*map->geom.width*map->geom.depth*map->geom.size*sizeof(float) ;
 }
 
-void feature_map_init_with_geom (FeatureMap * map, bool gpuMode,
-                                 FeatureMapGeometry geom, bool initialize)
+/*
+ This function initializes a PackedData structure from a desired data geometry:
+ 
+ - In CPU mode, the function allocates a MATLAB array (self->array).
+ - In GPU mode, the function allocates a MATLAB GPU array (self->gpuArray).
+
+ The flag self->isOwner is set to @c true to indicate that the data was
+ allocated here. If @c initialize is @c true, then the data is zeroed.
+ */
+
+void
+packed_data_init_with_geom (PackedData * map,
+                            bool gpuMode,
+                            PackedDataGeometry geom,
+                            bool initialize)
 {
   mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
   map->isOwner = true ;
@@ -136,14 +160,14 @@ void feature_map_init_with_geom (FeatureMap * map, bool gpuMode,
 #ifdef ENABLE_GPU
   map->gpuArray = NULL ;
   if (gpuMode) {
-    map->gpuArray = mxGPUCreateGPUArray(4, dimensions, mxSINGLE_CLASS, mxREAL,
-                                        (initialize)?MX_GPU_INITIALIZE_VALUES:MX_GPU_DO_NOT_INITIALIZE) ;
+    map->gpuArray = mxGPUCreateGPUArray
+    (4, dimensions, mxSINGLE_CLASS, mxREAL,
+     (initialize)?MX_GPU_INITIALIZE_VALUES:MX_GPU_DO_NOT_INITIALIZE) ;
   } else
 #endif
   {
     if (initialize) {
       map->array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
-      mexPrintf("zeroing\n") ;
     } else {
       mwSize dimensions_ [4] = {0,0,0,0} ;
       float * data = (float*) mxMalloc(dimensions[0]*dimensions[1]*dimensions[2]*dimensions[3]*sizeof(float)) ;
@@ -155,27 +179,53 @@ void feature_map_init_with_geom (FeatureMap * map, bool gpuMode,
   map->memory = map->geom.height*map->geom.width*map->geom.depth*map->geom.size*sizeof(float) ;
 }
 
-void feature_map_init_with_geom_and_ones (FeatureMap * map, bool gpuMode,
-                                          FeatureMapGeometry geom)
+/*
+ This function operates like the previous one, but initializes the
+ data with zeros.
+ */
+
+void
+packed_data_init_with_geom_and_ones (PackedData * map,
+                                     bool gpuMode,
+                                     PackedDataGeometry geom)
 {
   mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
   map->isOwner = true ;
   map->geom = geom ;
-  map->array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
+  map->array = NULL ;
+
+  /* create a CPU array of all ones */
+  mxArray * array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
   int i ;
   float* data = (float*)mxGetData(map->array) ;
   for (i = 0 ; i < geom.numElements ; ++i) { data[i] = 1.0f ; }
-  mexPrintf("oning\n") ;
+
 #ifdef ENABLE_GPU
   map->gpuArray = NULL ;
   if (gpuMode) {
     map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray (map->array) ;
-  }
+    mxDestroyArray(array) ;
+  } else
 #endif
+  {
+    map->array = array ;
+  }
   map->memory = map->geom.height*map->geom.width*map->geom.depth*map->geom.size*sizeof(float) ;
 }
 
-void feature_map_deinit (FeatureMap * map)
+/*
+ This function deinits a packed data structure. It does the following:
+ 
+ - If the data contains a self->gpuArray, it destroys it (if there is such
+   an array, it was created here).
+ 
+ - If the data contains a self->array, it destroys it only if the
+   self->isOwner flag is true.
+ 
+ - In all cases, it reset the data structures.
+ */
+
+void packed_data_deinit (PackedData * map)
 {
 #ifdef ENABLE_GPU
   if (map->gpuArray) {
@@ -185,12 +235,30 @@ void feature_map_deinit (FeatureMap * map)
 #endif
   if (map->isOwner && map->array) {
     mxDestroyArray(map->array) ;
+    map->array = NULL ;
   }
-  map->array = NULL ;
+  map->isOwner = false ;
   map->memory = 0 ;
 }
 
-mxArray* feature_map_deinit_extracting_array(FeatureMap * map)
+/*
+ This function deinits a packed data structure returing the contained
+ array.
+ 
+ It does the following:
+
+ - If the data contains a self->gpuArray, it first check whetehr the
+   data contains a self->array too. In the latter case, then
+   it simply destroys the gpuArray under the assumption that
+   self->array already holds a copy to it. Otherwise, it creates
+   an array coping the gpuArray, and only then destrops the latter.
+ 
+ - Otherwise, it simply returns the array.
+ 
+ - In all cases, it reset the data structures.
+ */
+
+mxArray* packed_data_deinit_extracting_array(PackedData * map)
 {
   mxArray* array = map->array ;
   map->array = NULL ;
@@ -203,6 +271,8 @@ mxArray* feature_map_deinit_extracting_array(FeatureMap * map)
     map->gpuArray = NULL ;
   }
 #endif
+  map->isOwner = false ;
+  map->memory = 0 ;
   return array ;
 }
 
@@ -210,16 +280,16 @@ mxArray* feature_map_deinit_extracting_array(FeatureMap * map)
 /*                                                            Cache */
 /* ---------------------------------------------------------------- */
 
-FeatureMap temp = { 0 } ;
-FeatureMap allOnes = { 0 } ;
+PackedData temp = { 0 } ;
+PackedData allOnes = { 0 } ;
 
 void atExit()
 {
   if (temp.memory > 0) {
-    feature_map_deinit (&temp)  ;
+    packed_data_deinit (&temp)  ;
   }
   if (allOnes.memory > 0) {
-    feature_map_deinit (&allOnes)  ;
+    packed_data_deinit (&allOnes)  ;
   }
 }
 
@@ -239,16 +309,16 @@ void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   /* inputs */
-  FeatureMap data = {0} ;
-  FeatureMap filters = {0} ;
-  FeatureMap biases = {0} ;
-  FeatureMap derOutput = {0} ;
+  PackedData data = {0} ;
+  PackedData filters = {0} ;
+  PackedData biases = {0} ;
+  PackedData derOutput = {0} ;
 
   /* outputs */
-  FeatureMap output = {0} ;
-  FeatureMap derData = {0};
-  FeatureMap derFilters = {0} ;
-  FeatureMap derBiases = {0} ;
+  PackedData output = {0} ;
+  PackedData derData = {0};
+  PackedData derFilters = {0} ;
+  PackedData derBiases = {0} ;
 
   int stride = 1 ;
   int pad = 0 ;
@@ -342,10 +412,10 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  feature_map_init_with_array (&data, gpuMode, in[IN_DATA]) ;
-  feature_map_init_with_array (&filters, gpuMode, in[IN_FILTERS]) ;
-  if (biasMode) { feature_map_init_with_array(&biases, gpuMode, in[IN_BIASES]) ; }
-  if (backMode) { feature_map_init_with_array(&derOutput, gpuMode, in[IN_DEROUTPUT]) ; }
+  packed_data_init_with_array (&data, gpuMode, in[IN_DATA]) ;
+  packed_data_init_with_array (&filters, gpuMode, in[IN_FILTERS]) ;
+  if (biasMode) { packed_data_init_with_array(&biases, gpuMode, in[IN_BIASES]) ; }
+  if (backMode) { packed_data_init_with_array(&derOutput, gpuMode, in[IN_DEROUTPUT]) ; }
 
   if (data.geom.classID != mxSINGLE_CLASS) {
     mexErrMsgTxt("DATA is not of class SINGLE.");
@@ -401,18 +471,18 @@ void mexFunction(int nout, mxArray *out[],
   if (verbosity > 0) {
     mexPrintf("vl_nnconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
     mexPrintf("vl_nnconv: stride: %d, pad: %d, numGroups: %d, bias: %d, fully connected: %d\n", stride, pad, numGroups, biasMode, fullyConnectedMode) ;
-    feature_map_display(&data, "data") ;
-    feature_map_display(&filters, "filters") ;
-    if (biasMode) { feature_map_display(&biases, "biases") ; }
+    packed_data_display(&data, "data") ;
+    packed_data_display(&filters, "filters") ;
+    if (biasMode) { packed_data_display(&biases, "biases") ; }
     if (backMode) {
-      feature_map_display(&derOutput, "derOutput") ;
-      feature_map_display(&derData, "derData") ;
-      feature_map_display(&derFilters, "derFilters") ;
-      if (biasMode) { feature_map_display(&derBiases, "derBiases") ; }
+      packed_data_display(&derOutput, "derOutput") ;
+      packed_data_display(&derData, "derData") ;
+      packed_data_display(&derFilters, "derFilters") ;
+      if (biasMode) { packed_data_display(&derBiases, "derBiases") ; }
     } else {
-      feature_map_display(&output, "output") ;
+      packed_data_display(&output, "output") ;
     }
-    feature_map_display(&temp, "temp") ;
+    packed_data_display(&temp, "temp") ;
   }
 
   if (backMode) {
@@ -454,32 +524,30 @@ void mexFunction(int nout, mxArray *out[],
   /* auxiliary buffers */
   if (biasMode) {
     if (allOnes.memory < allOnes.geom.width*allOnes.geom.height*allOnes.geom.depth*allOnes.geom.size*sizeof(float)) {
-      feature_map_deinit (&allOnes) ;
-      mexPrintf("allocationg ones\n") ;
-      feature_map_init_with_geom_and_ones (&allOnes, gpuMode, allOnes.geom) ;
+      packed_data_deinit (&allOnes) ;
+      packed_data_init_with_geom_and_ones (&allOnes, gpuMode, allOnes.geom) ;
       mexMakeArrayPersistent(allOnes.array) ;
     }
-    //feature_map_init_with_geom_and_ones(&allOnes, gpuMode, allOnes.geom) ;
+    //packed_data_init_with_geom_and_ones(&allOnes, gpuMode, allOnes.geom) ;
   }
   if (!fullyConnectedMode) {
     if (temp.memory < temp.geom.width*temp.geom.height*temp.geom.depth*temp.geom.size*sizeof(float)) {
-      feature_map_deinit (&temp) ;
-      mexPrintf("allocationg temp\n") ;
-      feature_map_init_with_geom (&temp, gpuMode, temp.geom, false);
+      packed_data_deinit (&temp) ;
+      packed_data_init_with_geom (&temp, gpuMode, temp.geom, false);
       mexMakeArrayPersistent(temp.array) ;
     }
   }
   if (!backMode && computeOutput) {
-    feature_map_init_with_geom(&output, gpuMode, output.geom, false) ;
+    packed_data_init_with_geom(&output, gpuMode, output.geom, false) ;
   }
   if (backMode && computeDerData) {
-    feature_map_init_with_geom(&derData, gpuMode, derData.geom, false) ;
+    packed_data_init_with_geom(&derData, gpuMode, derData.geom, false) ;
   }
   if (backMode && computeDerFilters) {
-    feature_map_init_with_geom(&derFilters, gpuMode, derFilters.geom, false) ;
+    packed_data_init_with_geom(&derFilters, gpuMode, derFilters.geom, false) ;
   }
   if (backMode && computeDerBiases) {
-    feature_map_init_with_geom(&derBiases, gpuMode, derBiases.geom, false) ;
+    packed_data_init_with_geom(&derBiases, gpuMode, derBiases.geom, false) ;
   }
 
   if (fullyConnectedMode) {
@@ -787,7 +855,7 @@ void mexFunction(int nout, mxArray *out[],
                         CUBLAS_OP_N, CUBLAS_OP_N,
                         (int)m, (int)biases.geom.numElements, (int)q,
                         &alpha,
-                        (float const*)mxGPUGetDataReadOnly(allOnes.gpuArray) , (int)m,
+                        (float const*)mxGPUGetDataReadOnly(allOnes.gpuArray), (int)m,
                         (float const*)mxGPUGetDataReadOnly(biases.gpuArray), (int)q,
                         &beta,
                         (float*)mxGPUGetData(output.gpuArray) + outputOffset, (int)m) ;
@@ -816,14 +884,14 @@ void mexFunction(int nout, mxArray *out[],
   if (gpuMode) { cublasDestroy(handle) ; }
 #endif
 
-  feature_map_deinit(&data) ;
-  feature_map_deinit(&filters) ;
-  if (biasMode) { feature_map_deinit(&biases) ; }
+  packed_data_deinit(&data) ;
+  packed_data_deinit(&filters) ;
+  if (biasMode) { packed_data_deinit(&biases) ; }
   if (backMode) {
-    out[OUT_RESULT] = (computeDerData) ? feature_map_deinit_extracting_array(&derData) : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] =(computeDerFilters)? feature_map_deinit_extracting_array(&derFilters) : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERBIASES] = (computeDerBiases & biasMode) ? feature_map_deinit_extracting_array(&derBiases) : mxCreateDoubleMatrix(0,0,mxREAL) ;;
+    out[OUT_RESULT] = (computeDerData) ? packed_data_deinit_extracting_array(&derData) : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERFILTERS] =(computeDerFilters)? packed_data_deinit_extracting_array(&derFilters) : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERBIASES] = (computeDerBiases & biasMode) ? packed_data_deinit_extracting_array(&derBiases) : mxCreateDoubleMatrix(0,0,mxREAL) ;;
   } else {
-    out[OUT_RESULT] = feature_map_deinit_extracting_array(&output) ;
+    out[OUT_RESULT] = packed_data_deinit_extracting_array(&output) ;
   }
 }
