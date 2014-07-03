@@ -17,11 +17,11 @@ static inline int ceil_divide(int a, int b) {
   else return a/b ;
 }
 
-static inline int max(int a, int b) {
+static inline int static_max(int a, int b) {
   return (a>=b) ? a:b ;
 }
 
-static inline int min(int a, int b) {
+static inline int static_min(int a, int b) {
   return (a<=b) ? a:b ;
 }
 
@@ -66,8 +66,8 @@ void im2col_cpu(const Dtype* data_im,
       }
     }
 #else
-    int y0 =  max(0, ceil_divide(pad - h_offset, stride)) ;
-    int y1 =  min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
+    int y0 =  static_max(0, ceil_divide(pad - h_offset, stride)) ;
+    int y1 =  static_min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
 
     for (int y = 0 ; y < y0 ; ++y) {
       for (int x = 0 ; x < width_col ; ++x) {
@@ -75,8 +75,8 @@ void im2col_cpu(const Dtype* data_im,
       }
     }
     for (int y = y0 ; y < y1 ; ++y) {
-      int x0 =  max(0, ceil_divide(pad - w_offset, stride)) ;
-      int x1 =  min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
+      int x0 =  static_max(0, ceil_divide(pad - w_offset, stride)) ;
+      int x1 =  static_min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
       const int y_im = y * stride + h_offset - pad;
       const int x_im = x0 * stride + w_offset - pad;
       Dtype * a = data_col + (c * height_col + y) * width_col + x0 ;
@@ -195,10 +195,10 @@ void col2im_cpu(const Dtype* data_col, const int channels,
 
        y < min(height_col, (height + pad - h_offset)/stride)
     */
-    int y0 =  max(0, ceil_divide(pad - h_offset, stride)) ;
-    int x0 =  max(0, ceil_divide(pad - w_offset, stride)) ;
-    int y1 =  min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
-    int x1 =  min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
+    int y0 =  static_max(0, ceil_divide(pad - h_offset, stride)) ;
+    int x0 =  static_max(0, ceil_divide(pad - w_offset, stride)) ;
+    int y1 =  static_min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
+    int x1 =  static_min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
 
     for (int y = y0 ; y < y1 ; ++y) {
       for (int x = x0; x < x1 ; ++x) {
