@@ -86,7 +86,7 @@ for l=1:8
       end
 
     case 4
-      disp('testing vl_nnconv with suqare, non square, and fully connected filters') ;
+      disp('testing vl_nnconv with square, non square, and fully connected filters') ;
       n = 3 ;
       fn = 5 ;
       for fw=[1 3 5 18]
