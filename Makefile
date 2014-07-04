@@ -1,18 +1,20 @@
-ENABLE_GPU =
-SHELL = /bin/bash
+ENABLE_GPU ?=
+SHELL = /bin/bash # sh not good enough
 MEX ?= mex
-MEXARCH ?= $(shell mexext)
-
+MEXEXT ?= mexext
+MEXARCH ?= $(shell $(MEXEXT))
 NVCC ?= /Developer/NVIDIA/CUDA-5.5/bin/nvcc
+
 NVCCOPTS = -gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
 MEXOPTS = -lmwblas -largeArrayDims
 ifneq ($(DEBUG),)
-MEXOPTS += -g -O
-NVCCOPTS += -g -O
+MEXOPTS += -g
+NVCCOPTS += -g
 endif
 
 MEXOPTS_GPU= $(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
-nvcc_filter=2> >(sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2)
+nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
+#nvcc_filter=
 
 cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
@@ -55,18 +57,21 @@ matlab/src/bits/%.o : matlab/src/bits/%.cu
 
 # MEX files
 matlab/mex/%.$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
-	$(MEX) $(MEXOPTS) "$(<)" -o "$(@)" $(cu_tgt) $(nvcc_filter)
+	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
 
 matlab/mex/%.$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
 ifeq ($(ENABLE_GPU),)
 	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
 	$(MEX) $(MEXOPTS) \
 	  "matlab/mex/$(*).cpp" $(cpp_tgt) \
-	  -o "$(@)" \
+	  -output "$(@)" \
 	  $(nvcc_filter)
 	rm -f "matlab/mex/$(*).cpp"
 else
-	MW_NVCC_PATH='$(NVCC)' $(MEX) $(MEXOPTS_GPU) "$(<)" -o "$(@)" $(cpp_tgt) $(nvcc_filter)
+	echo $(@)
+	MW_NVCC_PATH='$(NVCC)' $(MEX) \
+	   $(MEXOPTS_GPU) "$(<)" \
+	   -output "$(@)" $(cpp_tgt) $(nvcc_filter)
 endif
 
 # Other targets
@@ -79,6 +84,7 @@ info:
 clean:
 	find . -name '*~' -delete
 	rm -f $(cpp_tgt)
+	rm -rf matlab/mex/
 
 distclean: clean
 	rm -rf matlab/mex/
