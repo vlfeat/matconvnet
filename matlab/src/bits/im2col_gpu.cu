@@ -68,7 +68,12 @@ void im2col_gpu(const Dtype* data_im, const int channels,
    stride, pad,
    height_col, width_col, data_col) ;
 
-  CUDA_POST_KERNEL_CHECK ;
+  if (cudaPeekAtLastError() != cudaSuccess) {
+    std::cout
+    <<"im2col: CUDA kernel error ("
+    <<cudaGetErrorString(cudaPeekAtLastError())
+    <<")"<<std::endl ;
+  }
 }
 
 // Explicit instantiation
@@ -197,7 +202,13 @@ void col2im_gpu(const Dtype* data_col, const int channels,
    kheight, kwidth,
    stride, pad,
    height_col, width_col, data_im);
-  CUDA_POST_KERNEL_CHECK;
+
+  if (cudaPeekAtLastError() != cudaSuccess) {
+    std::cout
+    <<"col2im: CUDA kernel error ("
+    <<cudaGetErrorString(cudaPeekAtLastError())
+    <<")"<<std::endl ;
+  }
 }
 
 template void col2im_gpu<float>(const float* data_col, const int channels,

@@ -213,6 +213,7 @@ packed_data_init_with_geom (PackedData * map,
 
 #ifdef ENABLE_GPU
   if (gpuMode) {
+    cudaError_t err ;
     if (!persistent) {
       /* if not persistent, create a GPU array */
       mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
@@ -222,13 +223,43 @@ packed_data_init_with_geom (PackedData * map,
       map->mode = matlabGpuArray ;
       map->memory = (float*) mxGPUGetData(map->gpuArray) ;
       if (initialize && value != 0) {
-        cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
+        err = cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
+        if (err != cudaSuccess) {
+          std::cout
+          <<"cudaMemcpy: error ("
+          <<cudaGetErrorString(err)
+          <<")"<<std::endl ;
+        }
       }
     } else {
       /* if persistent, use CUDA to allocate the memory (MATLAB does not have persistent GPU arrays) */
       map->mode = cudaMallocMemory ;
-      cudaMalloc((void**)&map->memory, map->memorySize) ;
-      cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
+      err = cudaMalloc((void**)&map->memory, map->memorySize) ;
+      if (err != cudaSuccess) {
+        std::cout
+        <<"cudaMalloc: error ("
+        <<cudaGetErrorString(err)
+        <<")"<<std::endl ;
+      }
+      if (initialize) {
+        if (value == 0) {
+          err = cudaMemset(map->memory, 0, map->memorySize) ;
+          if (err != cudaSuccess) {
+            std::cout
+            <<"cudaMemset: error ("
+            <<cudaGetErrorString(err)
+            <<")"<<std::endl ;
+          }
+        } else {
+          err = cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
+          if (err != cudaSuccess) {
+            std::cout
+            <<"cudaMemcpy: error ("
+            <<cudaGetErrorString(err)
+            <<")"<<std::endl ;
+          }
+        }
+      }
     }
     if (memory) { mxFree(memory) ; memory = NULL ; }
   } else
@@ -650,13 +681,15 @@ void mexFunction(int nout, mxArray *out[],
 
   /* auxiliary buffers */
   if (biasMode) {
-    if (allOnes.memorySize < allOnesGeom.numElements * sizeof(float)) {
+    if (allOnes.memorySize < allOnesGeom.numElements * sizeof(float) ||
+        (allOnes.mode == matlabGpuArray || allOnes.mode == cudaMallocMemory) != gpuMode) {
       packed_data_deinit (&allOnes) ;
       packed_data_init_with_geom (&allOnes, gpuMode, allOnesGeom, true, true, 1.0f) ;
     }
   }
   if (!fullyConnectedMode) {
-    if (temp.memorySize < tempGeom.numElements * sizeof(float)) {
+    if (temp.memorySize < tempGeom.numElements * sizeof(float) ||
+        (temp.mode == matlabGpuArray || temp.mode == cudaMallocMemory) != gpuMode) {
       packed_data_deinit (&temp) ;
       packed_data_init_with_geom (&temp, gpuMode, tempGeom, true, false, 0);
     }
