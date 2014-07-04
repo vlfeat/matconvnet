@@ -55,15 +55,25 @@ typedef struct PackedDataGeometry_
   ptrdiff_t numElements ;
 } PackedDataGeometry ;
 
+typedef enum PackedDataMode_
+{
+  empty,
+  matlabArrayWrapper,
+  matlabGpuArray,
+  matlabMallocMemory,
+  cudaMallocMemory
+} PackedDataMode ;
+
 typedef struct PackedData_
 {
-  bool isOwner ;
-  mwSize memory ;
+  PackedDataMode mode ;
+  PackedDataGeometry geom ;
+  mwSize memorySize ;
+  float * memory ;
   mxArray * array ;
 #ifdef ENABLE_GPU
   mxGPUArray * gpuArray ;
 #endif
-  PackedDataGeometry geom ;
 } PackedData ;
 
 int
@@ -77,13 +87,39 @@ compare_geom(PackedDataGeometry * a, PackedDataGeometry *b)
 }
 
 void
-packed_data_display (PackedData const * map, char const * name)
+packed_data_geom_init (PackedDataGeometry * geom,
+                       mxClassID classID,
+                       size_t height,
+                       size_t width,
+                       size_t depth,
+                       size_t size)
+{
+  geom->classID = classID ;
+  geom->height = height ;
+  geom->width = width;
+  geom->depth = depth;
+  geom->size = size ;
+  geom->numElements = height*width*depth*size ;
+}
+
+void
+packed_data_init_empty (PackedData * self)
+{
+  memset(self, 0, sizeof(PackedData)) ;
+  self->mode = empty ;
+  packed_data_geom_init(&self->geom,
+                        mxSINGLE_CLASS,
+                        0, 0, 0, 0) ;
+}
+
+void
+packed_data_geom_display (PackedDataGeometry const * geom, char const * name)
 {
   double const MB = 1024.0 * 1024.0 ;
   mexPrintf("vl_nnconv: %s: %d x %d x %d x %d [%.1f MB]\n",
             name,
-            map->geom.height, map->geom.width, map->geom.depth, map->geom.size,
-            map->memory / MB) ;
+            geom->height, geom->width, geom->depth, geom->size,
+            geom->numElements * sizeof(float) / MB) ;
 }
 
 /* 
@@ -100,41 +136,40 @@ packed_data_init_with_array (PackedData * map, bool gpuMode, mxArray const* arra
 {
   mwSize const * dimensions ;
   mwSize numDimensions ;
-
-#ifndef ENABLE_GPU
-  assert(!gpuMode) ;
-#endif
-
-  map->isOwner = false ;
-  map->array = (mxArray*)array ;
+  mxClassID classID ;
+  packed_data_init_empty(map) ;
 
 #ifdef ENABLE_GPU
-  map->gpuArray = NULL ;
   if (gpuMode) {
-    if (!mxIsGPUArray(map->array)) {
+    if (!mxIsGPUArray(array)) {
       mexErrMsgTxt("The inputs are of mixed GPU and CPU types.") ;
     }
-    map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(map->array) ;
-    map->geom.classID = mxGPUGetClassID(map->gpuArray) ;
-    map->geom.numElements = mxGPUGetNumberOfElements(map->gpuArray) ;
+    map->mode = matlabGpuArray ;
+    map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(array) ;
+    map->memory = (float*) mxGPUGetDataReadOnly(map->gpuArray) ;
+    classID = mxGPUGetClassID(map->gpuArray) ;
     dimensions = mxGPUGetDimensions(map->gpuArray) ;
     numDimensions = mxGPUGetNumberOfDimensions(map->gpuArray) ;
   } else
 #endif
   {
-    if (!mxIsNumeric(map->array)) {
+    if (!mxIsNumeric(array)) {
       mexErrMsgTxt("The inputs are neither all numeric CPU arrays or GPU arrays.") ;
     }
-    map->geom.classID = mxGetClassID(map->array) ;
-    map->geom.numElements = mxGetNumberOfElements(map->array) ;
+    map->mode = matlabArrayWrapper ;
+    map->array = (mxArray*) array ;
+    map->memory = (float*) mxGetData(map->array) ;
+    classID = mxGetClassID(map->array) ;
     dimensions = mxGetDimensions(map->array) ;
     numDimensions = mxGetNumberOfDimensions(map->array) ;
   }
-  map->geom.height = (numDimensions >= 1) ? dimensions[0] : 1 ;
-  map->geom.width = (numDimensions >= 2) ? dimensions[1] : 1 ;
-  map->geom.depth = (numDimensions >= 3) ? dimensions[2] : 1 ;
-  map->geom.size = (numDimensions >= 4) ? dimensions[3] : 1 ;
-  map->memory = map->geom.height*map->geom.width*map->geom.depth*map->geom.size*sizeof(float) ;
+  packed_data_geom_init(&map->geom,
+                        classID,
+                        (numDimensions >= 1) ? dimensions[0] : 1,
+                        (numDimensions >= 2) ? dimensions[1] : 1,
+                        (numDimensions >= 3) ? dimensions[2] : 1,
+                        (numDimensions >= 4) ? dimensions[3] : 1) ;
+  map->memorySize = map->geom.numElements * sizeof(float) ;
 }
 
 /*
@@ -151,94 +186,77 @@ void
 packed_data_init_with_geom (PackedData * map,
                             bool gpuMode,
                             PackedDataGeometry geom,
-                            bool initialize)
+                            bool persistent,
+                            bool initialize,
+                            float value)
 {
-  mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
-  map->isOwner = true ;
+  assert(geom.classID == mxSINGLE_CLASS) ;
+  float * memory = NULL ;
+
+  packed_data_init_empty(map) ;
   map->geom = geom ;
-  map->array = NULL ;
-#ifdef ENABLE_GPU
-  map->gpuArray = NULL ;
-  if (gpuMode) {
-    map->gpuArray = mxGPUCreateGPUArray
-    (4, dimensions, mxSINGLE_CLASS, mxREAL,
-     (initialize)?MX_GPU_INITIALIZE_VALUES:MX_GPU_DO_NOT_INITIALIZE) ;
-  } else
-#endif
-  {
-    if (initialize) {
-      map->array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
+  map->memorySize = map->geom.numElements * sizeof(float) ;
+
+  /* create a CPU array with the specified values */
+  if (! (gpuMode && (!initialize || value == 0))) {
+    if (!initialize) {
+      memory = (float*)mxMalloc(map->memorySize) ;
     } else {
-      mwSize dimensions_ [4] = {0,0,0,0} ;
-      float * data = (float*) mxMalloc(dimensions[0]*dimensions[1]*dimensions[2]*dimensions[3]*sizeof(float)) ;
-      map->array = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
-      mxSetData(map->array, data) ;
-      mxSetDimensions(map->array, dimensions, 4) ;
+      if (value == 0) {
+        memory = (float*)mxCalloc(1, map->memorySize) ;
+      } else {
+        memory = (float*)mxMalloc(map->memorySize) ;
+        for (int i = 0 ; i < geom.numElements ; ++i) { memory[i] = value ; }
+      }
     }
   }
-  map->memory = map->geom.height*map->geom.width*map->geom.depth*map->geom.size*sizeof(float) ;
-}
-
-/*
- This function operates like the previous one, but initializes the
- data with zeros.
- */
-
-void
-packed_data_init_with_geom_and_ones (PackedData * map,
-                                     bool gpuMode,
-                                     PackedDataGeometry geom)
-{
-  mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
-  map->isOwner = true ;
-  map->geom = geom ;
-  map->array = NULL ;
-
-  /* create a CPU array of all ones */
-  mxArray * array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
-  int i ;
-  float* data = (float*)mxGetData(map->array) ;
-  for (i = 0 ; i < geom.numElements ; ++i) { data[i] = 1.0f ; }
 
 #ifdef ENABLE_GPU
-  map->gpuArray = NULL ;
   if (gpuMode) {
-    map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray (map->array) ;
-    mxDestroyArray(array) ;
+    if (!persistent) {
+      /* if not persistent, create a GPU array */
+      mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
+      map->gpuArray = mxGPUCreateGPUArray
+      (4, dimensions, mxSINGLE_CLASS, mxREAL,
+       (initialize && value == 0) ? MX_GPU_INITIALIZE_VALUES : MX_GPU_DO_NOT_INITIALIZE) ;
+      map->mode = matlabGpuArray ;
+      map->memory = (float*) mxGPUGetData(map->gpuArray) ;
+      if (initialize && value != 0) {
+        cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
+      }
+    } else {
+      /* if persistent, use CUDA to allocate the memory (MATLAB does not have persistent GPU arrays) */
+      map->mode = cudaMallocMemory ;
+      cudaMalloc((void**)&map->memory, map->memorySize) ;
+      cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
+    }
+    if (memory) { mxFree(memory) ; memory = NULL ; }
   } else
 #endif
   {
-    map->array = array ;
+    map->mode = matlabMallocMemory ;
+    map->memory = memory ;
+    if (persistent) { mexMakeMemoryPersistent(map->memory) ; }
   }
-  map->memory = map->geom.height*map->geom.width*map->geom.depth*map->geom.size*sizeof(float) ;
 }
 
 /*
  This function deinits a packed data structure. It does the following:
- 
- - If the data contains a self->gpuArray, it destroys it (if there is such
-   an array, it was created here).
- 
- - If the data contains a self->array, it destroys it only if the
-   self->isOwner flag is true.
- 
- - In all cases, it reset the data structures.
  */
 
 void packed_data_deinit (PackedData * map)
 {
+  switch (map->mode) {
+    case empty: break ;
+    case matlabArrayWrapper : break ;
+    case matlabMallocMemory : mxFree(map->memory) ; break ;
 #ifdef ENABLE_GPU
-  if (map->gpuArray) {
-    mxGPUDestroyGPUArray(map->gpuArray) ;
-    map->gpuArray = NULL ;
-  }
+    case cudaMallocMemory : cudaFree(map->memory) ; break ;
+    case matlabGpuArray : mxGPUDestroyGPUArray(map->gpuArray) ; break ;
 #endif
-  if (map->isOwner && map->array) {
-    mxDestroyArray(map->array) ;
-    map->array = NULL ;
+    default: assert(false) ;
   }
-  map->isOwner = false ;
-  map->memory = 0 ;
+  packed_data_init_empty(map) ;
 }
 
 /*
@@ -260,37 +278,46 @@ void packed_data_deinit (PackedData * map)
 
 mxArray* packed_data_deinit_extracting_array(PackedData * map)
 {
-  mxArray* array = map->array ;
-  map->array = NULL ;
-#ifdef ENABLE_GPU
-  if (map->gpuArray) {
-    if (!array) {
-      array = mxGPUCreateMxArrayOnGPU(map->gpuArray) ;
+  mxArray* array ;
+  switch (map->mode) {
+    case empty : assert(false) ; break ;
+    case matlabArrayWrapper : assert(false) ; break ;
+    case cudaMallocMemory : assert(false) ; break ;
+    case matlabMallocMemory :
+    {
+      mwSize dimensions [4] = {map->geom.height, map->geom.width, map->geom.depth, map->geom.size} ;
+      mwSize dimensions_ [4] = {0,0,0,0} ;
+      array = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
+      mxSetData(array, map->memory) ;
+      mxSetDimensions(array, dimensions, 4) ;
+      map->mode = empty ;
+      map->memory = NULL ;
+      break ;
     }
-    mxGPUDestroyGPUArray(map->gpuArray) ;
-    map->gpuArray = NULL ;
-  }
+    case matlabGpuArray :
+    {
+#ifdef ENABLE_GPU
+      array = mxGPUCreateMxArrayOnGPU(map->gpuArray) ;
 #endif
-  map->isOwner = false ;
-  map->memory = 0 ;
-  return array ;
+      break ;
+    }
+  }
+  packed_data_deinit(map) ;
+  return array;
 }
 
 /* ---------------------------------------------------------------- */
 /*                                                            Cache */
 /* ---------------------------------------------------------------- */
 
-PackedData temp = { 0 } ;
-PackedData allOnes = { 0 } ;
+bool persistentDataInitialized = false ;
+PackedData temp ;
+PackedData allOnes ;
 
 void atExit()
 {
-  if (temp.memory > 0) {
-    packed_data_deinit (&temp)  ;
-  }
-  if (allOnes.memory > 0) {
-    packed_data_deinit (&allOnes)  ;
-  }
+  packed_data_deinit (&temp)  ;
+  packed_data_deinit (&allOnes)  ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -309,16 +336,23 @@ void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   /* inputs */
-  PackedData data = {0} ;
-  PackedData filters = {0} ;
-  PackedData biases = {0} ;
-  PackedData derOutput = {0} ;
+  PackedData data ;
+  PackedData filters ;
+  PackedData biases ;
+  PackedData derOutput ;
 
   /* outputs */
-  PackedData output = {0} ;
-  PackedData derData = {0};
-  PackedData derFilters = {0} ;
-  PackedData derBiases = {0} ;
+  PackedData output ;
+  PackedData derData  ;
+  PackedData derFilters ;
+  PackedData derBiases ;
+
+  PackedDataGeometry outputGeom ;
+  PackedDataGeometry derDataGeom  ;
+  PackedDataGeometry derFiltersGeom ;
+  PackedDataGeometry derBiasesGeom ;
+  PackedDataGeometry tempGeom ;
+  PackedDataGeometry allOnesGeom ;
 
   int stride = 1 ;
   int pad = 0 ;
@@ -343,6 +377,20 @@ void mexFunction(int nout, mxArray *out[],
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
+
+  packed_data_init_empty(&data) ;
+  packed_data_init_empty(&filters) ;
+  packed_data_init_empty(&biases) ;
+  packed_data_init_empty(&derOutput) ;
+  packed_data_init_empty(&output) ;
+  packed_data_init_empty(&derData) ;
+  packed_data_init_empty(&derFilters) ;
+  packed_data_init_empty(&derBiases) ;
+  if (!persistentDataInitialized) {
+    persistentDataInitialized = true ;
+    packed_data_init_empty(&temp) ;
+    packed_data_init_empty(&allOnes) ;
+  }
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
@@ -430,11 +478,12 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("DEROUTPUT is not of class SINGLE.");
   }
 
-  output.geom.height = (data.geom.height + 2*pad - filters.geom.height)/stride + 1 ;
-  output.geom.width = (data.geom.width + 2*pad - filters.geom.width)/stride + 1 ;
-  output.geom.depth = filters.geom.size ;
-  output.geom.size = data.geom.size ;
-  output.geom.numElements = output.geom.height*output.geom.width*output.geom.depth*output.geom.size ;
+  packed_data_geom_init(&outputGeom,
+                        mxSINGLE_CLASS,
+                        (data.geom.height + 2*pad - filters.geom.height)/stride + 1,
+                        (data.geom.width + 2*pad - filters.geom.width)/stride + 1,
+                        filters.geom.size,
+                        data.geom.size) ;
 
   /* grouped filters */
   numGroups = data.geom.depth / filters.geom.depth ;
@@ -442,52 +491,58 @@ void mexFunction(int nout, mxArray *out[],
   /* if the output is 1x1 pixels, then there is no need to actually
    call im2col as it does not do anything
    */
-  fullyConnectedMode = (output.geom.height == 1 && output.geom.width == 1 && numGroups == 1) ;
+  fullyConnectedMode = (outputGeom.height == 1 && outputGeom.width == 1 && numGroups == 1) ;
 
-  derData.geom = data.geom ;
-  derFilters.geom = filters.geom ;
+  derDataGeom = data.geom ;
+  derFiltersGeom = filters.geom ;
   if (biasMode) {
     if (fullyConnectedMode) {
-      allOnes.geom.height = 1 ;
-      allOnes.geom.width = 1 ;
-      allOnes.geom.depth = 1 ;
-      allOnes.geom.size =  data.geom.size ;
+      packed_data_geom_init (&allOnesGeom, mxSINGLE_CLASS,
+                             1, 1,
+                             1, data.geom.size) ;
     } else {
-      allOnes.geom.height = output.geom.height ;
-      allOnes.geom.width = output.geom.width ;
-      allOnes.geom.depth = 1 ;
-      allOnes.geom.size = 1 ;
+      packed_data_geom_init (&allOnesGeom, mxSINGLE_CLASS,
+                             outputGeom.height,
+                             outputGeom.width,
+                             1, 1) ;
     }
-    allOnes.geom.numElements = allOnes.geom.height*allOnes.geom.width*allOnes.geom.depth*allOnes.geom.size ;
-    derBiases.geom = biases.geom ;
+    derBiasesGeom = biases.geom ;
+  } else {
+    packed_data_geom_init (&allOnesGeom, mxSINGLE_CLASS,
+                           0, 0, 0, 0) ;
   }
 
-  temp.geom.height = output.geom.height ;
-  temp.geom.width = output.geom.width ;
-  temp.geom.depth = filters.geom.height*filters.geom.width*filters.geom.depth*numGroups ;
-  temp.geom.size = 1 ;
-
+  packed_data_geom_init
+  (&tempGeom,
+   mxSINGLE_CLASS,
+   outputGeom.height,
+   outputGeom.width,
+   filters.geom.height*filters.geom.width*filters.geom.depth*numGroups,
+   1) ;
 
   if (verbosity > 0) {
     mexPrintf("vl_nnconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
     mexPrintf("vl_nnconv: stride: %d, pad: %d, numGroups: %d, bias: %d, fully connected: %d\n", stride, pad, numGroups, biasMode, fullyConnectedMode) ;
-    packed_data_display(&data, "data") ;
-    packed_data_display(&filters, "filters") ;
-    if (biasMode) { packed_data_display(&biases, "biases") ; }
+    packed_data_geom_display(&data.geom, "data") ;
+    packed_data_geom_display(&filters.geom, "filters") ;
+    if (biasMode) { packed_data_geom_display(&biases.geom, "biases") ; }
     if (backMode) {
-      packed_data_display(&derOutput, "derOutput") ;
-      packed_data_display(&derData, "derData") ;
-      packed_data_display(&derFilters, "derFilters") ;
-      if (biasMode) { packed_data_display(&derBiases, "derBiases") ; }
+      packed_data_geom_display(&derOutput.geom, "derOutput") ;
+      packed_data_geom_display(&derDataGeom, "derData") ;
+      packed_data_geom_display(&derFiltersGeom, "derFilters") ;
+      if (biasMode) { packed_data_geom_display(&derBiasesGeom, "derBiases") ; }
     } else {
-      packed_data_display(&output, "output") ;
+      packed_data_geom_display(&outputGeom, "output") ;
     }
-    packed_data_display(&temp, "temp") ;
+    packed_data_geom_display(&tempGeom, "temp") ;
+    packed_data_geom_display(&temp.geom, "temp (cached)") ;
+    packed_data_geom_display(&allOnesGeom, "allOnes") ;
+    packed_data_geom_display(&allOnes.geom, "allOnes (cached)") ;
   }
 
   if (backMode) {
-    if (derOutput.geom.height != temp.geom.height ||
-        derOutput.geom.width != temp.geom.width ||
+    if (derOutput.geom.height != tempGeom.height ||
+        derOutput.geom.width != tempGeom.width ||
         derOutput.geom.depth != filters.geom.size ||
         derOutput.geom.size != data.geom.size)
     {
@@ -523,31 +578,28 @@ void mexFunction(int nout, mxArray *out[],
 
   /* auxiliary buffers */
   if (biasMode) {
-    if (allOnes.memory < allOnes.geom.width*allOnes.geom.height*allOnes.geom.depth*allOnes.geom.size*sizeof(float)) {
+    if (allOnes.memorySize < allOnesGeom.numElements * sizeof(float)) {
       packed_data_deinit (&allOnes) ;
-      packed_data_init_with_geom_and_ones (&allOnes, gpuMode, allOnes.geom) ;
-      mexMakeArrayPersistent(allOnes.array) ;
+      packed_data_init_with_geom (&allOnes, gpuMode, allOnesGeom, true, true, 1.0f) ;
     }
-    //packed_data_init_with_geom_and_ones(&allOnes, gpuMode, allOnes.geom) ;
   }
   if (!fullyConnectedMode) {
-    if (temp.memory < temp.geom.width*temp.geom.height*temp.geom.depth*temp.geom.size*sizeof(float)) {
+    if (temp.memorySize < tempGeom.numElements * sizeof(float)) {
       packed_data_deinit (&temp) ;
-      packed_data_init_with_geom (&temp, gpuMode, temp.geom, false);
-      mexMakeArrayPersistent(temp.array) ;
+      packed_data_init_with_geom (&temp, gpuMode, tempGeom, true, false, 0);
     }
   }
   if (!backMode && computeOutput) {
-    packed_data_init_with_geom(&output, gpuMode, output.geom, false) ;
+    packed_data_init_with_geom(&output, gpuMode, outputGeom, false, false, 0) ;
   }
   if (backMode && computeDerData) {
-    packed_data_init_with_geom(&derData, gpuMode, derData.geom, false) ;
+    packed_data_init_with_geom(&derData, gpuMode, derDataGeom, false, false, 0) ;
   }
   if (backMode && computeDerFilters) {
-    packed_data_init_with_geom(&derFilters, gpuMode, derFilters.geom, false) ;
+    packed_data_init_with_geom(&derFilters, gpuMode, derFiltersGeom, false, false, 0) ;
   }
   if (backMode && computeDerBiases) {
-    packed_data_init_with_geom(&derBiases, gpuMode, derBiases.geom, false) ;
+    packed_data_init_with_geom(&derBiases, gpuMode, derBiasesGeom, false, false, 0) ;
   }
 
   if (fullyConnectedMode) {
@@ -566,19 +618,19 @@ void mexFunction(int nout, mxArray *out[],
         sgemv(&OP_T,
               &filtersVolume, &filters.geom.size,
               &alpha,
-              (float*)mxGetData(filters.array), &filtersVolume,
-              (float*)mxGetData(data.array), &incx,
+              filters.memory, &filtersVolume,
+              data.memory, &incx,
               &beta,
-              (float*)mxGetData(output.array), &incy) ;
+              output.memory, &incy) ;
       } else {
         /* multiple images in the stack */
         sgemm(&OP_T, &OP_N,
               &filters.geom.size, &data.geom.size, &filtersVolume,
               &alpha,
-              (float*)mxGetData(filters.array), &filtersVolume,
-              (float*)mxGetData(data.array), &filtersVolume,
+              filters.memory, &filtersVolume,
+              data.memory, &filtersVolume,
               &beta,
-              (float*)mxGetData(output.array), &filters.geom.size) ;
+              output.memory, &filters.geom.size) ;
       }
       if (biasMode) {
         float beta = 1 ;
@@ -586,10 +638,10 @@ void mexFunction(int nout, mxArray *out[],
         sgemm(&OP_N, &OP_N,
               &filters.geom.size, &data.geom.size, &q,
               &alpha,
-              (float*)mxGetData(biases.array), &filters.geom.size,
-              (float*)mxGetData(allOnes.array), &q,
+              biases.memory, &filters.geom.size,
+              allOnes.memory, &q,
               &beta,
-              (float*)mxGetData(output.array), &filters.geom.size) ;
+              output.memory, &filters.geom.size) ;
       }
     } else {
       /* back mode */
@@ -597,29 +649,29 @@ void mexFunction(int nout, mxArray *out[],
         sgemm(&OP_N, &OP_T,
               &filtersVolume, &filters.geom.size, &data.geom.size,
               &alpha,
-              (float*)mxGetData(data.array), &filtersVolume,
-              (float*)mxGetData(derOutput.array), &filters.geom.size,
+              data.memory, &filtersVolume,
+              derOutput.memory, &filters.geom.size,
               &beta,
-              (float*)mxGetData(derFilters.array), &filtersVolume) ;
+              derFilters.memory, &filtersVolume) ;
       }
       if (computeDerBiases & biasMode) {
         ptrdiff_t q = 1 ;
         sgemm(&OP_N, &OP_T,
               &q, &filters.geom.size, &data.geom.size,
               &alpha,
-              (float*)mxGetData(allOnes.array), &q,
-              (float*)mxGetData(derOutput.array), &filters.geom.size,
+              allOnes.memory, &q,
+              derOutput.memory, &filters.geom.size,
               &beta,
-              (float*)mxGetData(derBiases.array), &q) ;
+              derBiases.memory, &q) ;
       }
       if (computeDerData) {
         sgemm(&OP_N, &OP_N,
               &filtersVolume, &data.geom.size, &filters.geom.size,
               &alpha,
-              (float*)mxGetData(filters.array), &filtersVolume,
-              (float*)mxGetData(derOutput.array), &filters.geom.size,
+              filters.memory, &filtersVolume,
+              derOutput.memory, &filters.geom.size,
               &beta,
-              (float*)mxGetData(derData.array), &filtersVolume) ;
+              derData.memory, &filtersVolume) ;
       }
     }
   } else {
@@ -633,9 +685,9 @@ void mexFunction(int nout, mxArray *out[],
       */
       ptrdiff_t dataOffset = (data.geom.height*data.geom.width*data.geom.depth) * image ;
       ptrdiff_t outputOffset = (output.geom.height*output.geom.width*output.geom.depth) * image ;
-      ptrdiff_t derDataOffset = dataOffset ;
-      ptrdiff_t derOutputOffset = outputOffset ;
-      ptrdiff_t m = temp.geom.height * temp.geom.width ; /* num output pixels */
+      ptrdiff_t derDataOffset = (derData.geom.height*derData.geom.width*derData.geom.depth) * image ;
+      ptrdiff_t derOutputOffset = (derOutput.geom.height*derOutput.geom.width*derOutput.geom.depth) * image ;
+      ptrdiff_t m = tempGeom.height * tempGeom.width ; /* num output pixels */
       ptrdiff_t n = filters.geom.size/numGroups ; /* num filters per group */
       ptrdiff_t k = filters.geom.height*filters.geom.width*filters.geom.depth ; /* filter volume */
       char OP_N = 'n' ;
@@ -651,20 +703,20 @@ void mexFunction(int nout, mxArray *out[],
           if (!fullyConnectedMode) {
             if (gpuMode) {
 #ifdef ENABLE_GPU
-              im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(data.gpuArray) + dataOffset,
+              im2col_gpu<float>(data.memory + dataOffset,
                                 data.geom.depth, data.geom.width, data.geom.height,
                                 filters.geom.width, filters.geom.height,
                                 stride, pad,
-                                (float *)mxGPUGetData(temp.gpuArray)) ;
+                                temp.memory) ;
 #else
               assert(false) ;
 #endif
             } else {
-              im2col_cpu<float>((float const*)mxGetData(data.array) + dataOffset,
+              im2col_cpu<float>(data.memory + dataOffset,
                                 data.geom.depth, data.geom.width, data.geom.height,
                                 filters.geom.width, filters.geom.height,
                                 stride, pad,
-                                (float *)mxGetData(temp.array)) ;
+                                temp.memory) ;
             }
           }
           for (int g = 0 ; g < numGroups ; ++ g) {
@@ -679,13 +731,13 @@ void mexFunction(int nout, mxArray *out[],
                           CUBLAS_OP_T, CUBLAS_OP_N,
                           (int)k, (int)n, (int)m,
                           &alpha,
-                          (float const*)mxGPUGetDataReadOnly(fullyConnectedMode ? data.gpuArray : temp.gpuArray)
+                          (fullyConnectedMode ? data.memory : temp.memory)
                           + (fullyConnectedMode?dataOffset:0) + tempGrpOffset,
                           (int)m,
-                          (float const*)mxGPUGetDataReadOnly(derOutput.gpuArray) + derOutputOffset + derOutputGrpOffset,
+                          derOutput.memory + derOutputOffset + derOutputGrpOffset,
                           (int)m,
                           &beta,
-                          (float*)mxGPUGetData(derFilters.gpuArray) + filterGrpOffset, (int)k) ;
+                          derFilters.memory + filterGrpOffset, (int)k) ;
 #else
               assert(false) ;
 #endif
@@ -693,11 +745,11 @@ void mexFunction(int nout, mxArray *out[],
               sgemm(&OP_T, &OP_N,
                     &k, &n, &m,
                     &alpha,
-                    (float*)mxGetData(fullyConnectedMode ? data.array : temp.array)
+                    (fullyConnectedMode ? data.memory : temp.memory)
                     + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, &m,
-                    (float*)mxGetData(derOutput.array) + derOutputOffset + derOutputGrpOffset, &m,
+                    derOutput.memory + derOutputOffset + derOutputGrpOffset, &m,
                     &beta,
-                    (float*)mxGetData(derFilters.array) + filterGrpOffset, &k) ;
+                    derFilters.memory + filterGrpOffset, &k) ;
             }
           }
         }
@@ -715,10 +767,10 @@ void mexFunction(int nout, mxArray *out[],
                         CUBLAS_OP_T,
                         (int)m, (int)q,
                         &alpha,
-                        (float const*)mxGPUGetDataReadOnly(derOutput.gpuArray) + derOutputOffset, (int)m,
-                        (float const*)mxGPUGetDataReadOnly(allOnes.gpuArray), (int)incx,
+                        derOutput.memory + derOutputOffset, (int)m,
+                        allOnes.memory, (int)incx,
                         &beta,
-                        (float*)mxGPUGetData(derBiases.gpuArray), (int)incy) ;
+                        derBiases.memory, (int)incy) ;
 #else
             assert(false) ;
 #endif
@@ -726,10 +778,10 @@ void mexFunction(int nout, mxArray *out[],
             sgemv(&OP_T,
                   &m, &q,
                   &alpha,
-                  (float*)mxGetData(derOutput.array) + derOutputOffset, &m,
-                  (float*)mxGetData(allOnes.array), &incx,
+                  derOutput.memory + derOutputOffset, &m,
+                  allOnes.memory, &incx,
                   &beta,
-                  (float*)mxGetData(derBiases.array), &incy) ;
+                  derBiases.memory, &incy) ;
           }
         }
 
@@ -748,10 +800,10 @@ void mexFunction(int nout, mxArray *out[],
                           CUBLAS_OP_N, CUBLAS_OP_T,
                           (int)m, (int)k, (int)n,
                           &alpha,
-                          (float const*)mxGPUGetDataReadOnly(derOutput.gpuArray) + derOutputOffset + derOutputGrpOffset, (int)m,
-                          (float const*)mxGPUGetDataReadOnly(filters.gpuArray) + filterGrpOffset, (int)k,
+                          derOutput.memory + derOutputOffset + derOutputGrpOffset, (int)m,
+                          filters.memory + filterGrpOffset, (int)k,
                           &beta,
-                          (float*)mxGPUGetData(fullyConnectedMode ? derData.gpuArray : temp.gpuArray)
+                          (fullyConnectedMode ? derData.memory : temp.memory)
                           + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
                           (int)m) ;
 #else
@@ -761,10 +813,10 @@ void mexFunction(int nout, mxArray *out[],
               sgemm(&OP_N, &OP_T,
                     &m, &k, &n,
                     &alpha,
-                    (float*)mxGetData(derOutput.array) + derOutputOffset + derOutputGrpOffset, &m,
-                    (float*)mxGetData(filters.array) + filterGrpOffset, &k,
+                    derOutput.memory + derOutputOffset + derOutputGrpOffset, &m,
+                    filters.memory + filterGrpOffset, &k,
                     &beta,
-                    (float*)mxGetData(fullyConnectedMode ? derData.array : temp.array)
+                    (fullyConnectedMode ? derData.memory : temp.memory)
                     + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
                     &m) ;
             }
@@ -773,20 +825,20 @@ void mexFunction(int nout, mxArray *out[],
           if (!fullyConnectedMode) {
             if (gpuMode) {
 #ifdef ENABLE_GPU
-              col2im_gpu<float>((float*)mxGPUGetDataReadOnly(temp.gpuArray),
+              col2im_gpu<float>(temp.memory,
                                 data.geom.depth, data.geom.width, data.geom.height,
                                 filters.geom.width, filters.geom.height,
                                 stride, pad,
-                                (float*)mxGPUGetData(derData.gpuArray) + derDataOffset) ;
+                                derData.memory + derDataOffset) ;
 #else
               assert(false) ;
 #endif
             } else {
-              col2im_cpu<float>((float*)mxGetData(temp.array),
+              col2im_cpu<float>(temp.memory,
                                 data.geom.depth, data.geom.width, data.geom.height,
                                 filters.geom.width, filters.geom.height,
                                 stride, pad,
-                                (float*)mxGetData(derData.array) + derDataOffset) ;
+                                derData.memory + derDataOffset) ;
             }
           }
 #endif
@@ -798,20 +850,20 @@ void mexFunction(int nout, mxArray *out[],
         if (computeOutput) {
           if (gpuMode) {
 #ifdef ENABLE_GPU
-            im2col_gpu<float>((float const*)mxGPUGetDataReadOnly(data.gpuArray) + dataOffset,
+            im2col_gpu<float>(data.memory + dataOffset,
                               data.geom.depth, data.geom.width, data.geom.height,
                               filters.geom.width, filters.geom.height,
                               stride, pad,
-                              (float *)mxGPUGetData(temp.gpuArray)) ;
+                              temp.memory) ;
 #else
             assert(false) ;
 #endif
           } else {
-            im2col_cpu<float>((float const*)mxGetData(data.array) + dataOffset,
+            im2col_cpu<float>(data.memory + dataOffset,
                               data.geom.depth, data.geom.width, data.geom.height,
                               filters.geom.width, filters.geom.height,
                               stride, pad,
-                              (float *)mxGetData(temp.array)) ;
+                              temp.memory) ;
           }
         }
         for (int g = 0 ; g < numGroups ; ++ g) {
@@ -826,11 +878,11 @@ void mexFunction(int nout, mxArray *out[],
                         CUBLAS_OP_N, CUBLAS_OP_N,
                         (int)m, (int)n, (int)k,
                         &alpha,
-                        (float const*)mxGPUGetDataReadOnly(fullyConnectedMode ? data.gpuArray  : temp.gpuArray)
+                        (fullyConnectedMode ? data.memory : temp.memory)
                         + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, (int)m,
-                        (float const*)mxGPUGetDataReadOnly(filters.gpuArray) + filterGrpOffset, (int)k,
+                        filters.memory + filterGrpOffset, (int)k,
                         &beta,
-                        (float*)mxGPUGetData(output.gpuArray) + outputOffset + outputGrpOffset, (int)m) ;
+                        output.memory + outputOffset + outputGrpOffset, (int)m) ;
 #else
             assert(false) ;
 #endif
@@ -838,11 +890,11 @@ void mexFunction(int nout, mxArray *out[],
             sgemm(&OP_N, &OP_N,
                   &m, &n, &k,
                   &alpha,
-                  (float*)mxGetData(fullyConnectedMode ? data.array : temp.array)
+                  (fullyConnectedMode ? data.memory : temp.memory)
                   + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, &m,
-                  (float*)mxGetData(filters.array) + filterGrpOffset, &k,
+                  filters.memory + filterGrpOffset, &k,
                   &beta,
-                  (float*)mxGetData(output.array) + outputOffset + outputGrpOffset, &m) ;
+                  output.memory + outputOffset + outputGrpOffset, &m) ;
           }
         }
         if (biasMode) {
@@ -855,10 +907,10 @@ void mexFunction(int nout, mxArray *out[],
                         CUBLAS_OP_N, CUBLAS_OP_N,
                         (int)m, (int)biases.geom.numElements, (int)q,
                         &alpha,
-                        (float const*)mxGPUGetDataReadOnly(allOnes.gpuArray), (int)m,
-                        (float const*)mxGPUGetDataReadOnly(biases.gpuArray), (int)q,
+                        allOnes.memory, (int)m,
+                        biases.memory, (int)q,
                         &beta,
-                        (float*)mxGPUGetData(output.gpuArray) + outputOffset, (int)m) ;
+                        output.memory + outputOffset, (int)m) ;
 #else
             assert(false) ;
 #endif
@@ -866,10 +918,10 @@ void mexFunction(int nout, mxArray *out[],
             sgemm(&OP_N, &OP_N,
                   &m, &biases.geom.numElements, &q,
                   &alpha,
-                  (float*)mxGetData(allOnes.array), &m,
-                  (float*)mxGetData(biases.array), &q,
+                  allOnes.memory, &m,
+                  biases.memory, &q,
                   &beta,
-                  (float*)mxGetData(output.array) + outputOffset, &m) ;
+                  output.memory + outputOffset, &m) ;
           }
         }
       }
@@ -890,7 +942,7 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? packed_data_deinit_extracting_array(&derData) : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERFILTERS] =(computeDerFilters)? packed_data_deinit_extracting_array(&derFilters) : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERBIASES] = (computeDerBiases & biasMode) ? packed_data_deinit_extracting_array(&derBiases) : mxCreateDoubleMatrix(0,0,mxREAL) ;;
+    out[OUT_DERBIASES] = (computeDerBiases & biasMode) ? packed_data_deinit_extracting_array(&derBiases) : mxCreateDoubleMatrix(0,0,mxREAL) ;
   } else {
     out[OUT_RESULT] = packed_data_deinit_extracting_array(&output) ;
   }
