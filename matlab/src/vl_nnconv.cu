@@ -39,8 +39,6 @@ vlmxOption  options [] = {
   {0,                  0,   0                      }
 } ;
 
-extern "C" bool mxUnshareArray(mxArray *array_ptr, bool noDeepCopy);
-
 /* ---------------------------------------------------------------- */
 /*                                                 Helper functions */
 /* ---------------------------------------------------------------- */
@@ -96,8 +94,8 @@ packed_data_geom_init (PackedDataGeometry * geom,
 {
   geom->classID = classID ;
   geom->height = height ;
-  geom->width = width;
-  geom->depth = depth;
+  geom->width = width ;
+  geom->depth = depth ;
   geom->size = size ;
   geom->numElements = height*width*depth*size ;
 }
@@ -703,7 +701,7 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode && computeDerFilters) {
     packed_data_init_with_geom(&derFilters, gpuMode, derFiltersGeom, false, false, 0) ;
   }
-  if (backMode && computeDerBiases) {
+  if (backMode && computeDerBiases && biasMode) {
     packed_data_init_with_geom(&derBiases, gpuMode, derBiasesGeom, false, false, 0) ;
   }
 
