@@ -317,7 +317,8 @@ cublasHandle_t thisCublasHandle ;
 static void
 sgemv_dispatch(bool gpuMode,
                char op,
-               ptrdiff_t m, ptrdiff_t n, float alpha,
+               ptrdiff_t m, ptrdiff_t n,
+               float alpha,
                float const * a, ptrdiff_t lda,
                float const * x, ptrdiff_t incx,
                float beta,
@@ -333,8 +334,8 @@ sgemv_dispatch(bool gpuMode,
   } else {
 #ifdef ENABLE_GPU
     cublasSgemv(thisCublasHandle,
-                (op == 't') ? CUBLAS_OP_T : CUBLAS_OPT_N,
-                (int)m, (int)n
+                (op == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
+                (int)m, (int)n,
                 &alpha,
                 a, lda,
                 x, (int)incx,
@@ -365,8 +366,8 @@ sgemm_dispatch(bool gpuMode,
   } else {
 #ifdef ENABLE_GPU
     cublasSgemm(thisCublasHandle,
-                (op1 == 't') ? CUBLAS_OP_T : CUBLAS_OPT_N,
-                (op2 == 't') ? CUBLAS_OP_T : CUBLAS_OPT_N,
+                (op1 == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
+                (op2 == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
                 (int)m, (int)n, (int)k,
                 &alpha,
                 a, (int)lda,
@@ -676,10 +677,6 @@ void mexFunction(int nout, mxArray *out[],
   if (fullyConnectedMode) {
     float alpha = 1 ;
     float beta = 0 ;
-    ptrdiff_t incx = 1 ;
-    ptrdiff_t incy = 1 ;
-    char OP_N = 'n' ;
-    char OP_T = 't' ;
     ptrdiff_t filtersVolume = filters.geom.height*filters.geom.width*filters.geom.depth ;
 
     /* especially optimized */
@@ -736,7 +733,7 @@ void mexFunction(int nout, mxArray *out[],
                        derBiases.memory, q) ;
       }
       if (computeDerData) {
-        sgemm_dispatch(gpuMode, 'n', 't',
+        sgemm_dispatch(gpuMode, 'n', 'n',
                        filtersVolume, data.geom.size, filters.geom.size,
                        alpha,
                        filters.memory, filtersVolume,
@@ -761,8 +758,6 @@ void mexFunction(int nout, mxArray *out[],
       ptrdiff_t m = tempGeom.height * tempGeom.width ; /* num output pixels */
       ptrdiff_t n = filters.geom.size/numGroups ; /* num filters per group */
       ptrdiff_t k = filters.geom.height*filters.geom.width*filters.geom.depth ; /* filter volume */
-      char OP_N = 'n' ;
-      char OP_T = 't' ;
 
       if (backMode) {
         /* ---------------------------------------------------------- */
@@ -809,18 +804,13 @@ void mexFunction(int nout, mxArray *out[],
 
         /* compute derData dz/dbias */
         if (computeDerBiases & biasMode) {
-          float alpha = 1 ;
-          float beta = (image > 0) ;
-          ptrdiff_t q = filters.geom.size ;
-          ptrdiff_t incx = 1 ;
-          ptrdiff_t incy = 1 ;
           sgemv_dispatch(gpuMode, 't',
-                         m, q,
-                         alpha,
+                         m, filters.geom.size,
+                         1, /* alpha */
                          derOutput.memory + derOutputOffset, m,
-                         allOnes.memory, incx,
-                         beta,
-                         derBiases.memory, incy) ;
+                         allOnes.memory, 1,
+                         (float)(image > 0), /* beta */
+                         derBiases.memory, 1) ;
         }
 
         /* compute derData dz/dx */
