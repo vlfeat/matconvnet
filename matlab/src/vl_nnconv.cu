@@ -307,12 +307,84 @@ mxArray* packed_data_deinit_extracting_array(PackedData * map)
 }
 
 /* ---------------------------------------------------------------- */
+/*                                                  Dispatcher func */
+/* ---------------------------------------------------------------- */
+
+#ifdef ENABLE_GPU
+cublasHandle_t thisCublasHandle ;
+#endif
+
+static void
+sgemv_dispatch(bool gpuMode,
+               char op,
+               ptrdiff_t m, ptrdiff_t n, float alpha,
+               float const * a, ptrdiff_t lda,
+               float const * x, ptrdiff_t incx,
+               float beta,
+               float * y, ptrdiff_t incy)
+{
+  if (!gpuMode) {
+    sgemv(&op,
+          &m, &n, &alpha,
+          (float*)a, &lda,
+          (float*)x, &incx,
+          &beta,
+          y, &incy) ;
+  } else {
+#ifdef ENABLE_GPU
+    cublasSgemv(thisCublasHandle,
+                (op == 't') ? CUBLAS_OP_T : CUBLAS_OPT_N,
+                (int)m, (int)n
+                &alpha,
+                a, lda,
+                x, (int)incx,
+                &beta,
+                y, (int)incy) ;
+#endif
+  }
+}
+
+static void
+sgemm_dispatch(bool gpuMode,
+               char op1, char op2,
+               ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+               float alpha,
+               float const * a, ptrdiff_t lda,
+               float const * b, ptrdiff_t ldb,
+               float beta,
+               float * c, ptrdiff_t ldc)
+{
+  if (!gpuMode) {
+    sgemm(&op1, &op2,
+          &m, &n, &k,
+          &alpha,
+          (float*)a, &lda,
+          (float*)b, &ldb,
+          &beta,
+          c, &ldc) ;
+  } else {
+#ifdef ENABLE_GPU
+    cublasSgemm(thisCublasHandle,
+                (op1 == 't') ? CUBLAS_OP_T : CUBLAS_OPT_N,
+                (op2 == 't') ? CUBLAS_OP_T : CUBLAS_OPT_N,
+                (int)m, (int)n, (int)k,
+                &alpha,
+                a, (int)lda,
+                b, (int)ldb,
+                &beta,
+                c, (int)ldc);
+#endif
+  }
+}
+
+/* ---------------------------------------------------------------- */
 /*                                                            Cache */
 /* ---------------------------------------------------------------- */
 
 bool persistentDataInitialized = false ;
 PackedData temp ;
 PackedData allOnes ;
+
 
 void atExit()
 {
@@ -360,7 +432,6 @@ void mexFunction(int nout, mxArray *out[],
 
 #if ENABLE_GPU
   cublasStatus_t stat;
-  cublasHandle_t handle;
   bool gpuMode = false ;
 #else
   bool const gpuMode = false ;
@@ -415,7 +486,7 @@ void mexFunction(int nout, mxArray *out[],
   gpuMode = mxIsGPUArray(in[IN_DATA]) ;
   if (gpuMode) {
     mxInitGPU() ;
-    stat = cublasCreate(&handle) ;
+    stat = cublasCreate(&thisCublasHandle) ;
     if (stat != CUBLAS_STATUS_SUCCESS) {
       mexErrMsgTxt("Could not initialize cuBLAS.") ;
     }
@@ -615,63 +686,63 @@ void mexFunction(int nout, mxArray *out[],
     if (!backMode) {
       if (data.geom.size == 1) {
         /* one image in the stack */
-        sgemv(&OP_T,
-              &filtersVolume, &filters.geom.size,
-              &alpha,
-              filters.memory, &filtersVolume,
-              data.memory, &incx,
-              &beta,
-              output.memory, &incy) ;
+        sgemv_dispatch(gpuMode, 't',
+                       filtersVolume, filters.geom.size,
+                       alpha,
+                       filters.memory, filtersVolume,
+                       data.memory, 1,
+                       beta,
+                       output.memory, 1) ;
       } else {
         /* multiple images in the stack */
-        sgemm(&OP_T, &OP_N,
-              &filters.geom.size, &data.geom.size, &filtersVolume,
-              &alpha,
-              filters.memory, &filtersVolume,
-              data.memory, &filtersVolume,
-              &beta,
-              output.memory, &filters.geom.size) ;
+        sgemm_dispatch(gpuMode, 't', 'n',
+                       filters.geom.size, data.geom.size, filtersVolume,
+                       alpha,
+                       filters.memory, filtersVolume,
+                       data.memory, filtersVolume,
+                       beta,
+                       output.memory, filters.geom.size) ;
       }
       if (biasMode) {
         float beta = 1 ;
         ptrdiff_t q = 1 ;
-        sgemm(&OP_N, &OP_N,
-              &filters.geom.size, &data.geom.size, &q,
-              &alpha,
-              biases.memory, &filters.geom.size,
-              allOnes.memory, &q,
-              &beta,
-              output.memory, &filters.geom.size) ;
+        sgemm_dispatch(gpuMode, 'n', 'n',
+                        filters.geom.size, data.geom.size, q,
+                        alpha,
+                        biases.memory, filters.geom.size,
+                        allOnes.memory, q,
+                        beta,
+                        output.memory, filters.geom.size) ;
       }
     } else {
       /* back mode */
       if (computeDerFilters) {
-        sgemm(&OP_N, &OP_T,
-              &filtersVolume, &filters.geom.size, &data.geom.size,
-              &alpha,
-              data.memory, &filtersVolume,
-              derOutput.memory, &filters.geom.size,
-              &beta,
-              derFilters.memory, &filtersVolume) ;
+        sgemm_dispatch(gpuMode, 'n', 't',
+                       filtersVolume, filters.geom.size, data.geom.size,
+                       alpha,
+                       data.memory, filtersVolume,
+                       derOutput.memory, filters.geom.size,
+                       beta,
+                       derFilters.memory, filtersVolume) ;
       }
       if (computeDerBiases & biasMode) {
         ptrdiff_t q = 1 ;
-        sgemm(&OP_N, &OP_T,
-              &q, &filters.geom.size, &data.geom.size,
-              &alpha,
-              allOnes.memory, &q,
-              derOutput.memory, &filters.geom.size,
-              &beta,
-              derBiases.memory, &q) ;
+        sgemm_dispatch(gpuMode, 'n', 't',
+                       q, filters.geom.size, data.geom.size,
+                       alpha,
+                       allOnes.memory, q,
+                       derOutput.memory, filters.geom.size,
+                       beta,
+                       derBiases.memory, q) ;
       }
       if (computeDerData) {
-        sgemm(&OP_N, &OP_N,
-              &filtersVolume, &data.geom.size, &filters.geom.size,
-              &alpha,
-              filters.memory, &filtersVolume,
-              derOutput.memory, &filters.geom.size,
-              &beta,
-              derData.memory, &filtersVolume) ;
+        sgemm_dispatch(gpuMode, 'n', 't',
+                       filtersVolume, data.geom.size, filters.geom.size,
+                       alpha,
+                       filters.memory, filtersVolume,
+                       derOutput.memory, filters.geom.size,
+                       beta,
+                       derData.memory, filtersVolume) ;
       }
     }
   } else {
@@ -725,32 +796,14 @@ void mexFunction(int nout, mxArray *out[],
             ptrdiff_t derOutputGrpOffset = m * n * g ;
             float alpha = 1 ;
             float beta = (image > 0)  ;
-            if (gpuMode) {
-#ifdef ENABLE_GPU
-              cublasSgemm(handle,
-                          CUBLAS_OP_T, CUBLAS_OP_N,
-                          (int)k, (int)n, (int)m,
-                          &alpha,
-                          (fullyConnectedMode ? data.memory : temp.memory)
-                          + (fullyConnectedMode?dataOffset:0) + tempGrpOffset,
-                          (int)m,
-                          derOutput.memory + derOutputOffset + derOutputGrpOffset,
-                          (int)m,
-                          &beta,
-                          derFilters.memory + filterGrpOffset, (int)k) ;
-#else
-              assert(false) ;
-#endif
-            } else {
-              sgemm(&OP_T, &OP_N,
-                    &k, &n, &m,
-                    &alpha,
-                    (fullyConnectedMode ? data.memory : temp.memory)
-                    + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, &m,
-                    derOutput.memory + derOutputOffset + derOutputGrpOffset, &m,
-                    &beta,
-                    derFilters.memory + filterGrpOffset, &k) ;
-            }
+            sgemm_dispatch(gpuMode, 't', 'n',
+                           k, n, m,
+                           alpha,
+                           (fullyConnectedMode ? data.memory : temp.memory)
+                           + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, m,
+                           derOutput.memory + derOutputOffset + derOutputGrpOffset, m,
+                           beta,
+                           derFilters.memory + filterGrpOffset, k) ;
           }
         }
 
@@ -761,28 +814,13 @@ void mexFunction(int nout, mxArray *out[],
           ptrdiff_t q = filters.geom.size ;
           ptrdiff_t incx = 1 ;
           ptrdiff_t incy = 1 ;
-          if (gpuMode) {
-#ifdef ENABLE_GPU
-            cublasSgemv(handle,
-                        CUBLAS_OP_T,
-                        (int)m, (int)q,
-                        &alpha,
-                        derOutput.memory + derOutputOffset, (int)m,
-                        allOnes.memory, (int)incx,
-                        &beta,
-                        derBiases.memory, (int)incy) ;
-#else
-            assert(false) ;
-#endif
-          } else {
-            sgemv(&OP_T,
-                  &m, &q,
-                  &alpha,
-                  derOutput.memory + derOutputOffset, &m,
-                  allOnes.memory, &incx,
-                  &beta,
-                  derBiases.memory, &incy) ;
-          }
+          sgemv_dispatch(gpuMode, 't',
+                         m, q,
+                         alpha,
+                         derOutput.memory + derOutputOffset, m,
+                         allOnes.memory, incx,
+                         beta,
+                         derBiases.memory, incy) ;
         }
 
         /* compute derData dz/dx */
@@ -793,33 +831,15 @@ void mexFunction(int nout, mxArray *out[],
             ptrdiff_t derOutputGrpOffset = m * n * g ;
             float alpha = 1 ;
             float beta = fullyConnectedMode ? (g > 0) : 0 ;
-
-            if (gpuMode) {
-#ifdef ENABLE_GPU
-              cublasSgemm(handle,
-                          CUBLAS_OP_N, CUBLAS_OP_T,
-                          (int)m, (int)k, (int)n,
-                          &alpha,
-                          derOutput.memory + derOutputOffset + derOutputGrpOffset, (int)m,
-                          filters.memory + filterGrpOffset, (int)k,
-                          &beta,
-                          (fullyConnectedMode ? derData.memory : temp.memory)
-                          + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
-                          (int)m) ;
-#else
-              assert(false) ;
-#endif
-            } else {
-              sgemm(&OP_N, &OP_T,
-                    &m, &k, &n,
-                    &alpha,
-                    derOutput.memory + derOutputOffset + derOutputGrpOffset, &m,
-                    filters.memory + filterGrpOffset, &k,
-                    &beta,
-                    (fullyConnectedMode ? derData.memory : temp.memory)
-                    + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
-                    &m) ;
-            }
+            sgemm_dispatch(gpuMode, 'n', 't',
+                           m, k, n,
+                           alpha,
+                           derOutput.memory + derOutputOffset + derOutputGrpOffset, m,
+                           filters.memory + filterGrpOffset, k,
+                           beta,
+                           (fullyConnectedMode ? derData.memory : temp.memory)
+                           + (fullyConnectedMode ? + derDataOffset : 0) + tempGrpOffset,
+                           m) ;
           }
 #if 1
           if (!fullyConnectedMode) {
@@ -872,57 +892,26 @@ void mexFunction(int nout, mxArray *out[],
           ptrdiff_t outputGrpOffset = m * n * g  ;
           float alpha = 1 ;
           float beta = 0 ;
-          if (gpuMode) {
-#ifdef ENABLE_GPU
-            cublasSgemm(handle,
-                        CUBLAS_OP_N, CUBLAS_OP_N,
-                        (int)m, (int)n, (int)k,
-                        &alpha,
-                        (fullyConnectedMode ? data.memory : temp.memory)
-                        + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, (int)m,
-                        filters.memory + filterGrpOffset, (int)k,
-                        &beta,
-                        output.memory + outputOffset + outputGrpOffset, (int)m) ;
-#else
-            assert(false) ;
-#endif
-          } else {
-            sgemm(&OP_N, &OP_N,
-                  &m, &n, &k,
-                  &alpha,
-                  (fullyConnectedMode ? data.memory : temp.memory)
-                  + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, &m,
-                  filters.memory + filterGrpOffset, &k,
-                  &beta,
-                  output.memory + outputOffset + outputGrpOffset, &m) ;
-          }
+          sgemm_dispatch(gpuMode, 'n', 'n',
+                         m, n, k,
+                         alpha,
+                         (fullyConnectedMode ? data.memory : temp.memory)
+                         + (fullyConnectedMode?dataOffset:0) + tempGrpOffset, m,
+                         filters.memory + filterGrpOffset, k,
+                         beta,
+                         output.memory + outputOffset + outputGrpOffset, m) ;
         }
         if (biasMode) {
           float alpha = 1 ;
           float beta = 1 ;
           ptrdiff_t q = 1 ;
-          if (gpuMode) {
-#ifdef ENABLE_GPU
-            cublasSgemm(handle,
-                        CUBLAS_OP_N, CUBLAS_OP_N,
-                        (int)m, (int)biases.geom.numElements, (int)q,
-                        &alpha,
-                        allOnes.memory, (int)m,
-                        biases.memory, (int)q,
-                        &beta,
-                        output.memory + outputOffset, (int)m) ;
-#else
-            assert(false) ;
-#endif
-          } else {
-            sgemm(&OP_N, &OP_N,
-                  &m, &biases.geom.numElements, &q,
-                  &alpha,
-                  allOnes.memory, &m,
-                  biases.memory, &q,
-                  &beta,
-                  output.memory + outputOffset, &m) ;
-          }
+          sgemm_dispatch(gpuMode, 'n', 'n',
+                         m, biases.geom.numElements, q,
+                         alpha,
+                         allOnes.memory, m,
+                         biases.memory, q,
+                         beta,
+                         output.memory + outputOffset, m) ;
         }
       }
     }
@@ -933,7 +922,7 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
 #ifdef ENABLE_GPU
-  if (gpuMode) { cublasDestroy(handle) ; }
+  if (gpuMode) { cublasDestroy(thisCublasHandle) ; }
 #endif
 
   packed_data_deinit(&data) ;
