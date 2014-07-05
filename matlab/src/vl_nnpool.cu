@@ -328,6 +328,9 @@ void mexFunction(int nout, mxArray *out[],
     out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(resultGpu) ;
     mxGPUDestroyGPUArray(dataGpu) ;
     mxGPUDestroyGPUArray(resultGpu) ;
+    if (backMode) {
+      mxGPUDestroyGPUArray(derGpu) ;
+    }
 #else
     assert(false) ;
 #endif
