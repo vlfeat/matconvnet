@@ -950,6 +950,7 @@ void mexFunction(int nout, mxArray *out[],
   packed_data_deinit(&filters) ;
   if (biasMode) { packed_data_deinit(&biases) ; }
   if (backMode) {
+    packed_data_deinit(&derOutput) ;
     out[OUT_RESULT] = (computeDerData) ? packed_data_deinit_extracting_array(&derData) : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERFILTERS] =(computeDerFilters)? packed_data_deinit_extracting_array(&derFilters) : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERBIASES] = (computeDerBiases & biasMode) ? packed_data_deinit_extracting_array(&derBiases) : mxCreateDoubleMatrix(0,0,mxREAL) ;
