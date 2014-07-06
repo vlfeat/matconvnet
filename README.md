@@ -1,26 +1,29 @@
-# MatConvNet: Convolutional Neural Networks for MATLAB
+# MatConvNet: CNNs for MATLAB
 
 Version 1.0-beta.
 
-**MatConvNet** is a simple MATLAB toolbox implementing Convolutional
-Neural Networks (CNN) for computer vision applications. Its main
+**MatConvNet** is a simple MATLAB toolbox implementing *Convolutional
+Neural Networks* (CNNs) for computer vision applications. Its main
 features are:
 
 - *Flexibility.* Neural network layers are implemented in a
   straightforward manner, often directly in MATLAB code, so that they
   are easy to modify, extend, or integrate with new ones. Other
-  toolboxes hide the whole neural network layers behind a wall of
-  compiled code; here the granularity is much finer.
-- *Power.* The implementation can run the latest features such as
+  toolboxes hide the neural network layers behind a wall of compiled
+  code; here the granularity is much finer.
+- *Power.* The implementation can run the latest models such as
   Krizhevsky et al., including the DeCAF and Caffe
-  variants. Pre-learned features for different tasks can be easily
-  downloaded.
+  variants. Pre-learned features for different tasks are provided.
+  Importing and exporting of models between implementations should be
+  a simple affair.
 - *Efficiency.* The implementation is quite efficient, supporting both
   CPU and GPU computation. Despite MATLAB overhead, it is only
   marginally slower than alternative implementations.
 
-This library will be merged in the future with
-[VLFeat](http://www.vlfeat.org/) library.
+This library may be merged in the future with
+[VLFeat library](http://www.vlfeat.org/). It uses a very similar
+style, so if you are familiar with VLFeat, you should be right at home
+here.
 
 ## Installation
 
@@ -31,7 +34,7 @@ before MATLAB can use it.
 
 You can download a copy of the source code here:
 
-- [Tarball]()
+- [Tarball for version 1.0-beta](download/matconvnet-1.0-beta.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 ### Compiling
@@ -79,8 +82,9 @@ At this point the library should be ready to use. To test it, try
 
 ## Usage
 
-Please see the [reference PDF manual](matconvnet-manual.pdf) for technical details. There
-are several examples provided for your convenience
+Please see the [reference PDF manual](matconvnet-manual.pdf) for
+technical details. There are several examples provided for your
+convenience.
 
 ### Pre-trained networks
 
@@ -91,7 +95,7 @@ You can download the following models
 - [ImageNet-M](). A somewhat larger network, with better performance.
 - [ImageNet-L](). A large model.
 
-## About
+## About and acknlowledgments
 
 This package was created and is currently maintained by
 [Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi). It is
@@ -111,6 +115,10 @@ distributed under the permissive BSD license.
     PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES,
     INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
     MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+The implementation of the fundamental computational blocks in this
+library, and in particular of the convolution operators, is inspired
+by [Caffe](http://caffe.berkeleyvision.org).
 
 ## Changes
 

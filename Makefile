@@ -16,6 +16,16 @@ ARCH ?= maci64
 CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
+NAME = matconvnet
+VER = 1.0-beta
+DIST = $(NAME)-$(VER)
+MARKDOWN = markdown2
+HOST = vlfeat-admin:vlfeat.org/sandbox-matconvnet
+GIT = git
+PDFLATEX = pdflatex
+BIBTEX = bibtex
+RSYNC = rsync
+
 # --------------------------------------------------------------------
 #                                                        Configuration
 # --------------------------------------------------------------------
@@ -43,7 +53,7 @@ endif
 
 # Mac OS X Intel
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
-MEXOPTS_GPU += -lcublas
+MEXOPTS_GPU += -L$(CUDAROOT)/lib -lcublas -lcudart
 endif
 
 # Linux
@@ -82,7 +92,7 @@ mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
 
-.PHONY: all, distclean, clean, info
+.PHONY: all, distclean, clean, info, pack, post, post-doc, doc
 
 all: $(mex_tgt)
 
@@ -118,6 +128,24 @@ else
 	   $(nvcc_filter)
 endif
 
+doc: doc/index.html doc/matconvnet-manual.pdf
+
+doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
+	mkdir -p doc/.build
+	ln -sf ../references.bib doc/.build/references.bib
+	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
+	cd doc/.build ; $(BIBTEX) matconvnet-manual
+	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
+	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
+	cp -f doc/.build/matconvnet-manual.pdf doc/
+
+doc/index.html : doc/.build/index.html.raw doc/template.html
+	sed -e '/%MARKDOWN%/{r doc/.build/README.html.raw' -e 'd;}' doc/template.html  > $(@)
+
+doc/.build/index.html.raw : README.md
+	mkdir -p doc/.build
+	$(MARKDOWN) $(<) > $(@)
+
 # Other targets
 info:
 	@echo "mex_src=$(mex_src)"
@@ -128,7 +156,18 @@ info:
 clean:
 	find . -name '*~' -delete
 	rm -f $(cpp_tgt)
-	rm -rf matlab/mex/
+	rm -rf doc/.build
 
 distclean: clean
 	rm -rf matlab/mex/
+
+pack:
+	COPYFILE_DISABLE=1 \
+	COPY_EXTENDED_ATTRIBUTES_DISABLE=1 \
+	$(GIT) archive --prefix=$(NAME)-$(VER)/ v$(VER) | gzip > $(DIST).tar.gz
+
+post:
+	$(RSYNC) -aP $(DIST).tar.gz $(HOST)/download/
+
+post-doc: doc
+	$(RSYNC) -aP doc/{index.html,matconvnet-manual.pdf} $(HOST)/
