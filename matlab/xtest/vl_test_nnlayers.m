@@ -13,7 +13,7 @@ end
 
 rng(1) ;
 
-for l=1:8
+for l=9 %1:8
   switch l
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;
@@ -236,5 +236,13 @@ for l=1:8
        dzdy = grandn(size(y),'single') ;
        dzdx = vl_nnoffset(x,param,dzdy) ;
        vl_testder(@(x) vl_nnoffset(x,param), x, dzdy, dzdx, 1e-3*range) ;
+
+    case 9
+      disp('testing vl_nndropout') ;
+      x = grandn(4,5,10,3,'single') ;
+      [y,mask] = vl_nndropout(x) ;
+      dzdy = grandn(size(y),'single') ;
+      dzdx = vl_nndropout(x,dzdy,'mask',mask) ;
+      vl_testder(@(x) vl_nndropout(x,'mask',mask), x, dzdy, dzdx, 1e-3*range) ;
   end
 end

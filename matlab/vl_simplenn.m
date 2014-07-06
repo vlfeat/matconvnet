@@ -8,11 +8,14 @@ else
   doder = true ;
 end
 
+gpuMode = isa(x, 'gpuArray') ;
+
 if (nargin <= 3) || isempty(res)
   res = struct(...
     'x', cell(1,n+1), ...
     'dzdx', cell(1,n+1), ...
     'dzdw', cell(1,n+1), ...
+    'aux', cell(1,n+1), ...
     'time', num2cell(zeros(1,n+1)), ...
     'backwardTime', num2cell(zeros(1,n+1))) ;
 end
@@ -38,6 +41,8 @@ for i=1:n
       res(i+1).x = vl_nnrelu(res(i).x) ;
     case 'noffset'
       res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
+    case 'dropout'
+      [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
     otherwise
       error('Unknown layer type %s', l.type);
   end
@@ -75,11 +80,11 @@ if doder
         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
         res(i).dzdx = vl_nnoffset(res(i).x, l.param, res(i+1).dzdx) ;
+      case 'dropout'
+        res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
     end
-    try
-        %wait(gpuDevice) ;
-    catch
-        % no gpuDevice
+    if gpuMode
+      %wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;
   end
