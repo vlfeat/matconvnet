@@ -13,7 +13,7 @@ end
 
 rng(1) ;
 
-for l=9 %1:8
+for l=setdiff(1:9,6)
   switch l
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;

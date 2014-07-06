@@ -8,30 +8,49 @@
 # This file is part of the VLFeat library and is made available under
 # the terms of the BSD license (see the COPYING file).
 
+# For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
+
 ENABLE_GPU ?=
-NVCC ?= /Developer/NVIDIA/CUDA-6.0/bin/nvcc
+DEBUG ?=
+ARCH ?= maci64
+CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
-SHELL = /bin/bash # sh not good enough
+# --------------------------------------------------------------------
+#                                                        Configuration
+# --------------------------------------------------------------------
 
-# at least compute 2.0 required
-NVCCOPTS = -gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
-
+# General options
 MEX = $(MATLABROOT)/bin/mex
 MEXEXT = $(MATLABROOT)/bin/mexext
 MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
-MEXOPTS =  -largeArrayDims -lmwblas
+MEXOPTS = -largeArrayDims -lmwblas
 MEXOPTS_GPU = \
--DENABLE_GPU -f matlab/src/config/mex_CUDA_$(MEXARCH).xml \
--largeArrayDims -lmwblas -lcudart -lcublas \
--v
+-DENABLE_GPU -f matlab/src/config/mex_CUDA_$(ARCH).xml \
+-largeArrayDims -lmwblas
+SHELL = /bin/bash # sh not good enough
+
+# at least compute 2.0 required
+NVCC = $(CUDAROOT)/bin/nvcc
+NVCCOPTS = \
+-gencode=arch=compute_20,code=sm_21 \
+-gencode=arch=compute_30,code=sm_30
 
 ifneq ($(DEBUG),)
 MEXOPTS += -g
 NVCCOPTS += -g
 endif
 
-.PRECIOUS: matlab/src/bits/pooling_gpu.o matlab/src/bits/im2col.o matlab/src/bits/normalize.o matlab/src/bits/im2col_gpu.o matlab/src/bits/pooling.o matlab/src/bits/normalize_gpu.o
+# Mac OS X Intel
+ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
+MEXOPTS_GPU += -lcublas
+endif
+
+# Linux
+ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
+NVCCOPTS += --compiler-options=-fPIC
+MEXOPTS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
+endif
 
 # --------------------------------------------------------------------
 #                                                           Do the job
@@ -93,8 +112,10 @@ ifeq ($(ENABLE_GPU),)
 else
 	echo $(@)
 	MW_NVCC_PATH='$(NVCC)' $(MEX) \
-	   $(MEXOPTS_GPU) "$(<)" \
-	   -output "$(@)" $(cpp_tgt) $(nvcc_filter)
+	   -output "$(@)" \
+	   "$(<)" $(cpp_tgt) \
+	   $(MEXOPTS_GPU) \
+	   $(nvcc_filter)
 endif
 
 # Other targets
