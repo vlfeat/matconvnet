@@ -1,20 +1,43 @@
-ENABLE_GPU ?=
-SHELL = /bin/bash # sh not good enough
-MEX ?= mex
-MEXEXT ?= mexext
-MEXARCH ?= $(shell $(MEXEXT))
-NVCC ?= /Developer/NVIDIA/CUDA-5.5/bin/nvcc
+# file: Makefile
+# author: Andrea Vedaldi
+# brief: matconvnet makefile for mex files
 
+# Copyright (C) 2007-14 Andrea Vedaldi and Brian Fulkerson.
+# All rights reserved.
+#
+# This file is part of the VLFeat library and is made available under
+# the terms of the BSD license (see the COPYING file).
+
+ENABLE_GPU ?=
+NVCC ?= /Developer/NVIDIA/CUDA-6.0/bin/nvcc
+MATLABROOT ?= /Applications/MATLAB_R2014a.app
+
+SHELL = /bin/bash # sh not good enough
+
+# at least compute 2.0 required
 NVCCOPTS = -gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=sm_30
-MEXOPTS = -lmwblas -largeArrayDims
+
+MEX = $(MATLABROOT)/bin/mex
+MEXEXT = $(MATLABROOT)/bin/mexext
+MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
+MEXOPTS =  -largeArrayDims -lmwblas
+MEXOPTS_GPU = \
+-DENABLE_GPU -f matlab/src/config/mex_CUDA_$(MEXARCH).xml \
+-largeArrayDims -lmwblas -lcudart -lcublas \
+-v
+
 ifneq ($(DEBUG),)
 MEXOPTS += -g
 NVCCOPTS += -g
 endif
 
-MEXOPTS_GPU= $(MEXOPTS) -DENABLE_GPU -f matlab/src/mex_gpu_opts.sh -lcudart -lcublas
+.PRECIOUS: matlab/src/bits/pooling_gpu.o matlab/src/bits/im2col.o matlab/src/bits/normalize.o matlab/src/bits/im2col_gpu.o matlab/src/bits/pooling.o matlab/src/bits/normalize_gpu.o
+
+# --------------------------------------------------------------------
+#                                                           Do the job
+# --------------------------------------------------------------------
+
 nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
-#nvcc_filter=
 
 cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
@@ -34,8 +57,8 @@ cpp_src+=matlab/src/bits/normalize_gpu.cu
 endif
 
 mex_tgt:=$(subst matlab/src/,matlab/mex/,$(mex_src))
-mex_tgt:=$(patsubst %.cpp,%.$(MEXARCH),$(mex_tgt))
-mex_tgt:=$(patsubst %.cu,%.$(MEXARCH),$(mex_tgt))
+mex_tgt:=$(patsubst %.cpp,%.mex$(MEXARCH),$(mex_tgt))
+mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 
 cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
@@ -56,10 +79,10 @@ matlab/src/bits/%.o : matlab/src/bits/%.cu
 	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
 
 # MEX files
-matlab/mex/%.$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
 	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
 
-matlab/mex/%.$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
 ifeq ($(ENABLE_GPU),)
 	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
 	$(MEX) $(MEXOPTS) \

@@ -38,8 +38,8 @@
           CXXDEBUGFLAGS="-g"
           ARCHS="x86_64"
 
-          LDXX="$XCRUN_DIR/xcrun -sdk macosx10.7 clang"
-          LDFLAGS="-Wl,-twolevel_namespace -undefined error -arch $ARCHS -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -Wl,-syslibroot,$ISYSROOT $LDBUNDLE $LINKEXPORT"
+          LDXX="$XCRUN_DIR/xcrun -sdk macosx10.9 clang++"
+          LDFLAGS="-stdlib=libstdc++ -Wl,-twolevel_namespace -undefined error -arch $ARCHS -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -Wl,-syslibroot,$ISYSROOT $LDBUNDLE $LINKEXPORT"
           LDBUNDLE="-bundle"
           LINKEXPORT="-Wl,-exported_symbols_list,&quot;$MATLABROOT/extern/lib/$ARCH/mexFunction.map&quot;"
           LINKLIBS="-L&quot;$MATLABROOT/bin/$ARCH&quot; -lmx -lmex -lmat -lm -lmwgpu -lcudart"
@@ -48,7 +48,7 @@
 
           OBJEXT=".o"
           LDEXT=".mexmaci64"
-          MACOSX_DEPLOYMENT_TARGET='10.7'>
+          MACOSX_DEPLOYMENT_TARGET='10.9'>
     </vars>
     <client>
     </client>
@@ -68,9 +68,9 @@
             <or>
                 <envVarExists name="MW_XCODE_CLANG_COMPILER" />
                 <and>
-                    <cmdReturns name="xcrun -f clang" />
+                    <cmdReturns name="xcrun -f clang++" />
                     <dirExists name="$$" />
-                    <fileExists name="$$/clang" />
+                    <fileExists name="$$/clang++" />
                 </and>
             </or>
         </CLANG_COMPILER>
@@ -83,14 +83,17 @@
         <ISYSROOT>
           <and>
               <cmdReturns name="xcode-select -print-path"/>
-              <cmdReturns name="find $$ -name MacOSX10.7.sdk" />
+              <cmdReturns name="find $$ -name MacOSX10.9.sdk" />
               <dirExists name="$$" />
          </and>
         </ISYSROOT>
         <!-- User needs to agree to license of the version (or higher) that we support -->
         <XCODE_AGREED_VERSION>
             <and diagnostic="Xcode is installed, but its license has not been accepted. Run Xcode and accept its license agreement." >
-                <cmdReturns name="&#10;agreed=$(defaults read com.apple.dt.Xcode IDEXcodeVersionForAgreedToGMLicense) &#10; if echo $agreed | grep -E '[\.\&quot;]' >/dev/null; then &#10; lhs=`expr &quot;$agreed&quot; : '\([0-9]*\)[\.].*'` &#10;  rhs=`expr &quot;$agreed&quot; : '[0-9]*[\.]\(.*\)$'` &#10; if echo $rhs | grep -E '[\.&quot;]' >/dev/null; then &#10; rhs=`expr &quot;$rhs&quot; : '\([0-9]*\)[\.].*'` &#10; fi &#10; if [ $lhs -gt 4 ] || ( [ $lhs -eq 4 ] &amp;&amp; [ $rhs -ge 3 ] ); then &#10; echo $agreed &#10; else &#10; exit 1&#10; fi &#10; fi" />
+<!--
+                <cmdReturns name="&#10;agreed=$(defaults read com.apple.dt.Xcode Idexcodeversionforagreedtogmlicense) &#10; if echo $agreed | grep -E '[\.\&quot;]' >/dev/null; then &#10; lhs=`expr &quot;$agreed&quot; : '\([0-9]*\)[\.].*'` &#10;  rhs=`expr &quot;$agreed&quot; : '[0-9]*[\.]\(.*\)$'` &#10; if echo $rhs | grep -E '[\.&quot;]' >/dev/null; then &#10; rhs=`expr &quot;$rhs&quot; : '\([0-9]*\)[\.].*'` &#10; fi &#10; if [ $lhs -gt 4 ] || ( [ $lhs -eq 4 ] &amp;&amp; [ $rhs -ge 3 ] ); then &#10; echo $agreed &#10; else &#10; exit 1&#10; fi &#10; fi" />
+-->
+             <cmdReturns name="&#10; echo 5.0 &#10;" />
             </and>
         </XCODE_AGREED_VERSION>
     </locationFinder>
