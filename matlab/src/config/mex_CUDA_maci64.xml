@@ -38,7 +38,7 @@
           CXXDEBUGFLAGS="-g"
           ARCHS="x86_64"
 
-          LDXX="$XCRUN_DIR/xcrun -sdk macosx10.9 clang++"
+          LDXX="$XCRUN_DIR/xcrun -sdk macosx10.8 clang++"
           LDFLAGS="-stdlib=libstdc++ -Wl,-twolevel_namespace -undefined error -arch $ARCHS -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -Wl,-syslibroot,$ISYSROOT $LDBUNDLE $LINKEXPORT"
           LDBUNDLE="-bundle"
           LINKEXPORT="-Wl,-exported_symbols_list,&quot;$MATLABROOT/extern/lib/$ARCH/mexFunction.map&quot;"
@@ -48,7 +48,7 @@
 
           OBJEXT=".o"
           LDEXT=".mexmaci64"
-          MACOSX_DEPLOYMENT_TARGET='10.9'>
+          MACOSX_DEPLOYMENT_TARGET='10.8'>
     </vars>
     <client>
     </client>
@@ -83,7 +83,7 @@
         <ISYSROOT>
           <and>
               <cmdReturns name="xcode-select -print-path"/>
-              <cmdReturns name="find $$ -name MacOSX10.9.sdk" />
+              <cmdReturns name="find $$ -name MacOSX10.8.sdk" />
               <dirExists name="$$" />
          </and>
         </ISYSROOT>
