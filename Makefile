@@ -160,13 +160,15 @@ clean:
 
 distclean: clean
 	rm -rf matlab/mex/
+	rm -f doc/index.html doc/matconvnet-manual.pdf
+	rm -f $(NAME)-*.tar.gz
 
 pack:
 	COPYFILE_DISABLE=1 \
 	COPY_EXTENDED_ATTRIBUTES_DISABLE=1 \
 	$(GIT) archive --prefix=$(NAME)-$(VER)/ v$(VER) | gzip > $(DIST).tar.gz
 
-post:
+post: pack
 	$(RSYNC) -aP $(DIST).tar.gz $(HOST)/download/
 
 post-doc: doc
