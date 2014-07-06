@@ -1,3 +1,0 @@
-[submodule "vgg-caffe"]
-	path = vgg-caffe
-	url = git@bitbucket.org:jaderberg/vgg-caffe.git
