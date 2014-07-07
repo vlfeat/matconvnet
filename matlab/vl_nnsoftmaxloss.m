@@ -1,13 +1,18 @@
 function Y = vl_nnsoftmaxloss(X,c,dzdy)
-% VL_NNSOFTMAXLOSS  Neural-network softmax and logistic loss
-%  Y = VL_NNSOFTMAXLOSS(X, C) computes the softmax operator of the vector stack
-%  X. X has dimension D x N, packing N vectors of dimension D.
+% VL_NNSOFTMAXLOSS  CNN combined softmax and logistic loss
+%  Y = VL_NNSOFTMAXLOSS(X, C) computes the softmax operator of the
+%  vector stack X. X has dimension D x N, packing N vectors of
+%  dimension D.
 %
-%  DZDX = VL_NNSOFTMAX(X, DZDY) computes the network ouptut Z derivative
-%  with respect to the input X given the derivative DZDY. DZDX has the
-%  same dimension as X.
+%  DZDX = VL_NNSOFTMAX(X, DZDY) computes the network ouptut Z
+%  derivative with respect to the input X given the derivative DZDY
+%  relative to the output Y. DZDX has the same dimension as X.
 
-% Author: Andrea Vedaldi
+% Copyright (C) 2014 Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
 %X = X + 1e-6 ;
 sz = [size(X,1) size(X,2) size(X,3) size(X,4)] ;

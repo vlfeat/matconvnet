@@ -1,10 +1,15 @@
-//
-//  caffe-scraps.h
-//  matconv
-//
-//  Created by Andrea Vedaldi on 13/02/2014.
-//  Copyright (c) 2014 Andrea Vedaldi. All rights reserved.
-//
+/** @file    gpu.h
+ ** @brief   GPU helper functions.
+ ** @author  Andrea Vedaldi
+ **/
+
+/*
+Copyright (C) 2014 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef matconv_caffe_scraps_h
 #define matconv_caffe_scraps_h

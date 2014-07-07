@@ -1,4 +1,17 @@
 function vl_testsim(a,b,tau)
+% VL_TESSIM  Test near-equality of arrays
+%   VL_TEST(A,B,TAU) succeds if A and B have the same dimensions
+%   and if their L^infinity difference is smaller than TAU.
+%
+%   VL_TEST(A,B) selects TAU automatically by looking at the
+%   dynamic range of the data.
+
+% Copyright (C) 2014 Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
 a = gather(a) ;
 b = gather(b) ;
 assert(isequal(size(a),size(b))) ;
