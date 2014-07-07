@@ -140,7 +140,7 @@ doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 	cp -f doc/.build/matconvnet-manual.pdf doc/
 
 doc/index.html : doc/.build/index.html.raw doc/template.html
-	sed -e '/%MARKDOWN%/{r doc/.build/README.html.raw' -e 'd;}' doc/template.html  > $(@)
+	sed -e '/%MARKDOWN%/{r doc/.build/index.html.raw' -e 'd;}' doc/template.html  > $(@)
 
 doc/.build/index.html.raw : README.md
 	mkdir -p doc/.build

@@ -95,7 +95,7 @@ You can download the following models
 - [ImageNet-M](). A somewhat larger network, with better performance.
 - [ImageNet-L](). A large model.
 
-## About and acknlowledgments
+## About and acknowledgments
 
 This package was created and is currently maintained by
 [Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi). It is
