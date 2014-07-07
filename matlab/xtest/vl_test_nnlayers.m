@@ -13,7 +13,7 @@ end
 
 rng(1) ;
 
-for l=setdiff(1:9,6)
+for l=5 %setdiff(1:9,6)
   switch l
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;
@@ -164,7 +164,7 @@ for l=setdiff(1:9,6)
       end
 
     case 5
-      disp('testing vl_nnpool') ;
+      disp('testing vl_nnmaxpool') ;
       pool = [3,3] ;
       % make sure that all elements in x are different. in this way,
       % we can compute numerical derivatives reliably by adding a delta < .5.
@@ -172,10 +172,10 @@ for l=setdiff(1:9,6)
       x(:) = randperm(numel(x))' ;
       for pad=0:2
         for stride=1:4
-          y = vl_nnpool(x,pool,'verbose','stride',stride,'pad',pad) ;
+          y = vl_nnmaxpool(x,pool,'verbose','stride',stride,'pad',pad) ;
           dzdy = grandn(size(y),'single') ;
-          dzdx = vl_nnpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
-          vl_testder(@(x) vl_nnpool(x,pool,'stride',stride,'pad',pad), ...
+          dzdx = vl_nnmaxpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
+          vl_testder(@(x) vl_nnmaxpool(x,pool,'stride',stride,'pad',pad), ...
             x, dzdy, dzdx, range * 1e-2) ;
         end
       end
