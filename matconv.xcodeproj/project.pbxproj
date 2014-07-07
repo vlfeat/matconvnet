@@ -53,6 +53,7 @@
 		2D6D042B196A896300022E96 /* vl_test_simplenn_bench.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_test_simplenn_bench.m; path = matlab/xtest/vl_test_simplenn_bench.m; sourceTree = "<group>"; };
 		2D6D042C196A896300022E96 /* vl_testsim.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_testsim.m; path = matlab/xtest/vl_testsim.m; sourceTree = "<group>"; };
 		2D6D042D196A896300022E96 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
+		2D6D042E196A988C00022E96 /* nnhelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nnhelper.h; path = matlab/src/bits/nnhelper.h; sourceTree = "<group>"; };
 		2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = im2col_gpu.cu; path = matlab/src/bits/im2col_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = pooling_gpu.cu; path = matlab/src/bits/pooling_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = normalize_gpu.cu; path = matlab/src/bits/normalize_gpu.cu; sourceTree = "<group>"; };
@@ -75,7 +76,7 @@
 		2DD3FAD918EC0E9000053032 /* vl_testder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_testder.m; path = matlab/xtest/vl_testder.m; sourceTree = "<group>"; };
 		2DD3FADA18EC118700053032 /* vl_rootnn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_rootnn.m; path = matlab/vl_rootnn.m; sourceTree = "<group>"; };
 		2DD3FADB18EC118700053032 /* vl_setupnn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_setupnn.m; path = matlab/vl_setupnn.m; sourceTree = "<group>"; };
-		2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnpool.cu; path = matlab/src/vl_nnpool.cu; sourceTree = "<group>"; };
+		2DF145CF18AA61BD00D920BA /* vl_nnmaxpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnmaxpool.cu; path = matlab/src/vl_nnmaxpool.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,7 +107,7 @@
 				2D6D0420196A892E00022E96 /* config */,
 				2D375DCE18A84923008A97EE /* bits */,
 				2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */,
-				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
+				2DF145CF18AA61BD00D920BA /* vl_nnmaxpool.cu */,
 				2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */,
 			);
 			name = src;
@@ -125,6 +126,7 @@
 			children = (
 				2DADF18018ACFA6700D16D4C /* gpu.hpp */,
 				2DADAFF918E8D61D00165C90 /* mexutils.h */,
+				2D6D042E196A988C00022E96 /* nnhelper.h */,
 				2D375DCA18A848E2008A97EE /* im2col.cpp */,
 				2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */,
 				2D375DCB18A848E2008A97EE /* im2col.hpp */,
