@@ -11,18 +11,11 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "mex.h"
-#ifdef ENABLE_GPU
-#include "gpu/mxGPUArray.h"
-#endif
-#include <blas.h>
-#ifdef ENABLE_GPU
-#include <cublas_v2.h>
-#endif
 #include "bits/mexutils.h"
+#include "bits/nnhelper.h"
 #include "bits/normalize.hpp"
-#include <assert.h>
 
+#include <assert.h>
 
 /* option codes */
 enum {
@@ -36,7 +29,7 @@ vlmxOption  options [] = {
 } ;
 
 enum {
-  IN_DATA = 0, IN_PARAM, IN_DER, IN_END
+  IN_DATA = 0, IN_PARAM, IN_DEROUTPUT, IN_END
 } ;
 
 enum {
@@ -46,28 +39,22 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  mxClassID dataClassID ;
-  mxClassID derClassID ;
+  /* inputs */
+  PackedData data ;
+  PackedData derOutput ;
 
-  mxArray *resultArray ;
+  /* outputs */
+  PackedData output ;
+  PackedData derData  ;
+  PackedDataGeometry outputGeom ;
+  PackedDataGeometry derDataGeom  ;
 
-  size_t height, width, depth, numImages ;
-  size_t derHeight, derWidth, derDepth, numDerImages ;
   size_t normDepth ;
   double normAlpha ;
   double normKappa ;
   double normBeta ;
 
-  mwSize dataNumDimensions ;
-  mwSize derNumDimensions ;
-  mwSize const * dataDimensions ;
-  mwSize const * derDimensions ;
-  mwSize resultDimensions [4] ;
-
-#if ENABLE_GPU
-  mxGPUArray const *dataGpu ;
-  mxGPUArray const *derGpu ;
-  mxGPUArray *resultGpu ;
+#ifdef ENABLE_GPU
   bool gpuMode = false ;
 #else
   bool const gpuMode = false ;
@@ -78,6 +65,11 @@ void mexFunction(int nout, mxArray *out[],
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
+
+  packed_data_init_empty(&data) ;
+  packed_data_init_empty(&derOutput) ;
+  packed_data_init_empty(&output) ;
+  packed_data_init_empty(&derData) ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
@@ -94,6 +86,17 @@ void mexFunction(int nout, mxArray *out[],
     backMode = (nin >= 3) ;
   }
 
+#if ENABLE_GPU
+  gpuMode = mxIsGPUArray(in[IN_DATA]) ;
+  if (gpuMode) {
+    mxInitGPU() ;
+  }
+#else
+  if (!mxIsNumeric(in[IN_DATA])) {
+    mexErrMsgTxt("DATA must be numeric (note: GPU support not compiled).") ;
+  }
+#endif
+
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
       case opt_verbose :
@@ -103,13 +106,17 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-#if ENABLE_GPU
-  gpuMode = mxIsGPUArray(in[IN_DATA]) ;
-#else
-  if (!mxIsNumeric(in[IN_DATA])) {
-    mexErrMsgTxt("DATA must be numeric (note: GPU support not compiled).") ;
+  packed_data_init_with_array (&data, gpuMode, in[IN_DATA]) ;
+  if (backMode) {
+    packed_data_init_with_array(&derOutput, gpuMode, in[IN_DEROUTPUT]) ;
   }
-#endif
+
+  if (data.geom.classID != mxSINGLE_CLASS) {
+    mexErrMsgTxt("DATA is not of class SINGLE.");
+  }
+  if (backMode && (derOutput.geom.classID != mxSINGLE_CLASS)) {
+    mexErrMsgTxt("DEROUTPUT is not of class SINGLE.");
+  }
 
   if (!mxIsNumeric(in[IN_PARAM]) ||
        mxGetClassID(in[IN_PARAM]) != mxDOUBLE_CLASS ||
@@ -123,93 +130,36 @@ void mexFunction(int nout, mxArray *out[],
   normAlpha = mxGetPr(in[IN_PARAM])[2]  ;
   normBeta = mxGetPr(in[IN_PARAM])[3]  ;
 
-  if (gpuMode) {
-#ifdef ENABLE_GPU
-    mxInitGPU() ;
-    dataGpu = mxGPUCreateFromMxArray(in[IN_DATA]) ;
-    dataClassID = mxGPUGetClassID(dataGpu) ;
-    dataNumDimensions = mxGPUGetNumberOfDimensions(dataGpu) ;
-    dataDimensions = mxGPUGetDimensions(dataGpu) ;
-    if (backMode) {
-      if (!mxIsGPUArray(in[IN_DER])) {
-        mexErrMsgTxt("DATA is a GPU array but DER is not.") ;
-      }
-      derGpu = mxGPUCreateFromMxArray(in[IN_DER]) ;
-      derClassID = mxGPUGetClassID(derGpu) ;
-      derNumDimensions = mxGPUGetNumberOfDimensions(derGpu) ;
-      derDimensions = mxGPUGetDimensions(derGpu) ;
-    }
-#else
-    assert(false) ;
-#endif
-  } else {
-    dataClassID = mxGetClassID(in[IN_DATA]) ;
-    dataNumDimensions = mxGetNumberOfDimensions(in[IN_DATA]) ;
-    dataDimensions = mxGetDimensions(in[IN_DATA]) ;
-    if (backMode) {
-      derClassID = mxGetClassID(in[IN_DER]) ;
-      derNumDimensions = mxGetNumberOfDimensions(in[IN_DER]) ;
-      derDimensions = mxGetDimensions(in[IN_DER]) ;
-    }
-  }
+  packed_data_geom_init(&outputGeom,
+                        mxSINGLE_CLASS,
+                        data.geom.height,
+                        data.geom.width,
+                        data.geom.depth,
+                        data.geom.size) ;
 
-  if (dataClassID != mxSINGLE_CLASS) {
-    mexErrMsgTxt("DATA is not of class SINGLE.");
-  }
-  if (backMode && (derClassID != mxSINGLE_CLASS)) {
-    mexErrMsgTxt("DER is not of class SINGLE.");
-  }
-
-  height = dataDimensions[0] ;
-  width = dataDimensions[1] ;
-  switch (dataNumDimensions) {
-    case 2 : depth = 1 ; numImages = 1 ; break ;
-    case 3 : depth = dataDimensions[2] ; numImages = 1 ; break ;
-    case 4 : depth = dataDimensions[2] ; numImages = dataDimensions[3] ; break ;
-    default:  mexErrMsgTxt("DATA has neither two nor three dimensions.") ; break ;
-  }
-
-  if (backMode) {
-    derHeight = derDimensions[0] ;
-    derWidth = derDimensions[1] ;
-    switch (derNumDimensions) {
-      case 2 : derDepth = 1 ; numDerImages = 1 ; break ;
-      case 3 : derDepth = derDimensions[2] ; numDerImages = 1 ; break ;
-      case 4 : derDepth = derDimensions[2] ; numDerImages = derDimensions[3] ; break ;
-      default:  mexErrMsgTxt("DER has neither two, three, nor four dimensions.") ; break ;
-    }
-  }
-
-  resultDimensions[0] = height ;
-  resultDimensions[1] = width ;
-  resultDimensions[2] = depth ;
-  resultDimensions[3] = numImages ;
+  derDataGeom = data.geom ;
 
   if (verbosity > 0) {
-    double const MB = 1024.0*1024.0 ;
     mexPrintf("vl_nnnormalize: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnnormalize: data: %d x %d x %d x %d [%.1f MB]\n",
-              height, width, depth, numImages,
-              (double)(height*width*depth*numImages*4)/MB) ;
     mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
               normDepth, normKappa, normAlpha, normBeta) ;
-    mexPrintf("vl_nnnormalize: result: %d x %d x %d x %d [%.1f MB]\n",
-              resultDimensions[0], resultDimensions[1], resultDimensions[2], resultDimensions[3],
-              (double)(resultDimensions[0]*resultDimensions[1]*resultDimensions[2]*resultDimensions[3]*4)/MB) ;
+    packed_data_geom_display(&data.geom, "vl_nnnormalize: data") ;
+
     if (backMode) {
-      mexPrintf("vl_nnnormalize: der: %d x %d x %d x %d [%.1f MB]\n",
-                derHeight, derWidth, derDepth, numDerImages,
-                (double)(derHeight*derWidth*derDepth*numDerImages*4)/MB) ;
+      packed_data_geom_display(&derOutput.geom, "vl_nnnormalize: derOutput") ;
+      packed_data_geom_display(&derDataGeom, "vl_nnnormalize: derData") ;
+    } else {
+      packed_data_geom_display(&outputGeom, "vl_nnnormalize: output") ;
     }
   }
 
   if (backMode) {
-    if (derHeight != height ||
-        derWidth != width ||
-        derDepth != depth ||
-        numDerImages != numImages)
+    if (derOutput.geom.height != outputGeom.height ||
+        derOutput.geom.width != outputGeom.width ||
+        derOutput.geom.depth != outputGeom.depth ||
+        derOutput.geom.size != outputGeom.size)
     {
-      mexErrMsgTxt("DER dimensions are incompatible with X.") ;
+      mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;
     }
   }
 
@@ -220,49 +170,37 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
-  // im2col should be called im2row
 
-  if (gpuMode) {
-#ifdef ENABLE_GPU
-    resultGpu = mxGPUCreateGPUArray(4, resultDimensions,
-                                    mxSINGLE_CLASS,
-                                    mxREAL,
-                                    MX_GPU_INITIALIZE_VALUES) ;
-//                                    MX_GPU_DO_NOT_INITIALIZE) ;
-#else
-    assert(false) ;
-#endif
+  if (!backMode) {
+    packed_data_init_with_geom(&output, gpuMode, outputGeom, false, true, 0) ;
   } else {
-    resultArray = mxCreateNumericArray(4, resultDimensions,
-                                       mxSINGLE_CLASS,
-                                       mxREAL) ;
+    packed_data_init_with_geom(&derData, gpuMode, derDataGeom, false, true, 0) ;
   }
 
-  for (int image = 0 ; image < numImages ; ++image) {
-    ptrdiff_t dataOffset = (width*height*depth) * image ;
-    ptrdiff_t resultOffset = (resultDimensions[0]*resultDimensions[1]*resultDimensions[2]) * image ;
+  for (int image = 0 ; image < data.geom.size ; ++image) {
+    ptrdiff_t dataOffset = (data.geom.height*data.geom.width*data.geom.depth) * image ;
+    ptrdiff_t outputOffset = (output.geom.height*output.geom.width*output.geom.depth) * image ;
+    ptrdiff_t derOutputOffset = (derOutput.geom.height*derOutput.geom.width*derOutput.geom.depth) * image ;
 
     if (backMode) {
-      ptrdiff_t derOffset = (derDimensions[0]*derDimensions[1]*derDimensions[2]) * image ;
-      
       /* ---------------------------------------------------------- */
       /*                                              Backward mode */
       /* ---------------------------------------------------------- */
       if (gpuMode) {
 #ifdef ENABLE_GPU
-        normalizeBackward_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
-                                     (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
-                                     (float const*)mxGPUGetDataReadOnly(derGpu) + derOffset,
-                                     height, width, depth,
+        normalizeBackward_gpu<float>(derData.memory + dataOffset,
+                                     data.memory + dataOffset,
+                                     derOutput.memory + derOutputOffset,
+                                     data.geom.height, data.geom.width, data.geom.depth,
                                      normDepth, normKappa, normAlpha, normBeta) ;
 #else
         assert(false) ;
 #endif
       } else {
-        normalizeBackward_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
-                                     (float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                                     (float const*)mxGetData(in[IN_DER]) + derOffset,
-                                     height, width, depth,
+        normalizeBackward_cpu<float>(derData.memory + dataOffset,
+                                     data.memory + dataOffset,
+                                     derOutput.memory + derOutputOffset,
+                                     data.geom.height, data.geom.width, data.geom.depth,
                                      normDepth, normKappa, normAlpha, normBeta) ;
       }
     } else {
@@ -271,17 +209,17 @@ void mexFunction(int nout, mxArray *out[],
       /* ---------------------------------------------------------- */
       if (gpuMode) {
 #ifdef ENABLE_GPU
-        normalize_gpu<float>((float*)mxGPUGetData(resultGpu) + resultOffset,
-                             (float const*)mxGPUGetDataReadOnly(dataGpu) + dataOffset,
-                             height, width, depth,
+        normalize_gpu<float>(output.memory + outputOffset,
+                             data.memory + dataOffset,
+                             data.geom.height, data.geom.width, data.geom.depth,
                              normDepth, normKappa, normAlpha, normBeta) ;
 #else
         assert(false) ;
 #endif
       } else {
-        normalize_cpu<float>((float*)mxGetData(resultArray) + resultOffset,
-                             (float const*)mxGetData(in[IN_DATA]) + dataOffset,
-                             height, width, depth,
+        normalize_cpu<float>(output.memory + outputOffset,
+                             data.memory + dataOffset,
+                             data.geom.height, data.geom.width, data.geom.depth,
                              normDepth, normKappa, normAlpha, normBeta) ;
       }
     }
@@ -290,18 +228,12 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
-  if (gpuMode) {
-#ifdef ENABLE_GPU
-    out[OUT_RESULT] = mxGPUCreateMxArrayOnGPU(resultGpu) ;
-    mxGPUDestroyGPUArray(dataGpu) ;
-    mxGPUDestroyGPUArray(resultGpu) ;
-    if (backMode) {
-      mxGPUDestroyGPUArray(derGpu) ;
-    }
-#else
-    assert(false) ;
-#endif
+
+  packed_data_deinit(&data) ;
+  if (backMode) {
+    packed_data_deinit(&derOutput) ;
+    out[OUT_RESULT] = packed_data_deinit_extracting_array(&derData) ;
   } else {
-    out[OUT_RESULT] = resultArray ;
+    out[OUT_RESULT] = packed_data_deinit_extracting_array(&output) ;
   }
 }

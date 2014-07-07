@@ -155,7 +155,6 @@ void mexFunction(int nout, mxArray *out[],
 
   derDataGeom = data.geom ;
 
-
   if (verbosity > 0) {
     mexPrintf("vl_nnmaxpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
     mexPrintf("vl_nnmaxpool: stride: %d, pad: %d\n", stride, pad) ;
