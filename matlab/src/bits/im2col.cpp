@@ -203,15 +203,19 @@ void col2im_cpu(T* data,
     int x1 = static_min(numPatchesX, ceil_divide(width + padLeft - u, strideX)) ;
     int y1 = static_min(numPatchesY, ceil_divide(height + padTop - v, strideY)) ;
 
+    stacked += numPatchesX * y0 ;
     for (int y = y0 ; y < y1 ; ++y) {
       int y_data = y * strideY + v - padTop ;
       int x_data = x0 * strideX + u - padLeft ;
       T * b = data + (z * height + y_data) * width + x_data ;
+      stacked += x0 ;
       for (int x = x0 ; x < x1 ; ++x) {
         *b += *stacked++ ;
         b += strideX ;
       }
+      stacked += numPatchesX - x1 ;
     }
+    stacked += numPatchesX * (numPatchesY - y1) ;
   }
 }
 
