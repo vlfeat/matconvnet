@@ -516,11 +516,12 @@ void mexFunction(int nout, mxArray *out[],
               assert(false) ;
 #endif
             } else {
-              im2col_cpu<float>(data.memory + dataOffset,
-                                data.geom.depth, data.geom.width, data.geom.height,
-                                filters.geom.width, filters.geom.height,
-                                stride, pad,
-                                temp.memory) ;
+              im2col_cpu<float>(temp.memory,
+                                data.memory + dataOffset,
+                                data.geom.height, data.geom.width, data.geom.depth,
+                                filters.geom.height, filters.geom.width,
+                                stride, stride,
+                                pad, pad, pad, pad) ;
             }
           }
           for (int g = 0 ; g < numGroups ; ++ g) {
@@ -607,11 +608,12 @@ void mexFunction(int nout, mxArray *out[],
             assert(false) ;
 #endif
           } else {
-            im2col_cpu<float>(data.memory + dataOffset,
-                              data.geom.depth, data.geom.width, data.geom.height,
-                              filters.geom.width, filters.geom.height,
-                              stride, pad,
-                              temp.memory) ;
+            im2col_cpu<float>(temp.memory,
+                              data.memory + dataOffset,
+                              data.geom.height, data.geom.width, data.geom.depth,
+                              filters.geom.height, filters.geom.width,
+                              stride, stride,
+                              pad, pad, pad, pad) ;
           }
         }
         for (int g = 0 ; g < numGroups ; ++ g) {

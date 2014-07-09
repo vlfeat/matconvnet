@@ -32,28 +32,49 @@ static inline int static_min(int a, int b) {
   return (a<=b) ? a:b ;
 }
 
-
 /* ---------------------------------------------------------------- */
 /*                                                     im2col (CPU) */
 /* ---------------------------------------------------------------- */
 
-template <typename Dtype>
-void im2col_cpu(const Dtype* data_im,
-                const int channels, const int height, const int width,
-                const int kheight, const int kwidth,
-                const int stride, const int pad,
-                Dtype* data_col)
+template <typename T>
+void im2col_cpu(T* stacked,
+                T const* data,
+                size_t width,
+                size_t height,
+                size_t depth,
+                size_t windowWidth,
+                size_t windowHeight,
+                size_t strideX,
+                size_t strideY,
+                size_t padLeft,
+                size_t padRight,
+                size_t padTop,
+                size_t padBottom)
 {
-  // the input is an image array of size H,W,C
-  // this functin prepares an array for filtering with filres of size ksize^2
-  // this function creates a new array of size H/stride, W/stride C*ksize^2 (crazy large!)
-  int height_col = (height + 2 * pad - kheight) / stride + 1;
-  int width_col = (width + 2 * pad - kwidth) / stride + 1;
-  int channels_col = channels * kheight * kwidth;
-  for (int c = 0; c < channels_col; ++c) {
-    int w_offset = c % kwidth;
-    int h_offset = (c / kwidth) % kheight;
-    int c_im = c / kheight / kwidth;
+  int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
+  int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+  int numCols = numPatchesX * numPatchesY ;
+  int numRows = windowWidth * windowHeight * depth ;
+
+  /* 
+   Fill a row of the stacked image at a time. Since patches are stored
+   along the columns, scanning a row menas visiting all patche once.
+   Each row corresponds to a particular offset within each patch.
+   
+   In this manner, as we fill a row
+   we tend to access spatially adiacent elements
+   in the input image, particulary for small strides.
+   */
+  for (int row = 0; row < numRows ; ++row) {
+    /* 
+     Get the patch offset corresponding to this row of the stacked
+     image.
+     */
+    int u = row ;
+    int v = u / windowWidth ;
+    int z = v / windowHeight ;
+    u %= windowWidth ;
+    v %= windowHeight ;
 
 #if 0
     for (int y = 0; y < height_col; ++y) {
@@ -73,71 +94,110 @@ void im2col_cpu(const Dtype* data_im,
       }
     }
 #else
-    int y0 =  static_max(0, ceil_divide(pad - h_offset, stride)) ;
-    int y1 =  static_min(height_col, ceil_divide(height + pad - h_offset, stride)) ;
+    /*
+     Filling this row amounts to visiting all the pixels in the input
+     image that appear at a given offset in the outut patches. Accounting
+     for the subsampling of the output patches and input padding,
+     these pixels are given by
+     
+     x_data(x) = x * strideX + u - padLeft,  0 <= x < numPatchesX
+     y_data(y) = y * strideY + v - padTop,   0 <= y < numPatchesY
+     z_data(z) = z.
+     
+     Here (x,y) are the spatial indexes of the output patches. Depedning
+     on the padding, some of these values will read pixels outised
+     the input image, which should default to 0. In particular this happens
+     if
+     
+     x_data(x) < 0 <=> x < (padLeft - u) / stride 
+                   <=> x < ceil((padLeft - u) / stride)
+     x_data(x) >= width <=> x >= (width + padLeft - u) / stride
+                        <=> x >= ceil((width + padLeft - u) / stride)
+     
+     and the same for y.
+     */
 
+    int y0 = static_max(0, ceil_divide(padTop - v, strideY)) ;
+    int y1 = static_min(numPatchesY, ceil_divide(height + padTop - v, strideY)) ;
     for (int y = 0 ; y < y0 ; ++y) {
-      for (int x = 0 ; x < width_col ; ++x) {
-        data_col[(c * height_col + y) * width_col + x] = 0 ;
+      for (int x = 0 ; x < numPatchesX ; ++x) {
+        *stacked++ = 0 ;
       }
     }
+
     for (int y = y0 ; y < y1 ; ++y) {
-      int x0 =  static_max(0, ceil_divide(pad - w_offset, stride)) ;
-      int x1 =  static_min(width_col,  ceil_divide(width  + pad - w_offset, stride)) ;
-      const int y_im = y * stride + h_offset - pad;
-      const int x_im = x0 * stride + w_offset - pad;
-      Dtype * a = data_col + (c * height_col + y) * width_col + x0 ;
-      Dtype const * b = data_im + (c_im * height + y_im) * width + x_im ;
+      int x0 = static_max(0, ceil_divide(padLeft - u, strideX)) ;
+      int x1 = static_min(numPatchesX,  ceil_divide(width + padLeft - u, strideX)) ;
+      const int y_data = y * strideY + v - padTop ;
+      const int x_data = x0 * strideX + u - padLeft ;
+      T const * b = data + (z * height + y_data) * width + x_data ;
 
       for (int x = 0 ; x < x0 ; ++x) {
-        data_col[(c * height_col + y) * width_col + x] = 0 ;
+        *stacked++ = 0 ;
       }
       for (int x = x0 ; x < x1 ; ++x) {
-        *a = *b ;
-        a += 1 ;
-        b += stride ;
+        *stacked++ = *b ;
+        b += strideX ;
       }
-      for (int x = x1 ; x < width_col ; ++x) {
-        data_col[(c * height_col + y) * width_col + x] = 0 ;
+      for (int x = x1 ; x < numPatchesX ; ++x) {
+        *stacked++ = 0 ;
       }
     }
-    for (int y = y1 ; y < height_col ; ++y) {
-      for (int x = 0 ; x < width_col ; ++x) {
-        data_col[(c * height_col + y) * width_col + x] = 0 ;
+    for (int y = y1 ; y < numPatchesY ; ++y) {
+      for (int x = 0 ; x < numPatchesX ; ++x) {
+        *stacked++ = 0 ;
       }
     }
 #endif
   }
 }
 
-template void im2col_cpu<float>(const float* data_im, const int channels,
-                                const int height, const int width, const int kheight, const int kwidth,
-                                const int pad, const int stride,
-                                float* data_col);
+template void im2col_cpu<float>(float* stacked,
+                                float const* data,
+                                size_t width,
+                                size_t height,
+                                size_t depth,
+                                size_t windowWidth,
+                                size_t windowHeight,
+                                size_t strideX,
+                                size_t strideY,
+                                size_t padLeft,
+                                size_t padRight,
+                                size_t padTop,
+                                size_t padBottom);
 
-template void im2col_cpu<double>(const double* data_im, const int channels,
-                                 const int height, const int width, const int kheight, const int kwidth,
-                                 const int pad, const int stride,
-                                 double* data_col);
+template void im2col_cpu<double>(double* stacked,
+                                 double const* data,
+                                 size_t width,
+                                 size_t height,
+                                 size_t depth,
+                                 size_t windowWidth,
+                                 size_t windowHeight,
+                                 size_t strideX,
+                                 size_t strideY,
+                                 size_t padLeft,
+                                 size_t padRight,
+                                 size_t padTop,
+                                 size_t padBottom);
 
 #if 0
 /* ---------------------------------------------------------------- */
 /*                                                     im2row (CPU) */
 /* ---------------------------------------------------------------- */
 
-template <typename Dtype>
-void im2row_cpu(const Dtype* data_im,
+template <typename T>
+void im2row_cpu(const T* data_im,
                 const int channels, const int height, const int width,
                 const int kheight, const int kwidth, const int stride,
-                Dtype* data_col)
+                T* data_col)
 {
   int height_col = (height - kheight) / stride + 1;
   int width_col = (width - kwidth) / stride + 1;
   int channels_col = channels * kheight * kwidth;
   for (int y = 0; y < height_col; ++y)
     for (int x = 0; x < width_col; ++x)
-      Dtype * patch_out = &data_col[(h * width_col + w) * channels_col] ;
-      Dtype const * patch_in = &data_im[h * width + w] ;
+      T * patch_out = &data_col[(h * width_col + w) * channels_col] ;
+      T const * patch_in = &data_im[h * width + w] ;
       for (int c = 0; c < channels ; ++c) {
         for (int hh = 0 ; hh < kheight ; ++hh) {
           for(int ww = 0 ; ww < kwidth ; ++ww) {
@@ -164,12 +224,12 @@ template void im2row_cpu<double>(const double* data_im, const int channels,
 /*                                                     col2im (CPU) */
 /* ---------------------------------------------------------------- */
 
-template <typename Dtype>
-void col2im_cpu(const Dtype* data_col, const int channels,
+template <typename T>
+void col2im_cpu(const T* data_col, const int channels,
                 const int height, const int width, const int kheight, const int kwidth,
                 const int stride, const int pad,
-                Dtype* data_im) {
-  memset(data_im, 0, sizeof(Dtype) * width * height * channels);
+                T* data_im) {
+  memset(data_im, 0, sizeof(T) * width * height * channels);
   int height_col = (height + 2 * pad - kheight) / stride + 1;
   int width_col = (width + 2 * pad - kwidth) / stride + 1;
   int channels_col = channels * kheight * kwidth;
