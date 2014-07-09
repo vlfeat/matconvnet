@@ -1,7 +1,7 @@
-function cnn_mnist
+function cnn_cifar
 
-opts.dataDir = 'data/mnist' ;
-opts.expDir = 'data/mnist-exp-1' ;
+opts.dataDir = 'data/cifar' ;
+opts.expDir = 'data/cifar-exp-1' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.batchSize = 100 ;
 opts.numEpochs = 100 ;
@@ -9,7 +9,7 @@ opts.continue = true ;
 opts.useGpu = false ;
 opts.learningRate = 0.001 ;
 opts.learningRate = 0.0001 ;
-opts.debug_weights = false;
+opts.debug_weights = true;
 
 run matlab/vl_setupnn ;
 
@@ -17,46 +17,71 @@ run matlab/vl_setupnn ;
 %                                                         Prepare data
 % --------------------------------------------------------------------
 
-if exist(opts.imdbPath)
-  imdb = load(opts.imdbPath) ;
-else
-  imdb = getMnistImdb(opts) ;
-  mkdir(opts.expDir) ;
-  save(opts.imdbPath, '-struct', 'imdb') ;
-end
+imdb = getCifarImdb(opts) ;
 
-% Define network
-f=1/100 ;
+% Define network, cifar10 quick
 net.layers = {} ;
+% 1 conv1
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', f*randn(5,5,1,20, 'single'), ...
-                           'biases', zeros(1, 20, 'single'), ...
+                           'filters', 1e-4*randn(5,5,3,32, 'single'), ...
+                           'biases', zeros(1, 32, 'single'), ...
+                           'lr', [1 2], ...
                            'stride', 1, ...
-                           'pad', 0) ;
+                           'pad', 2) ;
+% 2 pool1 (max pool)
 net.layers{end+1} = struct('type', 'maxpool', ...
-                           'pool', [2 2], ...
+                           'pool', [3 3], ...
                            'stride', 2, ...
-                           'pad', 0) ;
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', f*randn(5,5,20,50, 'single'),...
-                           'biases', zeros(1,50,'single'), ...
-                           'stride', 1, ...
-                           'pad', 0) ;
-net.layers{end+1} = struct('type', 'maxpool', ...
-                           'pool', [2 2], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', f*randn(4,4,50,500, 'single'),...
-                           'biases', zeros(1,500,'single'), ...
-                           'stride', 1, ...
-                           'pad', 0) ;
+                           'pad', [0 0 1 1]) ; % Emulate caffe
+% 3 relu1
 net.layers{end+1} = struct('type', 'relu') ;
+% 4 conv2
 net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', f*randn(1,1,500,10, 'single'),...
-                           'biases', zeros(1,10,'single'), ...
+                           'filters', 0.01*randn(5,5,32,32, 'single'),...
+                           'biases', zeros(1,32,'single'), ...
+                           'lr', [1 2], ...
+                           'stride', 1, ...
+                           'pad', 2) ;
+% 5 relu2
+net.layers{end+1} = struct('type', 'relu') ;
+% 6 pool2 (avg pool)
+net.layers{end+1} = struct('type', 'conv', ... 
+                           'filters', ones(3,3,1,32, 'single'),... 
+                           'biases', zeros(1,32,'single'), ...
+                           'lr', [0 0], ...
+                           'stride', 2, ...
+                           'pad', [0 0 1 1]) ; % Emulate caffe
+% 7 conv3
+net.layers{end+1} = struct('type', 'conv', ...
+                           'filters', 0.01*randn(5,5,32,64, 'single'),...
+                           'biases', zeros(1,64,'single'), ...
+                           'lr', [1 2], ...
+                           'stride', 1, ...
+                           'pad', 2) ;
+% 8 relu3
+net.layers{end+1} = struct('type', 'relu') ;
+% 9 pool3 (avg pool)
+net.layers{end+1} = struct('type', 'conv', ... 
+                           'filters', ones(3,3,1,64, 'single'),... 
+                           'biases', zeros(1,64,'single'), ...
+                           'lr', [0 0], ...
+                           'stride', 2, ...
+                           'pad', [0 0 1 1]) ;
+% 10 ip1
+net.layers{end+1} = struct('type', 'conv', ...
+                           'filters', 0.1*randn(3,3,64,64, 'single'),...
+                           'biases', zeros(1,64,'single'), ...
+                           'lr', [1 2], ...
                            'stride', 1, ...
                            'pad', 0) ;
+% 11 ip2
+net.layers{end+1} = struct('type', 'conv', ...
+                           'filters', 0.1*randn(1,1,64,10, 'single'),...
+                           'biases', zeros(1,10,'single'), ...
+                           'lr', [1 2], ...
+                           'stride', 1, ...
+                           'pad', 0) ;
+% 12 loss
 net.layers{end+1} = struct('type', 'softmaxloss') ;
 
 for i=1:numel(net.layers)
@@ -88,7 +113,6 @@ info.val.objective = [] ;
 info.val.error = [] ;
 info.val.topFiveError = [] ;
 
-imdb.images.data = bsxfun(@minus, imdb.images.data, mean(imdb.images.data,4)) ;
 if opts.useGpu
   imdb.images.data = gpuArray(imdb.images.data) ;
 end
@@ -119,7 +143,7 @@ for epoch=1:opts.numEpochs
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
       fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
     im = imdb.images.data(:,:,:,batch) ;
-    labels = imdb.images.labels(1,batch) ;
+    labels = single(imdb.images.labels(1,batch)) ;
 
     % backprop
     net.layers{end}.class = labels ;
@@ -139,11 +163,11 @@ for epoch=1:opts.numEpochs
 
       ly.filtersMomentum = 0.9 * ly.filtersMomentum ...
         - 0.0005 * opts.learningRate * ly.filters ...
-        - opts.learningRate/numel(batch) * res(l).dzdw{1} ;
+        - opts.learningRate*ly.lr(1)/numel(batch) * res(l).dzdw{1} ;
 
       ly.biasesMomentum = 0.9 * ly.biasesMomentum ...
         - 0.0005 * opts.learningRate * ly.biases ...
-        - opts.learningRate/numel(batch) * res(l).dzdw{2} ;
+        - opts.learningRate*ly.lr(2)/numel(batch) * res(l).dzdw{2} ;
 
       ly.filters = ly.filters + ly.filtersMomentum ;
       ly.biases = ly.biases + ly.biasesMomentum ;
@@ -227,45 +251,41 @@ end
 
 
 % --------------------------------------------------------------------
-function imdb = getMnistImdb(opts)
+function imdb = getCifarImdb(opts)
 % --------------------------------------------------------------------
 
-files = {'train-images-idx3-ubyte', ...
-         'train-labels-idx1-ubyte', ...
-         't10k-images-idx3-ubyte', ...
-         't10k-labels-idx1-ubyte'} ;
+unpackPath = fullfile(opts.dataDir, 'cifar-10-batches-mat');
+files = [arrayfun(@(n) sprintf('data_batch_%d.mat', n), 1:5, 'UniformOutput', false) ...
+  {'test_batch.mat'}];
+files = cellfun(@(fn) fullfile(unpackPath, fn), files, 'UniformOutput', false);
+file_set = uint8([ones(1, 5), 3]);
 
 mkdir(opts.dataDir) ;
-for i=1:4
-  if ~exist(fullfile(opts.dataDir, files{i}), 'file')
-    url = sprintf('http://yann.lecun.com/exdb/mnist/%s.gz',files{i}) ;
-    fprintf('downloading %s\n', url) ;
-    gunzip(url, opts.dataDir) ;
-  end
+if any(cellfun(@(fn) ~exist(fn, 'file'), files))
+  url = 'http://www.cs.toronto.edu/~kriz/cifar-10-matlab.tar.gz' ;
+  fprintf('downloading %s\n', url) ;
+  untar(url, opts.dataDir) ;
 end
 
-f=fopen(fullfile(opts.dataDir, 'train-images-idx3-ubyte'),'r') ;
-x1=fread(f,inf,'uint8');
-fclose(f) ;
-x1=permute(reshape(x1(17:end),28,28,60e3),[2 1 3]) ;
+data = cell(1, numel(files));
+labels = cell(1, numel(files));
+sets = cell(1, numel(files));
+for fi = 1:numel(files)
+  fd = load(files{fi}) ;
+  data{fi} = permute(reshape(fd.data',32,32,3,[]),[2 1 3 4]) ;
+  labels{fi} = fd.labels' + 1; % Index from 1
+  sets{fi} = repmat(file_set(fi), size(labels{fi}));
+end
 
-f=fopen(fullfile(opts.dataDir, 't10k-images-idx3-ubyte'),'r') ;
-x2=fread(f,inf,'uint8');
-fclose(f) ;
-x2=permute(reshape(x2(17:end),28,28,10e3),[2 1 3]) ;
+data = single(cat(4, data{:}));
+dataMean = mean(data, 4);
+data = bsxfun(@minus, data, dataMean);
 
-f=fopen(fullfile(opts.dataDir, 'train-labels-idx1-ubyte'),'r') ;
-y1=fread(f,inf,'uint8');
-fclose(f) ;
-y1=double(y1(9:end)')+1 ;
+clNames = load(fullfile(unpackPath, 'batches.meta.mat'));
 
-f=fopen(fullfile(opts.dataDir, 't10k-labels-idx1-ubyte'),'r') ;
-y2=fread(f,inf,'uint8');
-fclose(f) ;
-y2=double(y2(9:end)')+1 ;
-
-imdb.images.data = single(reshape(cat(3, x1, x2),28,28,1,[])) ;
-imdb.images.labels = cat(2, y1, y2) ;
-imdb.images.set = [ones(1,numel(y1)) 3*ones(1,numel(y2))] ;
+imdb.images.data = data ;
+imdb.images.data_mean = dataMean;
+imdb.images.labels = cat(2, labels{:}) ;
+imdb.images.set = cat(2, sets{:});
 imdb.meta.sets = {'train', 'val', 'test'} ;
-imdb.meta.classes = arrayfun(@(x)sprintf('%d',x),0:9,'uniformoutput',false) ;
+imdb.meta.classes = clNames.label_names;
