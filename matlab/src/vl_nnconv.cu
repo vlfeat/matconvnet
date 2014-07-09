@@ -163,8 +163,12 @@ void mexFunction(int nout, mxArray *out[],
   PackedDataGeometry tempGeom ;
   PackedDataGeometry allOnesGeom ;
 
-  int stride = 1 ;
-  int pad = 0 ;
+  int strideX = 1 ;
+  int strideY = 1 ;
+  int padLeft = 0 ;
+  int padRight = 0 ;
+  int padTop = 0 ;
+  int padBottom = 0 ;
   int numGroups = 1 ;
 
 #if ENABLE_GPU
@@ -241,30 +245,58 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_stride :
-        if (!vlmxIsPlainScalar(optarg) || (stride = (int) *mxGetPr(optarg)) < 1) {
-          mexErrMsgTxt("STRIDE must be a positive integer.") ;
+        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
+          mexErrMsgTxt("STRIDE is not a plain matrix.") ;
+        }
+        switch (mxGetNumberOfElements(optarg)) {
+          case 1:
+            strideY = (int)mxGetPr(optarg)[0] ;
+            strideX = strideY ;
+            break ;
+          case 2:
+            strideY = (int)mxGetPr(optarg)[0] ;
+            strideX = (int)mxGetPr(optarg)[1] ;
+            break ;
+          default:
+            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
         }
         break ;
 
       case opt_pad :
-        if (!vlmxIsPlainScalar(optarg) || (pad = (int) *mxGetPr(optarg)) < 0) {
-          mexErrMsgTxt("PAD must be a non-negative integer.") ;
+        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
+          mexErrMsgTxt("PAD is not a plain matrix.") ;
+        }
+        switch (mxGetNumberOfElements(optarg)) {
+          case 1:
+            padLeft = (int)mxGetPr(optarg)[0] ;
+            padRight = padLeft ;
+            padTop = padLeft ;
+            padBottom = padLeft ;
+            break ;
+          case 4:
+            padTop = (int)mxGetPr(optarg)[0] ;
+            padBottom = (int)mxGetPr(optarg)[1] ;
+            padLeft = (int)mxGetPr(optarg)[2] ;
+            padRight = (int)mxGetPr(optarg)[3] ;
+            break ;
+          default:
+            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
         }
         break ;
 
-    case opt_no_der_data :
-      computeDerData = VL_FALSE ;
-      break ;
+      case opt_no_der_data :
+        computeDerData = VL_FALSE ;
+        break ;
 
-    case opt_no_der_filters :
-      computeDerFilters = VL_FALSE ;
-      break ;
+      case opt_no_der_filters :
+        computeDerFilters = VL_FALSE ;
+        break ;
 
-    case opt_no_der_biases :
-      computeDerBiases = VL_FALSE ;
-      break ;
-
-    default: break ;
+      case opt_no_der_biases :
+        computeDerBiases = VL_FALSE ;
+        break ;
+        
+      default: break ;
     }
   }
 
@@ -286,10 +318,14 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("DEROUTPUT is not of class SINGLE.");
   }
 
+  if (strideX < 1 || strideY < 1) {
+    mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
+  }
+
   packed_data_geom_init(&outputGeom,
                         mxSINGLE_CLASS,
-                        (data.geom.height + 2*pad - filters.geom.height)/stride + 1,
-                        (data.geom.width + 2*pad - filters.geom.width)/stride + 1,
+                        (data.geom.height + (padTop+padBottom) - filters.geom.height)/strideY + 1,
+                        (data.geom.width + (padLeft+padRight) - filters.geom.width)/strideX + 1,
                         filters.geom.size,
                         data.geom.size) ;
 
@@ -330,7 +366,10 @@ void mexFunction(int nout, mxArray *out[],
 
   if (verbosity > 0) {
     mexPrintf("vl_nnconv: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnconv: stride: %d, pad: %d, numGroups: %d, bias: %d, fully connected: %d\n", stride, pad, numGroups, biasMode, fullyConnectedMode) ;
+    mexPrintf("vl_nnconv: stride: [%d %d], pad: [%d %d %d %d], numGroups: %d, bias: %d, fully connected: %d\n",
+              strideY, strideX,
+              padTop, padBottom, padLeft, padRight,
+              numGroups, biasMode, fullyConnectedMode) ;
     packed_data_geom_display(&data.geom, "vl_nnconv: data") ;
     packed_data_geom_display(&filters.geom, "vl_nnconv: filters") ;
     if (biasMode) { packed_data_geom_display(&biases.geom, "vl_nnconv: biases") ; }
@@ -366,7 +405,15 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("The number of filter groups does not divide the total number of filters.") ;
   }
 
-  if (data.geom.height + 2*pad < filters.geom.height || data.geom.width + 2*pad < filters.geom.width) {
+  if (padLeft < 0 ||
+      padRight < 0 ||
+      padTop < 0 ||
+      padBottom < 0) {
+    mexErrMsgTxt("An element of PAD is negative.") ;
+  }
+
+  if (data.geom.height + (padTop+padBottom) < filters.geom.height ||
+      data.geom.width + (padLeft+padRight) < filters.geom.width) {
     mexErrMsgTxt("FILTERS are larger than the DATA (including padding).") ;
   }
 
@@ -520,8 +567,8 @@ void mexFunction(int nout, mxArray *out[],
                                 data.memory + dataOffset,
                                 data.geom.height, data.geom.width, data.geom.depth,
                                 filters.geom.height, filters.geom.width,
-                                stride, stride,
-                                pad, pad, pad, pad) ;
+                                strideY, strideX,
+                                padTop, padBottom, padLeft, padRight) ;
             }
           }
           for (int g = 0 ; g < numGroups ; ++ g) {
@@ -578,8 +625,8 @@ void mexFunction(int nout, mxArray *out[],
                                 temp.memory,
                                 data.geom.height, data.geom.width, data.geom.depth,
                                 filters.geom.height, filters.geom.width,
-                                stride, stride,
-                                pad, pad, pad, pad) ;
+                                strideY, strideX,
+                                padTop, padBottom, padLeft, padRight) ;
 #else
               assert(false) ;
 #endif
@@ -588,8 +635,8 @@ void mexFunction(int nout, mxArray *out[],
                                 temp.memory,
                                 data.geom.height, data.geom.width, data.geom.depth,
                                 filters.geom.height, filters.geom.width,
-                                stride, stride,
-                                pad, pad, pad, pad) ;
+                                strideY, strideX,
+                                padTop, padBottom, padLeft, padRight) ;
             }
           }
 #endif
@@ -614,8 +661,8 @@ void mexFunction(int nout, mxArray *out[],
                               data.memory + dataOffset,
                               data.geom.height, data.geom.width, data.geom.depth,
                               filters.geom.height, filters.geom.width,
-                              stride, stride,
-                              pad, pad, pad, pad) ;
+                              strideY, strideX,
+                              padTop, padBottom, padLeft, padRight) ;
           }
         }
         for (int g = 0 ; g < numGroups ; ++ g) {
