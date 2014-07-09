@@ -9,6 +9,7 @@ opts.continue = true ;
 opts.useGpu = false ;
 opts.learningRate = 0.001 ;
 opts.learningRate = 0.0001 ;
+opts.debug_weights = false;
 
 run matlab/vl_setupnn ;
 
@@ -98,8 +99,8 @@ for epoch=1:opts.numEpochs
   % fast-forward to where we stopped
   modelPath = fullfile(opts.expDir, 'net-epoch-%d.mat') ;
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
-  if opts.continue & exist(sprintf(modelPath, epoch),'file'), continue ; end
-  if opts.continue & epoch > 1 & exist(sprintf(modelPath, epoch-1), 'file')
+  if opts.continue && exist(sprintf(modelPath, epoch),'file'), continue ; end
+  if opts.continue && epoch > 1 && exist(sprintf(modelPath, epoch-1), 'file')
     fprintf('resuming from loading epoch %d\n', epoch-1) ;
     load(sprintf(modelPath, epoch-1), 'net', 'info') ;
   end
@@ -149,7 +150,7 @@ for epoch=1:opts.numEpochs
       net.layers{l} = ly ;
     end
 
-    if mod(t-1,10*opts.batchSize)==0
+    if opts.debug_weights && mod(t-1,10*opts.batchSize)==0
       figure(100) ; clf ;
       n=numel(net.layers)+1 ;
       for l=1:n
@@ -236,7 +237,7 @@ files = {'train-images-idx3-ubyte', ...
 
 mkdir(opts.dataDir) ;
 for i=1:4
-  if ~exist(fullfile(opts.dataDir, files{i}))
+  if ~exist(fullfile(opts.dataDir, files{i}), 'file')
     url = sprintf('http://yann.lecun.com/exdb/mnist/%s.gz',files{i}) ;
     fprintf('downloading %s\n', url) ;
     gunzip(url, opts.dataDir) ;
