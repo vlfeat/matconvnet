@@ -148,7 +148,7 @@ void mexFunction(int nout, mxArray *out[],
             padRight = (int)mxGetPr(optarg)[3] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("PAD has neither one nor four elements.") ;
         }
 
       default: break ;
