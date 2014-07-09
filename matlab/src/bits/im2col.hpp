@@ -31,27 +31,52 @@ void im2col_cpu(T* stacked,
                 size_t padTop,
                 size_t padBottom) ;
 
-template <typename Dtype>
-void col2im_cpu(const Dtype* data_col, const int channels,
-                const int height, const int width, const int kheight, const int kwidth,
-                const int pad, const int stride,
-                Dtype* data_im) ;
+template <typename T>
+void col2im_cpu(T* data,
+                T const* stacked,
+                size_t width,
+                size_t height,
+                size_t depth,
+                size_t windowWidth,
+                size_t windowHeight,
+                size_t strideX,
+                size_t strideY,
+                size_t padLeft,
+                size_t padRight,
+                size_t padTop,
+                size_t padBottom) ;
 
 
 #ifdef ENABLE_GPU
-template <typename Dtype>
-void im2col_gpu(const Dtype* data_im, const int channels,
-                const int height, const int width,
-                const int kheight, const int kwidth,
-                const int pad, const int stride,
-                Dtype* data_col) ;
+template <typename T>
+void im2col_gpu(T* stacked,
+                T const* data,
+                size_t width,
+                size_t height,
+                size_t depth,
+                size_t windowWidth,
+                size_t windowHeight,
+                size_t strideX,
+                size_t strideY,
+                size_t padLeft,
+                size_t padRight,
+                size_t padTop,
+                size_t padBottom) ;
 
 template <typename Dtype>
-void col2im_gpu(const Dtype* data_col, const int channels,
-                const int height, const int width,
-                const int kheight, const int kwidth,
-                const int pad, const int stride,
-                Dtype* data_im) ;
+void col2im_gpu(T* data,
+                T const* stacked,
+                size_t width,
+                size_t height,
+                size_t depth,
+                size_t windowWidth,
+                size_t windowHeight,
+                size_t strideX,
+                size_t strideY,
+                size_t padLeft,
+                size_t padRight,
+                size_t padTop,
+                size_t padBottom) ;
 #endif
 
 #endif /* defined(__matconv__im2col__) */

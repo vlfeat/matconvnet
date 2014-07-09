@@ -574,20 +574,22 @@ void mexFunction(int nout, mxArray *out[],
           if (!fullyConnectedMode) {
             if (gpuMode) {
 #ifdef ENABLE_GPU
-              col2im_gpu<float>(temp.memory,
-                                data.geom.depth, data.geom.width, data.geom.height,
-                                filters.geom.width, filters.geom.height,
-                                stride, pad,
-                                derData.memory + derDataOffset) ;
+              col2im_gpu<float>(derData.memory + derDataOffset,
+                                temp.memory,
+                                data.geom.height, data.geom.width, data.geom.depth,
+                                filters.geom.height, filters.geom.width,
+                                stride, stride,
+                                pad, pad, pad, pad) ;
 #else
               assert(false) ;
 #endif
             } else {
-              col2im_cpu<float>(temp.memory,
-                                data.geom.depth, data.geom.width, data.geom.height,
-                                filters.geom.width, filters.geom.height,
-                                stride, pad,
-                                derData.memory + derDataOffset) ;
+              col2im_cpu<float>(derData.memory + derDataOffset,
+                                temp.memory,
+                                data.geom.height, data.geom.width, data.geom.depth,
+                                filters.geom.height, filters.geom.width,
+                                stride, stride,
+                                pad, pad, pad, pad) ;
             }
           }
 #endif
