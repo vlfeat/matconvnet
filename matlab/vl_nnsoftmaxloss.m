@@ -4,7 +4,7 @@ function Y = vl_nnsoftmaxloss(X,c,dzdy)
 %  vector stack X. X has dimension D x N, packing N vectors of
 %  dimension D.
 %
-%  DZDX = VL_NNSOFTMAX(X, DZDY) computes the network ouptut Z
+%  DZDX = VL_NNSOFTMAX(X, C, DZDY) computes the network ouptut Z
 %  derivative with respect to the input X given the derivative DZDY
 %  relative to the output Y. DZDX has the same dimension as X.
 
