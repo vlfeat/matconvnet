@@ -268,7 +268,14 @@ void mexFunction(int nout, mxArray *out[],
                                       data.memory + dataOffset,
                                       derOutput.memory + derOutputOffset,
                                       data.geom.height, data.geom.width, data.geom.depth,
-                                      poolWidth, strideX, padLeft) ;
+                                      poolHeight,
+                                      poolWidth,
+                                      strideY,
+                                      strideX,
+                                      padTop,
+                                      padBottom,
+                                      padLeft,
+                                      padRight) ;
 #else
         assert(false) ;
 #endif
@@ -295,7 +302,14 @@ void mexFunction(int nout, mxArray *out[],
         maxPooling_gpu<float>(output.memory + outputOffset,
                               data.memory + dataOffset,
                               data.geom.height, data.geom.width, data.geom.depth,
-                              poolWidth, strideX, padLeft) ;
+                              poolHeight,
+                              poolWidth,
+                              strideY,
+                              strideX,
+                              padTop,
+                              padBottom,
+                              padLeft,
+                              padRight) ;
 #else
         assert(false) ;
 #endif
