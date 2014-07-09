@@ -22,9 +22,14 @@ void maxPooling_cpu(T* pooled,
                     size_t width,
                     size_t height,
                     size_t depth,
-                    size_t poolSize,
-                    size_t stride,
-                    size_t pad) ;
+                    size_t windowWidth,
+                    size_t windowHeight,
+                    size_t strideX,
+                    size_t strideY,
+                    size_t padLeft,
+                    size_t padRight,
+                    size_t padTop,
+                    size_t padBottom) ;
 
 template<typename T>
 void maxPoolingBackward_cpu(T* dzdx,
@@ -33,9 +38,14 @@ void maxPoolingBackward_cpu(T* dzdx,
                             size_t width,
                             size_t height,
                             size_t depth,
-                            size_t poolSize,
-                            size_t stride,
-                            size_t pad) ;
+                            size_t windowWidth,
+                            size_t windowHeight,
+                            size_t strideX,
+                            size_t strideY,
+                            size_t padLeft,
+                            size_t padRight,
+                            size_t padTop,
+                            size_t padBottom) ;
 
 #ifdef ENABLE_GPU
 template<typename T>
