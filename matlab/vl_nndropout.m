@@ -34,9 +34,9 @@ if backMode && isempty(mask)
 end
 if isempty(mask)
   if isa(x,'gpuArray')
-    mask = single(rand(size(x)) >= opts.rate) ;
-  else
     mask = single(gpuArray.rand(size(x)) >= opts.rate) ;
+  else
+    mask = single(rand(size(x)) >= opts.rate) ;
   end
 end
 
