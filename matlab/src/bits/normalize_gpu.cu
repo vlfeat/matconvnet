@@ -70,7 +70,7 @@ void normalize_gpu(T* normalized,
 {
   int count = width*height ;
   normalize_gpu_kernel<T>
-  <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>
+  <<< divideUpwards(count, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
   (count, normalized, data, width, height, depth, normDepth, kappa, alpha, beta) ;
 }
 
@@ -157,7 +157,7 @@ void normalizeBackward_gpu(T* normalized,
 {
   int count = width*height ;
   normalizeBackward_gpu_kernel<T>
-  <<<CAFFE_GET_BLOCKS(count), CAFFE_CUDA_NUM_THREADS>>>
+  <<< divideUpwards(count, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
   (count, normalized, data, dzdy, width, height, depth, normDepth, kappa, alpha, beta) ;
 }
 

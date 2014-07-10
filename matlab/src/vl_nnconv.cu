@@ -554,11 +554,12 @@ void mexFunction(int nout, mxArray *out[],
           if (!fullyConnectedMode) {
             if (gpuMode) {
 #ifdef ENABLE_GPU
-              im2col_gpu<float>(data.memory + dataOffset,
-                                data.geom.depth, data.geom.width, data.geom.height,
-                                filters.geom.width, filters.geom.height,
-                                stride, pad,
-                                temp.memory) ;
+              im2col_gpu<float>(temp.memory,
+                                data.memory + dataOffset,
+                                data.geom.height, data.geom.width, data.geom.depth,
+                                filters.geom.height, filters.geom.width,
+                                strideY, strideX,
+                                padTop, padBottom, padLeft, padRight) ;
 #else
               assert(false) ;
 #endif
@@ -648,11 +649,12 @@ void mexFunction(int nout, mxArray *out[],
         if (computeOutput) {
           if (gpuMode) {
 #ifdef ENABLE_GPU
-            im2col_gpu<float>(data.memory + dataOffset,
-                              data.geom.depth, data.geom.width, data.geom.height,
-                              filters.geom.width, filters.geom.height,
-                              stride, pad,
-                              temp.memory) ;
+            im2col_gpu<float>(temp.memory,
+                              data.memory + dataOffset,
+                              data.geom.height, data.geom.width, data.geom.depth,
+                              filters.geom.height, filters.geom.width,
+                              strideY, strideX,
+                              padTop, padBottom, padLeft, padRight) ;
 #else
             assert(false) ;
 #endif

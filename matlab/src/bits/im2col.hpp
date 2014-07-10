@@ -63,7 +63,7 @@ void im2col_gpu(T* stacked,
                 size_t padTop,
                 size_t padBottom) ;
 
-template <typename Dtype>
+template <typename T>
 void col2im_gpu(T* data,
                 T const* stacked,
                 size_t width,

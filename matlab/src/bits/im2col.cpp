@@ -53,7 +53,6 @@ void im2col_cpu(T* stacked,
 {
   int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
-  int numCols = numPatchesX * numPatchesY ;
   int numRows = windowWidth * windowHeight * depth ;
 
   /* 
@@ -182,7 +181,6 @@ void col2im_cpu(T* data,
 {
   int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
-  int numCols = numPatchesX * numPatchesY ;
   int numRows = windowWidth * windowHeight * depth ;
 
   memset(data, 0, sizeof(T) * width * height * depth) ;
