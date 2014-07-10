@@ -19,6 +19,7 @@ the terms of the BSD license (see the COPYING file).
 #include<string.h>
 #include<stdio.h>
 #include<stdarg.h>
+#include<assert.h>
 
 typedef mwSize vl_size ;
 typedef int unsigned  vl_uint  ;
@@ -590,6 +591,117 @@ vlmxNextOption (mxArray const *args[], int nargs,
   return opt ;
 }
 
+
+/* -------------------------------------------------------------------
+ *                                                       VlEnumeration
+ * ---------------------------------------------------------------- */
+
+/** @name String enumerations
+ ** @{ */
+
+/** @brief Member of an enumeration */
+typedef struct _VlEnumerator
+{
+  char const *name ; /**< enumeration member name. */
+  vl_index value ;   /**< enumeration member value. */
+} VlEnumerator ;
+
+/** @brief Get a member of an enumeration by name
+ ** @param enumeration array of ::VlEnumerator objects.
+ ** @param name the name of the desired member.
+ ** @return enumerator matching @a name.
+ **
+ ** If @a name is not found in the enumeration, then the value
+ ** @c NULL is returned.
+ **
+ ** @sa vl-stringop-enumeration
+ **/
+
+static VlEnumerator*
+vl_enumeration_get (VlEnumerator const *enumeration, char const *name)
+{
+  assert(enumeration) ;
+  while (enumeration->name) {
+    if (strcmp(name, enumeration->name) == 0) return (VlEnumerator*)enumeration ;
+    enumeration ++ ;
+  }
+  return NULL ;
+}
+
+/** @brief Get a member of an enumeration by name (case insensitive)
+ ** @param enumeration array of ::VlEnumerator objects.
+ ** @param name the name of the desired member.
+ ** @return enumerator matching @a name.
+ **
+ ** If @a name is not found in the enumeration, then the value
+ ** @c NULL is returned. @a string is matched case insensitive.
+ **
+ **  @sa vl-stringop-enumeration
+ **/
+
+static VlEnumerator*
+vl_enumeration_get_casei (VlEnumerator const *enumeration, char const *name)
+{
+  assert(enumeration) ;
+  while (enumeration->name) {
+    if (vlmxCompareStringsI(name, enumeration->name) == 0) return (VlEnumerator*)enumeration ;
+    enumeration ++ ;
+  }
+  return NULL ;
+}
+
+/** @brief Get a member of an enumeration by value
+ ** @param enumeration array of ::VlEnumerator objects.
+ ** @param value value of the desired member.
+ ** @return enumerator matching @a value.
+ **
+ ** If @a value is not found in the enumeration, then the value
+ ** @c NULL is returned.
+ **
+ ** @sa vl-stringop-enumeration
+ **/
+
+static VlEnumerator *
+vl_enumeration_get_by_value (VlEnumerator const *enumeration, vl_index value)
+{
+  assert(enumeration) ;
+  while (enumeration->name) {
+    if (enumeration->value == value) return (VlEnumerator*)enumeration ;
+    enumeration ++ ;
+  }
+  return NULL ;
+}
+
+/** @brief Get an emumeration member by name
+ ** @param enumeration the enumeration to decode.
+ ** @param name_array member name as a MATLAB string array.
+ ** @param caseInsensitive if @c true match the string case-insensitive.
+ ** @return the corresponding enumeration member, or @c NULL if any.
+ **/
+
+static VlEnumerator *
+vlmxDecodeEnumeration (mxArray const *name_array,
+                       VlEnumerator const *enumeration,
+                       vl_bool caseInsensitive)
+{
+  char name [1024] ;
+
+  /* check the array is a string */
+  if (! vlmxIsString (name_array, -1)) {
+    vlmxError (vlmxErrInvalidArgument, "The array is not a string.") ;
+  }
+
+  /* retrieve option name */
+  if (mxGetString (name_array, name, sizeof(name))) {
+    vlmxError (vlmxErrInvalidArgument, "The string array is too long.") ;
+  }
+
+  if (caseInsensitive) {
+    return vl_enumeration_get_casei(enumeration, name) ;
+  } else {
+    return vl_enumeration_get(enumeration, name) ;
+  }
+}
 
 /* MEXUTILS_H */
 #endif

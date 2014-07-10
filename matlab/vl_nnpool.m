@@ -1,14 +1,14 @@
-% VL_NNMAXPOOL  CNN Max poolinng
-%    Y = VL_NNMAXPOOL(X, POOL) applies the max-pooling operator to all
+% VL_NNPOOL  CNN poolinng
+%    Y = VL_NNPOOL(X, POOL) applies the pooling operator to all
 %    channels of the data X using a square filter of size POOL. X is a
 %    SINGLE array of dimension H x W x D x N where (H,W) are the
 %    height and width of the map stack, D is the image depth (number
 %    of feature channels) and N the number of of images in the stack.
 %
-%    Y = VL_NNMAXPOOL(X, [POOLY, POOLX]) uses a rectangular filter of
+%    Y = VL_NNPOOL(X, [POOLY, POOLX]) uses a rectangular filter of
 %    height POOLY and width POOLX.
 %
-%    DZDX = VL_NNMAXPOOL(X, POOL, DZDY) computes the derivatives of
+%    DZDX = VL_NNPOOL(X, POOL, DZDY) computes the derivatives of
 %    the nework output Z w.r.t. the data X given the derivative DZDY
 %    w.r.t the max-pooling output Y.
 %
@@ -25,6 +25,11 @@
 %      computed. It can also be a vector [TOP BOTTOM LEFT RIGHT] to
 %      specify a different amount of padding in each direction. The
 %      size of the poolin filter has to exceed the padding.
+%
+%    Method:: ['max']
+%      Specify method of pooling. It can be either 'max' (retain max value
+%      over the pooling region per channel) or 'avg' (compute the average
+%      value over the poolling region per channel).
 %
 %    The pooling window must be not larger than the padded image, i.e.
 %

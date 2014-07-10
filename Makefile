@@ -74,11 +74,11 @@ cpp_src+=matlab/src/bits/normalize.cpp
 
 ifeq ($(ENABLE_GPU),)
 mex_src:=matlab/src/vl_nnconv.cpp
-mex_src+=matlab/src/vl_nnmaxpool.cpp
+mex_src+=matlab/src/vl_nnpool.cpp
 mex_src+=matlab/src/vl_nnnormalize.cpp
 else
 mex_src:=matlab/src/vl_nnconv.cu
-mex_src+=matlab/src/vl_nnmaxpool.cu
+mex_src+=matlab/src/vl_nnpool.cu
 mex_src+=matlab/src/vl_nnnormalize.cu
 cpp_src+=matlab/src/bits/im2col_gpu.cu
 cpp_src+=matlab/src/bits/pooling_gpu.cu

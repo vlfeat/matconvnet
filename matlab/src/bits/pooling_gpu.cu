@@ -12,6 +12,7 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "gpu.hpp"
+#include "pooling.hpp"
 
 #include <float.h>
 #include <sm_20_atomic_functions.h>
@@ -192,6 +193,7 @@ template<typename T>
 void maxPoolingBackward_gpu(T* dzdx,
                             T const* data,
                             T const* dzdy,
+                            PoolMethod method,
                             size_t width,
                             size_t height,
                             size_t depth,

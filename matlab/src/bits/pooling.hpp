@@ -16,68 +16,76 @@ the terms of the BSD license (see the COPYING file).
 
 #include <cstddef>
 
-template<typename T>
-void maxPooling_cpu(T* pooled,
-                    T const* data,
-                    size_t width,
-                    size_t height,
-                    size_t depth,
-                    size_t windowWidth,
-                    size_t windowHeight,
-                    size_t strideX,
-                    size_t strideY,
-                    size_t padLeft,
-                    size_t padRight,
-                    size_t padTop,
-                    size_t padBottom) ;
+enum PoolMethod {
+  NN_POOL_MAX = 0, NN_POOL_AVG, NN_POOL_METHODS_NUM
+} ;
 
 template<typename T>
-void maxPoolingBackward_cpu(T* dzdx,
-                            T const* data,
-                            T const* dzdy,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t windowWidth,
-                            size_t windowHeight,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom) ;
+void pooling_cpu(T* pooled,
+                 T const* data,
+                 PoolMethod method,
+                 size_t width,
+                 size_t height,
+                 size_t depth,
+                 size_t windowWidth,
+                 size_t windowHeight,
+                 size_t strideX,
+                 size_t strideY,
+                 size_t padLeft,
+                 size_t padRight,
+                 size_t padTop,
+                 size_t padBottom) ;
+
+template<typename T>
+void poolingBackward_cpu(T* dzdx,
+                         T const* data,
+                         T const* dzdy,
+                         PoolMethod method,
+                         size_t width,
+                         size_t height,
+                         size_t depth,
+                         size_t windowWidth,
+                         size_t windowHeight,
+                         size_t strideX,
+                         size_t strideY,
+                         size_t padLeft,
+                         size_t padRight,
+                         size_t padTop,
+                         size_t padBottom) ;
 
 #ifdef ENABLE_GPU
 template<typename T>
-void maxPooling_gpu(T* pooled,
-                    T const* data,
-                    size_t width,
-                    size_t height,
-                    size_t depth,
-                    size_t windowWidth,
-                    size_t windowHeight,
-                    size_t strideX,
-                    size_t strideY,
-                    size_t padLeft,
-                    size_t padRight,
-                    size_t padTop,
-                    size_t padBottom) ;
+void pooling_gpu(T* pooled,
+                 T const* data,
+                 PoolMethod method,
+                 size_t width,
+                 size_t height,
+                 size_t depth,
+                 size_t windowWidth,
+                 size_t windowHeight,
+                 size_t strideX,
+                 size_t strideY,
+                 size_t padLeft,
+                 size_t padRight,
+                 size_t padTop,
+                 size_t padBottom) ;
 
 template<typename T>
-void maxPoolingBackward_gpu(T* dzdx,
-                            T const* data,
-                            T const* dzdy,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t windowWidth,
-                            size_t windowHeight,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom) ;
+void poolingBackward_gpu(T* dzdx,
+                         T const* data,
+                         T const* dzdy,
+                         PoolMethod method,
+                         size_t width,
+                         size_t height,
+                         size_t depth,
+                         size_t windowWidth,
+                         size_t windowHeight,
+                         size_t strideX,
+                         size_t strideY,
+                         size_t padLeft,
+                         size_t padRight,
+                         size_t padTop,
+                         size_t padBottom) ;
 #endif
 
 #endif /* defined(__matconv__pooling__) */

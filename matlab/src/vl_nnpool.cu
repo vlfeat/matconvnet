@@ -1,5 +1,5 @@
-/** @file vl_nnmaxpool.cu
- ** @brief Max-pooling block
+/** @file vl_nnpool.cu
+ ** @brief Pooling block
  ** @author Andrea Vedaldi
  **/
 
@@ -21,6 +21,7 @@ the terms of the BSD license (see the COPYING file).
 enum {
   opt_stride = 0,
   opt_pad,
+  opt_method,
   opt_verbose
 } ;
 
@@ -28,8 +29,15 @@ enum {
 vlmxOption  options [] = {
   {"Stride",           1,   opt_stride            },
   {"Pad",              1,   opt_pad               },
+  {"Method",           1,   opt_method            },
   {"Verbose",          0,   opt_verbose           },
   {0,                  0,   0                     }
+} ;
+
+VlEnumerator nnPoolMethodTypes [NN_POOL_METHODS_NUM] =
+{
+  {"Max",     (vl_index)NN_POOL_MAX     },
+  {"Avg",     (vl_index)NN_POOL_AVG     }
 } ;
 
 enum {
@@ -61,6 +69,7 @@ void mexFunction(int nout, mxArray *out[],
   int padRight = 0 ;
   int padTop = 0 ;
   int padBottom = 0 ;
+  PoolMethod method = NN_POOL_MAX;
 
 #ifdef ENABLE_GPU
   bool gpuMode = false ;
@@ -73,6 +82,7 @@ void mexFunction(int nout, mxArray *out[],
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
+  VlEnumerator *pair ;
 
   packed_data_init_empty(&data) ;
   packed_data_init_empty(&derOutput) ;
@@ -150,7 +160,15 @@ void mexFunction(int nout, mxArray *out[],
           default:
             mexErrMsgTxt("PAD has neither one nor four elements.") ;
         }
+        break;
 
+      case opt_method :
+        pair = vlmxDecodeEnumeration(optarg, nnPoolMethodTypes, VL_TRUE) ;
+        if (pair == NULL) {
+          vlmxError(vlmxErrInvalidArgument, "METHOD is not a supported method.") ;
+        }
+        method = (PoolMethod)pair->value ;
+        break;
       default: break ;
     }
   }
@@ -193,17 +211,19 @@ void mexFunction(int nout, mxArray *out[],
   derDataGeom = data.geom ;
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnmaxpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnmaxpool: stride: [%d %d], pad: [%d %d %d %d]\n",
+    mexPrintf("vl_nnpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnpool: stride: [%d %d], pad: [%d %d %d %d]\n",
               strideY, strideX,
               padTop, padBottom, padLeft, padRight) ;
-    packed_data_geom_display(&data.geom, "vl_nnmaxpool: data") ;
-    mexPrintf("vl_nnmaxpool: pooling: %d x %d\n", poolHeight, poolWidth);
+    packed_data_geom_display(&data.geom, "vl_nnpool: data") ;
+    mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
+    mexPrintf("vl_nnpool: method: %s\n",
+              vl_enumeration_get_by_value(nnPoolMethodTypes, method)->name);
     if (backMode) {
-      packed_data_geom_display(&derOutput.geom, "vl_nnmaxpool: derOutput") ;
-      packed_data_geom_display(&derDataGeom, "vl_nnmaxpool: derData") ;
+      packed_data_geom_display(&derOutput.geom, "vl_nnpool: derOutput") ;
+      packed_data_geom_display(&derDataGeom, "vl_nnpool: derData") ;
     } else {
-      packed_data_geom_display(&outputGeom, "vl_nnmaxpool: output") ;
+      packed_data_geom_display(&outputGeom, "vl_nnpool: output") ;
     }
   }
 
@@ -264,34 +284,36 @@ void mexFunction(int nout, mxArray *out[],
       /* ---------------------------------------------------------- */
       if (gpuMode) {
 #ifdef ENABLE_GPU
-        maxPoolingBackward_gpu<float>(derData.memory + dataOffset,
-                                      data.memory + dataOffset,
-                                      derOutput.memory + derOutputOffset,
-                                      data.geom.height, data.geom.width, data.geom.depth,
-                                      poolHeight,
-                                      poolWidth,
-                                      strideY,
-                                      strideX,
-                                      padTop,
-                                      padBottom,
-                                      padLeft,
-                                      padRight) ;
+        poolingBackward_gpu<float>(derData.memory + dataOffset,
+                                   data.memory + dataOffset,
+                                   derOutput.memory + derOutputOffset,
+                                   method,
+                                   data.geom.height, data.geom.width, data.geom.depth,
+                                   poolHeight,
+                                   poolWidth,
+                                   strideY,
+                                   strideX,
+                                   padTop,
+                                   padBottom,
+                                   padLeft,
+                                   padRight) ;
 #else
         assert(false) ;
 #endif
       } else {
-        maxPoolingBackward_cpu<float>(derData.memory + dataOffset,
-                                      data.memory + dataOffset,
-                                      derOutput.memory + derOutputOffset,
-                                      data.geom.height, data.geom.width, data.geom.depth,                             
-                                      poolHeight,
-                                      poolWidth,
-                                      strideY,
-                                      strideX,
-                                      padTop,
-                                      padBottom,
-                                      padLeft,
-                                      padRight) ;
+        poolingBackward_cpu<float>(derData.memory + dataOffset,
+                                   data.memory + dataOffset,
+                                   derOutput.memory + derOutputOffset,
+                                   method,
+                                   data.geom.height, data.geom.width, data.geom.depth,
+                                   poolHeight,
+                                   poolWidth,
+                                   strideY,
+                                   strideX,
+                                   padTop,
+                                   padBottom,
+                                   padLeft,
+                                   padRight) ;
       }
     } else {
       /* ---------------------------------------------------------- */
@@ -299,8 +321,9 @@ void mexFunction(int nout, mxArray *out[],
       /* ---------------------------------------------------------- */
       if (gpuMode) {
 #ifdef ENABLE_GPU
-        maxPooling_gpu<float>(output.memory + outputOffset,
+        pooling_gpu<float>(output.memory + outputOffset,
                               data.memory + dataOffset,
+                              method,
                               data.geom.height, data.geom.width, data.geom.depth,
                               poolHeight,
                               poolWidth,
@@ -314,17 +337,18 @@ void mexFunction(int nout, mxArray *out[],
         assert(false) ;
 #endif
       } else {
-        maxPooling_cpu<float>(output.memory + outputOffset,
-                              data.memory + dataOffset,
-                              data.geom.height, data.geom.width, data.geom.depth,
-                              poolHeight,
-                              poolWidth,
-                              strideY,
-                              strideX,
-                              padTop,
-                              padBottom,
-                              padLeft,
-                              padRight) ;
+        pooling_cpu<float>(output.memory + outputOffset,
+                           data.memory + dataOffset,
+                           method,
+                           data.geom.height, data.geom.width, data.geom.depth,
+                           poolHeight,
+                           poolWidth,
+                           strideY,
+                           strideX,
+                           padTop,
+                           padBottom,
+                           padLeft,
+                           padRight) ;
       }
     }
   }
