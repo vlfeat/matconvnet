@@ -143,7 +143,7 @@ for epoch=1:opts.numEpochs
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
       fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
     im = imdb.images.data(:,:,:,batch) ;
-    labels = single(imdb.images.labels(1,batch)) ;
+    labels = imdb.images.labels(1,batch) ;
 
     % backprop
     net.layers{end}.class = labels ;
@@ -285,7 +285,7 @@ clNames = load(fullfile(unpackPath, 'batches.meta.mat'));
 
 imdb.images.data = data ;
 imdb.images.data_mean = dataMean;
-imdb.images.labels = cat(2, labels{:}) ;
+imdb.images.labels = single(cat(2, labels{:})) ;
 imdb.images.set = cat(2, sets{:});
 imdb.meta.sets = {'train', 'val', 'test'} ;
 imdb.meta.classes = clNames.label_names;
