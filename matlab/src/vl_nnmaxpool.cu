@@ -53,10 +53,14 @@ void mexFunction(int nout, mxArray *out[],
   PackedDataGeometry outputGeom ;
   PackedDataGeometry derDataGeom  ;
 
-  int stride = 1 ;
-  int pad = 0 ;
   int poolWidth ;
   int poolHeight ;
+  int strideX = 1 ;
+  int strideY = 1 ;
+  int padLeft = 0 ;
+  int padRight = 0 ;
+  int padTop = 0 ;
+  int padBottom = 0 ;
 
 #ifdef ENABLE_GPU
   bool gpuMode = false ;
@@ -109,16 +113,43 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_stride :
-        if (!vlmxIsPlainScalar(optarg) || (stride = (int) *mxGetPr(optarg)) < 1) {
-          mexErrMsgTxt("STRIDE must be a positive integer.") ;
+        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
+          mexErrMsgTxt("STRIDE is not a plain matrix.") ;
+        }
+        switch (mxGetNumberOfElements(optarg)) {
+          case 1:
+            strideY = (int)mxGetPr(optarg)[0] ;
+            strideX = strideY ;
+            break ;
+          case 2:
+            strideY = (int)mxGetPr(optarg)[0] ;
+            strideX = (int)mxGetPr(optarg)[1] ;
+            break ;
+          default:
+            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
         }
         break ;
 
       case opt_pad :
-        if (!vlmxIsPlainScalar(optarg) || (pad = (int) *mxGetPr(optarg)) < 0) {
-          mexErrMsgTxt("PAD must be a non-negative integer.") ;
+        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
+          mexErrMsgTxt("PAD is not a plain matrix.") ;
         }
-        break ;
+        switch (mxGetNumberOfElements(optarg)) {
+          case 1:
+            padLeft = (int)mxGetPr(optarg)[0] ;
+            padRight = padLeft ;
+            padTop = padLeft ;
+            padBottom = padLeft ;
+            break ;
+          case 4:
+            padTop = (int)mxGetPr(optarg)[0] ;
+            padBottom = (int)mxGetPr(optarg)[1] ;
+            padLeft = (int)mxGetPr(optarg)[2] ;
+            padRight = (int)mxGetPr(optarg)[3] ;
+            break ;
+          default:
+            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+        }
 
       default: break ;
     }
@@ -136,20 +167,30 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("DEROUTPUT is not of class SINGLE.");
   }
 
-  if (!mxIsNumeric(in[IN_SIZE]) ||
-      mxGetClassID(in[IN_SIZE]) != mxDOUBLE_CLASS ||
-      mxIsComplex(in[IN_SIZE]) ||
-      mxGetNumberOfElements(in[IN_SIZE]) != 2)
-  {
-    mexErrMsgTxt("SIZE is not a plain 2 vector.") ;
+  if (!vlmxIsPlainMatrix(in[IN_SIZE],-1,-1)) {
+    mexErrMsgTxt("SIZE is not a plain matrix.") ;
   }
-  poolHeight = mxGetPr(in[IN_SIZE])[0] ;
-  poolWidth = mxGetPr(in[IN_SIZE])[1] ;
+  switch (mxGetNumberOfElements(in[IN_SIZE])) {
+    case 1:
+      poolHeight = mxGetPr(in[IN_SIZE])[0] ;
+      poolWidth = poolHeight ;
+      break ;
+    case 2:
+      poolHeight = mxGetPr(in[IN_SIZE])[0] ;
+      poolWidth = mxGetPr(in[IN_SIZE])[1] ;
+      break ;
+    default:
+      mexErrMsgTxt("SIZE has neither one nor two elements.") ;
+  }
+
+  if (strideX < 1 || strideY < 1) {
+    mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
+  }
 
   packed_data_geom_init(&outputGeom,
                         mxSINGLE_CLASS,
-                        (data.geom.height + 2*pad - poolHeight)/stride + 1,
-                        (data.geom.width + 2*pad - poolWidth)/stride + 1,
+                        (data.geom.height + (padTop+padBottom) - poolHeight)/strideY + 1,
+                        (data.geom.width + (padLeft+padRight) - poolWidth)/strideX + 1,
                         data.geom.depth,
                         data.geom.size) ;
 
@@ -157,7 +198,9 @@ void mexFunction(int nout, mxArray *out[],
 
   if (verbosity > 0) {
     mexPrintf("vl_nnmaxpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnmaxpool: stride: %d, pad: %d\n", stride, pad) ;
+    mexPrintf("vl_nnmaxpool: stride: [%d %d], pad: [%d %d %d %d]\n",
+              strideY, strideX,
+              padTop, padBottom, padLeft, padRight) ;
     packed_data_geom_display(&data.geom, "vl_nnmaxpool: data") ;
     mexPrintf("vl_nnmaxpool: pooling: %d x %d\n", poolHeight, poolWidth);
     if (backMode) {
@@ -178,10 +221,6 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  if (poolHeight != poolWidth) {
-    mexErrMsgTxt("Non-square pooling not supported yet.");
-  }
-
   if (data.geom.height < poolHeight || data.geom.width < poolWidth) {
     mexErrMsgTxt("Pooling SIZE is larger than the DATA.") ;
   }
@@ -190,8 +229,22 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("A dimension of the pooling SIZE is void.") ;
   }
 
-  if (pad >= poolWidth) {
-    mexErrMsgTxt("PAD is larger or equal than the pooling size") ;
+  if (strideX == 0 || strideY == 0) {
+    mexErrMsgTxt("An element of STRIDE is zero.") ;
+  }
+
+  if (padLeft < 0 ||
+      padRight < 0 ||
+      padTop < 0 ||
+      padBottom < 0) {
+    mexErrMsgTxt("An element of PAD is negative.") ;
+  }
+
+  if (padLeft >= poolWidth ||
+      padRight >= poolWidth ||
+      padTop >= poolHeight  ||
+      padBottom >= poolHeight) {
+    mexErrMsgTxt("A padding value is larger or equal than the size of the pooling window.") ;
   }
 
   /* -------------------------------------------------------------- */
@@ -219,7 +272,14 @@ void mexFunction(int nout, mxArray *out[],
                                       data.memory + dataOffset,
                                       derOutput.memory + derOutputOffset,
                                       data.geom.height, data.geom.width, data.geom.depth,
-                                      poolWidth, stride, pad) ;
+                                      poolHeight,
+                                      poolWidth,
+                                      strideY,
+                                      strideX,
+                                      padTop,
+                                      padBottom,
+                                      padLeft,
+                                      padRight) ;
 #else
         assert(false) ;
 #endif
@@ -227,8 +287,15 @@ void mexFunction(int nout, mxArray *out[],
         maxPoolingBackward_cpu<float>(derData.memory + dataOffset,
                                       data.memory + dataOffset,
                                       derOutput.memory + derOutputOffset,
-                                      data.geom.height, data.geom.width, data.geom.depth,
-                                      poolWidth, stride, pad) ;
+                                      data.geom.height, data.geom.width, data.geom.depth,                             
+                                      poolHeight,
+                                      poolWidth,
+                                      strideY,
+                                      strideX,
+                                      padTop,
+                                      padBottom,
+                                      padLeft,
+                                      padRight) ;
       }
     } else {
       /* ---------------------------------------------------------- */
@@ -239,7 +306,14 @@ void mexFunction(int nout, mxArray *out[],
         maxPooling_gpu<float>(output.memory + outputOffset,
                               data.memory + dataOffset,
                               data.geom.height, data.geom.width, data.geom.depth,
-                              poolWidth, stride, pad) ;
+                              poolHeight,
+                              poolWidth,
+                              strideY,
+                              strideX,
+                              padTop,
+                              padBottom,
+                              padLeft,
+                              padRight) ;
 #else
         assert(false) ;
 #endif
@@ -247,7 +321,14 @@ void mexFunction(int nout, mxArray *out[],
         maxPooling_cpu<float>(output.memory + outputOffset,
                               data.memory + dataOffset,
                               data.geom.height, data.geom.width, data.geom.depth,
-                              poolWidth, stride, pad) ;
+                              poolHeight,
+                              poolWidth,
+                              strideY,
+                              strideX,
+                              padTop,
+                              padBottom,
+                              padLeft,
+                              padRight) ;
       }
     }
   }

@@ -11,8 +11,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __matconv__pooling__
-#define __matconv__pooling__
+#ifndef VL_NNPOOLING_H
+#define VL_NNPOOLING_H
 
 #include <cstddef>
 
@@ -22,9 +22,14 @@ void maxPooling_cpu(T* pooled,
                     size_t width,
                     size_t height,
                     size_t depth,
-                    size_t poolSize,
-                    size_t stride,
-                    size_t pad) ;
+                    size_t windowWidth,
+                    size_t windowHeight,
+                    size_t strideX,
+                    size_t strideY,
+                    size_t padLeft,
+                    size_t padRight,
+                    size_t padTop,
+                    size_t padBottom) ;
 
 template<typename T>
 void maxPoolingBackward_cpu(T* dzdx,
@@ -33,9 +38,14 @@ void maxPoolingBackward_cpu(T* dzdx,
                             size_t width,
                             size_t height,
                             size_t depth,
-                            size_t poolSize,
-                            size_t stride,
-                            size_t pad) ;
+                            size_t windowWidth,
+                            size_t windowHeight,
+                            size_t strideX,
+                            size_t strideY,
+                            size_t padLeft,
+                            size_t padRight,
+                            size_t padTop,
+                            size_t padBottom) ;
 
 #ifdef ENABLE_GPU
 template<typename T>
@@ -44,9 +54,14 @@ void maxPooling_gpu(T* pooled,
                     size_t width,
                     size_t height,
                     size_t depth,
-                    size_t poolSize,
-                    size_t stride,
-                    size_t pad) ;
+                    size_t windowWidth,
+                    size_t windowHeight,
+                    size_t strideX,
+                    size_t strideY,
+                    size_t padLeft,
+                    size_t padRight,
+                    size_t padTop,
+                    size_t padBottom) ;
 
 template<typename T>
 void maxPoolingBackward_gpu(T* dzdx,
@@ -55,9 +70,14 @@ void maxPoolingBackward_gpu(T* dzdx,
                             size_t width,
                             size_t height,
                             size_t depth,
-                            size_t poolSize,
-                            size_t stride,
-                            size_t pad) ;
+                            size_t windowWidth,
+                            size_t windowHeight,
+                            size_t strideX,
+                            size_t strideY,
+                            size_t padLeft,
+                            size_t padRight,
+                            size_t padTop,
+                            size_t padBottom) ;
 #endif
 
-#endif /* defined(__matconv__pooling__) */
+#endif /* defined(VL_NNPOOLING_H) */

@@ -13,7 +13,7 @@ end
 
 rng(1) ;
 
-for l=5 %setdiff(1:9,6)
+for l=4 %setdiff(1:9,6)
   switch l
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;
@@ -103,29 +103,51 @@ for l=5 %setdiff(1:9,6)
         end
       end
 
+
       disp('testing vl_nnconv stride correctness') ;
       x = grandn(9,9,1,1,'single') ;
       w = grandn(3,3,1,1,'single') ;
       y = vl_nnconv(x,w,[],'verbose') ;
-      y_ = vl_nnconv(x,w,[],'verbose','stride',2) ;
-      vl_testsim(y(1:2:end,1:2:end,:,:),y_) ;
 
-      dzdy = grandn(size(y),'single') ;
-      dzdy(2:2:end,:,:,:) = 0 ;
-      dzdy(:,2:2:end,:,:) = 0 ;
-      [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
-      [dzdx_,dzdw_] = vl_nnconv(x,w,[],dzdy(1:2:end,1:2:end,:,:),'verbose','stride',2) ;
-      assert(all(all(gather(abs(dzdx-dzdx_)) < 1e-3))) ;
+      for strideX=1:3
+        for strideY=1:3
+          stride = [strideY strideX] ;
+          y_ = vl_nnconv(x,w,[],'verbose','stride',stride) ;
+          vl_testsim(y(1:strideY:end,1:strideX:end,:,:),y_) ;
+
+          dzdy = grandn(size(y),'single') ;
+          dzdy(setdiff(1:end, 1:strideY:end),:,:,:) = 0 ;
+          dzdy(:,setdiff(1:end, 1:strideX:end),:,:) = 0 ;
+          [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
+          [dzdx_,dzdw_] = vl_nnconv(x,w,[],dzdy(1:strideY:end,1:strideX:end,:,:),'verbose','stride',stride) ;
+          assert(all(all(gather(abs(dzdx-dzdx_)) < 1e-3))) ;
+        end
+      end
 
       disp('testing vl_nnconv pad correctness') ;
-      y_ = vl_nnconv(x,w,[],'verbose','pad',1) ;
-      vl_testsim(y_(2:end-1,2:end-1,:,:),y) ;
-
+      x = grandn(9,9,1,1,'single') ;
+      w = grandn(3,3,1,1,'single') ;
+      y = vl_nnconv(x,w,[],'verbose') ;
       dzdy = grandn(size(y),'single') ;
       [dzdx,dzdw] = vl_nnconv(x,w,[],dzdy,'verbose') ;
-      [dzdx_,dzdw_] = vl_nnconv(x,w,[],padarray(dzdy,[1 1],0,'both'),'verbose','pad',1) ;
-      vl_testsim(dzdx,dzdx_) ;
-      vl_testsim(dzdw,dzdw_) ;
+
+      for padX1=0:2
+        for padX2=0:2
+          for padY1=0:2
+            for padY2=0:2
+              pad = [padY1 padY2 padX1 padX2] ;
+              y_ = vl_nnconv(x,w,[],'verbose','pad',pad) ;
+              vl_testsim(y_(padY1+1:end-padY2,padX1+1:end-padX2,:,:),y) ;
+              dzdy_ = padarray(padarray(dzdy,[padY1 padX1],0,'pre'),...
+                               [padY2 padX2], 'post') ;
+
+              [dzdx_,dzdw_] = vl_nnconv(x,w,[],dzdy_,'verbose','pad',pad) ;
+              vl_testsim(dzdx,dzdx_) ;
+              vl_testsim(dzdw,dzdw_) ;
+            end
+          end
+        end
+      end
 
       disp('testing vl_nnconv pad and stride combo') ;
       x = grandn(16,15,4,2,'single') ;
@@ -165,20 +187,74 @@ for l=5 %setdiff(1:9,6)
 
     case 5
       disp('testing vl_nnmaxpool') ;
-      pool = [3,3] ;
       % make sure that all elements in x are different. in this way,
       % we can compute numerical derivatives reliably by adding a delta < .5.
       x = grandn(15,14,3,2,'single') ;
       x(:) = randperm(numel(x))' ;
-      for pad=0:2
-        for stride=1:4
+      for pool=1:3
+        for pad=0:min(3,pool-1)
+          for stride=1:4
+            y = vl_nnmaxpool(x,pool,'verbose','stride',stride,'pad',pad) ;
+            dzdy = grandn(size(y),'single') ;
+            dzdx = vl_nnmaxpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
+            vl_testder(@(x) vl_nnmaxpool(x,pool,'stride',stride,'pad',pad), ...
+                       x, dzdy, dzdx, range * 1e-2) ;
+          end
+        end
+      end
+
+      stride = 1 ;
+      pad = 0 ;
+      for poolx=1:3
+        for pooly=1:2
+          pool = [pooly poolx] ;
           y = vl_nnmaxpool(x,pool,'verbose','stride',stride,'pad',pad) ;
           dzdy = grandn(size(y),'single') ;
           dzdx = vl_nnmaxpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
           vl_testder(@(x) vl_nnmaxpool(x,pool,'stride',stride,'pad',pad), ...
-            x, dzdy, dzdx, range * 1e-2) ;
+                     x, dzdy, dzdx, range * 1e-2) ;
         end
       end
+
+      pool = [3 2] ;
+      for stridex=1:3
+        for stridey=1:2
+          stride = [stridey stridex] ;
+          y = vl_nnmaxpool(x,pool,'verbose','stride',stride,'pad',pad) ;
+          dzdy = grandn(size(y),'single') ;
+          dzdx = vl_nnmaxpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
+          vl_testder(@(x) vl_nnmaxpool(x,pool,'stride',stride,'pad',pad), ...
+                     x, dzdy, dzdx, range * 1e-2) ;
+        end
+      end
+
+      pool = [3 4] ;
+      stride = [2 1] ;
+      for padLeft=0:2
+        for padRight=0:2
+          pad = [0 0 padLeft padRight] ;
+          y = vl_nnmaxpool(x,pool,'verbose','stride',stride,'pad',pad) ;
+          dzdy = grandn(size(y),'single') ;
+          dzdx = vl_nnmaxpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
+          vl_testder(@(x) vl_nnmaxpool(x,pool,'stride',stride,'pad',pad), ...
+                     x, dzdy, dzdx, range * 1e-2) ;
+        end
+      end
+
+      pool = [3 4] ;
+      stride = [2 1] ;
+      for padTop=0:2
+        for padBottom=0:2
+          pad = [padTop padBottom 2 1] ;
+          y = vl_nnmaxpool(x,pool,'verbose','stride',stride,'pad',pad) ;
+          dzdy = grandn(size(y),'single') ;
+          dzdx = vl_nnmaxpool(x,pool,dzdy,'verbose','stride',stride,'pad',pad) ;
+          vl_testder(@(x) vl_nnmaxpool(x,pool,'stride',stride,'pad',pad), ...
+                     x, dzdy, dzdx, range * 1e-2) ;
+        end
+      end
+
+
 
     case 6
       disp('testing vl_nnnormalize') ;

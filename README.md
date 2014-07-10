@@ -95,11 +95,11 @@ You can download the following models
 - [ImageNet-M](). A somewhat larger network, with better performance.
 - [ImageNet-L](). A large model.
 
-## About and acknowledgments
+## Copyright and acknowledgments
 
 This package was created and is currently maintained by
 [Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi). It is
-distributed under the permissive BSD license.
+distributed under the permissive BSD license (see the file `COPYING`).
 
     Copyright (c) 2014 Andrea Vedaldi.
     All rights reserved.
