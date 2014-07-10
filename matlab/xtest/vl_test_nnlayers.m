@@ -138,7 +138,7 @@ for l=4 %setdiff(1:9,6)
               pad = [padY1 padY2 padX1 padX2] ;
               y_ = vl_nnconv(x,w,[],'verbose','pad',pad) ;
               vl_testsim(y_(padY1+1:end-padY2,padX1+1:end-padX2,:,:),y) ;
-              dzdy_ = padarray(padarray(dzdy,[padY1 padX1],0,'pre'),...
+              dzdy_ = padarray(padarray(dzdy,[padY1 padX1],'pre'),...
                                [padY2 padX2], 'post') ;
 
               [dzdx_,dzdw_] = vl_nnconv(x,w,[],dzdy_,'verbose','pad',pad) ;

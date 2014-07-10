@@ -14,7 +14,7 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __matconv__im2col__
 #define __matconv__im2col__
 
-#include <ctype.h>
+#include <stddef.h>
 
 template <typename T>
 void im2col_cpu(T* stacked,

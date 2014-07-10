@@ -63,15 +63,15 @@ im2col_gpu_kernel(T* stacked,
     /*
      copy the patch slice
      */
-    for (int v = 0; v < windowHeight ; ++v) {
-      for (int u = 0; u < windowWidth ; ++u) {
-        if (y + v >= 0 &&
-            y + v < height &&
-            x + u >= 0 &&
-            x + u < width) {
-          *stacked = data[v * width + u];
+    for (int v = 0 ; v < windowHeight ; ++v) {
+      for (int u = 0 ; u < windowWidth ; ++u) {
+        if (y_data + v >= 0 &&
+            y_data + v < height &&
+            x_data + u >= 0 &&
+            x_data + u < width) {
+          *stacked = data[v * width + u] ;
         } else {
-          *stacked = 0;
+          *stacked = 0 ;
         }
         stacked += (numPatchesX*numPatchesY) ;
       }
@@ -255,7 +255,7 @@ __global__ void col2im_gpu_kernel(T* data,
 
     int deltax = (1 - strideX * numPatchesY * numPatchesX) ;
     int deltay = (1 - strideY * numPatchesY * windowWidth) * numPatchesX ;
-    stacked += ((z * height + y_data + padTop) * windowWidth + (x_data + padLeft)) * (numPatchesX*numPatchesY) ;
+    stacked += ((z * windowHeight + y_data + padTop) * windowWidth + (x_data + padLeft)) * (numPatchesX*numPatchesY) ;
 
     for (int y = y1 ; y <= y2 ; ++ y) {
       for (int x = x1 ; x <= x2 ; ++ x) {
