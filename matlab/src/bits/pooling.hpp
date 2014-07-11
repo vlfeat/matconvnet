@@ -11,8 +11,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __matconv__pooling__
-#define __matconv__pooling__
+#ifndef VL_NNPOOLING_H
+#define VL_NNPOOLING_H
 
 #include <cstddef>
 
@@ -88,4 +88,4 @@ void poolingBackward_gpu(T* dzdx,
                          size_t padBottom) ;
 #endif
 
-#endif /* defined(__matconv__pooling__) */
+#endif /* defined(VL_NNPOOLING_H) */

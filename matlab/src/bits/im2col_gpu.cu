@@ -18,63 +18,100 @@ the terms of the BSD license (see the COPYING file).
 /*                                                     im2col (GPU) */
 /* ---------------------------------------------------------------- */
 
-template <typename Dtype>
+template <typename T>
 __global__ void
-im2col_gpu_kernel(const int n, const Dtype* data_im,
-                  const int height, const int width,
-                  const int kheight, const int kwidth,
-                  const int stride, const int pad,
-                  const int height_col, const int width_col, Dtype* data_col)
+im2col_gpu_kernel(T* stacked,
+                  T const* data,
+                  const int numPatchesX,
+                  const int numPatchesY,
+                  const int numPatchSlices,
+                  const int width,
+                  const int height,
+                  const int windowWidth,
+                  const int windowHeight,
+                  const int strideX,
+                  const int strideY,
+                  const int padLeft,
+                  const int padTop)
 {
   /* each kernel copies the pixels in an image patch for one channel */
   int index = threadIdx.x + blockIdx.x * blockDim.x ;
-  if (index < n) {
-    int x_out = index % width_col;
-    index /= width_col;
-    int y_out = index % height_col;
-    int channel_in = index / height_col;
-    int channel_out = channel_in * kheight * kwidth ;
-    int y_in = y_out * stride - pad;
-    int x_in = x_out * stride - pad;
+  if (index < numPatchSlices) {
+    /* 
+      get the patch slice (x,y,z) to copy
+     */
+    int x = index ;
+    int y = x / numPatchesX ;
+    int z = y / numPatchesY ;
+    x %= numPatchesX ;
+    y %= numPatchesY ;
 
-    data_col += (channel_out * height_col + y_out) * width_col + x_out;
-    data_im += (channel_in * height + y_in) * width + x_in;
+    /* 
+     pick the top-left corer of the patch slice in the input image
+     */
+    int x_data = x * strideX - padLeft ;
+    int y_data = y * strideY - padTop ;
+    data += (z * height + y_data) * width + x_data ;
 
-    for (int i = 0; i < kheight ; ++i) {
-      for (int j = 0; j < kwidth ; ++j) {
-        if (y_in + i >= 0 &&
-            y_in + i < height &&
-            x_in + j >= 0 &&
-            x_in + j < width) {
-          *data_col = data_im[i * width + j];
+    /* 
+     pick the column of the stacked image which contains this patch,
+     and move down along the column at the beginning of the patch slice
+     */
+    int patchSliceOffset = (windowWidth*windowHeight) * z ;
+    stacked += (numPatchesY * patchSliceOffset + y) * numPatchesX + x ;
+
+    /*
+     copy the patch slice
+     */
+    for (int v = 0 ; v < windowHeight ; ++v) {
+      for (int u = 0 ; u < windowWidth ; ++u) {
+        if (y_data + v >= 0 &&
+            y_data + v < height &&
+            x_data + u >= 0 &&
+            x_data + u < width) {
+          *stacked = data[v * width + u] ;
         } else {
-          *data_col = 0;
+          *stacked = 0 ;
         }
-        data_col += height_col * width_col;
+        stacked += (numPatchesX*numPatchesY) ;
       }
     }
   }
 }
 
-template <typename Dtype>
-void im2col_gpu(const Dtype* data_im, const int channels,
-                const int height, const int width,
-                const int kheight, const int kwidth,
-                const int stride, const int pad,
-                Dtype* data_col)
+template <typename T>
+void im2col_gpu(T* stacked,
+                T const* data,
+                size_t width,
+                size_t height,
+                size_t depth,
+                size_t windowWidth,
+                size_t windowHeight,
+                size_t strideX,
+                size_t strideY,
+                size_t padLeft,
+                size_t padRight,
+                size_t padTop,
+                size_t padBottom)
 {
-  // We are going to launch channels * height_col * width_col kernels, each
-  // kernel responsible for copying a single-channel grid.
-  int height_col = (height + 2 * pad - kheight) / stride + 1;
-  int width_col = (width + 2 * pad - kwidth) / stride + 1;
-  int num_kernels = channels * height_col * width_col;
+  int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
+  int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+  int numPatchSlices = numPatchesX * numPatchesY * depth ;
 
-  im2col_gpu_kernel<Dtype> <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>
-  (num_kernels, data_im,
-   height, width,
-   kheight, kwidth,
-   stride, pad,
-   height_col, width_col, data_col) ;
+  /*
+   Each kernel copies a feature dimension of a patch.
+   */
+  im2col_gpu_kernel<T>
+  <<< divideUpwards(numPatchSlices, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+  (stacked,
+   data,
+   numPatchesX,
+   numPatchesY,
+   numPatchSlices,
+   width, height,
+   windowWidth, windowHeight,
+   strideX, strideY,
+   padLeft, padTop) ;
 
   if (cudaPeekAtLastError() != cudaSuccess) {
     std::cout
@@ -85,131 +122,184 @@ void im2col_gpu(const Dtype* data_im, const int channels,
 }
 
 // Explicit instantiation
-template void im2col_gpu<float>(const float* data_im, const int channels,
-                                const int height, const int width,
-                                const int kheight, const int kwidth,
-                                const int stride, const int pad,
-                                float* data_col);
+template void im2col_gpu<float>(float* stacked,
+                                float const* data,
+                                size_t width,
+                                size_t height,
+                                size_t depth,
+                                size_t windowWidth,
+                                size_t windowHeight,
+                                size_t strideX,
+                                size_t strideY,
+                                size_t padLeft,
+                                size_t padRight,
+                                size_t padTop,
+                                size_t padBottom);
 
-template void im2col_gpu<double>(const double* data_im, const int channels,
-                                 const int height, const int width,
-                                 const int kheight, const int kwidth,
-                                 const int stride, const int pad,
-                                 double* data_col);
+template void im2col_gpu<double>(double* stacked,
+                                 double const* data,
+                                 size_t width,
+                                 size_t height,
+                                 size_t depth,
+                                 size_t windowWidth,
+                                 size_t windowHeight,
+                                 size_t strideX,
+                                 size_t strideY,
+                                 size_t padLeft,
+                                 size_t padRight,
+                                 size_t padTop,
+                                 size_t padBottom);
 
 /* ---------------------------------------------------------------- */
 /*                                                     col2im (GPU) */
 /* ---------------------------------------------------------------- */
 
-template <typename Dtype>
-__global__ void col2im_gpu_kernel(const int n, const Dtype* data_col,
-                                  const int height, const int width,
-                                  const int channels,
-                                  const int kheight, const int kwidth,
-                                  const int stride, const int pad,
-                                  const int height_col, const int width_col,
-                                  Dtype* data_im)
+template <typename T>
+__global__ void col2im_gpu_kernel(T* data,
+                                  T const* stacked,
+                                  const int numPatchesX,
+                                  const int numPatchesY,
+                                  const int dataVolume,
+                                  const int width,
+                                  const int height,
+                                  const int depth,
+                                  const int windowWidth,
+                                  const int windowHeight,
+                                  const int strideX,
+                                  const int strideY,
+                                  const int padLeft,
+                                  const int padTop)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
-
-  if (index < n)
+  if (index < dataVolume)
   {
-    Dtype val = 0;
+    T accumulator = 0 ;
     /*
-     Each kernel computes one pixel of the output image. This is obtained
-     by summing all the values in the columnised data that were generated as copies of
-     that particular pixel.
+     This kernel accumulates on data[index] all elements in stacked
+     that receive copies of data[index] in im2col.
+     
+     Consider coordinate (x_data,y_data) in the input image. Relative to patch
+     (x,y), this has offset
+     
+     u = x_data - (x * strideX - padLeft)
+     v = y_data - (y * strideY - padRight)
+     
+     In particular, (x_data,y_data) is contained (and hence contributes)
+     to patch (x,y) if, and only if,
+     
+     0 <= u < windowWidth  <==>  1) x_data >= x * strideX - padLeft
+                                 2) x_data <  x * strideX - padLeft + windowWidth
+     
+     and similar for y.
+     
+     Hence, the patches that contribute to (x_data,y_data) are given
+     by indexes (x,y) such that
+     
+     (x_data + padLeft - windowWidth)/stride < x
+         <= (x_data + padLeft)/stride
+     
+     or, accounting for the boundaries,
+
+       x1 <= x <= x2, such that
+         x1 = max(0,  1 + floor(x_data + padLeft - windowWidth)/stride),
+         x2 = min(numPatchesX-1,  floor(x_data + padLeft)/stride),
+     
+     and similar for y.
+     
+     Note that (x_data + padLeft - windowWidth) may be negative. In this case,
+     the C convention for rounding division towards zero fails to compute
+     the floor() properly. Instead, we check this case explicitly and set
      */
 
-    /*
-     recover the (x,y,c) coordinate of the input pixel based on the kernel
-     index, using the fact that index = x + width * y + width*height * c.
-     */
-    int x = (index % width) ;
-    int y = ((index / width) % height) ;
-    int c = index / (width * height) ;
+    int x_data = index ;
+    int y_data = x_data / width ;
+    int z = y_data / height ;
+    x_data %= width ;
+    y_data %= height ;
+
+    int dx = x_data + padLeft - windowWidth ;
+    int dy = y_data + padTop - windowHeight ;
+    int x1 = (dx >= 0) ? dx/strideX + 1 : 0 ;
+    int y1 = (dy >= 0) ? dy/strideY + 1 : 0 ;
+    int x2 = min((x_data + padLeft) / strideX, numPatchesX - 1) ;
+    int y2 = min((y_data + padTop) / strideY, numPatchesY - 1) ;
 
     /*
-     Let xc be the top left coordinate of the patch(xc,yc) packed at location
-     (xc,yc) in the columnised data. patch(xc,yc) includes all input image
-     pixels in the interval:
+     Knowing which patches (x,y) contribute to (x_data,y_data) is not enough;
+     we need to determine the specific element within each patch. This
+     is given by the offset as given above:
+     
+     u(x) = x_data - (x * strideX - padLeft)
+     v(y) = y_data - (y * strideY - padRight)
+     
+     Now we can comptute the indeces of the elements of stacked[] to accumulate:
+     
+     stackedIndex(x,y) = 
+         (y * numPatchesX + x) +                 // column offset
+         ((z * windowHeight + v(y)) * windowWidth + u(x)) *  // within patch offset
+            (numPatchesX*numPatchesY)
 
-     x1 <= x <= x2,   x1(xc) = stride * xc - pad,   x2(xc) = x1(xc) + kwidth - 1,
-     y1 <= y <= y2,   y1(yc) = stride * yc - pad,   y2(yc) = y1(yc) + kheight - 1.
+     Substituting the expression fo u(x), we find
 
-     Hence pixel (x,y) is integrated in patch(xc,yc) if, and only if,
+     stackedIndex(x,y) =
+         = (y * numPatchesX + x)
+         + ((z * windowHeight + y_data + padTop) * windowWidth + x_data + padLeft)
+           * (numPatchesX*numPatchesY)
+         - ((y * strideY) * windowWidth + x * strideX)
+           * (numPatchesX*numPatchesY)
+         = (z * windowHeight + y_data + padTop) * windowWidth + x_data + padLeft)
+         + x * (1 - strideX*numPatchesY*numPatchesX)
+         + y * (1 - strideY*numPatchesY*windowWidth)*numPatchesX ;
 
-     (x + pad - kwidth + 1) / stride <= xc <= (x + pad) / stride.
-
-     Here to find the minimum and maximum value of xc we need to take the ceil
-     of the left-hand side and the floor of the right hand side. With C integer
-     math:
-
-     xc1 <= xc <= xc2,  xc1 = (x + pad - kwidth + 1 + stride - 1)/stride
-                            = (x + pad - kwidth)/stride + 1,
-     xc2 = (x + pad) / stride
-
-     Some care must be given to the first expression for xc1 as this works
-     only if the numerator is non-negative (division is otherwise
-     undefined C89 or truncated upwards C99).
-
-     Within a patch(xc,yc), pixel (x,y) has relative coordinates
-     (dx,dy) given by
-
-     dx = x - (xc * stride - pad),  dy = y - (yc * stride - pad).
-
-     This result in an additional patch-relative offset of
-
-     doffset(dx,dy,c)
-        = (x + pad - xc*stride)
-          + (y + pad - yc*stride)*kwidth
-          + c*kwidth*kheight
-        = (x + pad)
-          + (y+pad)*kwidth + c*(kwidth*kheight)
-          - xc*stride - yc*stride*kwidth.
-
-     Thus pixel (x,y) in patch(xc,yc) should be read in the columnised
-     output with a total offset of
-
-     offset(x,y,xc,yc,c)
-        = xc + yc * widht_col + doffset(dx,dy,c) * width_col*height_col
-        = ((x+pad) + (y+pad)*kwidth + c*(kwidth*kheight)) * width_col*height_col
-          + xc * (1 - stride * width_col*height_col)
-          + yc * (1 - stride * kwidth*height_col) * width_col.
      */
-    int xc1 = (x + pad - kwidth >= 0) ? (x + pad - kwidth) / stride + 1 : 0 ;
-    int yc1 = (y + pad - kheight >= 0) ? (y + pad - kheight) / stride + 1 : 0 ;
-    int xc2 = min((x + pad) / stride, width_col - 1) ;
-    int yc2 = min((y + pad) / stride, height_col - 1) ;
-    int offset = (c * kwidth * kheight + (y+pad) * kwidth + (x+pad)) * height_col * width_col;
-    int deltax = (1 - stride * height_col * width_col);
-    int deltay = (1 - stride * kwidth * height_col) * width_col;
 
-    for (int yc = yc1 ; yc <= yc2 ; ++ yc) {
-      for (int xc = xc1 ; xc <= xc2 ; ++ xc) {
-        val += data_col[offset + yc * deltay + xc * deltax];
+    int deltax = (1 - strideX * numPatchesY * numPatchesX) ;
+    int deltay = (1 - strideY * numPatchesY * windowWidth) * numPatchesX ;
+    stacked += ((z * windowHeight + y_data + padTop) * windowWidth + (x_data + padLeft)) * (numPatchesX*numPatchesY) ;
+
+    for (int y = y1 ; y <= y2 ; ++ y) {
+      for (int x = x1 ; x <= x2 ; ++ x) {
+        accumulator += stacked[y * deltay + x * deltax];
       }
     }
-    data_im[index] = val;
+    data[index] = accumulator;
   }
 }
 
-template <typename Dtype>
-void col2im_gpu(const Dtype* data_col, const int channels,
-                const int height, const int width,
-                const int kheight, const int kwidth,
-                const int stride, const int pad,
-                Dtype* data_im)
+template <typename T>
+void col2im_gpu(T* data,
+                T const* stacked,
+                size_t width,
+                size_t height,
+                size_t depth,
+                size_t windowWidth,
+                size_t windowHeight,
+                size_t strideX,
+                size_t strideY,
+                size_t padLeft,
+                size_t padRight,
+                size_t padTop,
+                size_t padBottom)
 {
-  int height_col = (height + 2 * pad - kheight) / stride + 1;
-  int width_col = (width + 2 * pad - kwidth) / stride + 1;
-  int num_kernels = channels * height * width;
-  col2im_gpu_kernel<Dtype> <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>
-  (num_kernels, data_col,
-   height, width, channels,
-   kheight, kwidth,
-   stride, pad,
-   height_col, width_col, data_im);
+  /*
+   each kernel integrates all contributions to a particular element
+   of data.
+   */
+  int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
+  int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+  int dataVolume = width * height * depth ;
+
+  col2im_gpu_kernel<T>
+  <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+  (data,
+   stacked,
+   numPatchesX,
+   numPatchesY,
+   dataVolume,
+   width, height, depth,
+   windowWidth, windowHeight,
+   strideX, strideY,
+   padLeft, padTop) ;
 
   if (cudaPeekAtLastError() != cudaSuccess) {
     std::cout
@@ -219,14 +309,30 @@ void col2im_gpu(const Dtype* data_col, const int channels,
   }
 }
 
-template void col2im_gpu<float>(const float* data_col, const int channels,
-                                const int height, const int width,
-                                const int kheight, const int kwidth,
-                                const int stride, const int pad,
-                                float* data_im);
+template void col2im_gpu<float>(float* data,
+                                float const* stacked,
+                                size_t width,
+                                size_t height,
+                                size_t depth,
+                                size_t windowWidth,
+                                size_t windowHeight,
+                                size_t strideX,
+                                size_t strideY,
+                                size_t padLeft,
+                                size_t padRight,
+                                size_t padTop,
+                                size_t padBottom);
 
-template void col2im_gpu<double>(const double* data_col, const int channels,
-                                 const int height, const int width,
-                                 const int kheight, const int kwidth,
-                                 const int stride, const int pad,
-                                 double* data_im);
+template void col2im_gpu<double>(double* data,
+                                 double const* stacked,
+                                 size_t width,
+                                 size_t height,
+                                 size_t depth,
+                                 size_t windowWidth,
+                                 size_t windowHeight,
+                                 size_t strideX,
+                                 size_t strideY,
+                                 size_t padLeft,
+                                 size_t padRight,
+                                 size_t padTop,
+                                 size_t padBottom);

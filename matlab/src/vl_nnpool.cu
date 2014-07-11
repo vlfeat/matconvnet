@@ -201,6 +201,10 @@ void mexFunction(int nout, mxArray *out[],
       mexErrMsgTxt("SIZE has neither one nor two elements.") ;
   }
 
+  if (strideX < 1 || strideY < 1) {
+    mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
+  }
+
   packed_data_geom_init(&outputGeom,
                         mxSINGLE_CLASS,
                         (data.geom.height + (padTop+padBottom) - poolHeight)/strideY + 1,
