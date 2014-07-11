@@ -1,18 +1,18 @@
 function cnn_cifar
 
 opts.dataDir = 'data/cifar' ;
-opts.expDir = 'data/cifar-exp-1' ;
+opts.expDir = 'data/cifar-exp-2' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.batchSize = 100 ;
-opts.numEpochs = 100 ;
+opts.numEpochs = 10 ;
 opts.continue = true ;
 opts.useGpu = false ;
-opts.learningRate = 0.001 ;
-opts.learningRate = 0.0001 ;
-opts.debug_weights = true;
+opts.learningRates = [0.001*ones(1, 8) 0.0001*ones(1,2)] ;
+opts.debug_weights = false;
 
 run matlab/vl_setupnn ;
-
+vl_xmkdir(opts.dataDir);
+vl_xmkdir(opts.expDir);
 % --------------------------------------------------------------------
 %                                                         Prepare data
 % --------------------------------------------------------------------
@@ -82,6 +82,8 @@ net.layers{end+1} = struct('type', 'conv', ...
                            'pad', 0) ;
 % 12 loss
 net.layers{end+1} = struct('type', 'softmaxloss') ;
+
+%%
 
 for i=1:numel(net.layers)
   if ~strcmp(net.layers{i}.type,'conv'), continue; end
@@ -161,12 +163,12 @@ for epoch=1:opts.numEpochs
       if ~strcmp(ly.type, 'conv'), continue ; end
 
       ly.filtersMomentum = 0.9 * ly.filtersMomentum ...
-        - 0.0005 * opts.learningRate * ly.filters ...
-        - opts.learningRate*ly.lr(1)/numel(batch) * res(l).dzdw{1} ;
+        - 0.0005 * opts.learningRates(epoch) * ly.filters ...
+        - opts.learningRates(epoch)*ly.lr(1)/numel(batch) * res(l).dzdw{1} ;
 
       ly.biasesMomentum = 0.9 * ly.biasesMomentum ...
-        - 0.0005 * opts.learningRate * ly.biases ...
-        - opts.learningRate*ly.lr(2)/numel(batch) * res(l).dzdw{2} ;
+        - 0.0005 * opts.learningRates(epoch) * ly.biases ...
+        - opts.learningRates(epoch)*ly.lr(2)/numel(batch) * res(l).dzdw{2} ;
 
       ly.filters = ly.filters + ly.filtersMomentum ;
       ly.biases = ly.biases + ly.biasesMomentum ;
@@ -259,7 +261,6 @@ files = [arrayfun(@(n) sprintf('data_batch_%d.mat', n), 1:5, 'UniformOutput', fa
 files = cellfun(@(fn) fullfile(unpackPath, fn), files, 'UniformOutput', false);
 file_set = uint8([ones(1, 5), 3]);
 
-mkdir(opts.dataDir) ;
 if any(cellfun(@(fn) ~exist(fn, 'file'), files))
   url = 'http://www.cs.toronto.edu/~kriz/cifar-10-matlab.tar.gz' ;
   fprintf('downloading %s\n', url) ;
