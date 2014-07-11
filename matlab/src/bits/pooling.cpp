@@ -21,19 +21,19 @@ the terms of the BSD license (see the COPYING file).
 
 template<typename T>
 void pooling_cpu(T* pooled,
-                    T const* data,
-                    PoolMethod method,
-                    size_t width,
-                    size_t height,
-                    size_t depth,
-                    size_t windowWidth,
-                    size_t windowHeight,
-                    size_t strideX,
-                    size_t strideY,
-                    size_t padLeft,
-                    size_t padRight,
-                    size_t padTop,
-                    size_t padBottom)
+                 T const* data,
+                 PoolMethod method,
+                 size_t width,
+                 size_t height,
+                 size_t depth,
+                 size_t windowWidth,
+                 size_t windowHeight,
+                 size_t strideX,
+                 size_t strideY,
+                 size_t padLeft,
+                 size_t padRight,
+                 size_t padTop,
+                 size_t padBottom)
 {
   int pooledWidth = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int pooledHeight = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
@@ -89,35 +89,35 @@ void pooling_cpu(T* pooled,
 
 template
 void pooling_cpu<float>(float* pooled,
-                           float const* data,
-                           PoolMethod method,
-                           size_t width,
-                           size_t height,
-                           size_t depth,
-                           size_t windowWidth,
-                           size_t windowHeight,
-                           size_t strideX,
-                           size_t strideY,
-                           size_t padLeft,
-                           size_t padRight,
-                           size_t padTop,
-                           size_t padBottom) ;
+                        float const* data,
+                        PoolMethod method,
+                        size_t width,
+                        size_t height,
+                        size_t depth,
+                        size_t windowWidth,
+                        size_t windowHeight,
+                        size_t strideX,
+                        size_t strideY,
+                        size_t padLeft,
+                        size_t padRight,
+                        size_t padTop,
+                        size_t padBottom) ;
 
 template
 void pooling_cpu<double>(double* pooled,
-                            double const* data,
-                            PoolMethod method,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t windowWidth,
-                            size_t windowHeight,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom) ;
+                         double const* data,
+                         PoolMethod method,
+                         size_t width,
+                         size_t height,
+                         size_t depth,
+                         size_t windowWidth,
+                         size_t windowHeight,
+                         size_t strideX,
+                         size_t strideY,
+                         size_t padLeft,
+                         size_t padRight,
+                         size_t padTop,
+                         size_t padBottom) ;
 
 
 /* ---------------------------------------------------------------- */
@@ -126,20 +126,20 @@ void pooling_cpu<double>(double* pooled,
 
 template<typename T>
 void poolingBackward_cpu(T* dzdx,
-                            T const* data,
-                            T const* dzdy,
-                            PoolMethod method,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t windowWidth,
-                            size_t windowHeight,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom)
+                         T const* data,
+                         T const* dzdy,
+                         PoolMethod method,
+                         size_t width,
+                         size_t height,
+                         size_t depth,
+                         size_t windowWidth,
+                         size_t windowHeight,
+                         size_t strideX,
+                         size_t strideY,
+                         size_t padLeft,
+                         size_t padRight,
+                         size_t padTop,
+                         size_t padBottom)
 {
   int pooledWidth = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int pooledHeight = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
