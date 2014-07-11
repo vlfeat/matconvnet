@@ -43,20 +43,20 @@ __global__ void maxPooling_gpu_kernel
                    + y * pooledWidth
                    + z * (pooledWidth * pooledHeight) ;
      */
-    int x = pooledIndex ;
-    int y = x / pooledWidth ;
-    int z = y / pooledHeight ;
-    x %= pooledWidth ;
-    y %= pooledHeight ;
-    int x1 = max(x * strideX - padLeft, 0) ;
-    int y1 = max(y * strideY - padTop, 0) ;
+    int px = pooledIndex ;
+    int py = px / pooledWidth ;
+    int pz = py / pooledHeight ;
+    px %= pooledWidth ;
+    py %= pooledHeight ;
+    int x1 = max(px * strideX - padLeft, 0) ;
+    int y1 = max(py * strideY - padTop, 0) ;
     int x2 = min(x1 + windowWidth, width) ;
     int y2 = min(y1 + windowHeight, height) ;
-    data += z * (width*height) ;
+    data += pz * (width*height) ;
     T bestValue = data[y1 * width + x1] ;
-    for (int v = y1 ; v < y2 ; ++v) {
-      for (int u = x1 ; u < x2 ; ++u) {
-        bestValue = max(bestValue, data[v * width + u]) ;
+    for (int y = y1 ; y < y2 ; ++y) {
+      for (int x = x1 ; x < x2 ; ++x) {
+        bestValue = max(bestValue, data[y * width + x]) ;
       }
     }
     pooled[pooledIndex] = bestValue ;
@@ -86,21 +86,21 @@ __global__ void avgPooling_gpu_kernel
                    + y * pooledWidth
                    + z * (pooledWidth * pooledHeight) ;
      */
-    int x = pooledIndex ;
-    int y = x / pooledWidth ;
-    int z = y / pooledHeight ;
-    x %= pooledWidth ;
-    y %= pooledHeight ;
-    int x1 = max(x * strideX - padLeft, 0) ;
-    int y1 = max(y * strideY - padTop, 0) ;
+    int px = pooledIndex ;
+    int py = px / pooledWidth ;
+    int pz = py / pooledHeight ;
+    px %= pooledWidth ;
+    py %= pooledHeight ;
+    int x1 = max(px * strideX - padLeft, 0) ;
+    int y1 = max(py * strideY - padTop, 0) ;
     int x2 = min(x1 + windowWidth, width) ;
     int y2 = min(y1 + windowHeight, height) ;
-    data += z * (width*height) ;
+    data += pz * (width*height) ;
     T accum = 0;
     T poolSize = (y2 - y1)*(x2 - x1);
-    for (int v = y1 ; v < y2 ; ++v) {
-      for (int u = x1 ; u < x2 ; ++u) {
-        accum += data[v * width + u] ;
+    for (int y = y1 ; y < y2 ; ++y) {
+      for (int x = x1 ; x < x2 ; ++x) {
+        accum += data[y * width + x] ;
       }
     }
     pooled[pooledIndex] = accum / poolSize ;
@@ -269,23 +269,23 @@ __global__ void maxPoolingBackward_gpu_kernel
      + y * pooledWidth
      + z * (pooledWidth * pooledHeight) ;
      */
-    int x = pooledIndex ;
-    int y = x / pooledWidth ;
-    int z = y / pooledHeight ;
-    x %= pooledWidth ;
-    y %= pooledHeight ;
+    int px = pooledIndex ;
+    int py = px / pooledWidth ;
+    int pz = py / pooledHeight ;
+    px %= pooledWidth ;
+    py %= pooledHeight ;
 
-    int x1 = max(x * strideX - padLeft, 0) ;
-    int y1 = max(y * strideY - padTop, 0) ;
+    int x1 = max(px * strideX - padLeft, 0) ;
+    int y1 = max(py * strideY - padTop, 0) ;
     int x2 = min(x1 + windowWidth, width) ;
     int y2 = min(y1 + windowHeight, height) ;
-    data += z * (width*height) ;
-    dzdx += z * (width*height) ;
+    data += pz * (width*height) ;
+    dzdx += pz * (width*height) ;
     int bestIndex = y1 * width + x1 ;
     T bestValue = data[bestIndex] ;
-    for (int v = y1 ; v < y2 ; ++v) {
-      for (int u = x1 ; u < x2 ; ++u) {
-        int index = v * width + u ;
+    for (int y = y1 ; y < y2 ; ++y) {
+      for (int x = x1 ; x < x2 ; ++x) {
+        int index = y * width + x ;
         T value = data[index] ;
         if (value > bestValue) {
           bestValue = value ;
