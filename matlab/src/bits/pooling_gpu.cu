@@ -199,6 +199,53 @@ void pooling_gpu<double>(double* pooled,
 /*                                         maxPoolingBackward (GPU) */
 /* ---------------------------------------------------------------- */
 
+#ifdef VLNN_CAFFELIKE_BPPOOL
+// In order to be able to use this, BP would need to have access to both
+// bottom data and pooled data (currently only passed bottom data...)
+template <typename T>
+__global__ void maxPoolingBackward_gpu_kernel_caffelike(
+    T* dzdx,
+    const T* data,
+    const T* pooled,
+    const T* dzdy,
+    const int nthreads,
+    const int pooledWidth,
+    const int pooledHeight,
+    const int width,
+    const int height,
+    const int depth,
+    const int windowWidth,
+    const int windowHeight,
+    const int strideX,
+    const int strideY)
+{
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index < nthreads) {
+    // find out the local index
+    // find out the local offset
+    int x = index % width;
+    int y = (index / width) % height;
+    int z = (index / width / height) % depth;
+    int py1 = (y < windowHeight) ? 0 : (y - windowHeight) / strideY + 1;
+    int py2 = min(y / strideY + 1, pooledHeight);
+    int px1 = (x < windowWidth) ? 0 : (x - windowWidth) / strideX + 1;
+    int px2 = min(x / strideX + 1, pooledWidth);
+    T gradient = 0;
+    T datum = data[(z * height + y) * width + x];
+    pooled += z * pooledHeight * pooledWidth;
+    dzdy += z * pooledHeight * pooledWidth;
+    for (int py = py1; py < py2; ++py) {
+      for (int px = px1; px < px2; ++px) {
+        gradient += dzdy[py * pooledWidth + px] *
+            (datum == pooled[py * pooledWidth + px]);
+      }
+    }
+    dzdx[index] = gradient;
+  }
+}
+#endif
+
+
 template<typename T>
 __global__ void maxPoolingBackward_gpu_kernel
 (T* dzdx,
@@ -257,25 +304,49 @@ __global__ void maxPoolingBackward_gpu_kernel
   }
 }
 
-template<typename T>
-__global__ void avgPoolingBackward_gpu_kernel
-(T* dzdx,
- const T* dzdy,
- const int pooledWidth,
- const int pooledHeight,
- const int pooledVolume,
- const int width,
- const int height,
- const int windowWidth,
- const int windowHeight,
- const int strideX,
- const int strideY,
- const int padLeft,
- const int padTop)
+template <typename T>
+__global__ void avgPoolingBackward_gpu_kernel(
+    T* dzdx,
+    const T* dzdy,
+    const int nthreads,
+    const int pooledWidth,
+    const int pooledHeight,
+    const int width,
+    const int height,
+    const int depth,
+    const int windowWidth,
+    const int windowHeight,
+    const int strideX,
+    const int strideY,
+    const int padLeft,
+    const int padTop)
 {
-  // TODO non trivial...
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index < nthreads) {
+    // find out the local index
+    // find out the local offset
+    int x = index % width;
+    int y = (index / width) % height;
+    int z = (index / width / height) % depth;
+    int py1 = (y < windowHeight) ? 0 : (y - windowHeight) / strideY + 1;
+    int py2 = min(y / strideY + 1, pooledHeight);
+    int px1 = (x < windowWidth) ? 0 : (x - windowWidth) / strideX + 1;
+    int px2 = min(x / strideX + 1, pooledWidth);
+    T gradient = 0;
+    dzdy += z * pooledHeight * pooledWidth;
+    for (int py = py1; py < py2; ++py) {
+      for (int px = px1; px < px2; ++px) {
+        int x1 = max(x * strideX - padLeft, 0) ;
+        int y1 = max(y * strideY - padTop, 0) ;
+        int x2 = min(x1 + windowWidth, width) ;
+        int y2 = min(y1 + windowHeight, height) ;
+        T poolSize = (y2 - y1) * (x2 - x1);
+        gradient += dzdy[py * pooledWidth + px] / poolSize ;
+      }
+    }
+    dzdx[index] = gradient;
+  }
 }
-
 
 
 template<typename T>
@@ -297,14 +368,15 @@ void poolingBackward_gpu(T* dzdx,
 {
   int pooledWidth = (width + (padLeft+padRight) - windowWidth)/strideX + 1 ;
   int pooledHeight = (height + (padTop+padBottom) - windowHeight)/strideY + 1 ;
-  int pooledVolume = pooledWidth * pooledHeight * depth ;
+  int nthreads;
   switch (method) {
     case NN_POOL_MAX:
+      nthreads = pooledWidth * pooledHeight * depth ;
       maxPoolingBackward_gpu_kernel<T>
-      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideUpwards(nthreads, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (dzdx,
        data, dzdy,
-       pooledWidth, pooledHeight, pooledVolume,
+       pooledWidth, pooledHeight, nthreads,
        width, height,
        windowWidth, windowHeight,
        strideX, strideY,
@@ -317,15 +389,23 @@ void poolingBackward_gpu(T* dzdx,
       }
       break;
     case NN_POOL_AVG:
+      nthreads = width * height * depth ;
       avgPoolingBackward_gpu_kernel<T>
-      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideUpwards(nthreads, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (dzdx,
        dzdy,
-       pooledWidth, pooledHeight, pooledVolume,
-       width, height,
-       windowWidth, windowHeight,
-       strideX, strideY,
-       padLeft, padTop);
+       nthreads,
+       pooledWidth,
+       pooledHeight,
+       width,
+       height,
+       depth,
+       windowWidth,
+       windowHeight,
+       strideX,
+       strideY,
+       padLeft,
+       padTop);
       if (cudaGetLastError() != cudaSuccess) {
         std::cout
         <<"avgPooling_gpu_kernel error ("
