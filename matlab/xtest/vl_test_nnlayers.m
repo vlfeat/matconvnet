@@ -186,13 +186,31 @@ for l=4 %setdiff(1:9,6)
       end
 
     case 5
+      % make sure that all elements in x are different. in this way,
+      % we can compute numerical derivatives reliably by adding a delta < .5.
+      x = grandn(15,14,3,2,'single') ;
+      x(:) = randperm(numel(x))' ;
+
+      % Test whether the avg pool output is equal to its emulation with
+      % convolutional layer
+      stride = 1 ;
+      pad = 0 ;
+      for poolx=1:3
+        for pooly=1:2
+          pool = [pooly poolx] ;
+          args = {'verbose','stride',stride,'pad',pad, 'method', 'avg'};
+          y = vl_nnpool(x,pool,args{:}) ;
+          y_conv = vl_nnconv(x, ones(pooly,poolx,1,size(x,3), 'single')./poolx./pooly, ...
+            zeros(1, size(x,3), 'single'),'verbose', 'stride', stride, ...
+            'pad', pad);
+          vl_testsim(y, y_conv, 1e-3); % Hmm, does not pass with 1e-4
+        end
+      end
+
       methods = {'avg', 'max'};
+
       for mi = 1:numel(methods)
         fprintf('testing vl_nnpool - %s', methods{mi}) ;
-        % make sure that all elements in x are different. in this way,
-        % we can compute numerical derivatives reliably by adding a delta < .5.
-        x = grandn(15,14,3,2,'single') ;
-        x(:) = randperm(numel(x))' ;
         for pool=1:3
           for pad=0:min(3,pool-1)
             for stride=1:4
@@ -261,8 +279,7 @@ for l=4 %setdiff(1:9,6)
           end
         end
       end
-
-
+      
     case 6
       disp('testing vl_nnnormalize') ;
       % the derivative for d=1 is not very stable numerically
