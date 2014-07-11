@@ -61,7 +61,6 @@ void pooling_cpu(T* pooled,
       }
       break;
     case NN_POOL_AVG :
-      T pool_size = windowWidth * windowHeight;
       for (int z = 0; z < depth; ++z) {
         for (int y = 0; y < pooledHeight; ++y) {
           for (int x = 0; x < pooledWidth; ++x) {
@@ -70,12 +69,13 @@ void pooling_cpu(T* pooled,
             int x2 = std::min(x1 + windowWidth, width) ;
             int y2 = std::min(y1 + windowHeight, height) ;
             T accum = 0 ;
+            T poolSize = (y2 - y1) * (x2 - x1);
             for (int v = y1 ; v < y2 ; ++v) {
               for (int u = x1 ; u < x2 ; ++u) {
                 accum += data[v * width + u] ;
               }
             }
-            pooled[y * pooledWidth + x] = accum / pool_size ;
+            pooled[y * pooledWidth + x] = accum / poolSize ;
           }
         }
         data += width*height ;
@@ -175,7 +175,6 @@ void poolingBackward_cpu(T* dzdx,
       }
       break;
     case NN_POOL_AVG :
-      T pool_size = windowWidth * windowHeight;
       for (int z = 0; z < depth; ++z) {
         for (int y = 0; y < pooledHeight; ++y) {
           for (int x = 0; x < pooledWidth; ++x) {
@@ -183,9 +182,10 @@ void poolingBackward_cpu(T* dzdx,
             int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
             int x2 = std::min(x1 + windowWidth, width) ;
             int y2 = std::min(y1 + windowHeight, height) ;
+            T poolSize = (y2 - y1) * (x2 - x1);
             for (int v = y1 ; v < y2 ; ++v) {
               for (int u = x1 ; u < x2 ; ++u) {
-                dzdx[v * width + u] += dzdy[y * pooledWidth + x] / pool_size;
+                dzdx[v * width + u] += dzdy[y * pooledWidth + x] / poolSize;
               }
             }
           }
