@@ -1,4 +1,5 @@
 function cnn_mnist()
+% CNN_MNIST  Demonstrated MatConNet on MNIST
 
 opts.dataDir = 'data/mnist' ;
 opts.expDir = 'data/mnist-exp-1' ;
@@ -8,6 +9,7 @@ opts.train.numEpochs = 100 ;
 opts.train.continue = true ;
 opts.train.useGpu = false ;
 opts.train.learningRate = 0.001 ;
+opts.train.expDir = opts.expDir ;
 
 run matlab/vl_setupnn ;
 
@@ -21,12 +23,6 @@ else
   imdb = getMnistImdb(opts) ;
   mkdir(opts.expDir) ;
   save(opts.imdbPath, '-struct', 'imdb') ;
-end
-
-% Take the mean out and make GPU if needed
-imdb.images.data = bsxfun(@minus, imdb.images.data, mean(imdb.images.data,4)) ;
-if opts.train.useGpu
-  imdb.images.data = gpuArray(imdb.images.data) ;
 end
 
 % Define a network similar to LeNet
@@ -66,6 +62,12 @@ net.layers{end+1} = struct('type', 'softmaxloss') ;
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
+
+% Take the mean out and make GPU if needed
+imdb.images.data = bsxfun(@minus, imdb.images.data, mean(imdb.images.data,4)) ;
+if opts.train.useGpu
+  imdb.images.data = gpuArray(imdb.images.data) ;
+end
 
 [net,info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
