@@ -67,33 +67,96 @@ should do the trick. For example:
 
     > make ENABLE_GPU=y ARCH=maci64 MATLABROOT=/Applications/MATLAB_R2014a.app CUDAROOT=/Developer/NVIDIA/CUDA-5.5
 
-should work on a Mac with the corresponding version of MATLAB.
+should work on a Mac with MATLAB R2014a.
 
-### Installing in MATLAB and testing the setup
+### Setting up MATLAB
 
-Once the library is installed in MATLAB, setup is easy. Simply start MATLAB
-and type
+Once the MEX files are properly compiled, MATLAB setup is easy. Simply
+start MATLAB and type
 
     > run <path to MatConvNet>/matlab/vl_setupnn
 
 At this point the library should be ready to use. To test it, try
+issuing the command:
 
     > vl_test_nnlayers
 
-## Usage
+## Getting started
 
+This section provides a practical introduction to this toolbox.
 Please see the [reference PDF manual](matconvnet-manual.pdf) for
-technical details. There are several examples provided for your
-convenience.
+technical details.
 
-### Pre-trained networks
+MatConvNet can be used to [train CNN models](#training), or it can be
+used to evaluate several [pre-trained models](#pretrained) on your data.
 
-You can download the following models
+### Using pre-trained models <span id='pretrained'></span>
+
+You can download the following models:
 
 - [ImageNet-S](). A relatively small network pre-trained on
   ImageNet. Similar to Krizhevsky et al. 2012 network.
 - [ImageNet-M](). A somewhat larger network, with better performance.
 - [ImageNet-L](). A large model.
+
+For example, in order to run ImageNet-S on a test image, use:
+
+    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-s.mat') ;
+    net = load('imagenet-s.mat') ;
+    im = imread('peppers') ;
+    res = vl_simplenn(net, 'preprocess', im) ;
+
+`vl_simplenn` is a wrapper around MatConvNet core computational
+functions that simplifies evaluating CNN with a simple linear topology
+(i.e. chains of layers). It is not needed to use the toolbox, but it
+simplifies common examples such as the ones discussed here. The
+`preprocess` option is required to convert the image `im` into a
+format which can be processed by the network; typically, this involves
+rescaling/cropping the image to a fixed side, converting it to
+`single` precision, and subtracting an image mean. If you want to do
+these steps by yourself, you can remove 'preprocess'.
+
+`res` is a structure containing the network evaluation.
+
+    y = res(end).x ;
+    [score, class] = max(y) ;
+    fprintf('estimated class: %s (score: %f)\n', net.meta.classes{class}, score) ;
+
+### Training your own models <span id='training'></span>
+
+MatConvNet can be used to train models using stochastic gradient
+descent and back-propagation.
+
+The following learning demos are provided:
+
+- **MNIST**. See `cnn_mnist`.
+- **CIFAR**. See `cnn_cifar`.
+- **ImageNet**. See `cnn_imagenet`.
+
+These are self-contained, and include downloading and unpacking of the
+data. MNIST and CIFAR are small datasets (by today's standard) and
+training is feasible on a CPU. For ImageNet, however, a powerful GPU
+is highly recommended.
+
+### Working with GPU acelereated code
+
+GPU support in MatConvNet relies on the corresponding support as
+provided by recent releases of MATLAB and of its Parallel Programming
+Toolbox. This toolbox relies on CUDA-compatible cards, and you will
+need a copy of the CUDA devkit to compile GPU support in MatConvNet
+(see above).
+
+All the core computational functions (e.g. `vl_nnconv`) in the toolbox
+can work with either MATLAB arrays or MATLAB GPU arrays. Therefore,
+switching to use the GPU is then as simple as converting data
+contained in arrays (e.g. images) in GPU arrays before calling the
+toolbox functions.
+
+In order to make the very best of powerful GPUs, it is important to
+balance the load between CPU and GPU in order to avoid starving the
+latter. In training on a problem like ImageNet, the CPU(s) in your
+system will be busy loading data from disk and streaming it to the GPU
+to evaluate the CNN and its derivative.
 
 ## Copyright and acknowledgments
 
