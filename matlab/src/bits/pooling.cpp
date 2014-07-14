@@ -20,73 +20,104 @@ the terms of the BSD license (see the COPYING file).
 /* ---------------------------------------------------------------- */
 
 template<typename T>
-void maxPooling_cpu(T* pooled,
-                    T const* data,
-                    size_t width,
-                    size_t height,
-                    size_t depth,
-                    size_t windowWidth,
-                    size_t windowHeight,
-                    size_t strideX,
-                    size_t strideY,
-                    size_t padLeft,
-                    size_t padRight,
-                    size_t padTop,
-                    size_t padBottom)
+void pooling_cpu(T* pooled,
+                 T const* data,
+                 PoolMethod method,
+                 size_t width,
+                 size_t height,
+                 size_t depth,
+                 size_t windowWidth,
+                 size_t windowHeight,
+                 size_t strideX,
+                 size_t strideY,
+                 size_t padLeft,
+                 size_t padRight,
+                 size_t padTop,
+                 size_t padBottom)
 {
   int pooledWidth = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int pooledHeight = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
 
-  for (int z = 0; z < depth; ++z) {
-    for (int y = 0; y < pooledHeight; ++y) {
-      for (int x = 0; x < pooledWidth; ++x) {
-        int x1 = std::max(x * (signed)strideX - (signed)padLeft, 0) ;
-        int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
-        int x2 = std::min(x1 + windowWidth, width) ;
-        int y2 = std::min(y1 + windowHeight, height) ;
-        T bestValue = data[y1 * width + x1] ;
-        for (int v = y1 ; v < y2 ; ++v) {
-          for (int u = x1 ; u < x2 ; ++u) {
-            bestValue = std::max(bestValue, data[v * width + u]) ;
+  switch (method) {
+    case NN_POOL_MAX :
+      for (int z = 0; z < depth; ++z) {
+        for (int y = 0; y < pooledHeight; ++y) {
+          for (int x = 0; x < pooledWidth; ++x) {
+            int x1 = std::max(x * (signed)strideX - (signed)padLeft, 0) ;
+            int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
+            int x2 = std::min(x1 + windowWidth, width) ;
+            int y2 = std::min(y1 + windowHeight, height) ;
+            T bestValue = data[y1 * width + x1] ;
+            for (int v = y1 ; v < y2 ; ++v) {
+              for (int u = x1 ; u < x2 ; ++u) {
+                bestValue = std::max(bestValue, data[v * width + u]) ;
+              }
+            }
+            pooled[y * pooledWidth + x] = bestValue ;
           }
         }
-        pooled[y * pooledWidth + x] = bestValue ;
+        data += width*height ;
+        pooled += pooledWidth*pooledHeight ;
       }
-    }
-    data += width*height ;
-    pooled += pooledWidth*pooledHeight ;
+      break;
+    case NN_POOL_AVG :
+      for (int z = 0; z < depth; ++z) {
+        for (int y = 0; y < pooledHeight; ++y) {
+          for (int x = 0; x < pooledWidth; ++x) {
+            int x1 = std::max(x * (signed)strideX - (signed)padLeft, 0) ;
+            int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
+            int x2 = std::min(x1 + windowWidth, width) ;
+            int y2 = std::min(y1 + windowHeight, height) ;
+            T accum = 0 ;
+            T poolSize = (y2 - y1) * (x2 - x1);
+            for (int v = y1 ; v < y2 ; ++v) {
+              for (int u = x1 ; u < x2 ; ++u) {
+                accum += data[v * width + u] ;
+              }
+            }
+            pooled[y * pooledWidth + x] = accum / poolSize ;
+          }
+        }
+        data += width*height ;
+        pooled += pooledWidth*pooledHeight ;
+      }
+      break;
   }
+
+
 }
 
 template
-void maxPooling_cpu<float>(float* pooled,
-                           float const* data,
-                           size_t width,
-                           size_t height,
-                           size_t depth,
-                           size_t windowWidth,
-                           size_t windowHeight,
-                           size_t strideX,
-                           size_t strideY,
-                           size_t padLeft,
-                           size_t padRight,
-                           size_t padTop,
-                           size_t padBottom) ;
+void pooling_cpu<float>(float* pooled,
+                        float const* data,
+                        PoolMethod method,
+                        size_t width,
+                        size_t height,
+                        size_t depth,
+                        size_t windowWidth,
+                        size_t windowHeight,
+                        size_t strideX,
+                        size_t strideY,
+                        size_t padLeft,
+                        size_t padRight,
+                        size_t padTop,
+                        size_t padBottom) ;
 
 template
-void maxPooling_cpu<double>(double* pooled,
-                            double const* data,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t windowWidth,
-                            size_t windowHeight,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom) ;
+void pooling_cpu<double>(double* pooled,
+                         double const* data,
+                         PoolMethod method,
+                         size_t width,
+                         size_t height,
+                         size_t depth,
+                         size_t windowWidth,
+                         size_t windowHeight,
+                         size_t strideX,
+                         size_t strideY,
+                         size_t padLeft,
+                         size_t padRight,
+                         size_t padTop,
+                         size_t padBottom) ;
 
 
 /* ---------------------------------------------------------------- */
@@ -94,82 +125,110 @@ void maxPooling_cpu<double>(double* pooled,
 /* ---------------------------------------------------------------- */
 
 template<typename T>
-void maxPoolingBackward_cpu(T* dzdx,
-                            T const* data,
-                            T const* dzdy,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t windowWidth,
-                            size_t windowHeight,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom)
+void poolingBackward_cpu(T* dzdx,
+                         T const* data,
+                         T const* dzdy,
+                         PoolMethod method,
+                         size_t width,
+                         size_t height,
+                         size_t depth,
+                         size_t windowWidth,
+                         size_t windowHeight,
+                         size_t strideX,
+                         size_t strideY,
+                         size_t padLeft,
+                         size_t padRight,
+                         size_t padTop,
+                         size_t padBottom)
 {
   int pooledWidth = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int pooledHeight = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
 
-  for (int z = 0; z < depth; ++z) {
-    for (int y = 0; y < pooledHeight; ++y) {
-      for (int x = 0; x < pooledWidth; ++x) {
-        int x1 = std::max(x * (signed)strideX - (signed)padLeft, 0) ;
-        int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
-        int x2 = std::min(x1 + windowWidth, width) ;
-        int y2 = std::min(y1 + windowHeight, height) ;
-        int bestIndex = y1 * width + x1 ;
-        T bestValue = data[bestIndex] ;
+  switch (method) {
+    case NN_POOL_MAX :
+      for (int z = 0; z < depth; ++z) {
+        for (int py = 0; py < pooledHeight; ++py) {
+          for (int px = 0; px < pooledWidth; ++px) {
+            int x1 = std::max(px * (signed)strideX - (signed)padLeft, 0) ;
+            int y1 = std::max(py * (signed)strideY - (signed)padTop, 0) ;
+            int x2 = std::min(x1 + windowWidth, width) ;
+            int y2 = std::min(y1 + windowHeight, height) ;
+            int bestIndex = y1 * width + x1 ;
+            T bestValue = data[bestIndex] ;
 
-        for (int v = y1 ; v < y2 ; ++v) {
-          for (int u = x1 ; u < x2 ; ++u) {
-            int index = v * width + u ;
-            T value = data[index] ;
-            if (value > bestValue) {
-              bestValue = value ;
-              bestIndex = index ;
+            for (int y = y1 ; y < y2 ; ++y) {
+              for (int x = x1 ; x < x2 ; ++x) {
+                int index = y * width + x ;
+                T value = data[index] ;
+                if (value > bestValue) {
+                  bestValue = value ;
+                  bestIndex = index ;
+                }
+              }
+            }
+            dzdx[bestIndex] += dzdy[py * pooledWidth + px] ;
+          }
+        }
+        data += width*height ;
+        dzdx += width*height ;
+        dzdy += pooledWidth*pooledHeight ;
+      }
+      break;
+    case NN_POOL_AVG :
+      for (int z = 0; z < depth; ++z) {
+        for (int py = 0; py < pooledHeight; ++py) {
+          for (int px = 0; px < pooledWidth; ++px) {
+            int x1 = std::max(px * (signed)strideX - (signed)padLeft, 0) ;
+            int y1 = std::max(py * (signed)strideY - (signed)padTop, 0) ;
+            int x2 = std::min(x1 + windowWidth, width) ;
+            int y2 = std::min(y1 + windowHeight, height) ;
+            T poolSize = (y2 - y1) * (x2 - x1);
+            for (int x = y1 ; x < y2 ; ++x) {
+              for (int y = x1 ; y < x2 ; ++y) {
+                dzdx[x * width + y] += dzdy[py * pooledWidth + px] / poolSize;
+              }
             }
           }
         }
-        dzdx[bestIndex] += dzdy[y * pooledWidth + x] ;
+        data += width*height ;
+        dzdx += width*height ;
+        dzdy += pooledWidth*pooledHeight ;
       }
-    }
-    data += width*height ;
-    dzdx += width*height ;
-    dzdy += pooledWidth*pooledHeight ;
+     break;
   }
 }
 
 template
-void maxPoolingBackward_cpu<float>(float* dzdx,
-                                   float const* data,
-                                   float const* dzdy,
-                                   size_t width,
-                                   size_t height,
-                                   size_t depth,
-                                   size_t windowWidth,
-                                   size_t windowHeight,
-                                   size_t strideX,
-                                   size_t strideY,
-                                   size_t padLeft,
-                                   size_t padRight,
-                                   size_t padTop,
-                                   size_t padBottom) ;
+void poolingBackward_cpu<float>(float* dzdx,
+                                float const* data,
+                                float const* dzdy,
+                                PoolMethod method,
+                                size_t width,
+                                size_t height,
+                                size_t depth,
+                                size_t windowWidth,
+                                size_t windowHeight,
+                                size_t strideX,
+                                size_t strideY,
+                                size_t padLeft,
+                                size_t padRight,
+                                size_t padTop,
+                                size_t padBottom) ;
 
 template
-void maxPoolingBackward_cpu<double>(double* dzdx,
-                                    double const* data,
-                                    double const* dzdy,
-                                    size_t width,
-                                    size_t height,
-                                    size_t depth,
-                                    size_t windowWidth,
-                                    size_t windowHeight,
-                                    size_t strideX,
-                                    size_t strideY,
-                                    size_t padLeft,
-                                    size_t padRight,
-                                    size_t padTop,
-                                    size_t padBottom) ;
+void poolingBackward_cpu<double>(double* dzdx,
+                                 double const* data,
+                                 double const* dzdy,
+                                 PoolMethod method,
+                                 size_t width,
+                                 size_t height,
+                                 size_t depth,
+                                 size_t windowWidth,
+                                 size_t windowHeight,
+                                 size_t strideX,
+                                 size_t strideY,
+                                 size_t padLeft,
+                                 size_t padRight,
+                                 size_t padTop,
+                                 size_t padBottom) ;
 

@@ -55,9 +55,10 @@ function res = vl_simplenn(net, x, dzdy, res)
 %     - layer.padding: the padding (usually 0).
 %
 %   Max pooling layer::
-%     The max pooling layer wraps VL_NNMAXPOOL(). It has fields:
+%     The max pooling layer wraps VL_NNPOOL(). It has fields:
 %
-%     - layer.type = 'maxpool'
+%     - layer.type = 'pool'
+%     - layer.method: pooling method ('max' or 'avg').
 %     - layer.pool: the pooling size.
 %     - layer.stride: the sampling stride (usually 1).
 %     - layer.padding: the padding (usually 0).
@@ -131,8 +132,8 @@ for i=1:n
   switch l.type
     case 'conv'
       res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, 'pad', l.pad, 'stride', l.stride) ;
-    case 'maxpool'
-      res(i+1).x = vl_nnmaxpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride) ;
+    case 'pool'
+      res(i+1).x = vl_nnpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
     case 'normalize'
       res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
     case 'softmax'
@@ -169,9 +170,9 @@ if doder
             vl_nnconv(res(i).x, l.filters, l.biases, ...
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
-      case 'maxpool'
-        res(i).dzdx = vl_nnmaxpool(res(i).x, l.pool, res(i+1).dzdx, ...
-          'pad', l.pad, 'stride', l.stride) ;
+      case 'pool'
+        res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
+          'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
       case 'normalize'
         res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
       case 'softmax'

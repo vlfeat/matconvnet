@@ -98,17 +98,18 @@ for epoch=1:opts.numEpochs
     info.train.topFiveError(end) = info.train.topFiveError(end) + sum(min(error(1:5,:))) ;
 
     % gradient step
+    lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
     for l=1:numel(net.layers)
       ly = net.layers{l} ;
       if ~strcmp(ly.type, 'conv'), continue ; end
 
       ly.filtersMomentum = 0.9 * ly.filtersMomentum ...
-          - 0.0005 * opts.learningRate * ly.filtersLearningRate * ly.filters ...
-          - ly.filtersLearningRate * opts.learningRate/numel(batch) * res(l).dzdw{1} ;
+          - 0.0005 * lr * ly.filtersLearningRate * ly.filters ...
+          - lr * ly.filtersLearningRate/numel(batch) * res(l).dzdw{1} ;
 
       ly.biasesMomentum = 0.9 * ly.biasesMomentum ...
-          - 0.0005 * opts.learningRate * ly.biasesLearningRate * ly.biases ...
-          - ly.biasesLearningRate * opts.learningRate/numel(batch) * res(l).dzdw{2} ;
+          - 0.0005 * lr * ly.biasesLearningRate * ly.biases ...
+          - lr * ly.biasesLearningRate/numel(batch) * res(l).dzdw{2} ;
 
       ly.filters = ly.filters + ly.filtersMomentum ;
       ly.biases = ly.biases + ly.biasesMomentum ;
