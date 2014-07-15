@@ -343,23 +343,22 @@ __global__ void avgPoolingBackward_gpu_kernel(
 
     int dx = x_data + padLeft - windowWidth ;
     int dy = y_data + padTop - windowHeight ;
-    int x1 = (dx >= 0) ? dx/strideX + 1 : 0 ;
-    int y1 = (dy >= 0) ? dy/strideY + 1 : 0 ;
-    int x2 = min((x_data + padLeft) / strideX, pooledWidth - 1) ;
-    int y2 = min((y_data + padTop) / strideY, pooledHeight - 1) ;
+    int px1 = (dx >= 0) ? dx/strideX + 1 : 0 ;
+    int py1 = (dy >= 0) ? dy/strideY + 1 : 0 ;
+    int px2 = min((x_data + padLeft) / strideX, pooledWidth - 1) ;
+    int py2 = min((y_data + padTop) / strideY, pooledHeight - 1) ;
     T accumulator = 0 ;
     dzdy += z * pooledHeight * pooledWidth;
-
-    for (int y = y1 ; y <= y2 ; ++ y) {
-      for (int x = x1 ; x <= x2 ; ++ x) {
-        int x1_data = x * strideX - padLeft ;
-        int y1_data = y * strideY - padTop ;
-        int x2_data = min(x1_data + windowWidth, width) ;
-        int y2_data = min(y1_data + windowHeight, height) ;
-        x1_data = max(x1_data, 0) ;
-        y1_data = max(y1_data, 0) ;
-        T poolSize = (y2_data - y1_data) * (x2_data - x1_data);
-        accumulator += dzdy[y * pooledWidth + x] / poolSize ;
+    for (int py = py1 ; py <= py2 ; ++py) {
+      for (int px = px1 ; px <= px2 ; ++px) {
+        int x1 = px * strideX - padLeft ;
+        int y1 = py * strideY - padTop ;
+        int x2 = min(x1 + windowWidth, width) ;
+        int y2 = min(y1 + windowHeight, height) ;
+        x1 = max(x1, 0) ;
+        y1 = max(y1, 0) ;
+        T poolSize = (y2 - y1) * (x2 - x1);
+        accumulator += dzdy[py * pooledWidth + px] / poolSize ;
       }
     }
     dzdx[index] = accumulator ;
