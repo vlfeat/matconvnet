@@ -278,83 +278,81 @@ void mexFunction(int nout, mxArray *out[],
     packed_data_init_with_geom(&derData, gpuMode, derDataGeom, false, true, 0) ;
   }
 
-  for (int image = 0 ; image < data.geom.size ; ++image) {
-    ptrdiff_t dataOffset = (data.geom.height*data.geom.width*data.geom.depth) * image ;
-    ptrdiff_t outputOffset = (output.geom.height*output.geom.width*output.geom.depth) * image ;
-    ptrdiff_t derOutputOffset = (derOutput.geom.height*derOutput.geom.width*derOutput.geom.depth) * image ;
-
-    if (backMode) {
-      /* ---------------------------------------------------------- */
-      /*                                              Backward mode */
-      /* ---------------------------------------------------------- */
-      if (gpuMode) {
+  if (backMode) {
+    /* ---------------------------------------------------------- */
+    /*                                              Backward mode */
+    /* ---------------------------------------------------------- */
+    if (gpuMode) {
 #ifdef ENABLE_GPU
-        poolingBackward_gpu<float>(derData.memory + dataOffset,
-                                   data.memory + dataOffset,
-                                   derOutput.memory + derOutputOffset,
-                                   method,
-                                   data.geom.height, data.geom.width, data.geom.depth,
-                                   poolHeight,
-                                   poolWidth,
-                                   strideY,
-                                   strideX,
-                                   padTop,
-                                   padBottom,
-                                   padLeft,
-                                   padRight) ;
+      poolingBackward_gpu<float>(derData.memory,
+                                 data.memory,
+                                 derOutput.memory,
+                                 method,
+                                 data.geom.height, data.geom.width,
+                                 data.geom.depth * data.geom.size,
+                                 poolHeight,
+                                 poolWidth,
+                                 strideY,
+                                 strideX,
+                                 padTop,
+                                 padBottom,
+                                 padLeft,
+                                 padRight) ;
 #else
-        assert(false) ;
+      assert(false) ;
 #endif
-      } else {
-        poolingBackward_cpu<float>(derData.memory + dataOffset,
-                                   data.memory + dataOffset,
-                                   derOutput.memory + derOutputOffset,
-                                   method,
-                                   data.geom.height, data.geom.width, data.geom.depth,
-                                   poolHeight,
-                                   poolWidth,
-                                   strideY,
-                                   strideX,
-                                   padTop,
-                                   padBottom,
-                                   padLeft,
-                                   padRight) ;
-      }
     } else {
-      /* ---------------------------------------------------------- */
-      /*                                               Forward mode */
-      /* ---------------------------------------------------------- */
-      if (gpuMode) {
+      poolingBackward_cpu<float>(derData.memory,
+                                 data.memory,
+                                 derOutput.memory,
+                                 method,
+                                 data.geom.height, data.geom.width,
+                                 data.geom.depth * data.geom.size,
+                                 poolHeight,
+                                 poolWidth,
+                                 strideY,
+                                 strideX,
+                                 padTop,
+                                 padBottom,
+                                 padLeft,
+                                 padRight) ;
+    }
+  } else {
+    /* ---------------------------------------------------------- */
+    /*                                               Forward mode */
+    /* ---------------------------------------------------------- */
+    if (gpuMode) {
 #ifdef ENABLE_GPU
-        pooling_gpu<float>(output.memory + outputOffset,
-                           data.memory + dataOffset,
-                           method,
-                           data.geom.height, data.geom.width, data.geom.depth,
-                           poolHeight,
-                           poolWidth,
-                           strideY,
-                           strideX,
-                           padTop,
-                           padBottom,
-                           padLeft,
-                           padRight) ;
+      pooling_gpu<float>(output.memory,
+                         data.memory,
+                         method,
+                         data.geom.height, data.geom.width,
+                         data.geom.depth * data.geom.size,
+                         poolHeight,
+                         poolWidth,
+                         strideY,
+                         strideX,
+                         padTop,
+                         padBottom,
+                         padLeft,
+                         padRight) ;
 #else
-        assert(false) ;
+      assert(false) ;
 #endif
-      } else {
-        pooling_cpu<float>(output.memory + outputOffset,
-                           data.memory + dataOffset,
-                           method,
-                           data.geom.height, data.geom.width, data.geom.depth,
-                           poolHeight,
-                           poolWidth,
-                           strideY,
-                           strideX,
-                           padTop,
-                           padBottom,
-                           padLeft,
-                           padRight) ;
-      }
+    } else {
+      pooling_cpu<float>(output.memory,
+                         data.memory,
+                         method,
+                         data.geom.height, data.geom.width,
+                         data.geom.depth * data.geom.size,
+                         poolHeight,
+                         poolWidth,
+                         strideY,
+                         strideX,
+                         padTop,
+                         padBottom,
+                         padLeft,
+                         padRight) ;
     }
   }
 
