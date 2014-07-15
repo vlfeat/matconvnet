@@ -1,12 +1,12 @@
 function imagenet()
 % CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
 
-opts.dataDir = 'data/imagenet12' ;
-opts.expDir = 'data/imagenet12-exp-2' ;
+opts.dataDir = 'data/imagenet12-ram' ;
+opts.expDir = 'data/imagenet12-exp-3' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
-opts.train.batchSize = 100 ;
-opts.train.numEpochs = 10 ;
+opts.train.batchSize = 256 ;
+opts.train.numEpochs = 100 ;
 opts.train.continue = true ;
 opts.train.useGpu = true ;
 opts.train.learningRate = [0.001*ones(1, 8) 0.0001*ones(1,2)] ;
@@ -25,6 +25,9 @@ else
   mkdir(opts.expDir) ;
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
+
+% patch
+imdb.images.name = strrep(imdb.images.name, '.JPEG', '.jpg') ;
 
 % -------------------------------------------------------------------------
 %                                                    Network initialization
@@ -64,7 +67,7 @@ fn = getBatchWrapper(...
   net.normalization.averageImage, ...
   net.normalization.imageSize) ;
 
-[net,info] = cnn_train(net, imdb, fn, opts.train) ;
+[net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(averageImage, size)
@@ -93,7 +96,7 @@ switch opts.augmentation
 end
 
 im = cell(1, numel(batch)) ;
-parfor i=1:numel(batch)
+for i=1:numel(batch)
   imt = imread([imdb.imageDir '/' imdb.images.name{batch(i)}]) ;
   imt = single(imt) * (1/255) ; % faster than im2single
   if size(imt,3) == 1, imt = cat(3, imt, imt, imt) ; end
@@ -103,8 +106,10 @@ parfor i=1:numel(batch)
   fx = (opts.size(2)+opts.boder(2))/w ;
   fy = (opts.size(1)+opts.boder(1))/h ;
   factor = max(fx,fy) ;
-  imt = imresize(imt, factor) ;
-  
+  if abs(factor - 1) > 0.01
+    imt = imresize(imt, factor) ;
+  end
+    
   % crop & flip
   w = size(imt,2) ;
   h = size(imt,1) ;

@@ -7,6 +7,7 @@ opts.useGpu = false ;
 opts.learningRate = 0.001 ;
 opts.continue = false ;
 opts.expDir = 'data/exp' ;
+opts.conserveMemory = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir), mkdir(opts.expDir) ; end
@@ -88,7 +89,8 @@ for epoch=1:opts.numEpochs
 
     % backprop
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one) ;
+    clear res;
+    res = vl_simplenn(net, im, one, 'conserveMemory', opts.conserveMemory) ;
 
     % update energy
     info.train.objective(end) = info.train.objective(end) + double(gather(res(end).x)) ;
@@ -142,7 +144,12 @@ for epoch=1:opts.numEpochs
     info.val.topFiveError(end) = info.val.topFiveError(end) + sum(min(error(1:5,:))) ;
 
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
+    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/ batch_time) ;
+    if opts.useGpu
+      gpu = gpuDevice ;
+      fprintf(' [GPU free memory %.2fMB]', gpu.FreeMemory/1024^2) ;
+    end
+    fprintf('\n') ;
   end
 
   % save

@@ -1,4 +1,4 @@
-function res = vl_simplenn(net, x, dzdy, res)
+function res = vl_simplenn(net, x, dzdy, varargin)
 % VL_SIMPLENN  Evaluates a simple CNN
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
@@ -105,6 +105,10 @@ function res = vl_simplenn(net, x, dzdy, res)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+opts.res = [] ;
+opts.conserveMemory = false ;
+opts = vl_argparse(opts, varargin);
+
 n = numel(net.layers) ;
 
 if (nargin <= 2) || isempty(dzdy)
@@ -115,6 +119,8 @@ end
 
 gpuMode = isa(x, 'gpuArray') ;
 
+res = opts.res ;
+opt.res = [] ;
 if (nargin <= 3) || isempty(res)
   res = struct(...
     'x', cell(1,n+1), ...
@@ -149,12 +155,14 @@ for i=1:n
     case 'dropout'
       [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
     otherwise
-      error('Unknown layer type %s', l.type);
+      error('Unknown layer type %s', l.type) ;
   end
-  try
+  if opts.conserveMemory
+  end
+  if gpuMode
+    %gpu =gpuDevice ;
+    %fprintf('fwd: %d %.1f\n', i, gpu.FreeMemory/1024^2) ;
     %wait(gpuDevice) ;
-  catch
-    % no gpuDevice
   end
   res(i).time = toc(res(i).time) ;
 end
@@ -188,7 +196,12 @@ if doder
       case 'dropout'
         res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
     end
+    if opts.conserveMemory
+      res(i+1).dzdx = [] ;
+    end
     if gpuMode
+      %gpu =gpuDevice ;
+      %fprintf('bkg: %d %.1f\n', i, gpu.FreeMemory/1024^2) ;
       %wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;
