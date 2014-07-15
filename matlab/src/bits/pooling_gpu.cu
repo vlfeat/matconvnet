@@ -1,10 +1,11 @@
 /** @file pooling_gpu.cu
  ** @brief Max pooling filters (GPU)
  ** @author Andrea Vedaldi
+ ** @author Karel Lenc
  **/
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 2014 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -14,6 +15,7 @@ the terms of the BSD license (see the COPYING file).
 #include "gpu.hpp"
 #include "pooling.hpp"
 
+#include <assert.h>
 #include <float.h>
 #include <sm_20_atomic_functions.h>
 
@@ -48,10 +50,12 @@ __global__ void maxPooling_gpu_kernel
     int pz = py / pooledHeight ;
     px %= pooledWidth ;
     py %= pooledHeight ;
-    int x1 = max(px * strideX - padLeft, 0) ;
-    int y1 = max(py * strideY - padTop, 0) ;
+    int x1 = px * strideX - padLeft ;
+    int y1 = py * strideY - padTop ;
     int x2 = min(x1 + windowWidth, width) ;
     int y2 = min(y1 + windowHeight, height) ;
+    x1 = max(x1, 0) ;
+    y1 = max(y1, 0) ;
     data += pz * (width*height) ;
     T bestValue = data[y1 * width + x1] ;
     for (int y = y1 ; y < y2 ; ++y) {
@@ -91,10 +95,12 @@ __global__ void avgPooling_gpu_kernel
     int pz = py / pooledHeight ;
     px %= pooledWidth ;
     py %= pooledHeight ;
-    int x1 = max(px * strideX - padLeft, 0) ;
-    int y1 = max(py * strideY - padTop, 0) ;
+    int x1 = px * strideX - padLeft ;
+    int y1 = py * strideY - padTop ;
     int x2 = min(x1 + windowWidth, width) ;
     int y2 = min(y1 + windowHeight, height) ;
+    x1 = max(x1, 0) ;
+    y1 = max(y1, 0) ;
     data += pz * (width*height) ;
     T accum = 0;
     T poolSize = (y2 - y1)*(x2 - x1);
@@ -160,6 +166,8 @@ void pooling_gpu(T* pooled,
       <<")"<<std::endl ;
     }
     break;
+  default:
+    assert(false);
   }
 }
 
@@ -274,13 +282,15 @@ __global__ void maxPoolingBackward_gpu_kernel
     int pz = py / pooledHeight ;
     px %= pooledWidth ;
     py %= pooledHeight ;
-
-    int x1 = max(px * strideX - padLeft, 0) ;
-    int y1 = max(py * strideY - padTop, 0) ;
-    int x2 = min(x1 + windowWidth, width) ;
-    int y2 = min(y1 + windowHeight, height) ;
     data += pz * (width*height) ;
     dzdx += pz * (width*height) ;
+
+    int x1 = px * strideX - padLeft ;
+    int y1 = py * strideY - padTop ;
+    int x2 = min(x1 + windowWidth, width) ;
+    int y2 = min(y1 + windowHeight, height) ;
+    x1 = max(x1, 0) ;
+    y1 = max(y1, 0) ;
     int bestIndex = y1 * width + x1 ;
     T bestValue = data[bestIndex] ;
     for (int y = y1 ; y < y2 ; ++y) {
@@ -323,28 +333,36 @@ __global__ void avgPoolingBackward_gpu_kernel(
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index < nthreads) {
-    // find out the local index
-    // find out the local offset
-    int x = index % width;
-    int y = (index / width) % height;
-    int z = (index / width / height) % depth;
-    int py1 = (y < windowHeight) ? 0 : (y - windowHeight) / strideY + 1;
-    int py2 = min(y / strideY + 1, pooledHeight);
-    int px1 = (x < windowWidth) ? 0 : (x - windowWidth) / strideX + 1;
-    int px2 = min(x / strideX + 1, pooledWidth);
-    T gradient = 0;
+    /* To understand the logic of this piece of code see the
+     comments to col2im_gpu_kernel */
+    int x_data = index ;
+    int y_data = x_data / width ;
+    int z = y_data / height ;
+    x_data %= width ;
+    y_data %= height ;
+
+    int dx = x_data + padLeft - windowWidth ;
+    int dy = y_data + padTop - windowHeight ;
+    int x1 = (dx >= 0) ? dx/strideX + 1 : 0 ;
+    int y1 = (dy >= 0) ? dy/strideY + 1 : 0 ;
+    int x2 = min((x_data + padLeft) / strideX, pooledWidth - 1) ;
+    int y2 = min((y_data + padTop) / strideY, pooledHeight - 1) ;
+    T accumulator = 0 ;
     dzdy += z * pooledHeight * pooledWidth;
-    for (int py = py1; py < py2; ++py) {
-      for (int px = px1; px < px2; ++px) {
-        int x1 = max(x * strideX - padLeft, 0) ;
-        int y1 = max(y * strideY - padTop, 0) ;
-        int x2 = min(x1 + windowWidth, width) ;
-        int y2 = min(y1 + windowHeight, height) ;
-        T poolSize = (y2 - y1) * (x2 - x1);
-        gradient += dzdy[py * pooledWidth + px] / poolSize ;
+
+    for (int y = y1 ; y <= y2 ; ++ y) {
+      for (int x = x1 ; x <= x2 ; ++ x) {
+        int x1_data = x * strideX - padLeft ;
+        int y1_data = y * strideY - padTop ;
+        int x2_data = min(x1_data + windowWidth, width) ;
+        int y2_data = min(y1_data + windowHeight, height) ;
+        x1_data = max(x1_data, 0) ;
+        y1_data = max(y1_data, 0) ;
+        T poolSize = (y2_data - y1_data) * (x2_data - x1_data);
+        accumulator += dzdy[y * pooledWidth + x] / poolSize ;
       }
     }
-    dzdx[index] = gradient;
+    dzdx[index] = accumulator ;
   }
 }
 
@@ -413,9 +431,9 @@ void poolingBackward_gpu(T* dzdx,
         <<")"<<std::endl ;
       }
       break;
+    default:
+      assert(false) ;
   }
-
-
 }
 
 template

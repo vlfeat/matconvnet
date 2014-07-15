@@ -1,10 +1,11 @@
 /** @file pooling.cpp
  ** @brief Max pooling filters (CPU)
  ** @author Andrea Vedaldi
+ ** @author Karel Lenc
  **/
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 2014 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -14,6 +15,9 @@ the terms of the BSD license (see the COPYING file).
 #include "pooling.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cassert>
+
+#include<iostream>
 
 /* ---------------------------------------------------------------- */
 /*                                                 maxPooling (CPU) */
@@ -43,10 +47,12 @@ void pooling_cpu(T* pooled,
       for (int z = 0; z < depth; ++z) {
         for (int y = 0; y < pooledHeight; ++y) {
           for (int x = 0; x < pooledWidth; ++x) {
-            int x1 = std::max(x * (signed)strideX - (signed)padLeft, 0) ;
-            int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
+            int x1 = x * (signed)strideX - (signed)padLeft ;
+            int y1 = y * (signed)strideY - (signed)padTop ;
             int x2 = std::min(x1 + windowWidth, width) ;
             int y2 = std::min(y1 + windowHeight, height) ;
+            x1 = std::max(x1, 0) ;
+            y1 = std::max(y1, 0) ;
             T bestValue = data[y1 * width + x1] ;
             for (int v = y1 ; v < y2 ; ++v) {
               for (int u = x1 ; u < x2 ; ++u) {
@@ -64,10 +70,12 @@ void pooling_cpu(T* pooled,
       for (int z = 0; z < depth; ++z) {
         for (int y = 0; y < pooledHeight; ++y) {
           for (int x = 0; x < pooledWidth; ++x) {
-            int x1 = std::max(x * (signed)strideX - (signed)padLeft, 0) ;
-            int y1 = std::max(y * (signed)strideY - (signed)padTop, 0) ;
+            int x1 = x * (signed)strideX - (signed)padLeft ;
+            int y1 = y * (signed)strideY - (signed)padTop ;
             int x2 = std::min(x1 + windowWidth, width) ;
             int y2 = std::min(y1 + windowHeight, height) ;
+            x1 = std::max(x1, 0) ;
+            y1 = std::max(y1, 0) ;
             T accum = 0 ;
             T poolSize = (y2 - y1) * (x2 - x1);
             for (int v = y1 ; v < y2 ; ++v) {
@@ -82,6 +90,8 @@ void pooling_cpu(T* pooled,
         pooled += pooledWidth*pooledHeight ;
       }
       break;
+    default:
+      assert(false) ;
   }
 
 
@@ -149,13 +159,14 @@ void poolingBackward_cpu(T* dzdx,
       for (int z = 0; z < depth; ++z) {
         for (int py = 0; py < pooledHeight; ++py) {
           for (int px = 0; px < pooledWidth; ++px) {
-            int x1 = std::max(px * (signed)strideX - (signed)padLeft, 0) ;
-            int y1 = std::max(py * (signed)strideY - (signed)padTop, 0) ;
+            int x1 = px * (int)strideX - (int)padLeft ;
+            int y1 = py * (int)strideY - (int)padTop ;
             int x2 = std::min(x1 + windowWidth, width) ;
             int y2 = std::min(y1 + windowHeight, height) ;
+            x1 = std::max(x1, 0) ;
+            y1 = std::max(y1, 0) ;
             int bestIndex = y1 * width + x1 ;
             T bestValue = data[bestIndex] ;
-
             for (int y = y1 ; y < y2 ; ++y) {
               for (int x = x1 ; x < x2 ; ++x) {
                 int index = y * width + x ;
@@ -178,14 +189,16 @@ void poolingBackward_cpu(T* dzdx,
       for (int z = 0; z < depth; ++z) {
         for (int py = 0; py < pooledHeight; ++py) {
           for (int px = 0; px < pooledWidth; ++px) {
-            int x1 = std::max(px * (signed)strideX - (signed)padLeft, 0) ;
-            int y1 = std::max(py * (signed)strideY - (signed)padTop, 0) ;
+            int x1 = px * (int)strideX - (int)padLeft ;
+            int y1 = py * (int)strideY - (int)padTop ;
             int x2 = std::min(x1 + windowWidth, width) ;
             int y2 = std::min(y1 + windowHeight, height) ;
+            x1 = std::max(x1, 0) ;
+            y1 = std::max(y1, 0) ;
             T poolSize = (y2 - y1) * (x2 - x1);
-            for (int x = y1 ; x < y2 ; ++x) {
-              for (int y = x1 ; y < x2 ; ++y) {
-                dzdx[x * width + y] += dzdy[py * pooledWidth + px] / poolSize;
+            for (int y = y1 ; y < y2 ; ++y) {
+              for (int x = x1 ; x < x2 ; ++x) {
+                dzdx[y * width + x] += dzdy[py * pooledWidth + px] / poolSize;
               }
             }
           }
@@ -195,6 +208,8 @@ void poolingBackward_cpu(T* dzdx,
         dzdy += pooledWidth*pooledHeight ;
       }
      break;
+    default:
+      assert(false) ;
   }
 }
 

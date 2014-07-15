@@ -45,7 +45,7 @@
 %    The derivative DZDY has the same dimension of the output Y and
 %    the derivative DZDX has the same dimension as the input X.
 
-% Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
+% Copyright (C) 2014 Andrea Vedaldi, Karel Lenc, and Max Jaderberg.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

@@ -1,10 +1,11 @@
 /** @file pooling.hpp
  ** @brief Max pooling filters
  ** @author Andrea Vedaldi
+ ** @author Karel Lenc
  **/
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 2014 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
