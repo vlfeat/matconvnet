@@ -41,7 +41,7 @@ remainingArgs = {} ;
 names = fieldnames(conf) ;
 
 ai = 1 ;
-while ai < length(args)
+while ai <= length(args)
   paramName = args{ai} ;
   if isstruct(paramName)
     moreArgs = cat(2, fieldnames(args{ai}), struct2cell(args{ai}))' ;

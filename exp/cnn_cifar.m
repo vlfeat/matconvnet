@@ -11,7 +11,7 @@ opts.train.useGpu = false ;
 opts.train.learningRate = [0.001*ones(1, 8) 0.0001*ones(1,2)] ;
 opts.train.expDir = opts.expDir ;
 
-run matlab/vl_setupnn ;
+run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
 
 % --------------------------------------------------------------------
 %                                                         Prepare data
