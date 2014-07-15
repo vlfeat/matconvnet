@@ -200,24 +200,28 @@ for l=4 %setdiff(1:9,6)
           pool = [pooly poolx] ;
           args = {'verbose','stride',stride,'pad',pad, 'method', 'avg'};
           y = vl_nnpool(x,pool,args{:}) ;
-          y_conv = vl_nnconv(x, ones(pooly,poolx,1,size(x,3), 'single')./poolx./pooly, ...
+          y_conv = vl_nnconv(gather(x), ones(pooly,poolx,1,size(x,3), 'single')./poolx./pooly, ...
             zeros(1, size(x,3), 'single'),'verbose', 'stride', stride, ...
             'pad', pad);
-          vl_testsim(y, y_conv, 1e-3); % Hmm, does not pass with 1e-4
+          vl_testsim(y, y_conv, 1e-3); % Does not pass with 1e-4
         end
       end
 
-      methods = {'avg', 'max'};
-
+      methods = {'max', 'avg'};
       for mi = 1:numel(methods)
         fprintf('testing vl_nnpool - %s', methods{mi}) ;
         for pool=1:3
           for pad=0:min(3,pool-1)
             for stride=1:4
-              args = {'verbose','stride',stride,'pad',pad, 'method', methods{mi}};
+              args = {'verbose','stride',stride,'pad',pad,'method',methods{mi}};
               y = vl_nnpool(x,pool,args{:}) ;
+              %y__ = vl_nnpool(gather(x),pool,args{:}) ;
+              %vl_testsim(y,y__,1e-4) ;
+
               dzdy = grandn(size(y),'single') ;
+              %dzdy = gpuArray(ones(size(y),'single')) ;
               dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
+              %dzdx__ = vl_nnpool(gather(x),pool,gather(dzdy),args{:}) ;
               vl_testder(@(x) vl_nnpool(x,pool,args{:}), ...
                          x, dzdy, dzdx, range * 1e-2) ;
             end
