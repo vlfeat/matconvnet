@@ -34,7 +34,7 @@ imdb.cats.name = cats ;
 imdb.cats.description = descrs ;
 
 % load list of validation images
-names = textread(valImageListPath, '%s')' ;
+names = sort(textread(valImageListPath, '%s')') ;
 labels = textread(valLabelsPath, '%d')' ;
 
 imdb.images.id = horzcat(imdb.images.id, (1:numel(names)) + 1e7 - 1) ;
@@ -54,6 +54,13 @@ imdb.images.label = horzcat(imdb.images.label, labels) ;
 % fixes fields
 imdb.images.name = strcat(imdb.images.name, '.JPEG') ;
 imdb.imageDir = fullfile(opts.dataDir, 'images') ;
+
+% sort categories by WNID (to be compatible with other implementations)
+[imdb.cats.name,perm] = sort(imdb.cats.name) ;
+imdb.cats.description = imdb.cats.description(perm) ;
+relabel(perm) = 1:numel(imdb.cats.name) ;
+ok = imdb.images.label >  0 ;
+imdb.images.label(ok) = relabel(imdb.images.label(ok)) ;
 
 if opts.lite
   % pick a small number of images for the first 10 classes

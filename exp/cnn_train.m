@@ -13,6 +13,7 @@ opts = vl_argparse(opts, varargin) ;
 if ~exist(opts.expDir), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
+if isnan(opts.train), opts.train = [] ; end
 
 % -------------------------------------------------------------------------
 %                                                    Network initialization
@@ -145,9 +146,14 @@ for epoch=1:opts.numEpochs
 
     batch_time = toc(batch_time) ;
     fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/ batch_time) ;
+    if 1
+      n = t + numel(batch) - 1 ;
+      fprintf(' err %.1f err5 %.1f', ...
+        info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
+    end
     if opts.useGpu
-      gpu = gpuDevice ;
-      fprintf(' [GPU free memory %.2fMB]', gpu.FreeMemory/1024^2) ;
+      %gpu = gpuDevice ;
+      %fprintf(' [GPU free memory %.2fMB]', gpu.FreeMemory/1024^2) ;
     end
     fprintf('\n') ;
   end

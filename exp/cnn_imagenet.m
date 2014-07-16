@@ -2,7 +2,7 @@ function imagenet()
 % CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
 
 opts.dataDir = 'data/imagenet12-ram' ;
-opts.expDir = 'data/imagenet12-exp-3' ;
+opts.expDir = 'data/imagenet12-exp-4' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
 opts.train.batchSize = 256 ;
@@ -98,7 +98,7 @@ end
 im = cell(1, numel(batch)) ;
 for i=1:numel(batch)
   imt = imread([imdb.imageDir '/' imdb.images.name{batch(i)}]) ;
-  imt = single(imt) * (1/255) ; % faster than im2single
+  imt = single(imt) ; % faster than im2single (and multiplies bt 255)
   if size(imt,3) == 1, imt = cat(3, imt, imt, imt) ; end
   w = size(imt,2) ;
   h = size(imt,1) ;
