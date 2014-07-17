@@ -6,6 +6,7 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
 \usepackage{pgfplots} 
+\usepackage[colorlinks]{hyperref}
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
 \newcommand{\diag}{\operatorname{diag}}
@@ -47,17 +48,9 @@ Karel Lenc}
 \item \emph{Flexibility.} Neural network layers are implemented in a straightforward manner, often directly in MATLAB code, so that they are easy to modify, extend, or integrate with new ones. Other toolboxes hide the whole neural network layers behind a wall of compiled code; here the granularity is much finer.
 \item \emph{Power.} The implementation can run the latest models such as Krizhevsky~\textit{et al.}~\cite{krizhevsky12imagenet}, including the DeCAF and Caffe variants, and variants from the Oxford Visual Geometry Group. Pre-learned features for different tasks can be easily downloaded.
 \item \emph{Efficiency.} The implementation is quite efficient, supporting both CPU and GPU computation (in the latest versions of MALTAB). Despite MATLAB overhead, it is only marginally slower than alternative implementations such as Caffe. What you gain is development speed if you want to extend the architecture with new layers or other modification.
-\item \emph{Self contained.} The implementation is fully self-contained, requiring only MATLAB and a compatible C/C++ compiler to work (GPU code requires the freely-available CUDA DevKit). Several fully-functional image classification examples are included.
+\item \emph{Self contained.} The implementation is fully self-contained, requiring only MATLAB and a compatible C/C++ compiler to work (GPU code requires the freely-available CUDA DevKit). Several fully-functional image classification examples are included. \vlnn may be merged in the future with VLFeat~(\url{http://www.vlfeat.org/}).
 \end{itemize}
-\vlnn may be merged in the future with VLFeat~(\url{http://www.vlfeat.org/}).
-
-Section~\ref{s:intro}
-% ------------------------------------------------------------------
-\subsection{Credits}
-% ------------------------------------------------------------------
-
-The implementation of several CNN computations in this library are inspired by the Caffe library~\cite{jia13caffe} (however, Caffe is \emph{not} a dependency). Several of the example networks have been trained by Karen Simonyan as part of~\cite{chatfield14return}.
-
+Section~\ref{s:intro} provides a brief introduction to CNNs, explaining their modular structure and fundamental concepts such as back-propagation. Section~\ref{s:blocks} lists all the computational building blocks implemented in \vlnn that can be combined to create CNNs. Section~\ref{s:wrappers} discusses more abstract CNN wrappers and example code and models.
 
 % ------------------------------------------------------------------
 \section{Introduction to convolutional neural netowrks}\label{s:intro}
@@ -559,6 +552,13 @@ $\bx$ and $\by$ and $\bfe_c$ is the indicator vector of class $c$.
 It is easy enough to combine the computational blocks of Sect.~\ref{s:blocks} in any network DAG by writing a corresponding MATLAB script. Nevertheless, \vlnn provides a simple wrapper for the common case of a linear chain. This is implemented by the \verb!vl_simplenn! and \verb!vl_simplenn_move! functions.
 
 \verb!vl_simplenn! takes as input a structure \verb!net! representing the CNN as well as input \verb!x! and potentially output derivatives \verb!dzdy!, depending on the mode of operation.
+
+
+% ------------------------------------------------------------------
+\section{About \vlnn}
+% ------------------------------------------------------------------
+
+The implementation of several CNN computations in this library are inspired by the Caffe library~\cite{jia13caffe} (however, Caffe is \emph{not} a dependency). Several of the example networks have been trained by Karen Simonyan as part of~\cite{chatfield14return}.
 
 % ------------------------------------------------------------------
 \bibliographystyle{plain}
