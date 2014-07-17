@@ -46,7 +46,7 @@ else
     batch_time = tic ;
     batch = train(t:min(t+bs-1, numel(train))) ;
     fprintf('computing average image: processing batch starting with image %d ...', batch(1)) ;
-    temp = getBatch(imdb, batch, ...
+    temp = cnn_imagenet_get_batch(imdb, batch, ...
       'size', net.normalization.imageSize) ;
     im{t} = mean(temp, 4) ;
     batch_time = toc(batch_time) ;
