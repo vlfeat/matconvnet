@@ -211,39 +211,39 @@ bool terminate ;
 void * thread_function(void* reader_)
 {
   Reader* reader = (Reader*) reader_ ;
+  pthread_mutex_lock(&queueMutex) ;
   while (!terminate) {
-    /* wait for a change to the queue */
-    pthread_mutex_lock(&queueMutex) ;
-    pthread_cond_wait(&queueWait, &queueMutex) ;
-
-    /* acquire next available job */
     QueuedImage *image = queueFirst ;
     while (image) {
       if (!image->locked && image->buffer == NULL) {
-        image->locked = true ;
         break ;
       }
       image = image->next ;
     }
-    pthread_mutex_unlock(&queueMutex) ;
 
-    /* do the work */
-    if (image) {
+    if (image == NULL) {
+      pthread_cond_wait(&queueWait, &queueMutex) ;
+    } else {
+      image->locked = true ;
+      pthread_mutex_unlock(&queueMutex) ;
       reader_read(reader, image) ;
-      image->locked = false ;
-    }
 
-    /* signal change to the queue */
-    pthread_cond_signal(&queueWait) ;
+      pthread_mutex_lock(&queueMutex) ;
+      image->locked = false ;
+      pthread_cond_broadcast(&queueWait) ;
+    }
   }
+  pthread_mutex_unlock(&queueMutex) ;
   return NULL ;
 }
 
 void delete_readers()
 {
   /* terminate threads */
+  pthread_mutex_lock(&queueMutex) ;
   terminate = true ;
-  pthread_cond_signal(&queueWait) ; /* allow waiting threads to terminate */
+  pthread_cond_broadcast(&queueWait) ; /* allow waiting threads to wake up and terminate */
+  pthread_mutex_unlock(&queueMutex) ;
   void * status ;
   for (int t = 0 ; t < (signed)numReaders - 1 ; ++t) {
     pthread_join(threads[t] , &status) ;
@@ -349,19 +349,23 @@ void mexFunction(int nout, mxArray *out[],
     int num = 0 ;
     for (QueuedImage * image = queueFirst ; image ; image = image->next) {
       num++ ;
-      mexPrintf("vl_imreadjpeg: enqueued image %d; locked %d, ready %d, ('%s')\n",
-                num, image->locked, image->buffer != NULL, image->filename) ;
-
+      if (verbosity > 1) {
+        mexPrintf("vl_imreadjpeg: cached image %d; loading %d, loaded %d, ('%s')\n",
+                  num, image->locked, image->buffer != NULL, image->filename) ;
+      }
     }
+    mexPrintf("vl_imreadjpeg: %d images cached\n", num) ;
     pthread_mutex_unlock(&queueMutex) ;
   }
-
 
   if (!prefetch) {
     out[OUT_IMAGES] = mxCreateCellArray(mxGetNumberOfDimensions(in[IN_FILENAMES]),
                                         mxGetDimensions(in[IN_FILENAMES])) ;
 
   }
+
+  /* fill queue */
+  pthread_mutex_lock(&queueMutex) ;
   for (int i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
     mxArray* filename_array = mxGetCell(in[IN_FILENAMES], i) ;
     if (!vlmxIsString(filename_array,-1)) {
@@ -370,50 +374,46 @@ void mexFunction(int nout, mxArray *out[],
     char filename [4096] ;
     mxGetString (filename_array, filename, sizeof(filename)/sizeof(char)) ;
 
-    pthread_mutex_lock(&queueMutex) ;
     QueuedImage *image = queue_find(filename) ;
     if (image == NULL) {
       /* this image was not already enqueued */
       image = calloc(sizeof(QueuedImage),1) ;
       image->filename = malloc(strlen(filename)+1) ;
       strcpy(image->filename, filename) ;
-      if (prefetch) {
-        queue_add (image) ;
-        pthread_mutex_unlock(&queueMutex) ;
-        pthread_cond_signal(&queueWait) ;
-        if (verbosity) {
-          mexPrintf("vl_imreadjpeg: prefetching '%s'\n", image->filename) ;
-        }
-        continue ;
+      queue_add (image) ;
+      if (verbosity > 1) {
+        mexPrintf("vl_imreadjpeg: enqueued '%s'\n", image->filename) ;
       }
-      pthread_mutex_unlock(&queueMutex) ;
-      reader_read(readers[0], image) ;
-      if (verbosity) {
-        mexPrintf("vl_imreadjpeg: reading directly '%s'\n", image->filename) ;
-      }
-    } else {
-      /* the image was already enqueued */
-      /* wait for any thread that may be processing the image */
-      while (image->locked && image->buffer == NULL) {
-        if (verbosity) {
-          mexPrintf("vl_imreadjpeg: waiting for thread to finish reading '%s'\n", image->filename) ;
-        }
-        pthread_cond_wait(&queueWait, &queueMutex); /* unlock and wait */
-      }
-      /* at this point either the image was alrady read by a thread
-       or we read it ourself */
+    }
+  }
+  pthread_mutex_unlock(&queueMutex) ;
+  pthread_cond_signal(&queueWait) ;
+
+  /* empty the queue */
+  if (prefetch) return  ;
+
+  for (int i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
+    mxArray* filename_array = mxGetCell(in[IN_FILENAMES], i) ;
+    char filename [4096] ;
+    mxGetString (filename_array, filename, sizeof(filename)/sizeof(char)) ;
+
+    pthread_mutex_lock(&queueMutex) ;
+    QueuedImage *image = queue_find(filename) ;
+    assert(image) ;
+    if (image->buffer == NULL && numReaders == 1) {
+      /* no multithreading, read directly */
       queue_remove(image) ;
       pthread_mutex_unlock(&queueMutex) ;
-      if (image->buffer == NULL) {
-        if (verbosity) {
-          mexPrintf("vl_imreadjpeg: reading directly '%s'\n", image->filename) ;
+      reader_read(readers[0], image) ;
+    } else {
+      while (image->locked || image->buffer == NULL) {
+        if (verbosity > 1) {
+          mexPrintf("vl_imreadjpeg: waiting for thread to finish reading '%s'\n", image->filename) ;
         }
-        reader_read(readers[0], image) ;
-      } else {
-        if (verbosity) {
-          mexPrintf("vl_imreadjpeg: obtaining prefetched image '%s'\n", image->filename) ;
-        }
+        pthread_cond_wait(&queueWait, &queueMutex); /* unlock, wait, relock */
       }
+      queue_remove(image) ;
+      pthread_mutex_unlock(&queueMutex) ;
     }
 
     /* now the image is read */
