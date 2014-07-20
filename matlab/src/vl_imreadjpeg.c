@@ -128,7 +128,6 @@ void reader_deinit (Reader* self)
 void reader_read (Reader* self, QueuedImage * image)
 {
   JSAMPARRAY scanlines ;
-  JSAMPROW scanline ;
   int row_stride ;
 
   /* open file */
@@ -154,9 +153,10 @@ void reader_read (Reader* self, QueuedImage * image)
   jpeg_start_decompress(&self->decompressor);
 
   /* allocate scaline buffer */
+  const int blockSize = 32 ;
   row_stride = self->decompressor.output_width * self->decompressor.output_components ;
   scanlines = (*self->decompressor.mem->alloc_sarray)
-  ((j_common_ptr) &self->decompressor, JPOOL_IMAGE, row_stride, 1);
+  ((j_common_ptr) &self->decompressor, JPOOL_IMAGE, row_stride, blockSize);
 
   /* decompress each scanline and transpose result into MATLAB format */
   {
@@ -165,32 +165,33 @@ void reader_read (Reader* self, QueuedImage * image)
      after read_scanline
      */
     while(self->decompressor.output_scanline < self->decompressor.output_height) {
-      jpeg_read_scanlines(&self->decompressor, scanlines, 1);
-      scanline = scanlines[0] ;
-      JSAMPROW end = scanline
-      + self->decompressor.output_components
-      * self->decompressor.output_width ;
-      int y = self->decompressor.output_scanline - 1 ;
-      if (self->decompressor.output_components == 3) {
-        float* r = (float*)image->buffer + 0 * (image->height*image->width) + y ;
-        float* g = (float*)image->buffer + 1 * (image->height*image->width) + y ;
-        float* b = (float*)image->buffer + 2 * (image->height*image->width) + y ;
-        while (scanline != end) {
-          *r = ((float) (*scanline++)) / 255.0f ;
-          *g = ((float) (*scanline++)) / 255.0f ;
-          *b = ((float) (*scanline++)) / 255.0f ;
-          r += image->height ;
-          g += image->height ;
-          b += image->height ;
+      int y = self->decompressor.output_scanline ;
+      int bsy = self->decompressor.output_height - y ;
+      if (bsy > blockSize) { bsy = blockSize ; }
+      while (self->decompressor.output_scanline < y + bsy) {
+        jpeg_read_scanlines(&self->decompressor,
+                            scanlines + self->decompressor.output_scanline - y,
+                            y + bsy - self->decompressor.output_scanline);
+      }
+
+      for (int x = 0 ; x < self->decompressor.output_width ; x += blockSize) {
+        int bsx = self->decompressor.output_width - x ;
+        if (bsx > blockSize) { bsx = blockSize ; }
+        for (int dy = 0 ; dy < bsy ; dy += 1) {
+          float * restrict r = (float*)image->buffer + x * image->height + y + dy ;
+          float * restrict g = r + (image->height*image->width) ;
+          float * restrict b = g + (image->height*image->width) ;
+          JSAMPROW restrict scanline = scanlines[dy] + 3*x ;
+          JSAMPROW end = scanline + 3*bsx ;
+          while (scanline != end) {
+            *r = ((float) (*scanline++)) / 255.0f ;
+            *g = ((float) (*scanline++)) / 255.0f ;
+            *b = ((float) (*scanline++)) / 255.0f ;
+            r += image->height ;
+            g += image->height ;
+            b += image->height ;
+          }
         }
-      } else if (self->decompressor.output_components == 1) {
-        float* v = (float*)image->buffer + 0 * (image->height*image->width) + y ;
-        while (scanline != end) {
-          *v = ((float) (*scanline++)) / 255.0f ;
-          v += image->height ;
-        }
-      } else {
-        assert(false) ;
       }
     }
   }
