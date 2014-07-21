@@ -1,14 +1,16 @@
-function imagenet()
+function cnn_imagenet()
 % CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
 
 opts.dataDir = 'data/imagenet12-ram' ;
-opts.expDir = 'data/imagenet12-exp-5' ;
+opts.expDir = 'data/imagenet12-exp-6' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
+opts.numFetchThreads = 12 ;
 opts.train.batchSize = 256 ;
 opts.train.numEpochs = 100 ;
 opts.train.continue = true ;
 opts.train.useGpu = true ;
+opts.train.prefetch = true ;
 opts.train.learningRate = [0.001*ones(1, 8) 0.0001*ones(1,2)] ;
 opts.train.expDir = opts.expDir ;
 
@@ -47,7 +49,8 @@ else
     batch = train(t:min(t+bs-1, numel(train))) ;
     fprintf('computing average image: processing batch starting with image %d ...', batch(1)) ;
     temp = cnn_imagenet_get_batch(imdb, batch, ...
-      'size', net.normalization.imageSize) ;
+      'size', net.normalization.imageSize, ...
+      'numThreads', opts.numFetchThreads) ;
     im{t} = mean(temp, 4) ;
     batch_time = toc(batch_time) ;
     fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
@@ -65,16 +68,18 @@ clear averageImage im temp ;
 
 fn = getBatchWrapper(...
   net.normalization.averageImage, ...
-  net.normalization.imageSize) ;
+  net.normalization.imageSize, ...
+  opts.numFetchThreads) ;
 
 [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchWrapper(averageImage, size)
+function fn = getBatchWrapper(averageImage, size, numThreads)
 % -------------------------------------------------------------------------
 fn = @(imdb,batch) cnn_imagenet_get_batch(imdb,batch,...
-  'average',averageImage,...
-  'size', size) ;
+                                          'average',averageImage,...
+                                          'size', size, ...
+                                          'numThreads', numThreads) ;
 
 % -------------------------------------------------------------------------
 function net = initializeNetwork(opt)

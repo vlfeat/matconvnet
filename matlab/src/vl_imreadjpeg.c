@@ -165,6 +165,7 @@ void reader_read (Reader* self, QueuedImage * image)
      after read_scanline
      */
     while(self->decompressor.output_scanline < self->decompressor.output_height) {
+      int x, dy, bsx ;
       int y = self->decompressor.output_scanline ;
       int bsy = self->decompressor.output_height - y ;
       if (bsy > blockSize) { bsy = blockSize ; }
@@ -174,19 +175,19 @@ void reader_read (Reader* self, QueuedImage * image)
                             y + bsy - self->decompressor.output_scanline);
       }
 
-      for (int x = 0 ; x < self->decompressor.output_width ; x += blockSize) {
-        int bsx = self->decompressor.output_width - x ;
+      for (x = 0 ; x < self->decompressor.output_width ; x += blockSize) {
+        bsx = self->decompressor.output_width - x ;
         if (bsx > blockSize) { bsx = blockSize ; }
-        for (int dy = 0 ; dy < bsy ; dy += 1) {
-          float * restrict r = (float*)image->buffer + x * image->height + y + dy ;
-          float * restrict g = r + (image->height*image->width) ;
-          float * restrict b = g + (image->height*image->width) ;
-          JSAMPROW restrict scanline = scanlines[dy] + 3*x ;
+        for (dy = 0 ; dy < bsy ; dy += 1) {
+          float * __restrict r = (float*)image->buffer + x * image->height + y + dy ;
+          float * __restrict g = r + (image->height*image->width) ;
+          float * __restrict b = g + (image->height*image->width) ;
+          JSAMPROW __restrict scanline = scanlines[dy] + 3*x ;
           JSAMPROW end = scanline + 3*bsx ;
           while (scanline != end) {
-            *r = ((float) (*scanline++)) / 255.0f ;
-            *g = ((float) (*scanline++)) / 255.0f ;
-            *b = ((float) (*scanline++)) / 255.0f ;
+            *r = ((float) (*scanline++)) ;/*/ 255.0f ;*/
+            *g = ((float) (*scanline++)) ;/*/ 255.0f ;*/
+            *b = ((float) (*scanline++)) ;/*/ 255.0f ;*/
             r += image->height ;
             g += image->height ;
             b += image->height ;
@@ -240,19 +241,20 @@ void * thread_function(void* reader_)
 
 void delete_readers()
 {
+  int r, t ;
   /* terminate threads */
   pthread_mutex_lock(&queueMutex) ;
   terminate = true ;
   pthread_cond_broadcast(&queueWait) ; /* allow waiting threads to wake up and terminate */
   pthread_mutex_unlock(&queueMutex) ;
   void * status ;
-  for (int t = 0 ; t < (signed)numReaders - 1 ; ++t) {
+  for (t = 0 ; t < (signed)numReaders - 1 ; ++t) {
     pthread_join(threads[t] , &status) ;
   }
   pthread_cond_destroy(&queueWait) ;
   pthread_mutex_destroy(&queueMutex) ;
 
-  for (int r = 0 ; r < numReaders ; ++r) {
+  for (r = 0 ; r < numReaders ; ++r) {
     if (readers[r]) {
       reader_deinit(readers[r]);
       free(readers[r]) ;
@@ -264,6 +266,7 @@ void delete_readers()
 
 void create_readers(int requestedNumReaders)
 {
+  int r, t ;
   if (numReaders == requestedNumReaders) {
     return ;
   }
@@ -272,7 +275,7 @@ void create_readers(int requestedNumReaders)
   delete_readers() ;
 
   /* allocate plus one readers */
-  for (int r = 0 ; r < requestedNumReaders ; ++r) {
+  for (r = 0 ; r < requestedNumReaders ; ++r) {
     readers[r] = malloc(sizeof(Reader)) ;
     reader_init(readers[r]) ;
   }
@@ -282,7 +285,7 @@ void create_readers(int requestedNumReaders)
   pthread_mutex_init(&queueMutex, NULL) ;
   pthread_cond_init(&queueWait, NULL) ;
   terminate = false ;
-  for (int t = 0 ; t < numReaders - 1 ; ++t) {
+  for (t = 0 ; t < numReaders - 1 ; ++t) {
     pthread_create(threads + t, NULL, thread_function, readers[t+1]) ;
   }
 }
@@ -307,6 +310,7 @@ void mexFunction(int nout, mxArray *out[],
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
+  int i ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
@@ -345,10 +349,11 @@ void mexFunction(int nout, mxArray *out[],
   create_readers(requestedNumThreads + 1) ;
 
   if (verbosity) {
+    QueuedImage * image ;
+    int num = 0 ;
     mexPrintf("vl_imreadjpeg: numThreads = %d\n", (signed)numReaders-1) ;
     pthread_mutex_lock(&queueMutex) ;
-    int num = 0 ;
-    for (QueuedImage * image = queueFirst ; image ; image = image->next) {
+    for (image = queueFirst ; image ; image = image->next) {
       num++ ;
       if (verbosity > 1) {
         mexPrintf("vl_imreadjpeg: cached image %d; loading %d, loaded %d, ('%s')\n",
@@ -367,7 +372,7 @@ void mexFunction(int nout, mxArray *out[],
 
   /* fill queue */
   pthread_mutex_lock(&queueMutex) ;
-  for (int i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
+  for (i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
     mxArray* filename_array = mxGetCell(in[IN_FILENAMES], i) ;
     if (!vlmxIsString(filename_array,-1)) {
       mexErrMsgTxt("FILENAMES contains an entry that is not a string.") ;
@@ -393,7 +398,7 @@ void mexFunction(int nout, mxArray *out[],
   /* empty the queue */
   if (prefetch) return  ;
 
-  for (int i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
+  for (i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
     mxArray* filename_array = mxGetCell(in[IN_FILENAMES], i) ;
     char filename [4096] ;
     mxGetString (filename_array, filename, sizeof(filename)/sizeof(char)) ;

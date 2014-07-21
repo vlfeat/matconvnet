@@ -8,6 +8,7 @@ opts.learningRate = 0.001 ;
 opts.continue = false ;
 opts.expDir = 'data/exp' ;
 opts.conserveMemory = false ;
+opts.prefetch = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir), mkdir(opts.expDir) ; end
@@ -84,6 +85,10 @@ for epoch=1:opts.numEpochs
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
     [im, labels] = getBatch(imdb, batch) ;
+    if opts.prefetch
+      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
+      getBatch(imdb, nextBatch) ;
+    end
     if opts.useGpu
       im = gpuArray(im) ;
     end

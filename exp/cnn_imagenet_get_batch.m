@@ -1,10 +1,13 @@
-function [im, labels] = cnn_imagenet_get_batch(imdb, batch, varargin)
+function [imo, labels] = cnn_imagenet_get_batch(imdb, batch, varargin)
 % CNN_IMAGENET_GET_BATCH
 opts.size = [227, 227] ;
 opts.border = [29, 29] ;
 opts.average = [] ;
 opts.augmentation = 'none' ;
+opts.numThreads = 0 ;
 opts = vl_argparse(opts, varargin);
+
+prefetch = nargout == 0 ;
 
 switch opts.augmentation
   case 'none'
@@ -16,10 +19,24 @@ switch opts.augmentation
        0 0 0 0 0  1 1 1 1 1] ;
 end
 
+names = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
 im = cell(1, numel(batch)) ;
+if opts.numThreads > 0
+  if prefetch
+    vl_imreadjpeg(names,'numThreads', opts.numThreads, 'prefetch', 'verbose') ;
+    return ;
+  end
+  im = vl_imreadjpeg(names,'numThreads', opts.numThreads, 'verbose') ;
+end
+
+imo = zeros(opts.size(1), opts.size(2), 3, numel(batch), 'single') ;
 for i=1:numel(batch)
-  imt = imread([imdb.imageDir '/' imdb.images.name{batch(i)}]) ;
-  imt = single(imt) ; % faster than im2single (and multiplies bt 255)
+  if isempty(im{i})
+    imt = imread(names{i}) ;
+    imt = single(imt) ; % faster than im2single (and multiplies by 255)
+  else
+    imt = im{i} ;% 255 ;
+  end
   if size(imt,3) == 1, imt = cat(3, imt, imt, imt) ; end
   w = size(imt,2) ;
   h = size(imt,1) ;
@@ -30,7 +47,7 @@ for i=1:numel(batch)
   if abs(factor - 1) > 0.01
     imt = imresize(imt, factor, 'bilinear') ;
   end
-    
+
   % crop & flip
   w = size(imt,2) ;
   h = size(imt,1) ;
@@ -41,14 +58,12 @@ for i=1:numel(batch)
   sx = (1:opts.size(2)) + dx ;
   sy = (1:opts.size(1)) + dy ;
   if tf(3), sx = fliplr(sx) ; end
-  imt = imt(sy,sx,:) ;
-
-  % apply network normalization
-  if ~isempty(opts.average)
-    imt = imt - opts.average ;
-  end
-  im{i} = imt ;
+  imo(:,:,:,i) = imt(1+dy:opts.size(1)+dy, ...
+                     1+dx:opts.size(2)+dx, :) ;
 end
 
-im = cat(4, im{:}) ;
+if ~isempty(opts.average)
+  imo = bsxfun(@minus, imo, opts.average) ;
+end
+
 labels = imdb.images.label(batch) ;
