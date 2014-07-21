@@ -23,10 +23,10 @@ names = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
 im = cell(1, numel(batch)) ;
 if opts.numThreads > 0
   if prefetch
-    vl_imreadjpeg(names,'numThreads', opts.numThreads, 'prefetch', 'verbose') ;
+    vl_imreadjpeg(names,'numThreads', opts.numThreads, 'prefetch') ;
     return ;
   end
-  im = vl_imreadjpeg(names,'numThreads', opts.numThreads, 'verbose') ;
+  im = vl_imreadjpeg(names,'numThreads', opts.numThreads) ;
 end
 
 imo = zeros(opts.size(1), opts.size(2), 3, numel(batch), 'single') ;
