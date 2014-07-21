@@ -72,12 +72,13 @@ cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
 cpp_src+=matlab/src/bits/normalize.cpp
 
+mex_src:=matlab/src/vl_imreadjpeg.c
 ifeq ($(ENABLE_GPU),)
-mex_src:=matlab/src/vl_nnconv.cpp
+mex_src+=matlab/src/vl_nnconv.cpp
 mex_src+=matlab/src/vl_nnpool.cpp
 mex_src+=matlab/src/vl_nnnormalize.cpp
 else
-mex_src:=matlab/src/vl_nnconv.cu
+mex_src+=matlab/src/vl_nnconv.cu
 mex_src+=matlab/src/vl_nnpool.cu
 mex_src+=matlab/src/vl_nnnormalize.cu
 cpp_src+=matlab/src/bits/im2col_gpu.cu
@@ -86,6 +87,7 @@ cpp_src+=matlab/src/bits/normalize_gpu.cu
 endif
 
 mex_tgt:=$(subst matlab/src/,matlab/mex/,$(mex_src))
+mex_tgt:=$(patsubst %.c,%.mex$(MEXARCH),$(mex_tgt))
 mex_tgt:=$(patsubst %.cpp,%.mex$(MEXARCH),$(mex_tgt))
 mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 
@@ -108,6 +110,11 @@ matlab/src/bits/%.o : matlab/src/bits/%.cu
 	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
 
 # MEX files
+matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXOPTS+=-I/opt/local/include -L/opt/local/lib -ljpeg
+
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.c matlab/mex/.stamp $(cpp_tgt)
+	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
+
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
 	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
 
