@@ -15,6 +15,7 @@
 		2D95CDA518EDE3A50076E3A2 /* im2col_gpu.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */; };
 		2DADAFF718E6430500165C90 /* normalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DADAFF518E6430500165C90 /* normalize.cpp */; };
 		2DADAFF818E6430500165C90 /* normalize.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DADAFF618E6430500165C90 /* normalize.hpp */; };
+		2DE27163197A5531001768CA /* vl_imreadjpeg.c in Sources */ = {isa = PBXBuildFile; fileRef = 2DE27162197A5531001768CA /* vl_imreadjpeg.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -77,6 +78,7 @@
 		2DD3FAD918EC0E9000053032 /* vl_testder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_testder.m; path = matlab/xtest/vl_testder.m; sourceTree = "<group>"; };
 		2DD3FADA18EC118700053032 /* vl_rootnn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_rootnn.m; path = matlab/vl_rootnn.m; sourceTree = "<group>"; };
 		2DD3FADB18EC118700053032 /* vl_setupnn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_setupnn.m; path = matlab/vl_setupnn.m; sourceTree = "<group>"; };
+		2DE27162197A5531001768CA /* vl_imreadjpeg.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vl_imreadjpeg.c; path = matlab/src/vl_imreadjpeg.c; sourceTree = "<group>"; };
 		2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnpool.cu; path = matlab/src/vl_nnpool.cu; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -108,6 +110,7 @@
 				2D6D0420196A892E00022E96 /* config */,
 				2D375DCE18A84923008A97EE /* bits */,
 				2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */,
+				2DE27162197A5531001768CA /* vl_imreadjpeg.c */,
 				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
 				2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */,
 			);
@@ -290,6 +293,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2D375DC818A7FE3F008A97EE /* vl_nnconv.cu in Sources */,
+				2DE27163197A5531001768CA /* vl_imreadjpeg.c in Sources */,
 				2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */,
 				2D06568918AA79BB006545B4 /* pooling.cpp in Sources */,
 				2DADAFF718E6430500165C90 /* normalize.cpp in Sources */,
