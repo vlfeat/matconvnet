@@ -1,6 +1,8 @@
 function cnn_imagenet()
 % CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
 
+gpuDevice(2) ;
+
 opts.dataDir = 'data/imagenet12-ram' ;
 opts.expDir = 'data/imagenet12-exp-6' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
@@ -11,7 +13,7 @@ opts.train.numEpochs = 100 ;
 opts.train.continue = true ;
 opts.train.useGpu = true ;
 opts.train.prefetch = true ;
-opts.train.learningRate = [0.001*ones(1, 8) 0.0001*ones(1,2)] ;
+opts.train.learningRate = [0.001*ones(1, 30) 0.0001*ones(1,10) 0.00001*ones(1,10)] ;
 opts.train.expDir = opts.expDir ;
 
 run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
