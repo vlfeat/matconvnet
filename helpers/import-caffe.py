@@ -23,25 +23,25 @@ model_file='../data/vgg/CNN_F/model'
 
 # load network parameters
 net=caffe_pb2.NetParameter()
-#with open(param_file, 'r') as f:
-#  google.protobuf.text_format.Merge(f.read(), net)
+with open(param_file, 'r') as f:
+  google.protobuf.text_format.Merge(f.read(), net)
+net_bin=caffe_pb2.NetParameter()
 with open(model_file, 'rb') as f:
-  net.MergeFromString(f.read())
+  net_bin.MergeFromString(f.read())
 
 matlabLayers = []
-layers = [conn.layer.name for conn in net.layers]
+layers = [x.layer.name for x in net.layers]
+layers_bin = [x.layer.name for x in net_bin.layers]
 print layers
 for name in layers:
     index = layers.index(name)
-    blobs = list(net.layers[index].layer.blobs)
     layer = net.layers[index].layer
 
-    #print(net.layers[index].layer)
-
-#    print dir(layer)
-
     arrays = []
-    for b in blobs:
+    if name in layers_bin:
+      index = layers_bin.index(name)
+      blobs = list(net_bin.layers[index].layer.blobs)
+      for b in blobs:
         num = b.num
         channels = b.channels
         height = b.height
