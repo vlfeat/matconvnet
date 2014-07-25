@@ -4,6 +4,7 @@ opts.size = [227, 227] ;
 opts.border = [29, 29] ;
 opts.average = [] ;
 opts.augmentation = 'none' ;
+opts.numAugments = 1;
 opts.numThreads = 0 ;
 opts = vl_argparse(opts, varargin);
 
@@ -29,7 +30,9 @@ if opts.numThreads > 0
   im = vl_imreadjpeg(names,'numThreads', opts.numThreads) ;
 end
 
-imo = zeros(opts.size(1), opts.size(2), 3, numel(batch), 'single') ;
+imo = zeros(opts.size(1), opts.size(2), 3, ...
+  numel(batch)*opts.numAugments, 'single') ;
+si = 1;
 for i=1:numel(batch)
   if isempty(im{i})
     imt = imread(names{i}) ;
@@ -51,19 +54,24 @@ for i=1:numel(batch)
   % crop & flip
   w = size(imt,2) ;
   h = size(imt,1) ;
-  t = randi(size(tfs,2),1) ;
-  tf = tfs(:,t) ;
-  dx = floor((w - opts.size(2)) * tf(2)) ;
-  dy = floor((h - opts.size(1)) * tf(1)) ;
-  sx = (1:opts.size(2)) + dx ;
-  sy = (1:opts.size(1)) + dy ;
-  if tf(3), sx = fliplr(sx) ; end
-  imo(:,:,:,i) = imt(1+dy:opts.size(1)+dy, ...
-                     1+dx:opts.size(2)+dx, :) ;
+  augmentations = randperm(size(tfs,2));
+  for ai = 1:opts.numAugments
+    t = augmentations(ai) ;
+    tf = tfs(:,t) ;
+    dx = floor((w - opts.size(2)) * tf(2)) ;
+    dy = floor((h - opts.size(1)) * tf(1)) ;
+    sx = (1:opts.size(2)) + dx ;
+    sy = (1:opts.size(1)) + dy ;
+    if tf(3), sx = fliplr(sx) ; end
+    imo(:,:,:,si) = imt(1+dy:opts.size(1)+dy, ...
+                       1+dx:opts.size(2)+dx, :) ;
+    si = si + 1;
+  end
 end
 
 if ~isempty(opts.average)
-  imo = bsxfun(@minus, imo, opts.average) ;
+  % Different than in caffe
+  imo = bsxfun(@minus, imo, opts.average);
 end
 
 labels = imdb.images.label(batch) ;
