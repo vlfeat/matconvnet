@@ -1,10 +1,10 @@
-function imagenet()
+function cnn_imagenet_evaluate()
 % CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
 
 opts.dataDir = 'data/imagenet12' ;
 opts.expDir = 'data/imagenet12-caffe-eval-1' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.lite = false ;
+opts.lite = false ; 
 opts.train.batchSize = 256 ;
 opts.train.numEpochs = 1 ;
 opts.train.useGpu = false ;
@@ -25,13 +25,16 @@ else
 end
 
 % patch
-imdb.images.name = strrep(imdb.images.name, '.JPEG', '.jpg') ;
+%imdb.images.name = strrep(imdb.images.name, '.JPEG', '.jpg') ;
 
 % -------------------------------------------------------------------------
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-net = load('data/caffe-ref-net.mat') ;
+net = load('data/cnn_f.mat') ;
+mean_data = load('data/caffe-ref-net-mean.mat', 'mean_img');
+net.normalization.averageImage = imresize(mean_data.mean_img, ...
+  net.normalization.imageSize(1:2)');
 net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
 
 % -------------------------------------------------------------------------
