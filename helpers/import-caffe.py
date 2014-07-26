@@ -155,13 +155,10 @@ for name in layers_name_param:
       pad = 0
     mk['pad'] = float(pad) * np.array([1.,1.,1.,1.])
     mk['stride'] = float(layer.stride) * np.array([1.,1.])
-    keyboard()
-    #prev_out_sz = get_output_size(prev_out_sz, mk['filters'].shape, mk['pad'], mk['stride'])
     prev_out_sz = get_output_size(prev_out_sz,
                                   mk['filters'].shape,
                                   mk['pad'],
-                                  mk['stride']).append(mk['filters'].shape[3])
-    print prev_out_sz
+                                  mk['stride']) + [mk['filters'].shape[3]]
   elif layer.type == 'pad': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'pad'
     pass
@@ -186,7 +183,7 @@ for name in layers_name_param:
     prev_out_sz = get_output_size(prev_out_sz,
                                   mk['pool'],
                                   mk['pad'],
-                                  mk['stride']).append(prev_out_sz[2])
+                                  mk['stride']) + [prev_out_sz[2]]
   elif layer.type == 'innerproduct': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'conv'
     if len(arrays) >= 1:
@@ -231,7 +228,7 @@ else:
 #                                                          Save output
 # --------------------------------------------------------------------
 
-print 'Exporting to {}'.format(args.output)
-scipy.io.savemat(args.output, {
+print 'Exporting to {}'.format(args.output.name)
+sio.savemat(args.output, {
   'layers':np.array(matlab_layers),
   'normalization':mkn})
