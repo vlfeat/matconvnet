@@ -7,6 +7,7 @@ import sys
 import os
 import argparse
 import code
+import re
 import numpy as np
 from math import floor, ceil
 from numpy import array
@@ -47,8 +48,20 @@ parser.add_argument('--caffe-variant',
                     type=str,
                     nargs='?',
                     default='caffe',
-                    help='Synset file (ASCII)')
+                    help='Variant of Caffe software (use ? to get a list)')
 args = parser.parse_args()
+
+print 'Caffe varaint set to', args.caffe_variant
+if args.caffe_variant == 'vgg-caffe':
+  import vgg_caffe_pb2 as caffe_pb2
+elif args.caffe_variant == 'caffe':
+  import caffe_pb2 as caffe_pb2
+elif args.caffe_variant == '?':
+  print 'Supported variants: caffe, vgg-caffe'
+  sys.exit(0)
+else:
+  print 'Uknown Caffe variant', args.caffe_variant
+  sys.exit(1)
 
 # --------------------------------------------------------------------
 #                                                   Load average image
@@ -74,16 +87,21 @@ if args.average_image:
 #                                                        Load synseths
 # --------------------------------------------------------------------
 
+synsets_wnid=None
+synsets_name=None
+if args.synsets:
+  print 'Loading synsets'
+  r=re.compile('(?P<wnid>n[0-9]{8}?) (?P<name>.*)')
+  synsets_wnid=[]
+  synsets_name=[]
+  for line in args.synsets:
+    match = r.match(line)
+    synsets_wnid.append(match.group('wnid'))
+    synsets_name.append(match.group('name'))
 
 # --------------------------------------------------------------------
 #                                                          Load layers
 # --------------------------------------------------------------------
-
-print 'Caffe varaint set to', args.caffe_variant
-if args.caffe_variant == 'vgg-caffe':
-  import vgg_caffe_pb2 as caffe_pb2
-elif args.caffe_variant == 'caffe':
-  import caffe_pb2 as caffe_pb2
 
 print 'Loading Caffe CNN parameters from {}'.format(args.caffe_param.name)
 net_param=caffe_pb2.NetParameter()
@@ -238,6 +256,11 @@ else:
 # --------------------------------------------------------------------
 
 print 'Exporting to {}'.format(args.output.name)
-sio.savemat(args.output, {
-  'layers':np.array(matlab_layers),
-  'normalization':mkn})
+
+mnet = {
+  'layers': np.array(matlab_layers),
+  'normalization': mkn}
+if synsets_wnid: mnet['wnid'] = synsets_wnid
+if synsets_name: mnet['classes'] = synsets_name
+
+sio.savemat(args.output, mnet)

@@ -41,6 +41,8 @@ mkdir -p data/{tmp/vgg,tmp/caffe,models}
     for ((i=0;i<${#in[@]};++i)); do
         python utils/import-caffe.py \
             --caffe-variant=vgg-caffe \
+            --average-image=$base/mean.mat \
+            --synsets=data/tmp/caffe/synset_words.txt \
             $base/"${in[i]}"/param.prototxt \
             $base/"${in[i]}"/model \
             data/models/imagenet-vgg-"${out[i]}".mat

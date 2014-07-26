@@ -4,7 +4,7 @@ opts.size = [227, 227] ;
 opts.border = [29, 29] ;
 opts.average = [] ;
 opts.augmentation = 'none' ;
-opts.numAugments = 1;
+opts.numAugments = 1 ;
 opts.numThreads = 0 ;
 opts = vl_argparse(opts, varargin);
 
@@ -70,7 +70,6 @@ for i=1:numel(batch)
 end
 
 if ~isempty(opts.average)
-  % Different than in caffe
   imo = bsxfun(@minus, imo, opts.average);
 end
 
