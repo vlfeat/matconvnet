@@ -6,6 +6,7 @@
 import sys
 import os
 import argparse
+import code
 import numpy as np
 from math import floor, ceil
 from numpy import array
@@ -88,20 +89,38 @@ net_data.MergeFromString(args.caffe_data.read())
 # --------------------------------------------------------------------
 #                                                       Convert layers
 # --------------------------------------------------------------------
-
-pool_methods = ['max', 'avg']
-
 # TODO set layer sizes when blobs not provided
-# TODO add command line options (netdef, netdata, schemefile)
 
 matlab_layers = []
 layers_name_param = [x.layer.name for x in net_param.layers]
 layers_name_data = [x.layer.name for x in net_data.layers]
 print 'Converting {} layers'.format(len(net_param.layers))
 
+pool_methods = ['max', 'avg']
 prev_out_sz = [net_param.input_dim[2],
                net_param.input_dim[3],
                net_param.input_dim[1]]
+
+def keyboard(banner=None):
+    ''' Function that mimics the matlab keyboard command '''
+    # use exception trick to pick up the current frame
+    try:
+        raise None
+    except:
+        frame = sys.exc_info()[2].tb_frame.f_back
+    print "# Use quit() to exit :) Happy debugging!"
+    # evaluate commands in current namespace
+    namespace = frame.f_globals.copy()
+    namespace.update(frame.f_locals)
+    try:
+        code.interact(banner=banner, local=namespace)
+    except SystemExit:
+        return
+
+def get_output_size(size, filter_support, pad, stride):
+  return [ \
+      floor((size[0] + pad[0]+pad[1] - filter_support[0]) / stride[0]) + 1, \
+      floor((size[1] + pad[2]+pad[3] - filter_support[1]) / stride[1]) + 1]
 
 # scan all layers in net_param
 for name in layers_name_param:
@@ -120,73 +139,77 @@ for name in layers_name_param:
       print '  Extracted a blob of size', arrays[-1].shape
 
   mk = {'name': layer.name}
-  if layer.type == 'conv':
+  if layer.type == 'conv': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'conv'
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0].transpose([2, 3, 1, 0])
+      mk['filters'] = arrays[0].transpose([2,3,1,0])
     else:
-      mk['filters'] = np.zeros([0,0],dtype='float32')
+      mk['filters'] = np.zeros([0,0,0,0],dtype='float32')
     if len(arrays) >= 2:
-      mk['biases'] = np.squeeze(arrays[1].transpose([2, 3, 1, 0]), (2,3))
+      mk['biases'] = np.squeeze(arrays[1].transpose([2,3,1,0]), (2,3))
     else:
       mk['biases'] = np.zeros([0,0],dtype='float32')
     if hasattr(layer, 'pad'):
-      mk['pad'] = float(layer.pad)
+      pad = float(layer.pad)
     else:
-      mk['pad'] = 0.
-    mk['stride'] = float(layer.stride)
-    prev_out_sz = [\
-      floor((prev_out_sz[0] - mk['filters'].shape[0]) / layer.stride) + 1 + 2*mk['pad'], \
-      floor((prev_out_sz[1] - mk['filters'].shape[1]) / layer.stride) + 1 + 2*mk['pad'], \
-      mk['filters'].shape[3]]
-  elif layer.type == 'pad':
+      pad = 0
+    mk['pad'] = float(pad) * np.array([1.,1.,1.,1.])
+    mk['stride'] = float(layer.stride) * np.array([1.,1.])
+    keyboard()
+    #prev_out_sz = get_output_size(prev_out_sz, mk['filters'].shape, mk['pad'], mk['stride'])
+    prev_out_sz = get_output_size(prev_out_sz,
+                                  mk['filters'].shape,
+                                  mk['pad'],
+                                  mk['stride']).append(mk['filters'].shape[3])
+    print prev_out_sz
+  elif layer.type == 'pad': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'pad'
     pass
-  elif layer.type == 'relu':
+  elif layer.type == 'relu': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'relu'
-  elif layer.type == 'lrn':
+  elif layer.type == 'lrn': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'normalize'
     mk['param'] = np.array([layer.local_size, layer.k, layer.alpha, layer.beta])
-  elif layer.type == 'pool':
+  elif layer.type == 'pool': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'pool'
-    mk['pool'] = float(layer.kernelsize)
+    mk['pool'] = float(layer.kernelsize)*np.array([1.,1.])
     mk['method'] = pool_methods[layer.pool]
-    pad = 0
     if hasattr(layer, 'pad'):
-      mk['pad'] = float(layer.pad)*np.array([1., 1., 1., 1.])
       pad = layer.pad
     else:
-      mk['pad'] = np.array([0., 0., 0., 0.])
+      pad = 0
+    mk['pad'] = float(pad)*np.array([1.,1.,1.,1.])
     # Add single pixel right/bottom padding for even sized inputs
-    if prev_out_sz[0] % 2 == 0:
-      mk['pad'][1] += 1
-    if prev_out_sz[1] % 2 == 0:
-      mk['pad'][3] += 1
-    mk['stride'] = float(layer.stride)
-    prev_out_sz = [\
-      ceil((prev_out_sz[0] - mk['pool']) / layer.stride) + 1 + 2*pad, \
-      ceil((prev_out_sz[1] - mk['pool']) / layer.stride) + 1 + 2*pad, \
-      prev_out_sz[2]]
-  elif layer.type == 'innerproduct':
+    if prev_out_sz[0] % 2 == 0: mk['pad'][1] += 1
+    if prev_out_sz[1] % 2 == 0: mk['pad'][3] += 1
+    mk['stride'] = float(layer.stride)*np.array([1.,1.])
+    prev_out_sz = get_output_size(prev_out_sz,
+                                  mk['pool'],
+                                  mk['pad'],
+                                  mk['stride']).append(prev_out_sz[2])
+  elif layer.type == 'innerproduct': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'conv'
     if len(arrays) >= 1:
       mk['filters'] = arrays[0].reshape((prev_out_sz[1], prev_out_sz[0], prev_out_sz[2], -1))
       mk['filters'].transpose([1, 0, 2, 3])
     else:
-      mk['filters'] = np.zeros([0,0],dtype='float32')
+      mk['filters'] = np.zeros([0,0,0,0],dtype='float32')
     if len(arrays) >= 2:
       mk['biases'] = np.squeeze(arrays[1].transpose([2, 3, 1, 0]), (2,3))
     else:
       mk['biases'] = np.zeros([0,0],dtype='float32')
-    mk['pad'] = 0.
-    mk['stride'] = 1.
-    prev_out_sz = [ 1, 1, mk['filters'].shape[3]];
+    mk['pad'] = np.array([0.,0.,0.,0.])
+    mk['stride'] = np.array([1.,1.])
+    prev_out_sz = [1, 1, mk['filters'].shape[3]]
   elif layer.type == 'dropout':
+    # dropout ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'dropout'
     mk['rate']= float(layer.dropout_ratio)
   elif layer.type == 'softmax':
+    # softmax ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'softmax'
   else:
+    # anything else ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = layer.type
     print 'Warning: unknown layer type ', layer.type
   matlab_layers.append(mk)
