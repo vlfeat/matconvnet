@@ -57,11 +57,18 @@ args = parser.parse_args()
 average_image = None
 if args.average_image:
   print 'Loading average image'
-  blob=caffe_pb2.BlobProto()
-  blob.MergeFromString(args.average_image.read())
-  average_image = np.squeeze(blobproto_to_array(blob) \
-                               .astype('float32') \
-                               .transpose([2, 3, 1, 0]), 3)
+  avgim_nm, avgim_ext = os.path.splitext(args.average_image.name)
+  if avgim_ext == '.binaryproto':
+    blob=caffe_pb2.BlobProto()
+    blob.MergeFromString(args.average_image.read())
+    average_image = np.squeeze(blobproto_to_array(blob).astype('float32'),3)
+    average_image = average_image.transpose([2, 3, 1, 0])
+  elif avgim_ext == '.mat':
+    avgim_data = sio.loadmat(args.average_image)
+    average_image = avgim_data['mean_img']
+    average_image = average_image.transpose([1, 0, 2])
+  else:
+    print 'Unsupported average image format {}'.format(avgim_ext)
 
 # --------------------------------------------------------------------
 #                                                        Load synseths
@@ -219,7 +226,7 @@ if len(net_param.input_dim) > 0:
         net_param.input_dim[1]],dtype='float64')
 else:
   mkn['imageSize']=np.array([0,0],dtype='float32')
-if average_image:
+if average_image is not None:
   mkn['averageImage']=average_image
 else:
   mkn['averageImage']=np.array([0,0],dtype='float32')
