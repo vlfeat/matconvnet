@@ -96,7 +96,6 @@ net_data.MergeFromString(args.caffe_data.read())
 # --------------------------------------------------------------------
 #                                                       Convert layers
 # --------------------------------------------------------------------
-# TODO set layer sizes when blobs not provided
 
 matlab_layers = []
 layers_name_param = [x.layer.name for x in net_param.layers]
@@ -151,11 +150,12 @@ for name in layers_name_param:
     if len(arrays) >= 1:
       mk['filters'] = arrays[0].transpose([2,3,1,0])
     else:
-      mk['filters'] = np.zeros([0,0,0,0],dtype='float32')
+      mk['filters'] = np.zeros([layer.kernelsize,layer.kernelsize,
+                                prev_out_sz[3],layer.num_output],dtype='float32')
     if len(arrays) >= 2:
       mk['biases'] = np.squeeze(arrays[1].transpose([2,3,1,0]), (2,3))
     else:
-      mk['biases'] = np.zeros([0,0],dtype='float32')
+      mk['biases'] = np.zeros([1,layer.num_output],dtype='float32')
     if hasattr(layer, 'pad'):
       pad = float(layer.pad)
     else:
@@ -194,10 +194,12 @@ for name in layers_name_param:
   elif layer.type == 'innerproduct': # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     mk['type'] = 'conv'
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0].reshape((prev_out_sz[1], prev_out_sz[0], prev_out_sz[2], -1))
+      mk['filters'] = arrays[0].reshape((prev_out_sz[1], prev_out_sz[0],
+                                         prev_out_sz[2], layer.num_output))
       mk['filters'].transpose([1, 0, 2, 3])
     else:
-      mk['filters'] = np.zeros([0,0,0,0],dtype='float32')
+      mk['filters'] = np.zeros([prev_out_sz[1], prev_out_sz[0],
+                                prev_out_sz[2], layer.num_output],dtype='float32')
     if len(arrays) >= 2:
       mk['biases'] = np.squeeze(arrays[1].transpose([2, 3, 1, 0]), (2,3))
     else:
