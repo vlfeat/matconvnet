@@ -28,37 +28,38 @@ mkdir -p data/{tmp/vgg,tmp/caffe,models}
         wget -c -nc $CAFFE_URL/caffe_reference_imagenet_model
         wget -c -nc $CAFFE_URL/caffe_alexnet_model
         wget -c -nc $CAFFE_URL/caffe_ilsvrc12.tar.gz
-        wget -c -nc https://github.com/BVLC/caffe/raw/master/examples/imagenet/alexnet_deploy.prototxt
-        wget -c -nc https://github.com/BVLC/caffe/raw/master/examples/imagenet/imagenet_deploy.prototxt
+        wget -c -nc https://github.com/BVLC/caffe/raw/rcnn-release/examples/imagenet/alexnet_deploy.prototxt
+        wget -c -nc https://github.com/BVLC/caffe/raw/rcnn-release/examples/imagenet/imagenet_deploy.prototxt
         tar xzvf caffe_ilsvrc12.tar.gz
         )
     fi
 
-    base=data/tmp/vgg/$VGG_DEEPEVAL/models
-    in=(CNN_F CNN_M CNN_S CNN_M_128 CNN_M_1024 CNN_M_2048)
-    out=(f m s m-128 m-1024 m-2048)
+    if false
+    then
+        base=data/tmp/vgg/$VGG_DEEPEVAL/models
+        in=(CNN_F CNN_M CNN_S CNN_M_128 CNN_M_1024 CNN_M_2048)
+        out=(f m s m-128 m-1024 m-2048)
 
-    for ((i=0;i<${#in[@]};++i)); do
+        for ((i=0;i<${#in[@]};++i)); do
+            python utils/import-caffe.py \
+                --caffe-variant=vgg-caffe \
+                --average-image=$base/mean.mat \
+                --synsets=data/tmp/caffe/synset_words.txt \
+                $base/"${in[i]}"/param.prototxt \
+                $base/"${in[i]}"/model \
+                data/models/imagenet-vgg-"${out[i]}".mat
+        done
+    fi
+
+    if true
+    then
+        base=data/tmp/caffe
         python utils/import-caffe.py \
-            --caffe-variant=vgg-caffe \
-            --average-image=$base/mean.mat \
-            --synsets=data/tmp/caffe/synset_words.txt \
-            $base/"${in[i]}"/param.prototxt \
-            $base/"${in[i]}"/model \
-            data/models/imagenet-vgg-"${out[i]}".mat
-    done
-
-return
-
-    base=data/tmp/caffe
-    python utils/import-caffe.py \
-        --average-image=$base/imagenet_mean.binaryproto \
-        --synsets=$base/synset_words.txt \
-        $base/imagenet_deploy.prototxt \
-        $base/caffe_reference_imagenet_model \
-        data/models/imagenet-caffe-ref.mat
-
-
-   return
-
+            --caffe-variant=caffe-old \
+            --average-image=$base/imagenet_mean.binaryproto \
+            --synsets=$base/synset_words.txt \
+            $base/imagenet_deploy.prototxt \
+            $base/caffe_reference_imagenet_model \
+            data/models/imagenet-caffe-ref.mat
+    fi
 )
