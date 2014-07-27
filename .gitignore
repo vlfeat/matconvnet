@@ -5,6 +5,8 @@ mex/*
 mex
 data
 *.o
+*.pyc
+*~
 doc/.texpadtmp/*
 doc/*.pdf
 doc/.build
