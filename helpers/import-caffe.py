@@ -289,10 +289,12 @@ for name in layers_name_param:
     stride = [1]*2
     num_output_channels = param.num_output
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0].reshape((layer_input_size[0],
-                                         layer_input_size[1],
-                                         layer_input_size[2],
-                                         num_output_channels))
+      mk['filters'] = arrays[0].reshape(
+        layer_input_size[0],
+        layer_input_size[1],
+        layer_input_size[2],
+        num_output_channels,
+        order='F')
     else:
       mk['filters'] = np.zeros([layer_input_size[0],
                                 layer_input_size[1],
@@ -371,10 +373,10 @@ else:
 print 'Exporting to {}'.format(args.output.name)
 
 mnet = {
-  'layers': np.array(matlab_layers),
+  'layers': np.array(matlab_layers).reshape(1,-1),
   'normalization': mkn}
-if synsets_wnid: mnet['wnid'] = np.array(synsets_wnid, dtype=np.object)
-if synsets_name: mnet['classes'] = np.array(synsets_name, dtype=np.object)
+if synsets_wnid: mnet['wnid'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
+if synsets_name: mnet['classes'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
 
 sio.savemat(args.output, mnet)
 
