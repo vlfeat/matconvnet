@@ -260,12 +260,12 @@ for name in layers_name_param:
   elif ltype == 'lrn':
     mk['type'] = 'normalize'
     if hasattr(layer, 'lrn_param'): param = layer.lrn_param
-    local_size = param.local_size
-    alpha = param.alpha
-    beta = param.beta
+    local_size = float(param.local_size)
+    alpha = float(param.alpha)
+    beta = float(param.beta)
     kappa = 1.
     if hasattr(param, 'k'): kappa = param.k
-    mk['param'] = np.array([local_size, kappa, alpha, beta])
+    mk['param'] = np.array([local_size, kappa, alpha/local_size, beta])
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'pool':
     mk['type'] = 'pool'
@@ -338,7 +338,7 @@ if args.transpose and average_image is not None:
   average_image = average_image[:,:,: : -1] # to RGB
 
 for i in range(0,len(matlab_layers)):
-  for f in ['pad', 'stride', 'pool']:
+  for f in ['pad', 'stride', 'pool', 'param']:
     if f in matlab_layers[i]:
       matlab_layers[i][f] = np.array(matlab_layers[i][f],dtype=float).reshape([1,-1])
   if matlab_layers[i]['type'] == 'conv':

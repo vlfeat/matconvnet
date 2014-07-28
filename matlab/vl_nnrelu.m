@@ -14,9 +14,10 @@ function y = vl_nnrelu(x,dzdy)
 % the terms of the BSD license (see the COPYING file).
 
 if nargin <= 1
-  y = max(x,0) ;
+  y = max(x,single(0)) ;
+  %y = x .* (x > single(0)) ;
 else
   y = dzdy ;
   %y(x <= 0) = 0 ;
-  y = y .* (x > 0) ;
+  y = y .* (x > single(0)) ;
 end

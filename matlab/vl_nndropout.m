@@ -29,14 +29,15 @@ end
 
 % determine mask
 mask = opts.mask ;
+scale = single(1 / (1 - opts.rate)) ;
 if backMode && isempty(mask)
   warning('vl_nndropout: when using in backward mode, the mask should be specified') ;
 end
 if isempty(mask)
   if isa(x,'gpuArray')
-    mask = single(gpuArray.rand(size(x)) >= opts.rate) ;
+    mask = scale * single(gpuArray.rand(size(x)) >= opts.rate) ;
   else
-    mask = single(rand(size(x)) >= opts.rate) ;
+    mask = scale * single(rand(size(x)) >= opts.rate) ;
   end
 end
 
@@ -46,4 +47,3 @@ if ~backMode
 else
   y = mask .* dzdy ;
 end
-  

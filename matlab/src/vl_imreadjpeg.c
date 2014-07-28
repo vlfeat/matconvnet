@@ -175,24 +175,47 @@ void reader_read (Reader* self, QueuedImage * image)
                             y + bsy - self->decompressor.output_scanline);
       }
 
-      for (x = 0 ; x < self->decompressor.output_width ; x += blockSize) {
-        bsx = self->decompressor.output_width - x ;
-        if (bsx > blockSize) { bsx = blockSize ; }
-        for (dy = 0 ; dy < bsy ; dy += 1) {
-          float * __restrict r = (float*)image->buffer + x * image->height + y + dy ;
-          float * __restrict g = r + (image->height*image->width) ;
-          float * __restrict b = g + (image->height*image->width) ;
-          JSAMPROW __restrict scanline = scanlines[dy] + 3*x ;
-          JSAMPROW end = scanline + 3*bsx ;
-          while (scanline != end) {
-            *r = ((float) (*scanline++)) ;/*/ 255.0f ;*/
-            *g = ((float) (*scanline++)) ;/*/ 255.0f ;*/
-            *b = ((float) (*scanline++)) ;/*/ 255.0f ;*/
-            r += image->height ;
-            g += image->height ;
-            b += image->height ;
+      switch (image->depth) {
+      case 3:
+        {
+          for (x = 0 ; x < self->decompressor.output_width ; x += blockSize) {
+            bsx = self->decompressor.output_width - x ;
+            if (bsx > blockSize) { bsx = blockSize ; }
+            for (dy = 0 ; dy < bsy ; dy += 1) {
+              float * __restrict r = (float*)image->buffer + x * image->height + y + dy ;
+              float * __restrict g = r + (image->height*image->width) ;
+              float * __restrict b = g + (image->height*image->width) ;
+              JSAMPROW __restrict scanline = scanlines[dy] + 3*x ;
+              JSAMPROW end = scanline + 3*bsx ;
+              while (scanline != end) {
+                *r = ((float) (*scanline++)) ;/*/ 255.0f ;*/
+                *g = ((float) (*scanline++)) ;/*/ 255.0f ;*/
+                *b = ((float) (*scanline++)) ;/*/ 255.0f ;*/
+                r += image->height ;
+                g += image->height ;
+                b += image->height ;
+              }
+            }
           }
         }
+        break ;
+      case 1:
+        {
+          for (x = 0 ; x < self->decompressor.output_width ; x += blockSize) {
+            bsx = self->decompressor.output_width - x ;
+            if (bsx > blockSize) { bsx = blockSize ; }
+            for (dy = 0 ; dy < bsy ; dy += 1) {
+              float * __restrict r = (float*)image->buffer + x * image->height + y + dy ;
+              JSAMPROW __restrict scanline = scanlines[dy] + x ;
+              JSAMPROW end = scanline + bsx ;
+              while (scanline != end) {
+                *r = ((float) (*scanline++)) ;/*/ 255.0f ;*/
+                r += image->height ;
+              }
+            }
+          }
+        }
+        break ;
       }
     }
   }

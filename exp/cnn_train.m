@@ -67,7 +67,7 @@ for epoch=1:opts.numEpochs
     fprintf('resuming by loading epoch %d\n', epoch-1) ;
     load(sprintf(modelPath, epoch-1), 'net', 'info') ;
   end
-  
+
   train = opts.train(randperm(numel(opts.train))) ;
   val = opts.val ;
 
@@ -135,12 +135,16 @@ for epoch=1:opts.numEpochs
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix(t/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;
     [im, labels] = getBatch(imdb, batch) ;
+    if opts.prefetch
+      nextBatch = val(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(val))) ;
+      getBatch(imdb, nextBatch) ;
+    end
     if opts.useGpu
       im = gpuArray(im) ;
     end
 
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im) ;
+    res = vl_simplenn(net, im, [], 'disableDropout', true) ;
 
     % update energy
     info.val.objective(end) = info.val.objective(end) + double(gather(res(end).x)) ;

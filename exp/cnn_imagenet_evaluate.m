@@ -5,9 +5,11 @@ opts.dataDir = 'data/imagenet12' ;
 opts.expDir = 'data/imagenet12-ref-models-eval' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
+opts.numFetchThreads = 8 ;
 opts.train.batchSize = 256 ;
 opts.train.numEpochs = 1 ;
 opts.train.useGpu = false ;
+opts.train.prefetch = true ;
 opts.train.expDir = opts.expDir ;
 
 run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
@@ -51,7 +53,8 @@ net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
 
 fn = getBatchWrapper(...
   net.normalization.averageImage, ...
-  net.normalization.imageSize) ;
+  net.normalization.imageSize, ...
+  opts.numFetchThreads) ;
 
 [net,info] = cnn_train(net, imdb, fn, opts.train, ...
   'conserveMemory', true, ...
@@ -59,11 +62,9 @@ fn = getBatchWrapper(...
   'val', find(imdb.images.set==2)) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchWrapper(averageImage, size)
+function fn = getBatchWrapper(averageImage, size, numThreads)
 % -------------------------------------------------------------------------
 fn = @(imdb,batch) cnn_imagenet_get_batch(imdb,batch,...
-  'average',averageImage,...
-  'size', size, ...
-  'border', [0 0]) ;
-
-
+                                          'average',averageImage,...
+                                          'size', size, ...
+                                          'numThreads', numThreads) ;
