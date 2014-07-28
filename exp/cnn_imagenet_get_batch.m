@@ -47,7 +47,7 @@ for i=1:numel(batch)
   fx = (opts.size(2)+opts.border(2))/w ;
   fy = (opts.size(1)+opts.border(1))/h ;
   factor = max(fx,fy) ;
-  if abs(factor - 1) > 0.01
+  if abs(factor - 1) > 0.0001
     imt = imresize(imt, factor, 'bilinear') ;
   end
 

@@ -19,8 +19,8 @@ import google.protobuf
 # --------------------------------------------------------------------
 
 def blobproto_to_array(blob):
-  return np.array(blob.data).reshape(
-    blob.num, blob.channels, blob.height, blob.width)
+  return np.array(blob.data,dtype='float32').reshape(
+    blob.num, blob.channels, blob.height, blob.width).transpose()
 
 layers_type = {}
 layers_type[0]  = 'none'
@@ -81,6 +81,15 @@ parser.add_argument('--caffe-variant',
                     nargs='?',
                     default='caffe',
                     help='Variant of Caffe software (use ? to get a list)')
+parser.add_argument('--transpose',
+                    dest='transpose',
+                    action='store_true',
+                    help='Transpose CNN in a sane MATLAB format')
+parser.add_argument('--no-transpose',
+                    dest='transpose',
+                    action='store_false',
+                    help='Do not transpose CNN')
+parser.set_defaults(transpose=True)
 args = parser.parse_args()
 
 print 'Caffe varaint set to', args.caffe_variant
@@ -134,7 +143,6 @@ if args.average_image:
     blob=caffe_pb2.BlobProto()
     blob.MergeFromString(args.average_image.read())
     average_image = blobproto_to_array(blob).astype('float32')
-    average_image = average_image.transpose([2, 3, 1, 0])
     average_image = np.squeeze(average_image,3)
   elif avgim_ext == '.mat':
     avgim_data = sio.loadmat(args.average_image)
@@ -196,7 +204,7 @@ matlab_layers = []
 for name in layers_name_param:
   index = layers_name_param.index(name)
   layer = net_param.layers[index]
-  if args.caffe_variant == 'vgg-caffe': layer=layer.layer
+  if args.caffe_variant in ['vgg-caffe', 'caffe-old']: layer=layer.layer
   ltype = layer.type
   if not isinstance(ltype, basestring): ltype = layers_type[ltype]
 
@@ -229,17 +237,18 @@ for name in layers_name_param:
   if ltype == 'conv':
     mk['type'] = 'conv'
     if hasattr(layer, 'convolution_param'): param = layer.convolution_param
-    support = [param.kernel_size]*2
+    if hasattr(layer, 'kernelsize'): support = [param.kernelsize]*2
+    else: support = [param.kernel_size]*2
     pad = [param.pad]*4
     stride = [param.stride]*2
     num_output_channels = param.num_output
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0].transpose([2,3,1,0])
+      mk['filters'] = arrays[0]
     else:
       mk['filters'] = np.zeros(support + [layer_input_size[2], num_output_channels],
                                dtype='float32')
     if len(arrays) >= 2:
-      mk['biases'] = np.squeeze(arrays[1].transpose([2,3,1,0]), (2,3))
+      mk['biases'] = np.squeeze(arrays[1], (2,3))
     else:
       mk['biases'] = np.zeros([1,num_output_channels],dtype='float32')
     mk['pad'] = pad
@@ -261,7 +270,8 @@ for name in layers_name_param:
   elif ltype == 'pool':
     mk['type'] = 'pool'
     if hasattr(layer, 'pooling_param'): param = layer.pooling_param
-    support = [param.kernel_size]*2
+    if hasattr(layer, 'kernelsize'): support = [param.kernelsize]*2
+    else: support = [param.kernel_size]*2
     pad = [param.pad]*4
     stride = [param.stride]*2
     if layer_input_size[0] % 2 == 0: pad[1] += 1
@@ -279,18 +289,17 @@ for name in layers_name_param:
     stride = [1]*2
     num_output_channels = param.num_output
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0].reshape((layer_input_size[1],
-                                         layer_input_size[0],
+      mk['filters'] = arrays[0].reshape((layer_input_size[0],
+                                         layer_input_size[1],
                                          layer_input_size[2],
                                          num_output_channels))
-      mk['filters'].transpose([1,0,2,3])
     else:
-      mk['filters'] = np.zeros([layer_input_size[1],
-                                layer_input_size[0],
+      mk['filters'] = np.zeros([layer_input_size[0],
+                                layer_input_size[1],
                                 layer_input_size[2],
                                 num_output_channels],dtype='float32')
     if len(arrays) >= 2:
-      mk['biases'] = np.squeeze(arrays[1].transpose([2,3,1,0]), (2,3))
+      mk['biases'] = np.squeeze(arrays[1], (2,3))
     else:
       mk['biases'] = np.zeros([1,num_output_channels],dtype='float32')
     mk['pad'] = pad
@@ -315,6 +324,28 @@ for name in layers_name_param:
   layer_input_size = get_output_size(layer_input_size,
                                      support, pad, stride) + [num_output_channels]
   matlab_layers.append(mk)
+
+
+# --------------------------------------------------------------------
+#                                                Reshape and transpose
+# --------------------------------------------------------------------
+
+first_conv_layer = True
+if args.transpose and average_image is not None:
+  average_image = average_image.transpose([1,0,2])
+  average_image = average_image[:,:,: : -1] # to RGB
+
+for i in range(0,len(matlab_layers)):
+  for f in ['pad', 'stride', 'pool']:
+    if f in matlab_layers[i]:
+      matlab_layers[i][f] = np.array(matlab_layers[i][f],dtype=float).reshape([1,-1])
+  if matlab_layers[i]['type'] == 'conv':
+    matlab_layers[i]['biases'] = matlab_layers[i]['biases'].reshape(1,-1) # row
+    if args.transpose:
+      matlab_layers[i]['filters'] = matlab_layers[i]['filters'].transpose([1,0,2,3])
+      if first_conv_layer:
+        matlab_layers[i]['filters'] = matlab_layers[i]['filters'][:,:,: : -1,:] # to RGB
+        first_conv_layer = False
 
 # --------------------------------------------------------------------
 #                                                        Normalization
@@ -346,3 +377,4 @@ if synsets_wnid: mnet['wnid'] = np.array(synsets_wnid, dtype=np.object)
 if synsets_name: mnet['classes'] = np.array(synsets_name, dtype=np.object)
 
 sio.savemat(args.output, mnet)
+
