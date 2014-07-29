@@ -15,6 +15,8 @@ opts.continue = false ;
 opts.expDir = 'data/exp' ;
 opts.conserveMemory = false ;
 opts.prefetch = false ;
+opts.weightDecay = 0.0005;
+opts.momentum = 0.9;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir), mkdir(opts.expDir) ; end
@@ -35,6 +37,12 @@ for i=1:numel(net.layers)
   end
   if ~isfield(net.layers{i}, 'biasesLearningRate')
     net.layers{i}.biasesLearningRate = 1 ;
+  end
+  if ~isfield(net.layers{i}, 'filtersWeightDecay')
+    net.layers{i}.filtersWeightDecay = 1 ;
+  end
+  if ~isfield(net.layers{i}, 'biasesWeightDecay')
+    net.layers{i}.biasesWeightDecay = 1 ;
   end
 end
 
@@ -117,12 +125,14 @@ for epoch=1:opts.numEpochs
       ly = net.layers{l} ;
       if ~strcmp(ly.type, 'conv'), continue ; end
 
-      ly.filtersMomentum = 0.9 * ly.filtersMomentum ...
-          - 0.0005 * lr * ly.filtersLearningRate * ly.filters ...
+      ly.filtersMomentum = opts.momentum * ly.filtersMomentum ...
+          - opts.weightDecay * ly.filtersWeightDecay ...
+              * lr * ly.filtersLearningRate * ly.filters ...
           - lr * ly.filtersLearningRate/numel(batch) * res(l).dzdw{1} ;
 
-      ly.biasesMomentum = 0.9 * ly.biasesMomentum ...
-          - 0.0005 * lr * ly.biasesLearningRate * ly.biases ...
+      ly.biasesMomentum = opts.momentum * ly.biasesMomentum ...
+          - opts.weightDecay * ly.biasesWeightDecay ...
+              * lr * ly.biasesLearningRate * ly.biases ...
           - lr * ly.biasesLearningRate/numel(batch) * res(l).dzdw{2} ;
 
       ly.filters = ly.filters + ly.filtersMomentum ;
