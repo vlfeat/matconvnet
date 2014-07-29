@@ -364,7 +364,7 @@ else:
   mkn['imageSize']=np.array([0,0],dtype='float32')
 if average_image is not None:
   mkn['averageImage']=scipy.misc.imresize(average_image,
-                                          (mkn['imageSize'][0], mkn['imageSize'][1]),
+                                          (int(mkn['imageSize'][0]), int(mkn['imageSize'][1])),
                                           interp='bilinear')
 else:
   mkn['averageImage']=np.array([0,0],dtype='float32')
