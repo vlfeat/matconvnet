@@ -11,7 +11,9 @@ import re
 import numpy as np
 from math import floor, ceil
 from numpy import array
-import scipy.io as sio
+import scipy
+import scipy.io
+import scipy.misc
 import google.protobuf
 
 # --------------------------------------------------------------------
@@ -144,10 +146,12 @@ if args.average_image:
     blob.MergeFromString(args.average_image.read())
     average_image = blobproto_to_array(blob).astype('float32')
     average_image = np.squeeze(average_image,3)
+    if args.transpose and average_image is not None:
+      average_image = average_image.transpose([1,0,2])
+      average_image = average_image[:,:,: : -1] # to RGB
   elif avgim_ext == '.mat':
-    avgim_data = sio.loadmat(args.average_image)
+    avgim_data = scipy.io.loadmat(args.average_image)
     average_image = avgim_data['mean_img']
-    #average_image = average_image.transpose([1, 0, 2])
   else:
     print 'Unsupported average image format {}'.format(avgim_ext)
 
@@ -333,10 +337,6 @@ for name in layers_name_param:
 # --------------------------------------------------------------------
 
 first_conv_layer = True
-if args.transpose and average_image is not None:
-  average_image = average_image.transpose([1,0,2])
-  average_image = average_image[:,:,: : -1] # to RGB
-
 for i in range(0,len(matlab_layers)):
   for f in ['pad', 'stride', 'pool', 'param']:
     if f in matlab_layers[i]:
@@ -346,7 +346,8 @@ for i in range(0,len(matlab_layers)):
     if args.transpose:
       matlab_layers[i]['filters'] = matlab_layers[i]['filters'].transpose([1,0,2,3])
       if first_conv_layer:
-        matlab_layers[i]['filters'] = matlab_layers[i]['filters'][:,:,: : -1,:] # to RGB
+        if not args.caffe_variant in ['vgg-caffe']:
+          matlab_layers[i]['filters'] = matlab_layers[i]['filters'][:,:,: : -1,:] # to RGB
         first_conv_layer = False
 
 # --------------------------------------------------------------------
@@ -362,7 +363,9 @@ if len(net_param.input_dim) > 0:
 else:
   mkn['imageSize']=np.array([0,0],dtype='float32')
 if average_image is not None:
-  mkn['averageImage']=average_image
+  mkn['averageImage']=scipy.misc.imresize(average_image,
+                                          (mkn['imageSize'][0], mkn['imageSize'][1]),
+                                          interp='bilinear')
 else:
   mkn['averageImage']=np.array([0,0],dtype='float32')
 
@@ -378,5 +381,5 @@ mnet = {
 if synsets_wnid: mnet['wnid'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
 if synsets_name: mnet['classes'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
 
-sio.savemat(args.output, mnet)
+scipy.io.savemat(args.output, mnet)
 
