@@ -24,4 +24,3 @@ scores = squeeze(gather(res(end).x)) ;
 figure(1) ; clf ;
 imagesc(im) ; title(sprintf('%s (%d), score %f',...
                             net.classes{best}, best, bestScore)) ;
-

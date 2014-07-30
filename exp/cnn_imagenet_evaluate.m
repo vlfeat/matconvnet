@@ -1,25 +1,23 @@
-function cnn_imagenet_evaluate()
+function info = cnn_imagenet_evaluate(varargin)
 % CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
 
+run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+
 opts.dataDir = 'data/imagenet12' ;
-opts.expDir = 'data/imagenet12-ref-models-eval' ;
+opts.expDir = 'data/imagenet12-eval-vgg-f' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
+opts.modelPath = 'data/models/imagenet-vgg-f.mat' ;
 opts.lite = false ;
 opts.numFetchThreads = 8 ;
 opts.train.batchSize = 256 ;
 opts.train.numEpochs = 1 ;
 opts.train.useGpu = false ;
-opts.train.prefetch = true ;
+opts.train.prefetch = false ;
 opts.train.expDir = opts.expDir ;
 
-run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+opts = vl_argparse(opts, varargin) ;
 
-models = {...
-  'data/models/imagenet-caffe-ref.mat', ...
-  'data/models/imagenet-caffe-alex.mat', ...
-  'data/models/imagenet-vgg-f.mat', ...
-  'data/models/imagenet-vgg-m.mat', ...
-  'data/models/imagenet-vgg-s.mat'} ;
+opts
 
 % -------------------------------------------------------------------------
 %                                                   Database initialization
@@ -34,17 +32,14 @@ else
 end
 
 % patch
-%imdb.images.name = strrep(imdb.images.name, '.JPEG', '.jpg') ;
+imdb.images.name = strrep(imdb.images.name, '.JPEG', '.jpg') ;
+imdb.imageDir = fullfile(opts.dataDir, 'images') ;
 
 % -------------------------------------------------------------------------
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-net = load(models{1}) ;
-sz=net.normalization.imageSize(1:2);
-net.normalization.averageImage = ...
-    imresize(net.normalization.averageImage, ...
-             sz(:)');
+net = load(opts.modelPath) ;
 net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
 
 % -------------------------------------------------------------------------
@@ -64,7 +59,15 @@ fn = getBatchWrapper(...
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(averageImage, size, numThreads)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) cnn_imagenet_get_batch(imdb,batch,...
-                                          'average',averageImage,...
-                                          'size', size, ...
-                                          'numThreads', numThreads) ;
+fn = @(imdb,batch) getBatch(imdb,batch,averageImage,size,numThreads) ;
+
+% -------------------------------------------------------------------------
+function [im,labels] = getBatch(imdb, batch, averageImage, size, numThreads)
+% -------------------------------------------------------------------------
+images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
+im = cnn_imagenet_get_batch(images, ...
+                            'average', averageImage,...
+                            'size', size, ...
+                            'numThreads', numThreads, ...
+                            'prefetch', nargout == 0) ;
+labels = imdb.images.label(batch) ;
