@@ -310,8 +310,12 @@ for name in layers_name_param:
     else: support = [param.kernel_size]*2
     pad = [param.pad]*4
     stride = [param.stride]*2
-    if layer_input_size[0] % 2 == 0: pad[1] += 1
-    if layer_input_size[1] % 2 == 0: pad[3] += 1
+    #if layer_input_size[0] % 2 == 0: pad[1] += 1
+    #if layer_input_size[1] % 2 == 0: pad[3] += 1
+    pad[1] += ceil((layer_input_size[0]-support[0])/float(stride[0]))*stride[0] \
+              + support[0] - layer_input_size[0]
+    pad[3] += ceil((layer_input_size[1]-support[1])/float(stride[1]))*stride[1] \
+              + support[1] - layer_input_size[1]
     mk['pool'] = support
     mk['method'] = pool_methods[param.pool]
     mk['pad'] = pad
