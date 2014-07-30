@@ -10,6 +10,7 @@ import code
 import re
 import numpy as np
 from math import floor, ceil
+import numpy
 from numpy import array
 import scipy
 import scipy.io
@@ -132,6 +133,37 @@ def get_output_size(size, filter_support, pad, stride):
   return [ \
       (size[0] + pad[0]+pad[1] - filter_support[0]) / stride[0] + 1, \
       (size[1] + pad[2]+pad[3] - filter_support[1]) / stride[1] + 1]
+
+def bilinear_interpolate(im, x, y):
+  x = np.asarray(x)
+  y = np.asarray(y)
+
+  x0 = np.floor(x).astype(int)
+  x1 = x0 + 1
+  y0 = np.floor(y).astype(int)
+  y1 = y0 + 1
+
+  x0 = np.clip(x0, 0, im.shape[1]-1);
+  x1 = np.clip(x1, 0, im.shape[1]-1);
+  y0 = np.clip(y0, 0, im.shape[0]-1);
+  y1 = np.clip(y1, 0, im.shape[0]-1);
+
+  Ia = im[ y0, x0 ]
+  Ib = im[ y1, x0 ]
+  Ic = im[ y0, x1 ]
+  Id = im[ y1, x1 ]
+
+  wa = (1-x+x0) * (1-y+y0)
+  wb = (1-x+x0) * (y-y0)
+  wc = (x-x0) * (1-y+y0)
+  wd = (x-x0) * (y-y0)
+
+  wa = wa.reshape(x.shape[0], x.shape[1], 1)
+  wb = wb.reshape(x.shape[0], x.shape[1], 1)
+  wc = wc.reshape(x.shape[0], x.shape[1], 1)
+  wd = wd.reshape(x.shape[0], x.shape[1], 1)
+
+  return wa*Ia + wb*Ib + wc*Ic + wd*Id
 
 # --------------------------------------------------------------------
 #                                                   Load average image
@@ -359,13 +391,14 @@ if len(net_param.input_dim) > 0:
   mkn['imageSize']=np.array([ \
       net_param.input_dim[2], \
         net_param.input_dim[3], \
-        net_param.input_dim[1]],dtype='float64')
+        net_param.input_dim[1]],dtype=float).reshape(1,-1)
 else:
   mkn['imageSize']=np.array([0,0],dtype='float32')
 if average_image is not None:
-  mkn['averageImage']=scipy.misc.imresize(average_image,
-                                          (int(mkn['imageSize'][0]), int(mkn['imageSize'][1])),
-                                          interp='bilinear')
+  x = numpy.linspace(0, average_image.shape[1]-1, mkn['imageSize'][0,1])
+  y = numpy.linspace(0, average_image.shape[0]-1, mkn['imageSize'][0,0])
+  x, y = np.meshgrid(x, y, sparse=False, indexing='xy')
+  mkn['averageImage']=bilinear_interpolate(average_image, x, y)
 else:
   mkn['averageImage']=np.array([0,0],dtype='float32')
 
