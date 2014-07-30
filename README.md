@@ -26,14 +26,15 @@ technical details. MatConvNet can be used to
 This section describes how pre-trained models can be downloaded and
 used in MatConvNet.
 
-- [ImageNet-S](). A relatively small network pre-trained on
+- [ImageNet-S]('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat').
+  A relatively small network pre-trained on
   ImageNet. Similar to Krizhevsky et al. 2012 network.
 - [ImageNet-M](). A somewhat larger network, with better performance.
 - [ImageNet-L](). A large model.
 
 For example, in order to run ImageNet-S on a test image, use:
 
-    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-s.mat') ;
+    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat') ;
     net = load('imagenet-s.mat') ;
     im = imread('peppers') ;
     res = vl_simplenn(net, 'preprocess', im) ;
@@ -153,9 +154,8 @@ vision. Its main features are:
   variants. Pre-learned features for different tasks are provided.
   Importing and exporting of models between implementations should be
   a simple affair.
-- *Efficiency.* The implementation is quite efficient, supporting both
-  CPU and GPU computation. Despite MATLAB overhead, it is only
-  marginally slower than alternative implementations.
+- *Efficiency.* The implementation is efficient, supporting both
+  CPU and GPU computation.
 
 This library may be merged in the future with
 [VLFeat library](http://www.vlfeat.org/). It uses a very similar
