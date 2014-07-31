@@ -30,7 +30,7 @@ then
         wget -c -nc $CAFFE_URL/caffe_alexnet_model
         wget -c -nc $CAFFE_URL/caffe_ilsvrc12.tar.gz
         wget -c -nc $CAFFE_GIT/5d0958c173ac4d4632ea4146c538a35585a3ddc4/examples/imagenet/alexnet_deploy.prototxt
-        wget -c -nc $CAFFE_GIT/rcnn-release/examples/imagenet/imagenet_deploy.prototxt
+        wget -c -nc $CAFFE_GIT/8198585b4a670ee2d261d436ebecbb63688da617/examples/imagenet/imagenet_deploy.prototxt
         tar xzvf caffe_ilsvrc12.tar.gz
     )
 fi
@@ -65,7 +65,7 @@ then
         data/models/imagenet-caffe-alex.mat
 
     python utils/import-caffe.py \
-        --caffe-variant=caffe-old \
+        --caffe-variant=caffe \
         --average-image=$base/imagenet_mean.binaryproto \
         --synsets=$base/synset_words.txt \
         $base/imagenet_deploy.prototxt \
