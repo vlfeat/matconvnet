@@ -40,12 +40,13 @@ then
     base=data/tmp/vgg/$VGG_DEEPEVAL/models
     in=(CNN_F CNN_M CNN_S CNN_M_128 CNN_M_1024 CNN_M_2048)
     out=(f m s m-128 m-1024 m-2048)
+    synset=(caffe vgg vgg vgg vgg vgg)
 
     for ((i=0;i<${#in[@]};++i)); do
         python utils/import-caffe.py \
             --caffe-variant=vgg-caffe \
             --average-image=$base/mean.mat \
-            --synsets=data/tmp/caffe/synset_words.txt \
+            --synsets=data/tmp/"${synset[i]}"/synset_words.txt \
             $base/"${in[i]}"/param.prototxt \
             $base/"${in[i]}"/model \
             data/models/imagenet-vgg-"${out[i]}".mat

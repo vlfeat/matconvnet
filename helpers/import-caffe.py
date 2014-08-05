@@ -131,8 +131,8 @@ def keyboard(banner=None):
 
 def get_output_size(size, filter_support, pad, stride):
   return [ \
-      (size[0] + pad[0]+pad[1] - filter_support[0]) / stride[0] + 1, \
-      (size[1] + pad[2]+pad[3] - filter_support[1]) / stride[1] + 1]
+      floor((size[0] + pad[0]+pad[1] - filter_support[0]) / stride[0]) + 1, \
+      floor((size[1] + pad[2]+pad[3] - filter_support[1]) / stride[1]) + 1]
 
 def bilinear_interpolate(im, x, y):
   x = np.asarray(x)
@@ -171,7 +171,7 @@ def bilinear_interpolate(im, x, y):
 
 average_image = None
 if args.average_image:
-  print 'Loading average image'
+  print 'Loading average image from {}'.format(args.average_image.name)
   avgim_nm, avgim_ext = os.path.splitext(args.average_image.name)
   if avgim_ext == '.binaryproto':
     blob=caffe_pb2.BlobProto()
@@ -194,7 +194,7 @@ if args.average_image:
 synsets_wnid=None
 synsets_name=None
 if args.synsets:
-  print 'Loading synsets'
+  print 'Loading synsets from {}'.format(args.synsets.name)
   r=re.compile('(?P<wnid>n[0-9]{8}?) (?P<name>.*)')
   synsets_wnid=[]
   synsets_name=[]
