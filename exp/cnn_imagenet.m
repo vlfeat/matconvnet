@@ -4,7 +4,7 @@ function cnn_imagenet()
 gpuDevice(2) ;
 
 opts.dataDir = 'data/imagenet12-ram' ;
-opts.expDir = 'data/imagenet12-exp-6' ;
+opts.expDir = 'data/imagenet12-exp-7' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
 opts.numFetchThreads = 12 ;
@@ -78,10 +78,18 @@ fn = getBatchWrapper(...
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(averageImage, size, numThreads)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) cnn_imagenet_get_batch(imdb,batch,...
-                                          'average',averageImage,...
-                                          'size', size, ...
-                                          'numThreads', numThreads) ;
+fn = @(imdb,batch) getBatch(imdb,batch,averageImage,size,numThreads) ;
+
+% -------------------------------------------------------------------------
+function [im,labels] = getBatch(imdb, batch, averageImage, size, numThreads)
+% -------------------------------------------------------------------------
+images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
+im = cnn_imagenet_get_batch(images, ...
+                            'average', averageImage,...
+                            'size', size, ...
+                            'numThreads', numThreads, ...
+                            'prefetch', nargout == 0) ;
+labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
 function net = initializeNetwork(opt)

@@ -17,8 +17,6 @@ opts.train.expDir = opts.expDir ;
 
 opts = vl_argparse(opts, varargin) ;
 
-opts
-
 % -------------------------------------------------------------------------
 %                                                   Database initialization
 % -------------------------------------------------------------------------
@@ -68,6 +66,7 @@ images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, ...
                             'average', averageImage,...
                             'size', size, ...
+                            'border', [0 0], ...
                             'numThreads', numThreads, ...
                             'prefetch', nargout == 0) ;
 labels = imdb.images.label(batch) ;

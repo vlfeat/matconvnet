@@ -1,5 +1,6 @@
 function imo = cnn_imagenet_get_batch(images, varargin)
-% CNN_IMAGENET_GET_BATCH
+% CNN_IMAGENET_GET_BATCH  Load, preprocess, and pack images for CNN evaluation
+
 opts.size = [227, 227] ;
 opts.border = [29, 29] ;
 opts.average = [] ;
@@ -44,7 +45,7 @@ for i=1:numel(images)
     imt = imread(images{i}) ;
     imt = single(imt) ; % faster than im2single (and multiplies by 255)
   else
-    imt = im{i} ;% 255 ;
+    imt = im{i} ;
   end
   if size(imt,3) == 1, imt = cat(3, imt, imt, imt) ; end
   w = size(imt,2) ;

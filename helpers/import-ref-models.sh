@@ -1,6 +1,6 @@
 #! /bin/bash
 # brief: Import various Caffe models available on the Net
-# authors: Andrea Vedaldi
+# author: Andrea Vedaldi
 
 CAFFE_URL=http://dl.caffe.berkeleyvision.org/
 CAFFE_GIT=https://github.com/BVLC/caffe/raw
@@ -42,13 +42,18 @@ then
     out=(f m s m-128 m-1024 m-2048)
 
     for ((i=0;i<${#in[@]};++i)); do
-        python utils/import-caffe.py \
-            --caffe-variant=vgg-caffe \
-            --average-image=$base/mean.mat \
-            --synsets=data/tmp/caffe/synset_words.txt \
-            $base/"${in[i]}"/param.prototxt \
-            $base/"${in[i]}"/model \
-            data/models/imagenet-vgg-"${out[i]}".mat
+        out=data/models/imagenet-vgg-"${out[i]}".mat
+        if test ! -e $out ; then
+            python utils/import-caffe.py \
+                --caffe-variant=vgg-caffe \
+                --average-image=$base/mean.mat \
+                --synsets=data/tmp/caffe/synset_words.txt \
+                $base/"${in[i]}"/param.prototxt \
+                $base/"${in[i]}"/model \
+                $out
+        else
+            echo $out exists
+        fi
     done
 fi
 
@@ -56,20 +61,23 @@ if true
 then
     base=data/tmp/caffe
 
+    out=data/models/imagenet-caffe-alex.mat
+    test ! -e $out && \
     python utils/import-caffe.py \
         --caffe-variant=caffe \
         --average-image=$base/imagenet_mean.binaryproto \
         --synsets=$base/synset_words.txt \
         $base/alexnet_deploy.prototxt \
         $base/caffe_alexnet_model \
-        data/models/imagenet-caffe-alex.mat
+        $out
 
+    out=data/models/imagenet-caffe-ref.mat
+    test ! -e $out && \
     python utils/import-caffe.py \
         --caffe-variant=caffe-old \
         --average-image=$base/imagenet_mean.binaryproto \
         --synsets=$base/synset_words.txt \
         $base/imagenet_deploy.prototxt \
         $base/caffe_reference_imagenet_model \
-        data/models/imagenet-caffe-ref.mat
+        $out
 fi
-
