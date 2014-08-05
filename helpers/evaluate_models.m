@@ -1,13 +1,14 @@
 function evaluate_models()
 
 gpuDevice(4)
+addpath(fullfile(fileparts(mfilename('fullpath'))), '..','exp');
 
 models = {...
   'caffe-ref', ...
   'caffe-alex', ...
   'vgg-f', ...
-  'vgg-m'} ;
-%  'vgg-s'} ;
+  'vgg-m', ...
+  'vgg-s'} ;
 
 for i = 1:numel(models)
   opts.dataDir = 'data/imagenet12-ram' ;
