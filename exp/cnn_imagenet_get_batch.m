@@ -34,7 +34,7 @@ if opts.numThreads > 0
   end
 end
 if ~fetch
-  im = cell(1, numel(images)) ;
+  im = images ;
 end
 
 imo = zeros(opts.size(1), opts.size(2), 3, numel(images)*opts.numAugments, 'single') ;
