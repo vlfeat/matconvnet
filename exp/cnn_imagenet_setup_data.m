@@ -1,5 +1,6 @@
 function imdb = cnn_imagenet_setup_data(varargin)
-% DATASET_SETPU   Initialize a benchmark dataset
+% CNN_IMAGENET_SETPU_DATA  Initialize ImageNet data
+
 opts.dataDir = 'data/imagenet12' ;
 opts.lite = false ;
 opts = vl_argparse(opts, varargin) ;

@@ -8,12 +8,18 @@ VGG_URL=http://www.robots.ox.ac.uk/~vgg/software/deep_eval/releases/
 VGG_DEEPEVAL=deepeval-encoder-1.0.1
 VGG_DEEPEVAL_MODELS=models-1.0.1
 
+# Obtain the path of this script
+pushd `dirname $0` > /dev/null
+SCRIPTPATH=`pwd`
+popd > /dev/null
+
 mkdir -p data/{tmp/vgg,tmp/caffe,models}
 
-if false
+if true
 then
     (
         cd data/tmp/vgg
+        ln -sf $SCRIPTPATH/proto/vgg_synset_words.txt synset_words.txt
         wget -c -nc $VGG_URL/$VGG_DEEPEVAL.tar.gz
         tar xzvf $VGG_DEEPEVAL.tar.gz
         cd $VGG_DEEPEVAL/models

@@ -41,7 +41,10 @@ imdb.imageDir = fullfile(opts.dataDir, 'images') ;
 
 net = load(opts.modelPath) ;
 net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
-imdb = cnn_imagenet_synchro_labels(imdb, net);
+
+% IMDB and the loaded network may use a different label ordering
+% This fixes this issue
+imdb = cnn_imagenet_sync_labels(imdb, net);
 
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
