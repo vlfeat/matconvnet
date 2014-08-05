@@ -30,7 +30,7 @@ then
         wget -c -nc $CAFFE_URL/caffe_alexnet_model
         wget -c -nc $CAFFE_URL/caffe_ilsvrc12.tar.gz
         wget -c -nc $CAFFE_GIT/5d0958c173ac4d4632ea4146c538a35585a3ddc4/examples/imagenet/alexnet_deploy.prototxt
-        wget -c -nc $CAFFE_GIT/rcnn-release/examples/imagenet/imagenet_deploy.prototxt
+        wget -c -nc $CAFFE_GIT/8198585b4a670ee2d261d436ebecbb63688da617/examples/imagenet/imagenet_deploy.prototxt
         tar xzvf caffe_ilsvrc12.tar.gz
     )
 fi
@@ -40,12 +40,13 @@ then
     base=data/tmp/vgg/$VGG_DEEPEVAL/models
     in=(CNN_F CNN_M CNN_S CNN_M_128 CNN_M_1024 CNN_M_2048)
     out=(f m s m-128 m-1024 m-2048)
+    synset=(caffe vgg vgg vgg vgg vgg)
 
     for ((i=0;i<${#in[@]};++i)); do
         python utils/import-caffe.py \
             --caffe-variant=vgg-caffe \
             --average-image=$base/mean.mat \
-            --synsets=data/tmp/caffe/synset_words.txt \
+            --synsets=data/tmp/"${synset[i]}"/synset_words.txt \
             $base/"${in[i]}"/param.prototxt \
             $base/"${in[i]}"/model \
             data/models/imagenet-vgg-"${out[i]}".mat
@@ -65,7 +66,7 @@ then
         data/models/imagenet-caffe-alex.mat
 
     python utils/import-caffe.py \
-        --caffe-variant=caffe-old \
+        --caffe-variant=caffe \
         --average-image=$base/imagenet_mean.binaryproto \
         --synsets=$base/synset_words.txt \
         $base/imagenet_deploy.prototxt \

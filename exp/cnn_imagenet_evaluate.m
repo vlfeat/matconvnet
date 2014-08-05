@@ -17,7 +17,7 @@ opts.train.expDir = opts.expDir ;
 
 opts = vl_argparse(opts, varargin) ;
 
-opts
+display(opts);
 
 % -------------------------------------------------------------------------
 %                                                   Database initialization
@@ -41,6 +41,7 @@ imdb.imageDir = fullfile(opts.dataDir, 'images') ;
 
 net = load(opts.modelPath) ;
 net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
+imdb = cnn_imagenet_synchro_labels(imdb, net);
 
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
@@ -70,4 +71,4 @@ im = cnn_imagenet_get_batch(images, ...
                             'size', size, ...
                             'numThreads', numThreads, ...
                             'prefetch', nargout == 0) ;
-labels = imdb.images.label(batch) ;
+labels = imdb.cats.label(imdb.images.label(batch)) ;
