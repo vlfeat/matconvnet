@@ -30,9 +30,8 @@ imdb.images.id = 1:numel(names) ;
 imdb.images.name = names ;
 imdb.images.set = ones(1, numel(names)) ;
 imdb.images.label = labels ;
-imdb.cats.label = 1:numel(cats) ;
-imdb.cats.name = cats ;
-imdb.cats.description = descrs ;
+imdb.classes.name = cats ;
+imdb.classes.description = descrs ;
 
 % load list of validation images
 names = sort(textread(valImageListPath, '%s')') ;
@@ -57,9 +56,9 @@ imdb.images.name = strcat(imdb.images.name, '.JPEG') ;
 imdb.imageDir = fullfile(opts.dataDir, 'images') ;
 
 % sort categories by WNID (to be compatible with other implementations)
-[imdb.cats.name,perm] = sort(imdb.cats.name) ;
-imdb.cats.description = imdb.cats.description(perm) ;
-relabel(perm) = 1:numel(imdb.cats.name) ;
+[imdb.classes.name,perm] = sort(imdb.classes.name) ;
+imdb.classes.description = imdb.classes.description(perm) ;
+relabel(perm) = 1:numel(imdb.classes.name) ;
 ok = imdb.images.label >  0 ;
 imdb.images.label(ok) = relabel(imdb.images.label(ok)) ;
 

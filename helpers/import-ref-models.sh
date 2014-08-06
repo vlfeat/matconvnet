@@ -55,7 +55,6 @@ then
                 --caffe-variant=vgg-caffe \
                 --average-image=$base/mean.mat \
                 --synsets=data/tmp/"${synset[i]}"/synset_words.txt \
-                --synsets=data/tmp/caffe/synset_words.txt \
                 $base/"${in[i]}"/param.prototxt \
                 $base/"${in[i]}"/model \
                 $out
