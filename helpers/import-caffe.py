@@ -25,6 +25,15 @@ def blobproto_to_array(blob):
   return np.array(blob.data,dtype='float32').reshape(
     blob.num, blob.channels, blob.height, blob.width).transpose()
 
+def versiontuple(version):
+  return tuple(map(int, (version.split("."))))
+
+min_numpy_version = "1.7.0"
+if versiontuple(numpy.version.version) < versiontuple(min_numpy_version):
+  print 'Unsupported numpy version ({}), must be >= {}'.format(numpy.version.version, 
+    min_numpy_version)
+  sys.exit(0)
+
 layers_type = {}
 layers_type[0]  = 'none'
 layers_type[1]  = 'accuracy'
