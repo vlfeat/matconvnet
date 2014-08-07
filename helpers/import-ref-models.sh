@@ -1,6 +1,6 @@
 #! /bin/bash
 # brief: Import various Caffe models available on the Net
-# authors: Andrea Vedaldi
+# author: Andrea Vedaldi
 
 CAFFE_URL=http://dl.caffe.berkeleyvision.org/
 CAFFE_GIT=https://github.com/BVLC/caffe/raw
@@ -8,12 +8,18 @@ VGG_URL=http://www.robots.ox.ac.uk/~vgg/software/deep_eval/releases/
 VGG_DEEPEVAL=deepeval-encoder-1.0.1
 VGG_DEEPEVAL_MODELS=models-1.0.1
 
+# Obtain the path of this script
+pushd `dirname $0` > /dev/null
+SCRIPTPATH=`pwd`
+popd > /dev/null
+
 mkdir -p data/{tmp/vgg,tmp/caffe,models}
 
-if false
+if true
 then
     (
         cd data/tmp/vgg
+        ln -sf $SCRIPTPATH/proto/vgg_synset_words.txt synset_words.txt
         wget -c -nc $VGG_URL/$VGG_DEEPEVAL.tar.gz
         tar xzvf $VGG_DEEPEVAL.tar.gz
         cd $VGG_DEEPEVAL/models
@@ -43,13 +49,18 @@ then
     synset=(caffe vgg vgg vgg vgg vgg)
 
     for ((i=0;i<${#in[@]};++i)); do
-        python utils/import-caffe.py \
-            --caffe-variant=vgg-caffe \
-            --average-image=$base/mean.mat \
-            --synsets=data/tmp/"${synset[i]}"/synset_words.txt \
-            $base/"${in[i]}"/param.prototxt \
-            $base/"${in[i]}"/model \
-            data/models/imagenet-vgg-"${out[i]}".mat
+        out=data/models/imagenet-vgg-"${out[i]}".mat
+        if test ! -e $out ; then
+            python utils/import-caffe.py \
+                --caffe-variant=vgg-caffe \
+                --average-image=$base/mean.mat \
+                --synsets=data/tmp/"${synset[i]}"/synset_words.txt \
+                $base/"${in[i]}"/param.prototxt \
+                $base/"${in[i]}"/model \
+                $out
+        else
+            echo $out exists
+        fi
     done
 fi
 
@@ -57,20 +68,23 @@ if true
 then
     base=data/tmp/caffe
 
+    out=data/models/imagenet-caffe-alex.mat
+    test ! -e $out && \
     python utils/import-caffe.py \
         --caffe-variant=caffe \
         --average-image=$base/imagenet_mean.binaryproto \
         --synsets=$base/synset_words.txt \
         $base/alexnet_deploy.prototxt \
         $base/caffe_alexnet_model \
-        data/models/imagenet-caffe-alex.mat
+        $out
 
+    out=data/models/imagenet-caffe-ref.mat
+    test ! -e $out && \
     python utils/import-caffe.py \
         --caffe-variant=caffe \
         --average-image=$base/imagenet_mean.binaryproto \
         --synsets=$base/synset_words.txt \
         $base/imagenet_deploy.prototxt \
         $base/caffe_reference_imagenet_model \
-        data/models/imagenet-caffe-ref.mat
+        $out
 fi
-

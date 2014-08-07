@@ -1,19 +1,29 @@
 # MatConvNet: CNNs for MATLAB
 
-Version 1.0-beta.
+Version 1.0-beta2.
 
 **MatConvNet** is a MATLAB toolbox implementing *Convolutional Neural
-Networks* (CNNs) for computer vision applications. It is simple, fast,
-and can learn and evaluate state-of-the-art networks. Several such
-networks for image classification and encoding are provided as
-well. See [here](#about) for further details.
+Networks* (CNNs) for computer vision applications. It is simple,
+efficient, and can learn and run state-of-the-art CNNs. Several
+example CNNs are included to classify and encode images. See
+[here](#about) for further details.
 
-- [Tarball for version 1.0-beta1](download/matconvnet-1.0-beta1.tar.gz)
+- Tarball for [version 1.0-beta2](download/matconvnet-1.0-beta2.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
 - [Installation instructions](#installing)
 
-## Getting started
+**Contents**
+
+- [Getting started](#started)
+  - [Using pre-trained models](#pretrained)
+  - [Training your own models](#training)
+  - [Working with GPU accelerated code](#gpu)
+- [Installing](#installing)
+  - [Compiling](#compiling)
+- [About MatConvNet](#about)
+
+## <a name='started'></a> Getting started
 
 This section provides a practical introduction to this toolbox.
 Please see the [reference PDF manual](matconvnet-manual.pdf) for
@@ -21,57 +31,61 @@ technical details. MatConvNet can be used to
 [train CNN models](#training), or it can be used to evaluate several
 [pre-trained models](#pretrained) on your data.
 
-### <span id='pretrained'></span> Using pre-trained models
+### <a name='pretrained'></span> Using pre-trained models
 
 This section describes how pre-trained models can be downloaded and
-used in MatConvNet.
+used in MatConvNet. The following models are available
 
-- [ImageNet-S]('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat').
-  A relatively small network pre-trained on
-  ImageNet. Similar to Krizhevsky et al. 2012 network.
-- [ImageNet-M](). A somewhat larger network, with better performance.
-- [ImageNet-L](). A large model.
+- VGG models from the
+  [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval) paper:
+  - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
+  - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
+  - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
+  - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
+  - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
+  - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
+- Berkeley [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html):
+  - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
+  - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
 
 For example, in order to run ImageNet-S on a test image, use:
 
-    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat') ;
-    net = load('imagenet-s.mat') ;
+    % obtain model and image
+    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-s.mat') ;
+    net = load('imagenet-vgg-s.mat') ;
     im = imread('peppers') ;
+
+    % preprocess the image
+    im_ = single(im) ; % note: 255 range
+    im_ = imresize(im_, net.normalization.imageSize, 'bilinear') ;
+    im_ = im_ - net.normalization.averageImage ;
+
+    % run CNN
     res = vl_simplenn(net, 'preprocess', im) ;
 
-`vl_simplenn` is a wrapper around MatConvNet core computational
-functions that simplifies evaluating CNN with a simple linear topology
-(i.e. chains of layers). It is not needed to use the toolbox, but it
-simplifies common examples such as the ones discussed here. The
-`preprocess` option is required to convert the image `im` into a
-format which can be processed by the network; typically, this involves
-rescaling/cropping the image to a fixed side, converting it to
-`single` precision, and subtracting an image mean. If you want to do
-these steps by yourself, you can remove 'preprocess'.
+`vl_simplenn` is a wrapper around MatConvNet core computational blocks
+implements a CNN with a simple linear topology (a chain of layers). It
+is not needed to use the toolbox, but it simplifies common examples
+such as the ones discussed here. See also
+`examples/cnn_imagenet_minimal.m` for further examples.
 
-`res` is a structure containing the network evaluation.
-
-    y = res(end).x ;
-    [score, class] = max(y) ;
-    fprintf('estimated class: %s (score: %f)\n', net.meta.classes{class}, score) ;
-
-### <span id='training'></span> Training your own models
+### <a name='training'></a> Training your own models
 
 MatConvNet can be used to train models using stochastic gradient
 descent and back-propagation.
 
 The following learning demos are provided:
 
-- **MNIST**. See `cnn_mnist`.
-- **CIFAR**. See `cnn_cifar`.
-- **ImageNet**. See `cnn_imagenet`.
+- **MNIST**. See `examples/cnn_mnist.m`.
+- **CIFAR**. See `examples/cnn_cifar.m`.
+- **ImageNet**. See `examples/cnn_imagenet.m`.
 
 These are self-contained, and include downloading and unpacking of the
 data. MNIST and CIFAR are small datasets (by today's standard) and
 training is feasible on a CPU. For ImageNet, however, a powerful GPU
 is highly recommended.
 
-###  <span id='gpu'></span> Working with GPU acelereated code
+###  <a name='gpu'></a> Working with GPU acelereated code
 
 GPU support in MatConvNet relies on the corresponding support as
 provided by recent releases of MATLAB and of its Parallel Programming
@@ -81,17 +95,19 @@ need a copy of the CUDA devkit to compile GPU support in MatConvNet
 
 All the core computational functions (e.g. `vl_nnconv`) in the toolbox
 can work with either MATLAB arrays or MATLAB GPU arrays. Therefore,
-switching to use the GPU is then as simple as converting data
-contained in arrays (e.g. images) in GPU arrays before calling the
-toolbox functions.
+switching to use the a GPU is as simple as converting the input CPU
+arrays in GPU arrays.
 
 In order to make the very best of powerful GPUs, it is important to
 balance the load between CPU and GPU in order to avoid starving the
 latter. In training on a problem like ImageNet, the CPU(s) in your
 system will be busy loading data from disk and streaming it to the GPU
-to evaluate the CNN and its derivative.
+to evaluate the CNN and its derivative. MatConvNet includes the
+utility `vl_imreadjpeg` to accelerate and parallelize loading images
+into memory (this function will be made more powerful in future
+releases).
 
-## <span id='installing'></span> Installation
+## <a name='installing'></a> Installation
 
 This library comprises several MEX files that need to be compiled
 before MATLAB can use it. Start by downloading and unpacking the code;
@@ -106,10 +122,12 @@ issuing the command:
 
     > vl_test_nnlayers
 
-### <span id='compiling'></span> Compiling
+### <a name='compiling'></a> Compiling
 
-Compiling the CPU version of MatConvNet is a simple affair. The simple
-method is to use supplied `Makefile`:
+Compiling the CPU version of MatConvNet is simple (presently Linux and
+Mac OS X are supported; Windows should work, up to some modifications
+to `vl_imreadjpeg.c`).  The simplest compilation method is to use
+supplied `Makefile`:
 
     > make ARCH=<your arch> MATLABROOT=<path to MATLAB>
 
@@ -123,12 +141,11 @@ would work for a Mac with MATLAB R2014 installed in its default
 folder. Other supported architectures are `glnxa64` (for Linux) and
 `win64` (for Windows).
 
-Compiling the GPU version should be just as simple; however, in
-practice, this may require some configuration. First of all, you will
-need a recent version of MATLAB (e.g. R2014a). Secondly, you will need
-a corresponding version of the CUDA (e.g. CUDA-5.5 for R2014a) -- use
-the `gpuDevice` MATLAB command to figure out the proper version of the
-CUDA toolkit. Then
+Compiling the GPU version requries some more configuration. First of
+all, you will need a recent version of MATLAB (e.g. R2014a). Secondly,
+you will need a corresponding version of the CUDA (e.g. CUDA-5.5 for
+R2014a) -- use the `gpuDevice` MATLAB command to figure out the proper
+version of the CUDA toolkit. Then
 
     > make ENABLE_GPU=y ARCH=<your arch> MATLABROOT=<path to MATLAB> CUDAROOT=<path to CUDA>
 
@@ -138,23 +155,21 @@ should do the trick. For example:
 
 should work on a Mac with MATLAB R2014a.
 
-## <span id='about'></span> About MatConvNet
+## <a name='about'></a> About MatConvNet
 
-MatConvNet was born in the Oxford Visual Geometry Group as a platform
-for fast pprototyping new Convolitional Neural Networm methods in
-vision. Its main features are:
+MatConvNet was born in the Oxford Visual Geometry Group as both an
+educatinonal and research platform for fast prototyping in
+Convolutional Neural Nets. Its main features are:
 
 - *Flexibility.* Neural network layers are implemented in a
   straightforward manner, often directly in MATLAB code, so that they
   are easy to modify, extend, or integrate with new ones. Other
   toolboxes hide the neural network layers behind a wall of compiled
   code; here the granularity is much finer.
-- *Power.* The implementation can run the latest models such as
-  Krizhevsky et al., including the DeCAF and Caffe
-  variants. Pre-learned features for different tasks are provided.
-  Importing and exporting of models between implementations should be
-  a simple affair.
-- *Efficiency.* The implementation is efficient, supporting both
+- *Power.* The implementation can run large models such as Krizhevsky
+  et al., including the DeCAF and Caffe variants. Several pre-trained
+  models are provided.
+- *Efficiency.* The implementation is quite efficient, supporting both
   CPU and GPU computation.
 
 This library may be merged in the future with
@@ -184,11 +199,11 @@ Lenc. It is distributed under the permissive BSD license (see the file
     INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
     MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
-The implementation of the fundamental computational blocks in this
-library, and in particular of the convolution operators, is inspired
-by [Caffe](http://caffe.berkeleyvision.org).
+The implementation of the computational blocks in this library, and in
+particular of the convolution operator, is inspired by
+[Caffe](http://caffe.berkeleyvision.org).
 
-  
 ## Changes
 
-- 1.0-beta. First public release (summer 2014).
+- 1.0-beta2 (June 2014) Adds a set of standard models.
+- 1.0-beta1 (June 2014) First public release

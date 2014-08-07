@@ -421,11 +421,14 @@ else:
 
 print 'Exporting to {}'.format(args.output.name)
 
+classes = {}
+if synsets_wnid: classes['name'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
+if synsets_name: classes['description'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
+
 mnet = {
   'layers': np.array(matlab_layers).reshape(1,-1),
-  'normalization': mkn}
-if synsets_wnid: mnet['wnid'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
-if synsets_name: mnet['classes'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
+  'normalization': mkn,
+  'classes': classes}
 
 scipy.io.savemat(args.output, mnet)
 
