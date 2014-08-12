@@ -18,11 +18,11 @@ if 0
   for t =1:100
     x = randn(3) ;
     g = reshape(spatialDer, [], 8)'*x(:) ;
-    gx = (x(2,3) - x(2,1))/2 ;    
+    gx = (x(2,3) - x(2,1))/2 ;
     gy = (x(3,2) - x(1,2))/2 ;
     a(t) = norm([gx gy]);
     b(t) = norm([g]) ; %twice the norm of a
-  end 
+  end
 end
 
 % orientation binning is the weakest approximation. It could be done much
@@ -69,4 +69,4 @@ net.layers{end+1} = struct('type','conv', ...
   'filters', mask, ...
   'biases', zeros(size(mask,4),1,'single'), ...
   'stride', 3, 'pad', 0) ;
-net.layers{end+1} = struct('type','normalize', 'param', [128*2, 0.0001, 1, .5]) ; 
+net.layers{end+1} = struct('type','normalize', 'param', [128*2, 0.0001, 1, .5]) ;

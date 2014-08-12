@@ -51,17 +51,25 @@ used in MatConvNet. The following models are available
 For example, in order to run ImageNet-S on a test image, use:
 
     % obtain model and image
-    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-s.mat') ;
-    net = load('imagenet-vgg-s.mat') ;
+    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat') ;
+    net = load('imagenet-vgg-f.mat') ;
     im = imread('peppers') ;
 
     % preprocess the image
     im_ = single(im) ; % note: 255 range
-    im_ = imresize(im_, net.normalization.imageSize, 'bilinear') ;
+    im_ = imresize(im_, net.normalization.imageSize) ;
     im_ = im_ - net.normalization.averageImage ;
 
     % run CNN
-    res = vl_simplenn(net, 'preprocess', im) ;
+    res = vl_simplenn(net, im_) ;
+
+    % show result
+    scores = squeeze(gather(res(end).x)) ;
+    [bestScore, best] = max(scores) ;
+    figure(1) ; clf ; imagesc(im) ;
+    title(sprintf('%s (%d), score %.3f',...
+       net.classes.description{best}, best, bestScore)) ;
+
 
 `vl_simplenn` is a wrapper around MatConvNet core computational blocks
 implements a CNN with a simple linear topology (a chain of layers). It

@@ -43,6 +43,33 @@ fi
 
 if true
 then
+    base=data/tmp/caffe
+
+    out=data/models/imagenet-caffe-alex.mat
+    test ! -e $out && \
+    python utils/import-caffe.py \
+        --caffe-variant=caffe \
+        --average-image=$base/imagenet_mean.binaryproto \
+        --synsets=$base/synset_words.txt \
+        --preproc=caffe \
+        $base/alexnet_deploy.prototxt \
+        $base/caffe_alexnet_model \
+        $out
+
+    out=data/models/imagenet-caffe-ref.mat
+    test ! -e $out && \
+    python utils/import-caffe.py \
+        --caffe-variant=caffe \
+        --average-image=$base/imagenet_mean.binaryproto \
+        --synsets=$base/synset_words.txt \
+        --preproc=caffe \
+        $base/imagenet_deploy.prototxt \
+        $base/caffe_reference_imagenet_model \
+        $out
+fi
+
+if true
+then
     base=data/tmp/vgg/$VGG_DEEPEVAL/models
     in=(CNN_F CNN_M CNN_S CNN_M_128 CNN_M_1024 CNN_M_2048)
     out=(f m s m-128 m-1024 m-2048)
@@ -55,6 +82,7 @@ then
                 --caffe-variant=vgg-caffe \
                 --average-image=$base/mean.mat \
                 --synsets=data/tmp/"${synset[i]}"/synset_words.txt \
+                --preproc=vgg-caffe \
                 $base/"${in[i]}"/param.prototxt \
                 $base/"${in[i]}"/model \
                 $out
@@ -64,27 +92,3 @@ then
     done
 fi
 
-if true
-then
-    base=data/tmp/caffe
-
-    out=data/models/imagenet-caffe-alex.mat
-    test ! -e $out && \
-    python utils/import-caffe.py \
-        --caffe-variant=caffe \
-        --average-image=$base/imagenet_mean.binaryproto \
-        --synsets=$base/synset_words.txt \
-        $base/alexnet_deploy.prototxt \
-        $base/caffe_alexnet_model \
-        $out
-
-    out=data/models/imagenet-caffe-ref.mat
-    test ! -e $out && \
-    python utils/import-caffe.py \
-        --caffe-variant=caffe \
-        --average-image=$base/imagenet_mean.binaryproto \
-        --synsets=$base/synset_words.txt \
-        $base/imagenet_deploy.prototxt \
-        $base/caffe_reference_imagenet_model \
-        $out
-fi

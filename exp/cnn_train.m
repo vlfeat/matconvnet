@@ -1,4 +1,10 @@
 function [net, info] = cnn_train(net, imdb, getBatch, varargin)
+% CNN_TRAIN   Demonstrates training a CNN
+%    CNN_TRAIN() is an example learner implementing stochastic gradient
+%    descent with momentum to train a CNN for image classification.
+%    It can be used with different datasets by providing a suitable
+%    getBatch function.
+
 opts.train = [] ;
 opts.val = [] ;
 opts.numEpochs = 300 ;

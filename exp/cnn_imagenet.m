@@ -1,22 +1,21 @@
-function cnn_imagenet()
-% CNN_IMAGENET   Demonstrates MatConvNet on ImageNet
+function cnn_imagenet(varargin)
+% CNN_IMAGENET   Demonstrates training a CNN on ImageNet
 
-gpuDevice(2) ;
+run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
 
-opts.dataDir = 'data/imagenet12-ram' ;
-opts.expDir = 'data/imagenet12-exp-7' ;
+opts.dataDir = 'data/imagenet12' ;
+opts.expDir = 'data/imagenet12-baseline' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
-opts.numFetchThreads = 12 ;
+opts.numFetchThreads = 0 ;
 opts.train.batchSize = 256 ;
 opts.train.numEpochs = 100 ;
 opts.train.continue = true ;
-opts.train.useGpu = true ;
-opts.train.prefetch = true ;
+opts.train.useGpu = false ;
+opts.train.prefetch = false ;
 opts.train.learningRate = [0.001*ones(1, 30) 0.0001*ones(1,10) 0.00001*ones(1,10)] ;
 opts.train.expDir = opts.expDir ;
-
-run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+opts = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
 %                                                   Database initialization
@@ -30,29 +29,25 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
-% patch
-imdb.images.name = strrep(imdb.images.name, '.JPEG', '.jpg') ;
-
 % -------------------------------------------------------------------------
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-net = initializeNetwork(opts);
-net.normalization.imageSize = [227, 227] ;
+net = initializeNetwork(opts) ;
 
+% compute the average image
 averageImagePath = fullfile(opts.expDir, 'average.mat') ;
 if exist(averageImagePath)
   load(averageImagePath, 'averageImage') ;
 else
   train = find(imdb.images.set == 1) ;
   bs = 256 ;
+  fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
   for t=1:bs:numel(train)
     batch_time = tic ;
     batch = train(t:min(t+bs-1, numel(train))) ;
     fprintf('computing average image: processing batch starting with image %d ...', batch(1)) ;
-    temp = cnn_imagenet_get_batch(imdb, batch, ...
-      'size', net.normalization.imageSize, ...
-      'numThreads', opts.numFetchThreads) ;
+    temp = fn(imdb, batch) ;
     im{t} = mean(temp, 4) ;
     batch_time = toc(batch_time) ;
     fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
@@ -68,25 +63,20 @@ clear averageImage im temp ;
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
 
-fn = getBatchWrapper(...
-  net.normalization.averageImage, ...
-  net.normalization.imageSize, ...
-  opts.numFetchThreads) ;
+fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
 
 [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchWrapper(averageImage, size, numThreads)
+function fn = getBatchWrapper(opts, numThreads)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatch(imdb,batch,averageImage,size,numThreads) ;
+fn = @(imdb,batch) getBatch(imdb,batch,opts,numThreads) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getBatch(imdb, batch, averageImage, size, numThreads)
+function [im,labels] = getBatch(imdb, batch, opts, numThreads)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
-im = cnn_imagenet_get_batch(images, ...
-                            'average', averageImage,...
-                            'size', size, ...
+im = cnn_imagenet_get_batch(images, opts, ...
                             'numThreads', numThreads, ...
                             'prefetch', nargout == 0) ;
 labels = imdb.images.label(batch) ;
@@ -191,3 +181,10 @@ net.layers{end+1} = struct('type', 'conv', ...
 
 % Block 9
 net.layers{end+1} = struct('type', 'softmaxloss') ;
+
+% Other details
+net.normalization.imageSize = [227, 227] ;
+net.normalization.interpolation = 'bilinear' ;
+net.normalization.border = 255 - net.normalization.imageSize ;
+net.normalization.averageImage = [] ;
+

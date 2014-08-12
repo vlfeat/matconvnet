@@ -1,5 +1,15 @@
 function imdb = cnn_imagenet_setup_data(varargin)
 % CNN_IMAGENET_SETPU_DATA  Initialize ImageNet data
+%    This function creates an image database IMDB pointing to the
+%    ImageNet12 data. This data should be already contained on disk. The
+%    IMDB just list the images in the dataset, but does not contain the
+%    actual image data.
+%
+%    Note that, in order to speedup training and testing, it may be a good
+%    idea to preprocess the images to have a fixed size (e.g. 256 pixels
+%    height) and to store the resulting images on RAM disk (provided that
+%    sufficient RAM is available). Reading images off disk with a
+%    sufficient speed is crucial for fast training.
 
 opts.dataDir = 'data/imagenet12' ;
 opts.lite = false ;

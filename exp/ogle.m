@@ -5,11 +5,11 @@ run ~/src/vlfeat/toolbox/vl_setup ;
 %load(fullfile(vlg_root, 'data', 'tinynet_caffe_data.mat')) ;
 
 switch 2
-  case 1   
+  case 1
     net = load(fullfile(vlg_root, 'data', 'tinynet_caffe.mat')) ;
     normalize = @(x) caffe_normalize(net, x) ;
     denormalize = @(x) caffe_denormalize(net, x) ;
-    
+
   case 2
     net = getDSIFTNet(5) ;
     normalize = @(x) single(rgb2gray(x)) ;
@@ -35,7 +35,7 @@ for l=5;%1:numel(net.layers)
   res = tinynet(net_, normalize(im)) ;
   y = res(end).x ;
   meanValue = sum(res(1).x(:)) ;
-  
+
   % initial reconstruction
   recon = randn(size(normalize(im)), 'single') ;
   recon = recon + meanValue /numel(recon) ;
@@ -50,18 +50,18 @@ for l=5;%1:numel(net.layers)
     E(3,t) = lambda/2 * (sum(recon(:)) - meanValue).^2 ;
     E(4,t) = E(1,t)+E(2,t)+E(3,t) ;
     dzdy = 2*(recony - y) ;
-    
+
     res = tinynet(net_, recon, dzdy) ;
     dzdx = res(1).dzdx ;
     dzdx = dzdx + lambda * recon ;
     dzdx = dzdx + lambda * (sum(recon(:)) - meanValue) ;
-    
+
     recon = recon - eta*dzdx ;
-    
+
     if mod(t,1)==0
       figure(l) ; clf;
       subplot(2,2,1) ;
-      imagesc(vl_imsc(denormalize(recon))); axis image; colormap gray;      
+      imagesc(vl_imsc(denormalize(recon))); axis image; colormap gray;
       subplot(2,2,2) ;
       semilogy(E') ;
       legend('res', 'reg', 'meanval', 'tot') ;

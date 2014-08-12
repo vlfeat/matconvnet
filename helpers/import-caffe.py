@@ -92,6 +92,11 @@ parser.add_argument('--no-transpose',
                     dest='transpose',
                     action='store_false',
                     help='Do not transpose CNN')
+parser.add_argument('--preproc',
+                    type=str,
+                    nargs='?',
+                    default='caffe',
+                    help='Variant of image preprocessing to use (use ? to get a list)')
 parser.set_defaults(transpose=True)
 args = parser.parse_args()
 
@@ -106,7 +111,14 @@ elif args.caffe_variant == '?':
   print 'Supported variants: caffe, cafe-old, vgg-caffe'
   sys.exit(0)
 else:
-  print 'Uknown Caffe variant', args.caffe_variant
+  print 'Unkown Caffe variant', args.caffe_variant
+  sys.exit(1)
+
+if args.preproc == '?':
+  print 'Preprocessing variants: caffe, vgg'
+  sys.exit(0)
+if args.preproc not in ['caffe', 'vgg-caffe']:
+  print 'Unknown preprocessing variant', args.preproc
   sys.exit(1)
 
 # --------------------------------------------------------------------
@@ -397,7 +409,7 @@ if len(net_param.input_dim) > 0:
         net_param.input_dim[3], \
         net_param.input_dim[1]],dtype=float).reshape(1,-1)
 else:
-  mkn['imageSize']=np.array([0,0],dtype='float32')
+  mkn['imageSize']=np.array([0,0],dtype=float)
 if average_image is not None:
   x = numpy.linspace(0, average_image.shape[1]-1, mkn['imageSize'][0,1])
   y = numpy.linspace(0, average_image.shape[0]-1, mkn['imageSize'][0,0])
@@ -405,6 +417,16 @@ if average_image is not None:
   mkn['averageImage']=bilinear_interpolate(average_image, x, y)
 else:
   mkn['averageImage']=np.array([0,0],dtype='float32')
+
+if args.preproc == 'caffe':
+  mkn['interpolation'] = 'bicubic'
+  mkn['keepAspect'] = False
+  mkn['border'] = np.array((256 - mkn['imageSize'][0,0], \
+                            256 - mkn['imageSize'][0,1]), dtype=float).reshape(1,-1)
+else:
+  mkn['interpolation'] = 'bilinear'
+  mkn['keepAspect'] = True
+  mkn['border']=np.array([0,0],dtype=float).reshape(1,-1)
 
 # --------------------------------------------------------------------
 #                                                          Save output
@@ -422,4 +444,3 @@ mnet = {
   'classes': classes}
 
 scipy.io.savemat(args.output, mnet)
-

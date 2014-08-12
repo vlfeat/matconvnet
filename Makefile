@@ -17,7 +17,7 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
 NAME = matconvnet
-VER = 1.0-beta1
+VER = 1.0-beta2
 DIST = $(NAME)-$(VER)
 MARKDOWN = markdown2
 HOST = vlfeat-admin:vlfeat.org/sandbox-matconvnet
@@ -177,6 +177,9 @@ pack:
 
 post: pack
 	$(RSYNC) -aP $(DIST).tar.gz $(HOST)/download/
+
+post-models:
+	$(RSYNC) -aP data/models/*.mat $(HOST)/models/
 
 post-doc: doc
 	$(RSYNC) -aP README.md doc/{index.html,matconvnet-manual.pdf} $(HOST)/
