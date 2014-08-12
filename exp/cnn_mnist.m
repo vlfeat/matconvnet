@@ -1,5 +1,7 @@
-function cnn_mnist()
+function cnn_mnist(varargin)
 % CNN_MNIST  Demonstrated MatConNet on MNIST
+
+run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
 
 opts.dataDir = 'data/mnist' ;
 opts.expDir = 'data/mnist-exp-1' ;
@@ -10,8 +12,7 @@ opts.train.continue = true ;
 opts.train.useGpu = false ;
 opts.train.learningRate = 0.001 ;
 opts.train.expDir = opts.expDir ;
-
-run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
 %                                                         Prepare data

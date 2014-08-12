@@ -50,26 +50,28 @@ used in MatConvNet. The following models are available
 
 For example, in order to run ImageNet-S on a test image, use:
 
-    % obtain model and image
-    gunzip('http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat') ;
-    net = load('imagenet-vgg-f.mat') ;
-    im = imread('peppers') ;
+    % setup MtConvNet in MATLAB
+    run matlab/vl_setupnn
 
-    % preprocess the image
+    % download a pre-trained CNN from the web
+    gunzip('http://www.vlfeat.org/sandbox-matconvnet/models/imagenet-vgg-f.mat') ;
+    net = load('imagenet-vgg-f.mat') ;
+
+    % obtain and preprocess an image
+    im = imread('peppers.png') ;
     im_ = single(im) ; % note: 255 range
-    im_ = imresize(im_, net.normalization.imageSize) ;
+    im_ = imresize(im_, net.normalization.imageSize(1:2)) ;
     im_ = im_ - net.normalization.averageImage ;
 
-    % run CNN
+    % run the CNN
     res = vl_simplenn(net, im_) ;
 
-    % show result
+    % show the classification result
     scores = squeeze(gather(res(end).x)) ;
     [bestScore, best] = max(scores) ;
     figure(1) ; clf ; imagesc(im) ;
     title(sprintf('%s (%d), score %.3f',...
-       net.classes.description{best}, best, bestScore)) ;
-
+    net.classes.description{best}, best, bestScore)) ;
 
 `vl_simplenn` is a wrapper around MatConvNet core computational blocks
 implements a CNN with a simple linear topology (a chain of layers). It
@@ -112,8 +114,8 @@ latter. In training on a problem like ImageNet, the CPU(s) in your
 system will be busy loading data from disk and streaming it to the GPU
 to evaluate the CNN and its derivative. MatConvNet includes the
 utility `vl_imreadjpeg` to accelerate and parallelize loading images
-into memory (this function will be made more powerful in future
-releases).
+into memory (this function is currently a bottleneck will be made more
+powerful in future releases).
 
 ## <a name='installing'></a> Installation
 
@@ -162,6 +164,15 @@ should do the trick. For example:
     > make ENABLE_GPU=y ARCH=maci64 MATLABROOT=/Applications/MATLAB_R2014a.app CUDAROOT=/Developer/NVIDIA/CUDA-5.5
 
 should work on a Mac with MATLAB R2014a.
+
+Finally, running large-scale experiments on fast GPUs require reading
+and preprocessing JPEG images very efficiently. To this end,
+MatConvNet ships with a `vl_imreadjpeg` tool that can be used to read
+JPEG images in a separate thread. This tool is Linux/Mac only and
+requires LibJPEG and POSIX threads. Compile it by switching on the
+`ENABLE_IMREADJPEG` flag:
+
+    > make ENABLE_IMREADJPEG=y
 
 ## <a name='about'></a> About MatConvNet
 

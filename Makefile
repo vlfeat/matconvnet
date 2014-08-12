@@ -11,6 +11,7 @@
 # For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
 
 ENABLE_GPU ?=
+ENABLE_IMREADJPEG ?=
 DEBUG ?=
 ARCH ?= maci64
 CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
@@ -72,7 +73,10 @@ cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
 cpp_src+=matlab/src/bits/normalize.cpp
 
+ifneq $($(ENALBE_IMREADJPEG),)
 mex_src:=matlab/src/vl_imreadjpeg.c
+endif
+
 ifeq ($(ENABLE_GPU),)
 mex_src+=matlab/src/vl_nnconv.cpp
 mex_src+=matlab/src/vl_nnpool.cpp
