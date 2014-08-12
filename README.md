@@ -4,9 +4,8 @@ Version 1.0-beta2.
 
 **MatConvNet** is a MATLAB toolbox implementing *Convolutional Neural
 Networks* (CNNs) for computer vision applications. It is simple,
-efficient, and can learn and run state-of-the-art CNNs. Several
-example CNNs are included to classify and encode images. See
-[here](#about) for further details.
+efficient, and can run and learn state-of-the-art CNNs. Several
+example CNNs are included to classify and encode images.
 
 - Tarball for [version 1.0-beta2](download/matconvnet-1.0-beta2.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
@@ -25,13 +24,12 @@ example CNNs are included to classify and encode images. See
 
 ## <a name='started'></a> Getting started
 
-This section provides a practical introduction to this toolbox.
-Please see the [reference PDF manual](matconvnet-manual.pdf) for
-technical details. MatConvNet can be used to
-[train CNN models](#training), or it can be used to evaluate several
-[pre-trained models](#pretrained) on your data.
+This section provides a practical introduction to MatConvNet. Please
+see the [reference manual (PDF)](matconvnet-manual.pdf) for technical
+details. MatConvNet can be used to evaluate several
+[pre-trained CNNs](#pretrained) or to [train new models](#training).
 
-### <a name='pretrained'></span> Using pre-trained models
+### <a name='pretrained'></a> Using pre-trained models
 
 This section describes how pre-trained models can be downloaded and
 used in MatConvNet. The following models are available
@@ -54,7 +52,8 @@ For example, in order to run ImageNet-S on a test image, use:
     run matlab/vl_setupnn
 
     % download a pre-trained CNN from the web
-    gunzip('http://www.vlfeat.org/sandbox-matconvnet/models/imagenet-vgg-f.mat') ;
+    urlwrite('http://www.vlfeat.org/sandbox-matconvnet/models/imagenet-vgg-f.mat', ...
+      'imagenet-vgg-f.mat') ;
     net = load('imagenet-vgg-f.mat') ;
 
     % obtain and preprocess an image
@@ -74,9 +73,9 @@ For example, in order to run ImageNet-S on a test image, use:
     net.classes.description{best}, best, bestScore)) ;
 
 `vl_simplenn` is a wrapper around MatConvNet core computational blocks
-implements a CNN with a simple linear topology (a chain of layers). It
-is not needed to use the toolbox, but it simplifies common examples
-such as the ones discussed here. See also
+that implements a CNN with a simple linear structure (a chain of
+layers). It is not needed to use the toolbox, but it simplifies common
+examples such as the ones discussed here. See also
 `examples/cnn_imagenet_minimal.m` for further examples.
 
 ### <a name='training'></a> Training your own models
@@ -97,11 +96,11 @@ is highly recommended.
 
 ###  <a name='gpu'></a> Working with GPU acelereated code
 
-GPU support in MatConvNet relies on the corresponding support as
-provided by recent releases of MATLAB and of its Parallel Programming
-Toolbox. This toolbox relies on CUDA-compatible cards, and you will
-need a copy of the CUDA devkit to compile GPU support in MatConvNet
-(see above).
+GPU support in MatConvNet builds on top of MATLAB GPU support in the
+Parallel Programming Toolbox. This toolbox requires CUDA-compatible
+cards, and you will need a copy of the corresponding
+[CUDA devkit](https://developer.nvidia.com/cuda-toolkit-archive) to
+compile GPU support in MatConvNet (see [compiling](#compiling)).
 
 All the core computational functions (e.g. `vl_nnconv`) in the toolbox
 can work with either MATLAB arrays or MATLAB GPU arrays. Therefore,
@@ -153,9 +152,10 @@ folder. Other supported architectures are `glnxa64` (for Linux) and
 
 Compiling the GPU version requries some more configuration. First of
 all, you will need a recent version of MATLAB (e.g. R2014a). Secondly,
-you will need a corresponding version of the CUDA (e.g. CUDA-5.5 for
-R2014a) -- use the `gpuDevice` MATLAB command to figure out the proper
-version of the CUDA toolkit. Then
+you will need a corresponding version of the
+[CUDA toolkit](https://developer.nvidia.com/cuda-toolkit-archive)
+(e.g. CUDA-5.5 for R2014a) -- use the `gpuDevice` MATLAB command to
+figure out the proper version of the CUDA toolkit. Then
 
     > make ENABLE_GPU=y ARCH=<your arch> MATLABROOT=<path to MATLAB> CUDAROOT=<path to CUDA>
 
@@ -221,6 +221,9 @@ Lenc. It is distributed under the permissive BSD license (see the file
 The implementation of the computational blocks in this library, and in
 particular of the convolution operator, is inspired by
 [Caffe](http://caffe.berkeleyvision.org).
+
+We gratefully acknowledge the support of NVIDIA Corporation with the
+donation of the GPUs used to develop this software.
 
 ## Changes
 
