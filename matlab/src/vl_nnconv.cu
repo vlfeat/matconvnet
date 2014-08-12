@@ -335,7 +335,13 @@ void mexFunction(int nout, mxArray *out[],
   /* if the output is 1x1 pixels, then there is no need to actually
    call im2col as it does not do anything
    */
-  fullyConnectedMode = (outputGeom.height == 1 && outputGeom.width == 1 && numGroups == 1) ;
+  fullyConnectedMode = (outputGeom.height == 1 &&
+                        outputGeom.width == 1 &&
+                        padTop == 0 &&
+                        padBottom == 0 &&
+                        padLeft == 0 &&
+                        padRight == 0 &&
+                        numGroups == 1) ;
 
   derDataGeom = data.geom ;
   derFiltersGeom = filters.geom ;
