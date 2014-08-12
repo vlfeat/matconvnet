@@ -92,12 +92,21 @@ parser.add_argument('--no-transpose',
                     dest='transpose',
                     action='store_false',
                     help='Do not transpose CNN')
+parser.set_defaults(transpose=True)
 parser.add_argument('--preproc',
                     type=str,
                     nargs='?',
                     default='caffe',
                     help='Variant of image preprocessing to use (use ? to get a list)')
-parser.set_defaults(transpose=True)
+parser.add_argument('--remove-dropout',
+                    dest='remove_dropout',
+                    action='store_true',
+                    help='Remove dropout layers')
+parser.add_argument('--no-remove-dropout',
+                    dest='remove_dropout',
+                    action='store_false',
+                    help='Do not remove dropout layers')
+parser.set_defaults(remove_dropout=True)
 args = parser.parse_args()
 
 print 'Caffe varaint set to', args.caffe_variant
@@ -363,6 +372,9 @@ for name in layers_name_param:
     mk['type'] = 'dropout'
     if hasattr(layer, 'dropout_param'): param = layer.dropout_param
     mk['rate']= float(param.dropout_ratio)
+    if args.remove_dropout:
+      print '   Removing dropout layer'
+      continue
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'softmax':
     mk['type'] = 'softmax'
