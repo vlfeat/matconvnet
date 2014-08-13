@@ -3,6 +3,8 @@
 # brief: Caffe importer
 # author: Andrea Vedaldi and Karel Lenc
 
+# Requires Google Protobuf for Python and SciPy
+
 import sys
 import os
 import argparse
@@ -120,7 +122,7 @@ elif args.caffe_variant == '?':
   print 'Supported variants: caffe, cafe-old, vgg-caffe'
   sys.exit(0)
 else:
-  print 'Unkown Caffe variant', args.caffe_variant
+  print 'Unknown Caffe variant', args.caffe_variant
   sys.exit(1)
 
 if args.preproc == '?':
