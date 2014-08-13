@@ -1,7 +1,5 @@
 # MatConvNet: CNNs for MATLAB
 
-Version 1.0-beta2.
-
 **MatConvNet** is a MATLAB toolbox implementing *Convolutional Neural
 Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
