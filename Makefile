@@ -153,7 +153,7 @@ doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 doc/index.html : doc/.build/index.html.raw doc/template.html
 	sed -e '/%MARKDOWN%/{r doc/.build/index.html.raw' -e 'd;}' doc/template.html  > $(@)
 
-doc/.build/index.html.raw : README.md
+doc/.build/index.html.raw : doc/index.md
 	mkdir -p doc/.build
 	$(MARKDOWN) $(<) > $(@)
 
