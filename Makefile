@@ -73,7 +73,7 @@ cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
 cpp_src+=matlab/src/bits/normalize.cpp
 
-ifneq ($(ENALBE_IMREADJPEG),)
+ifneq ($(ENABLE_IMREADJPEG),)
 mex_src:=matlab/src/vl_imreadjpeg.c
 endif
 
