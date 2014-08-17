@@ -46,8 +46,8 @@ opts = vl_argparse(opts, varargin) ;
 
 d = dir(fullfile(opts.dataDir, '*devkit*')) ;
 if numel(d) == 0
-  error('Make sure that ILSVRC data is installed in %s (%s not found)', ...
-    opts.dataDir, metaPath) ;
+  error('Make sure that ILSVRC data is correctly installed in %s', ...
+    opts.dataDir) ;
 end
 devkitPath = fullfile(opts.dataDir, d(1).name) ;
 

@@ -46,6 +46,9 @@ end
 
 imo = zeros(opts.imageSize(1), opts.imageSize(2), 3, ...
             numel(images)*opts.numAugments, 'single') ;
+
+[~,augmentations] = sort(rand(size(tfs,2), numel(images)), 1) ;
+
 si = 1 ;
 for i=1:numel(images)
 
@@ -78,9 +81,8 @@ for i=1:numel(images)
   % crop & flip
   w = size(imt,2) ;
   h = size(imt,1) ;
-  augmentations = randsample(size(tfs,2), opts.numAugments);
   for ai = 1:opts.numAugments
-    t = augmentations(ai) ;
+    t = augmentations(ai,i) ;
     tf = tfs(:,t) ;
     dx = floor((w - opts.imageSize(2)) * tf(2)) ;
     dy = floor((h - opts.imageSize(1)) * tf(1)) ;
