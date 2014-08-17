@@ -18,7 +18,7 @@ num_cpus=8
 mkdir -p "$ram"/images ;
 rsync -rv --chmod=ugo=rwX "$data"/*devkit* "$ram/"
 
-function convert_one()
+function convert_some()
 {
     out="$1"
     shift
@@ -29,13 +29,12 @@ function convert_one()
         then
             continue ;
         fi
-        convert -verbose -format jpeg -quality 90 -resize x256 \
-            "$infile" "${outfile}.temp"
+        convert -verbose -quality 90 -resize '256x256^' \
+            "$infile" JPEG:"${outfile}.temp"
         mv "${outfile}.temp" "$outfile"
     done
 }
 export -f convert_one
-
 
 dirs=$(find $data/images/* -maxdepth 2 -type d)
 for d in $dirs
@@ -46,5 +45,5 @@ do
     mkdir -p "$out"
     find "$d" -maxdepth 1 -name '*.JPEG' | \
         xargs -n 100 --max-procs=$num_cpus \
-        bash -c "convert_one \"$out\" \"\$@\"" _
+        bash -c "convert_some \"$out\" \"\$@\"" _
 done
