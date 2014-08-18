@@ -57,19 +57,19 @@ while ai <= length(args)
     error('Parameter-value pair expected (missing value?).') ;
   end
   value = args{ai+1} ;
-  if isfield(conf,paramName)
-    conf.(paramName) = value ;
-  else
-    % try case-insensitive
-    i = find(strcmpi(paramName, names)) ;
-    if isempty(i)
-      if nargout < 2
-        error('Unknown parameter ''%s''.', paramName) ;
-      else
-        remainingArgs(end+1:end+2) = args(ai:ai+1) ;
-      end
+  i = find(strcmpi(paramName, names)) ;
+  if isempty(i)
+    if nargout < 2
+      error('Unknown parameter ''%s''.', paramName) ;
     else
-      conf.(names{i}) = value ;
+      remainingArgs(end+1:end+2) = args(ai:ai+1) ;
+    end
+  else
+    paramName = names{i} ;
+    if isstruct(conf.(paramName))
+      [conf.(paramName),r] = vl_argparse(conf.(paramName), {value}) ;
+    else
+      conf.(paramName) = value ;
     end
   end
   ai = ai + 2 ;
