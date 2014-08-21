@@ -196,7 +196,7 @@
 /* Begin PBXLegacyTarget section */
 		2D375DB518A7F064008A97EE /* matconv */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(ACTION)";
+			buildArgumentsString = "ENABLE_GPU=y ENABLE_IMREADJPEG=y $(ACTION)";
 			buildConfigurationList = 2D375DB818A7F064008A97EE /* Build configuration list for PBXLegacyTarget "matconv" */;
 			buildPhases = (
 			);
@@ -210,7 +210,7 @@
 		};
 		2D95CDAA18EEB2630076E3A2 /* matconv no gpu */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "ENABLE_GPU=\"\" $(ACTION)";
+			buildArgumentsString = "ENABLE_GPU=\"\" ENABLE_IMREADJPEG=y $(ACTION)";
 			buildConfigurationList = 2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "matconv no gpu" */;
 			buildPhases = (
 			);
