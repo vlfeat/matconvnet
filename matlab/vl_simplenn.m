@@ -108,6 +108,7 @@ function res = vl_simplenn(net, x, dzdy, varargin)
 opts.res = [] ;
 opts.conserveMemory = false ;
 opts.disableDropout = false ;
+opts.freezeDropout = false ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -156,9 +157,13 @@ for i=1:n
     case 'dropout'
       if opts.disableDropout
         res(i+1).x = res(i).x ;
+      elseif opts.freezeDropout
+        [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate, 'mask', res(i+1).aux) ;
       else
         [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
       end
+    case 'custom'
+      res(i+1) = l.forward(l, res(i), res(i+1)) ;
     otherwise
       error('Unknown layer type %s', l.type) ;
   end
@@ -204,6 +209,8 @@ if doder
         else
           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
         end
+      case 'custom'
+        res(i) = l.backward(l, res(i), res(i+1)) ;
     end
     if opts.conserveMemory
       res(i+1).dzdx = [] ;
