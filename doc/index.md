@@ -31,17 +31,41 @@ details. MatConvNet can be used to evaluate several
 ### <a name='pretrained'></a> Using pre-trained models
 
 This section describes how pre-trained models can be downloaded and
-used in MatConvNet. The following models are available
+used in MatConvNet.
+
+> **Remark:** The following models have been *imported from other
+> reference implementations*. Given the same input, MatConvNet CNNs
+> will return the same output up to numerical precision. However, note
+> that:
+>
+> 1. Even small differences in the image preprocessing (e.g. the image
+>    resizing algorithm or the cropping method) can affect the results.
+> 2. The example below evaluates the CNN, but does not
+>    include data augmentation or encoding normalization as for example
+>    provided by the [VGG code](http://www.robots.ox.ac.uk/~vgg/research/deep_eval).
+>    While this is easy to implement, it is not done automatically here.
+> 3. These models are provided here for convenience, but please credit
+>    the original authors.
 
 - VGG models from the
-  [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval) paper:
+  [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
+  paper (v1.0.1):
   - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
   - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
   - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
   - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
   - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
   - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
-- Berkeley [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html):
+
+> Please cite as
+> `Return of the Devil in the Details: Delving
+> Deep into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
+> Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
+> ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
+
+- Berkeley
+  [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
+  (version downloaded on July 2014):
   - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
   - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
 
