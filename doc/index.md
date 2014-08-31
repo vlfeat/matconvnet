@@ -6,7 +6,7 @@ efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
 - [Homepage](http://www.vlfeat.org/matconvnet)
-- Tarball for [version 1.0-beta3](download/matconvnet-1.0-beta3.tar.gz)
+- Tarball for [version 1.0-beta4](download/matconvnet-1.0-beta4.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
 - [Installation instructions](#installing)
@@ -251,6 +251,6 @@ donation of the GPUs used to develop this software.
 
 ## Changes
 
-- 1.0-beta3 (August 2014) Cleanup.
+- 1.0-beta4 (August 2014) Cleanup.
 - 1.0-beta2 (July 2014) Adds a set of standard models.
 - 1.0-beta1 (June 2014) First public release
