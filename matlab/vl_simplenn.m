@@ -97,6 +97,18 @@ function res = vl_simplenn(net, x, dzdy, varargin)
 %
 %     - layer.type = 'softmaxloss'
 %     - layer.class: the ground-truth class.
+%
+%   Custom layer::
+%     This can be used to specify custom layers.
+%
+%     - layer.type = 'custom'
+%     - layer.forward: a function handle computing the block.
+%     - layer.backward: a function handle computing the block derivative.
+%
+%     The first function is called as res(i+1) = forward(layer, res(i), res(i+1))
+%     where res() is the struct array specified before. The second function is
+%     called as res(i) = backward(layer, res(i), res(i+1)). Note that the
+%     `layer` structure can contain additional fields if needed.
 
 
 % Copyright (C) 2014 Andrea Vedaldi.
