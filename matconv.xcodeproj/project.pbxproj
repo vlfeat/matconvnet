@@ -54,6 +54,10 @@
 		2D6D042C196A896300022E96 /* vl_testsim.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_testsim.m; path = matlab/xtest/vl_testsim.m; sourceTree = "<group>"; };
 		2D6D042D196A896300022E96 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		2D6D042E196A988C00022E96 /* nnhelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nnhelper.h; path = matlab/src/bits/nnhelper.h; sourceTree = "<group>"; };
+		2D717F1E19B3A2A50028FE9E /* index.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = index.md; path = doc/index.md; sourceTree = "<group>"; };
+		2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "matconvnet-manual.tex"; path = "doc/matconvnet-manual.tex"; sourceTree = "<group>"; };
+		2D717F2019B3A2A50028FE9E /* references.bib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = references.bib; path = doc/references.bib; sourceTree = "<group>"; };
+		2D717F2119B3A2A50028FE9E /* template.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = template.html; path = doc/template.html; sourceTree = "<group>"; };
 		2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = im2col_gpu.cu; path = matlab/src/bits/im2col_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = pooling_gpu.cu; path = matlab/src/bits/pooling_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = normalize_gpu.cu; path = matlab/src/bits/normalize_gpu.cu; sourceTree = "<group>"; };
@@ -89,7 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				2D375DBC18A7F790008A97EE /* Makefile */,
-				2D6D042D196A896300022E96 /* README.md */,
+				2D717F2219B3A2AB0028FE9E /* doc */,
 				2D375DBD18A7F796008A97EE /* src */,
 				2DD3FACA18EC0E4C00053032 /* matlab */,
 				2D375DC418A7FD1C008A97EE /* Products */,
@@ -145,6 +149,18 @@
 				2D6D0424196A894A00022E96 /* mex_gpu_opts.sh */,
 			);
 			name = config;
+			sourceTree = "<group>";
+		};
+		2D717F2219B3A2AB0028FE9E /* doc */ = {
+			isa = PBXGroup;
+			children = (
+				2D6D042D196A896300022E96 /* README.md */,
+				2D717F1E19B3A2A50028FE9E /* index.md */,
+				2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */,
+				2D717F2019B3A2A50028FE9E /* references.bib */,
+				2D717F2119B3A2A50028FE9E /* template.html */,
+			);
+			name = doc;
 			sourceTree = "<group>";
 		};
 		2DD3FACA18EC0E4C00053032 /* matlab */ = {
