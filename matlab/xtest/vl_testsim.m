@@ -15,6 +15,7 @@ function vl_testsim(a,b,tau)
 a = gather(a) ;
 b = gather(b) ;
 assert(isequal(size(a),size(b))) ;
+if isempty(a), return ; end
 delta = a - b ;
 %max(abs(a(:)-b(:)))
 if nargin < 3

@@ -1,7 +1,10 @@
 % VL_NNCONV  CNN convolution
 %    Y = VL_NNCONV(X, F, B) computes the convolution of the image stack X
 %    with the filter bank F and biases B. If B is the empty matrix,
-%    then no biases are added.
+%    then no biases are added. If F is the empty matrix, then
+%    the function does not filter the image, but still adds the
+%    biases as well as performing downsampling and padding as explained
+%    below.
 %
 %    [DXDY, DXDF, DXDB] = VL_NNCONV(X, F, B, DZDY) computes the
 %    derivatives of the nework output Z w.r.t. the data X and

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		2D06568918AA79BB006545B4 /* pooling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D06568718AA79BB006545B4 /* pooling.cpp */; };
 		2D06568A18AA79BB006545B4 /* pooling.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D06568818AA79BB006545B4 /* pooling.hpp */; };
-		2D375DC818A7FE3F008A97EE /* vl_nnconv.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */; };
 		2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DCA18A848E2008A97EE /* im2col.cpp */; };
 		2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D375DCB18A848E2008A97EE /* im2col.hpp */; };
 		2D95CDA518EDE3A50076E3A2 /* im2col_gpu.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */; };
@@ -54,6 +53,9 @@
 		2D6D042C196A896300022E96 /* vl_testsim.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_testsim.m; path = matlab/xtest/vl_testsim.m; sourceTree = "<group>"; };
 		2D6D042D196A896300022E96 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		2D6D042E196A988C00022E96 /* nnhelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nnhelper.h; path = matlab/src/bits/nnhelper.h; sourceTree = "<group>"; };
+		2D6FC8A319B672A800C1CF41 /* subsample.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = subsample.cpp; path = matlab/src/bits/subsample.cpp; sourceTree = "<group>"; };
+		2D6FC8A419B672D900C1CF41 /* subsample.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = subsample.hpp; path = matlab/src/bits/subsample.hpp; sourceTree = "<group>"; };
+		2D6FC8A519B672EE00C1CF41 /* subsample_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = subsample_gpu.cu; path = matlab/src/bits/subsample_gpu.cu; sourceTree = "<group>"; };
 		2D717F1E19B3A2A50028FE9E /* index.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = index.md; path = doc/index.md; sourceTree = "<group>"; };
 		2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "matconvnet-manual.tex"; path = "doc/matconvnet-manual.tex"; sourceTree = "<group>"; };
 		2D717F2019B3A2A50028FE9E /* references.bib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = references.bib; path = doc/references.bib; sourceTree = "<group>"; };
@@ -125,17 +127,20 @@
 			isa = PBXGroup;
 			children = (
 				2DADF18018ACFA6700D16D4C /* gpu.hpp */,
+				2D375DCA18A848E2008A97EE /* im2col.cpp */,
+				2D375DCB18A848E2008A97EE /* im2col.hpp */,
+				2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */,
 				2DADAFF918E8D61D00165C90 /* mexutils.h */,
 				2D6D042E196A988C00022E96 /* nnhelper.h */,
-				2D375DCA18A848E2008A97EE /* im2col.cpp */,
-				2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */,
-				2D375DCB18A848E2008A97EE /* im2col.hpp */,
-				2D06568718AA79BB006545B4 /* pooling.cpp */,
-				2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */,
-				2D06568818AA79BB006545B4 /* pooling.hpp */,
 				2DADAFF518E6430500165C90 /* normalize.cpp */,
-				2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */,
 				2DADAFF618E6430500165C90 /* normalize.hpp */,
+				2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */,
+				2D06568718AA79BB006545B4 /* pooling.cpp */,
+				2D06568818AA79BB006545B4 /* pooling.hpp */,
+				2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */,
+				2D6FC8A319B672A800C1CF41 /* subsample.cpp */,
+				2D6FC8A419B672D900C1CF41 /* subsample.hpp */,
+				2D6FC8A519B672EE00C1CF41 /* subsample_gpu.cu */,
 			);
 			name = bits;
 			sourceTree = "<group>";
@@ -292,7 +297,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2D375DC818A7FE3F008A97EE /* vl_nnconv.cu in Sources */,
 				2DE27163197A5531001768CA /* vl_imreadjpeg.c in Sources */,
 				2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */,
 				2D06568918AA79BB006545B4 /* pooling.cpp in Sources */,
