@@ -111,7 +111,7 @@ for epoch=1:opts.numEpochs
     % backprop
     clear res ;
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one);% 'conserveMemory', opts.conserveMemory) ;
+    res = vl_simplenn(net, im, one, 'conserveMemory', opts.conserveMemory) ;
     info.train = updateError(opts, info.train, net, res) ;
 
     % gradient step
@@ -143,7 +143,7 @@ for epoch=1:opts.numEpochs
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
     fprintf('\n') ;
     
-    if 1 
+    if 0
       diagnose(net,res) ;
     end
   end % next batch
@@ -264,34 +264,40 @@ dbmx = fmu ;
 for i=1:numel(net.layers)
   ly = net.layers{i} ;
   if strcmp(ly.type, 'conv') && numel(ly.filters) > 0
-    fmu(i) = mean(ly.filters(:)) ;
-    fmi(i) = min(ly.filters(:)) ;
-    fmx(i) = max(ly.filters(:)) ;
+    x = gather(ly.filters) ;
+    fmu(i) = mean(x(:)) ;
+    fmi(i) = min(x(:)) ;
+    fmx(i) = max(x(:)) ;
   end
   if strcmp(ly.type, 'conv') && numel(ly.biases) > 0
-    bmu(i) = mean(ly.biases(:)) ;
-    bmi(i) = min(ly.biases(:)) ;
-    bmx(i) = max(ly.biases(:)) ;
+    x = gather(ly.biases) ;
+    bmu(i) = mean(x(:)) ;
+    bmi(i) = min(x(:)) ;
+    bmx(i) = max(x(:)) ;
   end
   if numel(res(i).x) > 1
-    xmu(i) = mean(res(i).x(:)) ;
-    xmi(i) = min(res(i).x(:)) ;
-    xmx(i) = max(res(i).x(:)) ;
+    x = gather(res(i).x) ;
+    xmu(i) = mean(x(:)) ;
+    xmi(i) = min(x(:)) ;
+    xmx(i) = max(x(:)) ;
   end
   if numel(res(i).dzdx) > 1
-    dxmu(i) = mean(res(i).dzdx(:)) ;
-    dxmi(i) = min(res(i).dzdx(:)) ;
-    dxmx(i) = max(res(i).dzdx(:)) ;
+    x = gather(res(i).dzdx);
+    dxmu(i) = mean(x(:)) ;
+    dxmi(i) = min(x(:)) ;
+    dxmx(i) = max(x(:)) ;
   end
   if strcmp(ly.type, 'conv') && numel(res(i).dzdw{1}) > 0
-    dfmu(i) = mean(res(i).dzdw{1}(:)) ;
-    dfmi(i) = min(res(i).dzdw{1}(:)) ;
-    dfmx(i) = max(res(i).dzdw{1}(:)) ;
+    x = gather(res(i).dzdw{1}) ;
+    dfmu(i) = mean(x(:)) ;
+    dfmi(i) = min(x(:)) ;
+    dfmx(i) = max(x(:)) ;
   end
   if strcmp(ly.type, 'conv') && numel(res(i).dzdw{2}) > 0
-    dbmu(i) = mean(res(i).dzdw{2}(:)) ;
-    dbmi(i) = min(res(i).dzdw{2}(:)) ;
-    dbmx(i) = max(res(i).dzdw{2}(:)) ;
+    x = gather(res(i).dzdw{2}) ;
+    dbmu(i) = mean(x(:)) ;
+    dbmi(i) = min(x(:)) ;
+    dbmx(i) = max(x(:)) ;
   end
 end
 
