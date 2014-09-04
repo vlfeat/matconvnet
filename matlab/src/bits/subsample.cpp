@@ -15,9 +15,11 @@
 #include "subsample.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <cassert>
 
 #include<iostream>
+
 
 /* ---------------------------------------------------------------- */
 /*                                                  subsample (CPU) */
