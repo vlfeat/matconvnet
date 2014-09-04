@@ -86,6 +86,15 @@ for l=setdiff(1:9,6)
       end
 
     case 4
+      disp('testing vl_nnconv with fully connected identity filtets') ;
+      x = grandn(1,1,10,4,'single') ;
+      b = grandn(1,size(x,3),'single') ;
+      y = vl_nnconv(x,[],b,'verbose') ;
+      dzdy = grandn(size(y),'single') ;
+      [dzdx,dzdw,dzdb] = vl_nnconv(x,[],b,dzdy,'verbose') ;
+      vl_testder(@(x) vl_nnconv(x,[],b), x, dzdy, dzdx, range * 1e-2) ;
+      vl_testder(@(b) vl_nnconv(x,[],b), b, dzdy, dzdb, range * 1e-2) ;
+      
       disp('testing vl_nnconv with square, non square, and fully connected filters') ;
       n = 3 ;
       fn = 5 ;

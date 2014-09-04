@@ -123,10 +123,10 @@ copy_dispatch(bool gpuMode,
               size_t numElements)
 {
   if (!gpuMode) {
-    memcpy(dest, src, numElements) ;
+    memcpy(dest, src, numElements * sizeof(float)) ;
   } else {
 #ifdef ENABLE_GPU
-    cudaMemcpy(dest, src, numElements, cudaMemcpyDeviceToDevice) ;
+    cudaMemcpy(dest, src, numElements * sizeof(float), cudaMemcpyDeviceToDevice) ;
 #endif
   }
 }
