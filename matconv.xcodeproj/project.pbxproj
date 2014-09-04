@@ -36,7 +36,7 @@
 		2D06568818AA79BB006545B4 /* pooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = pooling.hpp; path = matlab/src/bits/pooling.hpp; sourceTree = "<group>"; };
 		2D375DBB18A7F790008A97EE /* vl_nnconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnconv.m; path = matlab/vl_nnconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
-		2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnconv.cu; path = matlab/src/vl_nnconv.cu; sourceTree = "<group>"; };
+		2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnconv.cu; path = matlab/src/vl_nnconv.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D375DC318A7FD1C008A97EE /* libgconv.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libgconv.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D375DCA18A848E2008A97EE /* im2col.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = im2col.cpp; path = matlab/src/bits/im2col.cpp; sourceTree = "<group>"; };
 		2D375DCB18A848E2008A97EE /* im2col.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = im2col.hpp; path = matlab/src/bits/im2col.hpp; sourceTree = "<group>"; };
