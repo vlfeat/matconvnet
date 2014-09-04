@@ -15,8 +15,8 @@ opts.continue = false ;
 opts.expDir = 'data/exp' ;
 opts.conserveMemory = false ;
 opts.prefetch = false ;
-opts.weightDecay = 0.0005;
-opts.momentum = 0.9;
+opts.weightDecay = 0.0005 ;
+opts.momentum = 0.9 ;
 opts.errorType = 'multiclass' ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -111,7 +111,7 @@ for epoch=1:opts.numEpochs
     % backprop
     clear res ;
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one, 'conserveMemory', opts.conserveMemory) ;
+    res = vl_simplenn(net, im, one);% 'conserveMemory', opts.conserveMemory) ;
     info.train = updateError(opts, info.train, net, res) ;
 
     % gradient step
@@ -142,6 +142,10 @@ for epoch=1:opts.numEpochs
     fprintf(' err %.1f err5 %.1f', ...
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
     fprintf('\n') ;
+    
+    if 1 
+      diagnose(net,res) ;
+    end
   end % next batch
 
   % evaluation on validation set
@@ -233,3 +237,102 @@ switch opts.errorType
     error = bsxfun(@times, predictions, labels) < 0 ;
     info.error(end) = info.error(end) + sum(error(:))/n ;
 end
+
+% -------------------------------------------------------------------------
+function diagnose(net, res)
+% -------------------------------------------------------------------------
+n = numel(net.layers) ;
+fmu = NaN + zeros(1, n) ;
+fmi = fmu ;
+fmx = fmu ;
+bmu = fmu ;
+bmi = fmu ;
+bmx = fmu ;
+xmu = fmu ;
+xmi = fmi ;
+xmx = fmx ;
+dxmu = fmu ;
+dxmi = fmi ;
+dxmx = fmx ;
+dfmu = fmu ;
+dfmi = fmu ;
+dfmx = fmu ;
+dbmu = fmu ;
+dbmi = fmu ;
+dbmx = fmu ;
+
+for i=1:numel(net.layers)
+  ly = net.layers{i} ;
+  if strcmp(ly.type, 'conv') && numel(ly.filters) > 0
+    fmu(i) = mean(ly.filters(:)) ;
+    fmi(i) = min(ly.filters(:)) ;
+    fmx(i) = max(ly.filters(:)) ;
+  end
+  if strcmp(ly.type, 'conv') && numel(ly.biases) > 0
+    bmu(i) = mean(ly.biases(:)) ;
+    bmi(i) = min(ly.biases(:)) ;
+    bmx(i) = max(ly.biases(:)) ;
+  end
+  if numel(res(i).x) > 1
+    xmu(i) = mean(res(i).x(:)) ;
+    xmi(i) = min(res(i).x(:)) ;
+    xmx(i) = max(res(i).x(:)) ;
+  end
+  if numel(res(i).dzdx) > 1
+    dxmu(i) = mean(res(i).dzdx(:)) ;
+    dxmi(i) = min(res(i).dzdx(:)) ;
+    dxmx(i) = max(res(i).dzdx(:)) ;
+  end
+  if strcmp(ly.type, 'conv') && numel(res(i).dzdw{1}) > 0
+    dfmu(i) = mean(res(i).dzdw{1}(:)) ;
+    dfmi(i) = min(res(i).dzdw{1}(:)) ;
+    dfmx(i) = max(res(i).dzdw{1}(:)) ;
+  end
+  if strcmp(ly.type, 'conv') && numel(res(i).dzdw{2}) > 0
+    dbmu(i) = mean(res(i).dzdw{2}(:)) ;
+    dbmi(i) = min(res(i).dzdw{2}(:)) ;
+    dbmx(i) = max(res(i).dzdw{2}(:)) ;
+  end
+end
+
+figure(2) ; clf ;
+subplot(6,1,1) ;
+errorbar(1:n, fmu, fmi, fmx, 'bo') ;
+grid on ;
+xlabel('layer') ;
+ylabel('filters') ;
+
+subplot(6,1,2) ;
+errorbar(1:n, bmu, bmi, bmx, 'bo') ;
+grid on ;
+xlabel('layer') ;
+ylabel('biases') ;
+
+subplot(6,1,3) ;
+errorbar(1:n, xmu, xmi, xmx, 'bo') ;
+grid on ;
+xlabel('layer') ;
+ylabel('x') ;
+
+subplot(6,1,4) ;
+errorbar(1:n, dxmu, dxmi, dxmx, 'bo') ;
+grid on ;
+xlabel('layer') ;
+ylabel('dzdx') ;
+
+subplot(6,1,5) ;
+errorbar(1:n, dfmu, dfmi, dfmx, 'bo') ;
+grid on ;
+xlabel('layer') ;
+ylabel('dfilters') ;
+
+subplot(6,1,6) ;
+errorbar(1:n, dbmu, dbmi, dbmx, 'bo') ;
+grid on ;
+xlabel('layer') ;
+ylabel('dbiases') ;
+
+title('coefficient ranges') ;
+drawnow ;
+
+
