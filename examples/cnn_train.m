@@ -18,6 +18,7 @@ opts.prefetch = false ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
 opts.errorType = 'multiclass' ;
+opts.plotDiagnostics = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir), mkdir(opts.expDir) ; end
@@ -59,7 +60,9 @@ end
 % -------------------------------------------------------------------------
 %                                                        Train and validate
 % -------------------------------------------------------------------------
+
 rng(0) ;
+
 if opts.useGpu
   one = gpuArray(single(1)) ;
 else
@@ -142,9 +145,10 @@ for epoch=1:opts.numEpochs
     fprintf(' err %.1f err5 %.1f', ...
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
     fprintf('\n') ;
-    
-    if 0
-      diagnose(net,res) ;
+
+    % debug info
+    if opts.plotDiagnostics
+      vl_simplenn_diagnose(net,res) ;
     end
   end % next batch
 
@@ -189,9 +193,9 @@ for epoch=1:opts.numEpochs
   subplot(1,2,1) ;
   semilogy(1:epoch, info.train.objective, 'k') ; hold on ;
   semilogy(1:epoch, info.val.objective, 'b') ;
-  xlabel('training epoch') ; ylabel('energy') ; 
+  xlabel('training epoch') ; ylabel('energy') ;
   grid on ;
-  h=legend('train', 'val') ; 
+  h=legend('train', 'val') ;
   set(h,'color','none');
   title('objective') ;
   subplot(1,2,2) ;
@@ -208,7 +212,7 @@ for epoch=1:opts.numEpochs
       h=legend('train','val') ;
   end
   grid on ;
-  xlabel('training epoch') ; ylabel('error') ; 
+  xlabel('training epoch') ; ylabel('error') ;
   set(h,'color','none') ;
   title('error') ;
   drawnow ;
@@ -221,13 +225,13 @@ function info = updateError(opts, info, net, res)
 predictions = gather(res(end-1).x) ;
 sz = size(predictions) ;
 n = prod(sz(1:2)) ;
-    
+
 labels = net.layers{end}.class ;
 info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
 switch opts.errorType
   case 'multiclass'
     if any(sz>1)
-      warning('mutliclass loss does cannot yet be applied in a convolutional manner') ;
+      warning('the mutliclass loss cannot be applied in a convolutional manner yet') ;
     end
     [~,predictions] = sort(squeeze(predictions), 'descend') ;
     error = ~bsxfun(@eq, predictions, labels) ;
@@ -238,107 +242,5 @@ switch opts.errorType
     info.error(end) = info.error(end) + sum(error(:))/n ;
 end
 
-% -------------------------------------------------------------------------
-function diagnose(net, res)
-% -------------------------------------------------------------------------
-n = numel(net.layers) ;
-fmu = NaN + zeros(1, n) ;
-fmi = fmu ;
-fmx = fmu ;
-bmu = fmu ;
-bmi = fmu ;
-bmx = fmu ;
-xmu = fmu ;
-xmi = fmi ;
-xmx = fmx ;
-dxmu = fmu ;
-dxmi = fmi ;
-dxmx = fmx ;
-dfmu = fmu ;
-dfmi = fmu ;
-dfmx = fmu ;
-dbmu = fmu ;
-dbmi = fmu ;
-dbmx = fmu ;
-
-for i=1:numel(net.layers)
-  ly = net.layers{i} ;
-  if strcmp(ly.type, 'conv') && numel(ly.filters) > 0
-    x = gather(ly.filters) ;
-    fmu(i) = mean(x(:)) ;
-    fmi(i) = min(x(:)) ;
-    fmx(i) = max(x(:)) ;
-  end
-  if strcmp(ly.type, 'conv') && numel(ly.biases) > 0
-    x = gather(ly.biases) ;
-    bmu(i) = mean(x(:)) ;
-    bmi(i) = min(x(:)) ;
-    bmx(i) = max(x(:)) ;
-  end
-  if numel(res(i).x) > 1
-    x = gather(res(i).x) ;
-    xmu(i) = mean(x(:)) ;
-    xmi(i) = min(x(:)) ;
-    xmx(i) = max(x(:)) ;
-  end
-  if numel(res(i).dzdx) > 1
-    x = gather(res(i).dzdx);
-    dxmu(i) = mean(x(:)) ;
-    dxmi(i) = min(x(:)) ;
-    dxmx(i) = max(x(:)) ;
-  end
-  if strcmp(ly.type, 'conv') && numel(res(i).dzdw{1}) > 0
-    x = gather(res(i).dzdw{1}) ;
-    dfmu(i) = mean(x(:)) ;
-    dfmi(i) = min(x(:)) ;
-    dfmx(i) = max(x(:)) ;
-  end
-  if strcmp(ly.type, 'conv') && numel(res(i).dzdw{2}) > 0
-    x = gather(res(i).dzdw{2}) ;
-    dbmu(i) = mean(x(:)) ;
-    dbmi(i) = min(x(:)) ;
-    dbmx(i) = max(x(:)) ;
-  end
-end
-
-figure(2) ; clf ;
-subplot(6,1,1) ;
-errorbar(1:n, fmu, fmi, fmx, 'bo') ;
-grid on ;
-xlabel('layer') ;
-ylabel('filters') ;
-
-subplot(6,1,2) ;
-errorbar(1:n, bmu, bmi, bmx, 'bo') ;
-grid on ;
-xlabel('layer') ;
-ylabel('biases') ;
-
-subplot(6,1,3) ;
-errorbar(1:n, xmu, xmi, xmx, 'bo') ;
-grid on ;
-xlabel('layer') ;
-ylabel('x') ;
-
-subplot(6,1,4) ;
-errorbar(1:n, dxmu, dxmi, dxmx, 'bo') ;
-grid on ;
-xlabel('layer') ;
-ylabel('dzdx') ;
-
-subplot(6,1,5) ;
-errorbar(1:n, dfmu, dfmi, dfmx, 'bo') ;
-grid on ;
-xlabel('layer') ;
-ylabel('dfilters') ;
-
-subplot(6,1,6) ;
-errorbar(1:n, dbmu, dbmi, dbmx, 'bo') ;
-grid on ;
-xlabel('layer') ;
-ylabel('dbiases') ;
-
-title('coefficient ranges') ;
-drawnow ;
 
 
