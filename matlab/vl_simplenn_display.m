@@ -71,7 +71,7 @@ for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
         mem(1:2,l) = [a;b] ;
         s=sprintf('%.0f/%.0f', a/1024^2, b/1024^2) ;
     end
-    fprintf('|%7s', s) ;    
+    fprintf('|%7s', s) ;
   end
   fprintf('|\n') ;
 end
@@ -100,5 +100,5 @@ for f=fieldnames(s)'
   end
 end
 
- 
+
 

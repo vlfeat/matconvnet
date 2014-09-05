@@ -47,8 +47,8 @@ while ai <= length(args)
     moreArgs = cat(2, fieldnames(args{ai}), struct2cell(args{ai}))' ;
     [conf,r] = vl_argparse(conf, moreArgs(:)) ;
     remainingArgs = cat(2, remainingArgs, r) ;
-    ai = ai +1 ;    
-    continue ; 
+    ai = ai +1 ;
+    continue ;
   end
   if ~ischar(paramName)
     error('The name of the parameter number %d is not a string nor a structure', (ai-1)/2+1) ;
