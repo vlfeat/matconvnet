@@ -5,15 +5,17 @@ run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
 
 opts.dataDir = 'data/imagenet12' ;
 opts.expDir = 'data/imagenet12-baseline' ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
 opts.train.batchSize = 256 ;
-opts.train.numEpochs = 100 ;
+opts.train.numEpochs = 65 ;
 opts.train.continue = true ;
 opts.train.useGpu = false ;
 opts.train.prefetch = false ;
-opts.train.learningRate = [0.01*ones(1, 20) 0.001*ones(1, 10) 0.0001*ones(1,10) 0.00001*ones(1,10)] ;
+opts.train.learningRate = [0.01*ones(1, 25) 0.001*ones(1, 25) 0.0001*ones(1,15)] ;
 opts.train.expDir = opts.expDir ;
 opts = vl_argparse(opts, varargin) ;
 
