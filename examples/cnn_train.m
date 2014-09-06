@@ -76,8 +76,8 @@ for epoch=1:opts.numEpochs
   % fast-forward to where we stopped
   modelPath = fullfile(opts.expDir, 'net-epoch-%d.mat') ;
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
-  if opts.continue & exist(sprintf(modelPath, epoch),'file'), continue ; end
-  if opts.continue & epoch > 1 & exist(sprintf(modelPath, epoch-1), 'file')
+  if opts.continue
+    if exist(sprintf(modelPath, epoch),'file'), continue ; end
     fprintf('resuming by loading epoch %d\n', epoch-1) ;
     load(sprintf(modelPath, epoch-1), 'net', 'info') ;
   end
@@ -125,15 +125,15 @@ for epoch=1:opts.numEpochs
       ly = net.layers{l} ;
       if ~strcmp(ly.type, 'conv'), continue ; end
 
-      ly.filtersMomentum = opts.momentum * ly.filtersMomentum ...
-          - opts.weightDecay * ly.filtersWeightDecay ...
-              * lr * ly.filtersLearningRate * ly.filters ...
-          - lr * ly.filtersLearningRate/numel(batch) * res(l).dzdw{1} ;
+      ly.filtersMomentum = ...
+        opts.momentum * ly.filtersMomentum ...
+          - (lr * ly.filtersLearningRate) * (opts.weightDecay * ly.filtersWeightDecay) * ly.filters ...
+          - (lr * ly.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
 
-      ly.biasesMomentum = opts.momentum * ly.biasesMomentum ...
-          - opts.weightDecay * ly.biasesWeightDecay ...
-              * lr * ly.biasesLearningRate * ly.biases ...
-          - lr * ly.biasesLearningRate/numel(batch) * res(l).dzdw{2} ;
+      ly.biasesMomentum = ...
+        opts.momentum * ly.biasesMomentum ...
+          - (lr * ly.biasesLearningRate) * (opts.weightDecay * ly.biasesWeightDecay) * ly.biases ...
+          - (lr * ly.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
 
       ly.filters = ly.filters + ly.filtersMomentum ;
       ly.biases = ly.biases + ly.biasesMomentum ;
@@ -141,7 +141,7 @@ for epoch=1:opts.numEpochs
     end
 
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
+    fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/batch_time) ;
   end % next batch
 
   % evaluation on validation set
