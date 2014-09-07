@@ -53,11 +53,12 @@ c_ = 1 + ...
 Xmax = max(X,[],3) ;
 ex = exp(bsxfun(@minus, X, Xmax)) ;
 
+n = sz(1)*sz(2) ;
 if nargin <= 2
   t = Xmax + log(sum(ex,3)) - reshape(X(c_), [sz(1:2) 1 sz(4)]) ;
-  Y = sum(t(:)) ;
+  Y = sum(t(:)) / n ;
 else
   Y = bsxfun(@rdivide, ex, sum(ex,3)) ;
   Y(c_) = Y(c_) - 1;
-  Y = Y * dzdy ;
+  Y = Y * (dzdy / n) ;
 end

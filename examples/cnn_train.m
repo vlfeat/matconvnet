@@ -231,13 +231,12 @@ labels = net.layers{end}.class ;
 info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
 switch opts.errorType
   case 'multiclass'
-    if any(sz>1)
-      warning('the mutliclass loss cannot be applied in a convolutional manner yet') ;
-    end
-    [~,predictions] = sort(squeeze(predictions), 'descend') ;
-    error = ~bsxfun(@eq, predictions, labels) ;
-    info.error(end) = info.error(end) + sum(error(1,:)) ;
-    info.topFiveError(end) = info.topFiveError(end) + sum(min(error(1:5,:))) ;
+    [~,predictions] = sort(predictions, 3, 'descend') ;
+    error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
+    info.error(end) = info.error(end) +....
+      sum(sum(sum(error(:,:,1,:))))/n ;
+    info.topFiveError(end) = info.topFiveError(end) + ...
+      sum(sum(sum(min(error(:,:,1:5,:),[],3))))/n ;
   case 'binary'
     error = bsxfun(@times, predictions, labels) < 0 ;
     info.error(end) = info.error(end) + sum(error(:))/n ;

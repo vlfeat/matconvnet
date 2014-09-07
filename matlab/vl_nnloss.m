@@ -49,10 +49,11 @@ c_ = 1 + ...
   (sz(1)*sz(2)) * c(:)' + ...
   (sz(1)*sz(2)*sz(3)) * floor(c_/(sz(1)*sz(2))) ;
 
+n = sz(1)*sz(2) ;
 if nargin <= 2
-  Y = - sum(log(X(c_))) ;
+  Y = - sum(log(X(c_))) / n ;
 else
-  Y_ = - (1./X) * dzdy ;
+  Y_ = - (1./X) * (dzdy/n) ;
   Y = Y_*0 ;
   Y(c_) = Y_(c_) ;
 end
