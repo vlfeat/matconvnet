@@ -18,27 +18,34 @@ for l=setdiff(1:9,6)
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;
       C = 10 ;
-      c = [7 2 1] ;
       n = 3 ;
 
-      % compare direct and indirect composition; this cannot
-      % take large ranges
-      x = grand(3,4,C,n)/range + 0.001 ; % non-negative
-      y = vl_nnsoftmaxloss(x,c) ;
-      y_ = vl_nnloss(vl_nnsoftmax(x),c) ;
-      dzdy = grandn(size(y)) ;
-      dzdx = vl_nnsoftmaxloss(x,c,dzdy) ;
-      dzdx_ = vl_nnsoftmax(x,vl_nnloss(vl_nnsoftmax(x),c,dzdy)) ;
-      vl_testsim(y,y_,0.1) ;
-      vl_testsim(dzdx, dzdx_) ;
-      vl_testder(@(x) vl_nnsoftmaxloss(x,c), x, dzdy, dzdx, 1e-6) ;
+      for multilab = [false true]
+        if multilab
+          c = reshape(mod(0:3*4*n-1,C)+1, 3, 4, 1, n) ;
+        else
+          c = [7 2 1] ;
+        end
 
-      % now larger input range
-      x = grand(3,4,C,n) + range * 0.001 ; % non-negative
-      y = vl_nnsoftmaxloss(x,c) ;
-      dzdy = grandn(size(y)) ;
-      dzdx = vl_nnsoftmaxloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnsoftmaxloss(x,c), x, dzdy, dzdx, range * 1e-6) ;
+        % compare direct and indirect composition; this cannot
+        % take large ranges
+        x = grand(3,4,C,n)/range + 0.001 ; % non-negative
+        y = vl_nnsoftmaxloss(x,c) ;
+        y_ = vl_nnloss(vl_nnsoftmax(x),c) ;
+        dzdy = grandn(size(y)) ;
+        dzdx = vl_nnsoftmaxloss(x,c,dzdy) ;
+        dzdx_ = vl_nnsoftmax(x,vl_nnloss(vl_nnsoftmax(x),c,dzdy)) ;
+        vl_testsim(y,y_,0.1) ;
+        vl_testsim(dzdx, dzdx_) ;
+        vl_testder(@(x) vl_nnsoftmaxloss(x,c), x, dzdy, dzdx, 1e-6) ;
+
+        % now larger input range
+        x = grand(3,4,C,n) + range * 0.001 ; % non-negative
+        y = vl_nnsoftmaxloss(x,c) ;
+        dzdy = grandn(size(y)) ;
+        dzdx = vl_nnsoftmaxloss(x,c,dzdy) ;
+        vl_testder(@(x) vl_nnsoftmaxloss(x,c), x, dzdy, dzdx, range * 1e-6) ;
+      end
 
     case 2
       disp('testing vl_nnloss multiple images convolutional') ;
@@ -94,7 +101,7 @@ for l=setdiff(1:9,6)
       [dzdx,dzdw,dzdb] = vl_nnconv(x,[],b,dzdy,'verbose') ;
       vl_testder(@(x) vl_nnconv(x,[],b), x, dzdy, dzdx, range * 1e-2) ;
       vl_testder(@(b) vl_nnconv(x,[],b), b, dzdy, dzdb, range * 1e-2) ;
-      
+
       disp('testing vl_nnconv with square, non square, and fully connected filters') ;
       n = 3 ;
       fn = 5 ;
