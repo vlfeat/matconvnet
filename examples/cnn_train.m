@@ -148,7 +148,7 @@ for epoch=1:opts.numEpochs
 
     % debug info
     if opts.plotDiagnostics
-      vl_simplenn_diagnose(net,res) ;
+      figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
     end
   end % next batch
 
@@ -168,6 +168,7 @@ for epoch=1:opts.numEpochs
     end
 
     net.layers{end}.class = labels ;
+    clear res ;
     res = vl_simplenn(net, im, [], 'disableDropout', true) ;
     info.val = updateError(opts, info.val, net, res) ;
 
