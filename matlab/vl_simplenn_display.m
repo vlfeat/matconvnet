@@ -8,13 +8,13 @@ function vl_simplenn_display(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
+for w={'layer', 'type', 'support', 'stride', 'pad', 'field', 'mem'}
   switch char(w)
     case 'type', s = 'type' ;
     case 'stride', s = 'stride' ;
     case 'padding', s = 'pad' ;
-    case 'field', s = 'field' ;
-    case 'mem', s = 'c//g mem' ;
+    case 'field', s = 'rec. field' ;
+    case 'mem', s = 'c/g mem' ;
     otherwise, s = char(w) ;
   end
   fprintf('%10s',s) ;
@@ -34,7 +34,7 @@ for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
         end
       case 'support'
         switch ly.type
-          case 'conv', support(1:2,l) = [size(ly.filters,1) ; size(ly.filters,2)] ;
+          case 'conv', support(1:2,l) = max([size(ly.filters,1) ; size(ly.filters,2)],1) ;
           case 'pool', support(1:2,l) = ly.pool(:) ;
           otherwise, support(1:2,l) = [1;1] ;
         end
@@ -77,8 +77,9 @@ for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
 end
 fprintf('total CPU/GPU memory: %.1f/%1.f MB\n', sum(mem(1,:))/1024^2, sum(mem(2,:))/1024^2) ;
 
-
-function [cpuMem,gpuMem]=xmem(s)
+% -------------------------------------------------------------------------
+function [cpuMem,gpuMem] = xmem(s)
+% -------------------------------------------------------------------------
 cpuMem = 0 ;
 gpuMem = 0 ;
 for f=fieldnames(s)'
