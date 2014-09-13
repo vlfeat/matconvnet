@@ -372,13 +372,13 @@ for l=setdiff(1:9,6)
       vl_testder(@(x) vl_nnrelu(x), x, dzdy, dzdx) ;
 
     case 8
-      disp('testing vl_nnoffset') ;
+      disp('testing vl_nnnoffset') ;
       param = [.34, .5] ;
       x = grandn(4,5,10,3,'single') ;
-      y = vl_nnoffset(x,param) ;
+      y = vl_nnnoffset(x,param) ;
       dzdy = grandn(size(y),'single') ;
-      dzdx = vl_nnoffset(x,param,dzdy) ;
-      vl_testder(@(x) vl_nnoffset(x,param), x, dzdy, dzdx, 1e-3*range) ;
+      dzdx = vl_nnnoffset(x,param,dzdy) ;
+      vl_testder(@(x) vl_nnnoffset(x,param), x, dzdy, dzdx, 1e-3*range) ;
 
     case 9
       disp('testing vl_nndropout') ;

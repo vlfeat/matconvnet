@@ -214,7 +214,7 @@ if doder
       case 'relu'
         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
-        res(i).dzdx = vl_nnoffset(res(i).x, l.param, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
       case 'dropout'
         if opts.disableDropout
           res(i).dzdx = res(i+1).dzdx ;
