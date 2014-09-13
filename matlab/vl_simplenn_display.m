@@ -8,12 +8,13 @@ function vl_simplenn_display(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-for w={'layer', 'type', 'support', 'stride', 'pad', 'field', 'mem'}
+for w={'layer', 'type', 'support', 'stride', 'pad', 'dim', 'field','mem'}
   switch char(w)
     case 'type', s = 'type' ;
     case 'stride', s = 'stride' ;
     case 'padding', s = 'pad' ;
     case 'field', s = 'rec. field' ;
+    case 'dim', s = 'dimension' ;
     case 'mem', s = 'c/g mem' ;
     otherwise, s = char(w) ;
   end
@@ -47,29 +48,50 @@ for w={'layer', 'type', 'support', 'stride', 'pad', 'field', 'mem'}
             else
               stride(1:2,l) = ly.stride(:) ;
             end
-          otherwise, stride(:,l)=1 ;
+          otherwise, stride(1:2,l)=1 ;
         end
-        s=sprintf('%dx%d', stride(1,l), stride(2,l)) ;
+        if all(stride(:,l)==stride(1,l))
+          s=sprintf('%d', stride(1,l)) ;
+        else
+          s=sprintf('%dx%d', stride(1,l), stride(2,l)) ;
+        end
       case 'pad'
         switch ly.type
           case {'conv', 'pool'}
             if numel(ly.pad) == 1
-              pad(1:2,l) = ly.pad ;
+              pad(1:4,l) = ly.pad ;
             else
-              pad(1:2,l) = ly.pad(:) ;
+              pad(1:4,l) = ly.pad(:) ;
             end
-          otherwise, pad(:,l)=1 ;
+          otherwise, pad(1:4,l)=0 ;
         end
-        s=sprintf('%dx%d', pad(1,l), pad(2,l)) ;
+        if all(pad(:,l)==pad(1,l))
+          s=sprintf('%d', pad(1,l)) ;
+        else
+          s=sprintf('%d,%dx%d,%d', pad(1,l), pad(2,l), pad(3,l), pad(4,l)) ;
+        end
       case 'field'
         for i=1:2
           field(i,l) = sum(cumprod([1 stride(i,1:l-1)]).*(support(i,1:l)-1))+1 ;
         end
-        s=sprintf('%dx%d', field(1,l), field(2,l)) ;
+        if all(field(:,l)==field(1,l))
+          s=sprintf('%d', field(1,l)) ;
+        else
+          s=sprintf('%dx%d', field(1,l), field(2,l)) ;
+        end
       case 'mem'
         [a,b] = xmem(ly) ;
         mem(1:2,l) = [a;b] ;
         s=sprintf('%.0f/%.0f', a/1024^2, b/1024^2) ;
+      case 'dim'
+        switch ly.type
+          case 'conv', dimension(1,l) = size(ly.filters,4) ;
+          otherwise
+            if l > 1
+              dimension(1,l) = dimension(1,l-1) ;
+            end
+        end
+        s=sprintf('%d', dimension(1,l)) ;
     end
     fprintf('|%7s', s) ;
   end
