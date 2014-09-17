@@ -8,13 +8,14 @@ function vl_simplenn_display(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-for w={'layer', 'type', 'support', 'stride', 'pad', 'dim', 'field','mem'}
+for w={'layer', 'type', 'support', 'stride', 'pad', 'dim', 'fdim', 'field', 'mem'}
   switch char(w)
     case 'type', s = 'type' ;
     case 'stride', s = 'stride' ;
     case 'padding', s = 'pad' ;
     case 'field', s = 'rec. field' ;
-    case 'dim', s = 'dimension' ;
+    case 'dim', s = 'out dim' ;
+    case 'fdim', s = 'filt dim' ;
     case 'mem', s = 'c/g mem' ;
     otherwise, s = char(w) ;
   end
@@ -40,6 +41,15 @@ for w={'layer', 'type', 'support', 'stride', 'pad', 'dim', 'field','mem'}
           otherwise, support(1:2,l) = [1;1] ;
         end
         s=sprintf('%dx%d', support(1,l), support(2,l)) ;
+      case 'fdim'
+        switch ly.type
+          case 'conv'
+            filterDimension(l) = size(ly.filters,3) ;
+            s=sprintf('%d', filterDimension(l)) ;
+          otherwise
+            filterDimension(l) = 0 ;
+            s='n/a' ;
+        end
       case 'stride'
         switch ly.type
           case {'conv', 'pool'}
