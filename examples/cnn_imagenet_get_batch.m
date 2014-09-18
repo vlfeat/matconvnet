@@ -24,9 +24,15 @@ switch opts.augmentation
     tfs = [.5 ; .5 ; 0 ];
   case 'f5'
     tfs = [...
-      .5 0 0 1 1 .5 0 1 0 1 ;
+      .5 0 0 1 1 .5 0 0 1 1 ;
       .5 0 1 0 1 .5 0 1 0 1 ;
        0 0 0 0 0  1 1 1 1 1] ;
+  case 'f25'
+    [tx,ty] = meshgrid(linspace(0,1,5)) ;
+    tfs = [tx(:)' ; ty(:)' ; zeros(1,numel(tx))] ;
+    tfs_ = tfs ;
+    tfs_(3,:) = 1 ;
+    tfs = [tfs,tfs_] ;
 end
 
 im = cell(1, numel(images)) ;
