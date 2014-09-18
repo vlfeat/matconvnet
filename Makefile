@@ -18,7 +18,7 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
 NAME = matconvnet
-VER = 1.0-beta3
+VER = 1.0-beta4
 DIST = $(NAME)-$(VER)
 MARKDOWN = markdown2
 HOST = vlfeat-admin:sites/sandbox-matconvnet
@@ -72,6 +72,7 @@ nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
 cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
 cpp_src+=matlab/src/bits/normalize.cpp
+cpp_src+=matlab/src/bits/subsample.cpp
 
 ifneq ($(ENABLE_IMREADJPEG),)
 mex_src:=matlab/src/vl_imreadjpeg.c
@@ -88,6 +89,7 @@ mex_src+=matlab/src/vl_nnnormalize.cu
 cpp_src+=matlab/src/bits/im2col_gpu.cu
 cpp_src+=matlab/src/bits/pooling_gpu.cu
 cpp_src+=matlab/src/bits/normalize_gpu.cu
+cpp_src+=matlab/src/bits/subsample_gpu.cu
 endif
 
 mex_tgt:=$(subst matlab/src/,matlab/mex/,$(mex_src))

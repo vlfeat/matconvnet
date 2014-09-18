@@ -6,7 +6,7 @@ efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
 - [Homepage](http://www.vlfeat.org/matconvnet)
-- Tarball for [version 1.0-beta3](download/matconvnet-1.0-beta3.tar.gz)
+- Tarball for [version 1.0-beta4](download/matconvnet-1.0-beta4.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
 - [Installation instructions](#installing)
@@ -31,19 +31,44 @@ details. MatConvNet can be used to evaluate several
 ### <a name='pretrained'></a> Using pre-trained models
 
 This section describes how pre-trained models can be downloaded and
-used in MatConvNet. The following models are available
+used in MatConvNet.
+
+> **Remark:** The following CNN models have been *imported from other
+> reference implementations* and are equivalent to the originals up to
+> numerical precision. However, note that:
+>
+> 1. Images need to be pre-processed (resized and cropped) before
+>    being submitted to a CNN for evaluation. Even small differences
+>    in the prepreocessing details can have a non-negligible effect on
+>    the results.
+> 2. The example below shows how to evaluate a CNN, but does not
+>    include data augmentation or encoding normalization as for
+>    example provided by the
+>    [VGG code](http://www.robots.ox.ac.uk/~vgg/research/deep_eval).
+>    While this is easy to implement, it is not done automatically here.
+> 3. These models are provided here for convenience, but please credit
+>    the original authors.
 
 - VGG models from the
-  [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval) paper:
+  [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
+  paper (v1.0.1):
   - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
   - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
   - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
   - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
   - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
   - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
-- Berkeley [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html):
+  - **Citation:** `Return of the Devil in the Details: Delving Deep
+    into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
+    Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
+    ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
+
+- Berkeley
+  [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
+  (version downloaded on July 2014):
   - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
   - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
+  - **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
 
 For example, in order to run ImageNet-S on a test image, use:
 
@@ -226,6 +251,6 @@ donation of the GPUs used to develop this software.
 
 ## Changes
 
-- 1.0-beta3 (August 2014) Cleanup.
+- 1.0-beta4 (August 2014) Cleanup.
 - 1.0-beta2 (July 2014) Adds a set of standard models.
 - 1.0-beta1 (June 2014) First public release

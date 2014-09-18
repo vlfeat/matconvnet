@@ -8,13 +8,15 @@ function vl_simplenn_display(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
+for w={'layer', 'type', 'support', 'stride', 'pad', 'dim', 'fdim', 'field', 'mem'}
   switch char(w)
     case 'type', s = 'type' ;
     case 'stride', s = 'stride' ;
     case 'padding', s = 'pad' ;
-    case 'field', s = 'field' ;
-    case 'mem', s = 'c//g mem' ;
+    case 'field', s = 'rec. field' ;
+    case 'dim', s = 'out dim' ;
+    case 'fdim', s = 'filt dim' ;
+    case 'mem', s = 'c/g mem' ;
     otherwise, s = char(w) ;
   end
   fprintf('%10s',s) ;
@@ -34,11 +36,20 @@ for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
         end
       case 'support'
         switch ly.type
-          case 'conv', support(1:2,l) = [size(ly.filters,1) ; size(ly.filters,2)] ;
+          case 'conv', support(1:2,l) = max([size(ly.filters,1) ; size(ly.filters,2)],1) ;
           case 'pool', support(1:2,l) = ly.pool(:) ;
           otherwise, support(1:2,l) = [1;1] ;
         end
         s=sprintf('%dx%d', support(1,l), support(2,l)) ;
+      case 'fdim'
+        switch ly.type
+          case 'conv'
+            filterDimension(l) = size(ly.filters,3) ;
+            s=sprintf('%d', filterDimension(l)) ;
+          otherwise
+            filterDimension(l) = 0 ;
+            s='n/a' ;
+        end
       case 'stride'
         switch ly.type
           case {'conv', 'pool'}
@@ -47,38 +58,60 @@ for w={'layer', 'type', 'support', 'stride', 'padding', 'field', 'mem'}
             else
               stride(1:2,l) = ly.stride(:) ;
             end
-          otherwise, stride(:,l)=1 ;
+          otherwise, stride(1:2,l)=1 ;
         end
-        s=sprintf('%dx%d', stride(1,l), stride(2,l)) ;
+        if all(stride(:,l)==stride(1,l))
+          s=sprintf('%d', stride(1,l)) ;
+        else
+          s=sprintf('%dx%d', stride(1,l), stride(2,l)) ;
+        end
       case 'pad'
         switch ly.type
           case {'conv', 'pool'}
             if numel(ly.pad) == 1
-              pad(1:2,l) = ly.pad ;
+              pad(1:4,l) = ly.pad ;
             else
-              pad(1:2,l) = ly.pad(:) ;
+              pad(1:4,l) = ly.pad(:) ;
             end
-          otherwise, pad(:,l)=1 ;
+          otherwise, pad(1:4,l)=0 ;
         end
-        s=sprintf('%dx%d', pad(1,l), pad(2,l)) ;
+        if all(pad(:,l)==pad(1,l))
+          s=sprintf('%d', pad(1,l)) ;
+        else
+          s=sprintf('%d,%dx%d,%d', pad(1,l), pad(2,l), pad(3,l), pad(4,l)) ;
+        end
       case 'field'
         for i=1:2
           field(i,l) = sum(cumprod([1 stride(i,1:l-1)]).*(support(i,1:l)-1))+1 ;
         end
-        s=sprintf('%dx%d', field(1,l), field(2,l)) ;
+        if all(field(:,l)==field(1,l))
+          s=sprintf('%d', field(1,l)) ;
+        else
+          s=sprintf('%dx%d', field(1,l), field(2,l)) ;
+        end
       case 'mem'
         [a,b] = xmem(ly) ;
         mem(1:2,l) = [a;b] ;
         s=sprintf('%.0f/%.0f', a/1024^2, b/1024^2) ;
+      case 'dim'
+        switch ly.type
+          case 'conv', dimension(1,l) = size(ly.filters,4) ;
+          otherwise
+            if l > 1
+              dimension(1,l) = dimension(1,l-1) ;
+            end
+        end
+        s=sprintf('%d', dimension(1,l)) ;
     end
-    fprintf('|%7s', s) ;    
+    fprintf('|%7s', s) ;
   end
   fprintf('|\n') ;
 end
 fprintf('total CPU/GPU memory: %.1f/%1.f MB\n', sum(mem(1,:))/1024^2, sum(mem(2,:))/1024^2) ;
 
-
-function [cpuMem,gpuMem]=xmem(s)
+% -------------------------------------------------------------------------
+function [cpuMem,gpuMem] = xmem(s)
+% -------------------------------------------------------------------------
 cpuMem = 0 ;
 gpuMem = 0 ;
 for f=fieldnames(s)'
@@ -100,5 +133,5 @@ for f=fieldnames(s)'
   end
 end
 
- 
+
 

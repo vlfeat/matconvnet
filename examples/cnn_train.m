@@ -15,8 +15,10 @@ opts.continue = false ;
 opts.expDir = 'data/exp' ;
 opts.conserveMemory = false ;
 opts.prefetch = false ;
-opts.weightDecay = 0.0005;
-opts.momentum = 0.9;
+opts.weightDecay = 0.0005 ;
+opts.momentum = 0.9 ;
+opts.errorType = 'multiclass' ;
+opts.plotDiagnostics = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir), mkdir(opts.expDir) ; end
@@ -58,7 +60,9 @@ end
 % -------------------------------------------------------------------------
 %                                                        Train and validate
 % -------------------------------------------------------------------------
+
 rng(0) ;
+
 if opts.useGpu
   one = gpuArray(single(1)) ;
 else
@@ -125,16 +129,10 @@ for epoch=1:opts.numEpochs
     end
 
     % backprop
+    clear res ;
     net.layers{end}.class = labels ;
-    clear res;
     res = vl_simplenn(net, im, one, 'conserveMemory', opts.conserveMemory) ;
-
-    % update energy
-    info.train.objective(end) = info.train.objective(end) + double(gather(res(end).x)) ;
-    [~,predictions] = sort(squeeze(gather(res(end-1).x)), 'descend') ;
-    error = ~bsxfun(@eq, predictions, labels) ;
-    info.train.error(end) = info.train.error(end) + sum(error(1,:)) ;
-    info.train.topFiveError(end) = info.train.topFiveError(end) + sum(min(error(1:5,:))) ;
+    info.train = updateError(opts, info.train, net, res) ;
 
     % gradient step
     for l=1:numel(net.layers)
@@ -156,8 +154,18 @@ for epoch=1:opts.numEpochs
       net.layers{l} = ly ;
     end
 
+    % print information
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/batch_time) ;
+    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/batch_time) ;
+    n = t + numel(batch) - 1 ;
+    fprintf(' err %.1f err5 %.1f', ...
+      info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
+    fprintf('\n') ;
+
+    % debug info
+    if opts.plotDiagnostics
+      figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
+    end
   end % next batch
 
   % evaluation on validation set
@@ -176,26 +184,16 @@ for epoch=1:opts.numEpochs
     end
 
     net.layers{end}.class = labels ;
+    clear res ;
     res = vl_simplenn(net, im, [], 'disableDropout', true) ;
+    info.val = updateError(opts, info.val, net, res) ;
 
-    % update energy
-    info.val.objective(end) = info.val.objective(end) + double(gather(res(end).x)) ;
-    [~,predictions] = sort(squeeze(gather(res(end-1).x)), 'descend') ;
-    error = ~bsxfun(@eq, predictions, labels) ;
-    info.val.error(end) = info.val.error(end) + sum(error(1,:)) ;
-    info.val.topFiveError(end) = info.val.topFiveError(end) + sum(min(error(1:5,:))) ;
-
+    % print information
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/ batch_time) ;
-    if 1
-      n = t + numel(batch) - 1 ;
-      fprintf(' err %.1f err5 %.1f', ...
-        info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
-    end
-    if opts.useGpu
-      %gpu = gpuDevice ;
-      %fprintf(' [GPU free memory %.2fMB]', gpu.FreeMemory/1024^2) ;
-    end
+    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/batch_time) ;
+    n = t + numel(batch) - 1 ;
+    fprintf(' err %.1f err5 %.1f', ...
+      info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
     fprintf('\n') ;
   end
 
@@ -204,7 +202,7 @@ for epoch=1:opts.numEpochs
   info.train.error(end) = info.train.error(end) / numel(train)  ;
   info.train.topFiveError(end) = info.train.topFiveError(end) / numel(train) ;
   info.val.objective(end) = info.val.objective(end) / numel(val) ;
-  info.val.error(end) = info.val.error(end) / numel(val)  ;
+  info.val.error(end) = info.val.error(end) / numel(val) ;
   info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
   save(sprintf(modelPath,epoch), 'net', 'info') ;
 
@@ -212,17 +210,53 @@ for epoch=1:opts.numEpochs
   subplot(1,2,1) ;
   semilogy(1:epoch, info.train.objective, 'k') ; hold on ;
   semilogy(1:epoch, info.val.objective, 'b') ;
-  xlabel('epoch') ; ylabel('energy') ; h=legend('train', 'val') ; grid on ;
+  xlabel('training epoch') ; ylabel('energy') ;
+  grid on ;
+  h=legend('train', 'val') ;
   set(h,'color','none');
   title('objective') ;
   subplot(1,2,2) ;
-  plot(1:epoch, info.train.error, 'k') ; hold on ;
-  plot(1:epoch, info.train.topFiveError, 'k--') ;
-  plot(1:epoch, info.val.error, 'b') ;
-  plot(1:epoch, info.val.topFiveError, 'b--') ;
-  xlabel('epoch') ; ylabel('energy') ; h=legend('train','train-5','val','val-5') ; grid on ;
+  switch opts.errorType
+    case 'multiclass'
+      plot(1:epoch, info.train.error, 'k') ; hold on ;
+      plot(1:epoch, info.train.topFiveError, 'k--') ;
+      plot(1:epoch, info.val.error, 'b') ;
+      plot(1:epoch, info.val.topFiveError, 'b--') ;
+      h=legend('train','train-5','val','val-5') ;
+    case 'binary'
+      plot(1:epoch, info.train.error, 'k') ; hold on ;
+      plot(1:epoch, info.val.error, 'b') ;
+      h=legend('train','val') ;
+  end
+  grid on ;
+  xlabel('training epoch') ; ylabel('error') ;
   set(h,'color','none') ;
   title('error') ;
   drawnow ;
   print(1, modelFigPath, '-dpdf') ;
 end
+
+% -------------------------------------------------------------------------
+function info = updateError(opts, info, net, res)
+% -------------------------------------------------------------------------
+predictions = gather(res(end-1).x) ;
+sz = size(predictions) ;
+n = prod(sz(1:2)) ;
+
+labels = net.layers{end}.class ;
+info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
+switch opts.errorType
+  case 'multiclass'
+    [~,predictions] = sort(predictions, 3, 'descend') ;
+    error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
+    info.error(end) = info.error(end) +....
+      sum(sum(sum(error(:,:,1,:))))/n ;
+    info.topFiveError(end) = info.topFiveError(end) + ...
+      sum(sum(sum(min(error(:,:,1:5,:),[],3))))/n ;
+  case 'binary'
+    error = bsxfun(@times, predictions, labels) < 0 ;
+    info.error(end) = info.error(end) + sum(error(:))/n ;
+end
+
+
+

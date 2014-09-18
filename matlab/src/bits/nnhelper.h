@@ -98,7 +98,7 @@ packed_data_geom_display (PackedDataGeometry const * geom, char const * name)
  */
 
 void
-packed_data_init_with_array (PackedData * map, bool gpuMode, mxArray const* array)
+packed_data_init_with_array (PackedData * map, mxArray const* array)
 {
   mwSize const * dimensions ;
   mwSize numDimensions ;
@@ -106,10 +106,7 @@ packed_data_init_with_array (PackedData * map, bool gpuMode, mxArray const* arra
   packed_data_init_empty(map) ;
 
 #ifdef ENABLE_GPU
-  if (gpuMode) {
-    if (!mxIsGPUArray(array)) {
-      mexErrMsgTxt("The inputs are of mixed GPU and CPU types.") ;
-    }
+  if (mxIsGPUArray(array)) {
     map->mode = matlabGpuArray ;
     map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(array) ;
     map->memory = (float*) mxGPUGetDataReadOnly(map->gpuArray) ;
@@ -120,7 +117,7 @@ packed_data_init_with_array (PackedData * map, bool gpuMode, mxArray const* arra
 #endif
   {
     if (!mxIsNumeric(array)) {
-      mexErrMsgTxt("The inputs are neither all numeric CPU arrays or GPU arrays.") ;
+      mexErrMsgTxt("An input is not a numeric array (or GPU support not compiled).") ;
     }
     map->mode = matlabArrayWrapper ;
     map->array = (mxArray*) array ;

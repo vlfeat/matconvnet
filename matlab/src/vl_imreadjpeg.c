@@ -157,7 +157,7 @@ void reader_read (Reader* self, QueuedImage * image)
     snprintf(image->buffer, 4096,
              "vl_imreadjpeg: '%s' is not a valid JPEG file (%s)\n",
              image->filename, self->jpegLastErrorMsg) ;
-    jpeg_abort(&self->decompressor) ;
+    jpeg_abort((j_common_ptr)&self->decompressor) ;
     fclose(fp) ;
     return ;
   }
@@ -336,7 +336,6 @@ void create_readers(int requestedNumReaders)
   }
 }
 
-
 void atExit()
 {
   delete_readers() ;
@@ -365,7 +364,7 @@ void mexFunction(int nout, mxArray *out[],
   mexAtExit(atExit) ;
 
   if (nin < 1) {
-    mexErrMsgTxt("There is less than one arguments.") ;
+    mexErrMsgTxt("There are less than one argument.") ;
   }
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
