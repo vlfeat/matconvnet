@@ -34,7 +34,7 @@ function convert_some()
         mv "${outfile}.temp" "$outfile"
     done
 }
-export -f convert_one
+export -f convert_some
 
 dirs=$(find $data/images/* -maxdepth 2 -type d)
 for d in $dirs
