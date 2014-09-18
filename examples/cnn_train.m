@@ -72,14 +72,20 @@ info.val.objective = [] ;
 info.val.error = [] ;
 info.val.topFiveError = [] ;
 
+lr = 0 ;
 for epoch=1:opts.numEpochs
+  prevLr = lr ;
+  lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
+
   % fast-forward to where we stopped
   modelPath = fullfile(opts.expDir, 'net-epoch-%d.mat') ;
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
   if opts.continue
     if exist(sprintf(modelPath, epoch),'file'), continue ; end
-    fprintf('resuming by loading epoch %d\n', epoch-1) ;
-    load(sprintf(modelPath, epoch-1), 'net', 'info') ;
+    if epoch > 1
+      fprintf('resuming by loading epoch %d\n', epoch-1) ;
+      load(sprintf(modelPath, epoch-1), 'net', 'info') ;
+    end
   end
 
   train = opts.train(randperm(numel(opts.train))) ;
@@ -91,6 +97,17 @@ for epoch=1:opts.numEpochs
   info.val.objective(end+1) = 0 ;
   info.val.error(end+1) = 0 ;
   info.val.topFiveError(end+1) = 0 ;
+
+  % reset momentum if needed
+  if prevLr ~= lr
+    fprintf('learning rate changed (%f --> %f): resetting momentum\n', prevLr, lr) ;
+    for l=1:numel(net.layers)
+      ly = net.layers{l} ;
+      if ~strcmp(ly.type, 'conv'), continue ; end
+      ly.filtersMomentum = 0 * ly.filtersMomentum ;
+      ly.biasesMomentum = 0 * ly.biasesMomentum ;
+    end
+  end
 
   for t=1:opts.batchSize:numel(train)
     % get next image batch and labels
@@ -120,7 +137,6 @@ for epoch=1:opts.numEpochs
     info.train.topFiveError(end) = info.train.topFiveError(end) + sum(min(error(1:5,:))) ;
 
     % gradient step
-    lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
     for l=1:numel(net.layers)
       ly = net.layers{l} ;
       if ~strcmp(ly.type, 'conv'), continue ; end
