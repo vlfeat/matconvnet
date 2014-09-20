@@ -114,6 +114,9 @@ for epoch=1:opts.numEpochs
   end
 
   for t=1:opts.batchSize:numel(train)
+    % deltes all allocated buffers
+    clear res ;
+
     % get next image batch and labels
     batch = train(t:min(t+opts.batchSize-1, numel(train))) ;
     batch_time = tic ;
@@ -129,7 +132,6 @@ for epoch=1:opts.numEpochs
     end
 
     % backprop
-    clear res ;
     net.layers{end}.class = labels ;
     res = vl_simplenn(net, im, one, 'conserveMemory', opts.conserveMemory) ;
     info.train = updateError(opts, info.train, net, res) ;
