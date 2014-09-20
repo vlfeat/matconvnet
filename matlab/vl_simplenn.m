@@ -1,4 +1,4 @@
-function res = vl_simplenn(net, x, dzdy, varargin)
+function res = vl_simplenn(net, x, dzdy, res, varargin)
 % VL_SIMPLENN  Evaluates a simple CNN
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
@@ -133,9 +133,7 @@ end
 
 gpuMode = isa(x, 'gpuArray') ;
 
-res = opts.res ;
-opt.res = [] ;
-if (nargin <= 3) || isempty(res)
+if nargin <= 3 || isempty(res)
   res = struct(...
     'x', cell(1,n+1), ...
     'dzdx', cell(1,n+1), ...

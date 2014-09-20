@@ -77,6 +77,7 @@ info.val.error = [] ;
 info.val.topFiveError = [] ;
 
 lr = 0 ;
+res = [] ;
 for epoch=1:opts.numEpochs
   prevLr = lr ;
   lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
@@ -114,9 +115,6 @@ for epoch=1:opts.numEpochs
   end
 
   for t=1:opts.batchSize:numel(train)
-    % deltes all allocated buffers
-    clear res ;
-
     % get next image batch and labels
     batch = train(t:min(t+opts.batchSize-1, numel(train))) ;
     batch_time = tic ;
@@ -133,7 +131,7 @@ for epoch=1:opts.numEpochs
 
     % backprop
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one, 'conserveMemory', opts.conserveMemory) ;
+    res = vl_simplenn(net, im, one, res, 'conserveMemory', opts.conserveMemory) ;
     info.train = updateError(opts, info.train, net, res) ;
 
     % gradient step
@@ -186,8 +184,7 @@ for epoch=1:opts.numEpochs
     end
 
     net.layers{end}.class = labels ;
-    clear res ;
-    res = vl_simplenn(net, im, [], 'disableDropout', true) ;
+    res = vl_simplenn(net, im, [], res, 'disableDropout', true) ;
     info.val = updateError(opts, info.val, net, res) ;
 
     % print information
