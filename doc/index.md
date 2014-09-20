@@ -251,6 +251,8 @@ donation of the GPUs used to develop this software.
 
 ## Changes
 
+- 1.0-beta5 (September 2014) Bugfixes, adds more documentation,
+  improves ImageNet example.
 - 1.0-beta4 (August 2014) Cleanup.
 - 1.0-beta2 (July 2014) Adds a set of standard models.
 - 1.0-beta1 (June 2014) First public release
