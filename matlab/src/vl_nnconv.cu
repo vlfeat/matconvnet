@@ -63,7 +63,6 @@ void atExit()
   packed_data_deinit (&allOnes)  ;
 #ifdef ENABLE_GPU
   if (cublasInitialized) {
-    mexPrintf("destroy\n");
     cublasDestroy(thisCublasHandle) ;
     cublasInitialized = false ;
   }
