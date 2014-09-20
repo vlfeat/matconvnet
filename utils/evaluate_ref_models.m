@@ -1,18 +1,18 @@
-function evaluate_models()
+function evaluate_ref_models()
+% Evaluate MatConvNet reference models to validate them
 
-gpuDevice(4)
-addpath(fullfile(fileparts(mfilename('fullpath'))), '..','exp');
+addpath(fullfile(fileparts(mfilename('fullpath'))), '..','examples');
 
 models = {...
   'caffe-ref', ...
   'caffe-alex', ...
-  'vgg-f', ...
+  'vgg-s', ...
   'vgg-m', ...
-  'vgg-s'} ;
+  'vgg-f'} ;
 
 for i = 1:numel(models)
-  opts.dataDir = 'data/imagenet12-ram' ;
-  opts.expDir = sprintf('data/imagenet12-eval-%s', models{i}) ;
+  opts.dataDir = 'data/imagenet12' ;
+  opts.expDir = sprintf('data/models-eval/%s', models{i}) ;
   opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
   opts.modelPath = sprintf('data/models/imagenet-%s.mat', models{i}) ;
   opts.lite = false ;
@@ -31,7 +31,7 @@ for i = 1:numel(models)
 end
 
 for i = 1:numel(models)
-  opts.expDir = sprintf('data/imagenet12-eval-%s', models{i}) ;
+  opts.expDir = sprintf('data/models-eval/%s', models{i}) ;
   resultPath = fullfile(opts.expDir, 'results.mat') ;
   load(resultPath, 'results') ;
 

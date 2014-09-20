@@ -12,3 +12,4 @@ doc/*.pdf
 doc/.build
 index.html
 matconvnet-*.tar.gz
+local

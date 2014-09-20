@@ -106,17 +106,6 @@ void mexFunction(int nout, mxArray *out[],
     backMode = (nin >= 3) ;
   }
 
-#if ENABLE_GPU
-  gpuMode = mxIsGPUArray(in[IN_DATA]) ;
-  if (gpuMode) {
-    mxInitGPU() ;
-  }
-#else
-  if (!mxIsNumeric(in[IN_DATA])) {
-    mexErrMsgTxt("DATA must be numeric (note: GPU support not compiled).") ;
-  }
-#endif
-
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
       case opt_verbose :
@@ -174,11 +163,20 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  packed_data_init_with_array (&data, gpuMode, in[IN_DATA]) ;
-  if (backMode) {
-    packed_data_init_with_array(&derOutput, gpuMode, in[IN_DEROUTPUT]) ;
-  }
+  packed_data_init_with_array(&data, in[IN_DATA]) ;
+  if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
 
+#if ENABLE_GPU
+  gpuMode = (data.mode == matlabGpuArray) ;
+  if (gpuMode) {
+    mxInitGPU() ;
+  }
+#endif
+
+  /* check GPU/data class consistency */
+  if (gpuMode && (derOutput.mode != matlabGpuArray & backMode)) {
+    mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
+  }
   if (data.geom.classID != mxSINGLE_CLASS) {
     mexErrMsgTxt("DATA is not of class SINGLE.");
   }

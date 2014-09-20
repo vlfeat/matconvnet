@@ -11,16 +11,17 @@
 # For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
 
 ENABLE_GPU ?=
+ENABLE_IMREADJPEG ?=
 DEBUG ?=
 ARCH ?= maci64
 CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
 NAME = matconvnet
-VER = 1.0-beta1
+VER = 1.0-beta4
 DIST = $(NAME)-$(VER)
 MARKDOWN = markdown2
-HOST = vlfeat-admin:vlfeat.org/sandbox-matconvnet
+HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
 PDFLATEX = pdflatex
 BIBTEX = bibtex
@@ -71,8 +72,12 @@ nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
 cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
 cpp_src+=matlab/src/bits/normalize.cpp
+cpp_src+=matlab/src/bits/subsample.cpp
 
+ifneq ($(ENABLE_IMREADJPEG),)
 mex_src:=matlab/src/vl_imreadjpeg.c
+endif
+
 ifeq ($(ENABLE_GPU),)
 mex_src+=matlab/src/vl_nnconv.cpp
 mex_src+=matlab/src/vl_nnpool.cpp
@@ -84,6 +89,7 @@ mex_src+=matlab/src/vl_nnnormalize.cu
 cpp_src+=matlab/src/bits/im2col_gpu.cu
 cpp_src+=matlab/src/bits/pooling_gpu.cu
 cpp_src+=matlab/src/bits/normalize_gpu.cu
+cpp_src+=matlab/src/bits/subsample_gpu.cu
 endif
 
 mex_tgt:=$(subst matlab/src/,matlab/mex/,$(mex_src))
@@ -149,7 +155,7 @@ doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 doc/index.html : doc/.build/index.html.raw doc/template.html
 	sed -e '/%MARKDOWN%/{r doc/.build/index.html.raw' -e 'd;}' doc/template.html  > $(@)
 
-doc/.build/index.html.raw : README.md
+doc/.build/index.html.raw : doc/index.md
 	mkdir -p doc/.build
 	$(MARKDOWN) $(<) > $(@)
 
@@ -177,6 +183,9 @@ pack:
 
 post: pack
 	$(RSYNC) -aP $(DIST).tar.gz $(HOST)/download/
+
+post-models:
+	$(RSYNC) -aP data/models/*.mat $(HOST)/models/
 
 post-doc: doc
 	$(RSYNC) -aP README.md doc/{index.html,matconvnet-manual.pdf} $(HOST)/

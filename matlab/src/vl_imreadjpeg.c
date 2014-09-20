@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <jpeglib.h>
 #include <pthread.h>
+#include <setjmp.h>
 
 /* option codes */
 enum {
@@ -31,7 +32,6 @@ vlmxOption  options [] = {
   {"Verbose",          0,   opt_verbose            },
   {0,                  0,   0                      }
 } ;
-
 
 enum {
   IN_FILENAMES = 0, IN_END
@@ -108,13 +108,23 @@ void queue_remove (QueuedImage * image)
 
 typedef struct Reader_
 {
+  struct jpeg_error_mgr jpegErrorManager ; /* must be the first element */
   struct jpeg_decompress_struct decompressor ;
-  struct jpeg_error_mgr standardErrorManager ;
+  jmp_buf onJpegError ;
+  char jpegLastErrorMsg [JMSG_LENGTH_MAX] ;
 } Reader ;
+
+void reader_jpeg_error (j_common_ptr cinfo)
+{
+  Reader* self = (Reader*) cinfo->err ;
+  (*(cinfo->err->format_message)) (cinfo, self->jpegLastErrorMsg) ;
+  longjmp(self->onJpegError, 1) ;
+}
 
 void reader_init (Reader* self)
 {
-  self->decompressor.err = jpeg_std_error(&self->standardErrorManager) ;
+  self->decompressor.err = jpeg_std_error(&self->jpegErrorManager) ;
+  self->jpegErrorManager.error_exit = reader_jpeg_error ;
   jpeg_create_decompress(&self->decompressor) ;
   self->decompressor.out_color_space = JCS_RGB ;
   self->decompressor.quantize_colors = FALSE ;
@@ -135,7 +145,20 @@ void reader_read (Reader* self, QueuedImage * image)
   if (fp == NULL) {
     image->error = -1 ;
     image->buffer = malloc(sizeof(char)*4096) ;
-    snprintf(image->buffer, 4096, "vl_imreadjpeg: could not open file '%s'\n", image->filename) ;
+    snprintf(image->buffer, 4096,
+             "vl_imreadjpeg: could not open file '%s'\n", image->filename) ;
+    return ;
+  }
+
+  /* handle decompression errors */
+  if (setjmp(self->onJpegError)) {
+    image->error = -1 ;
+    image->buffer = malloc(sizeof(char)*4096) ;
+    snprintf(image->buffer, 4096,
+             "vl_imreadjpeg: '%s' is not a valid JPEG file (%s)\n",
+             image->filename, self->jpegLastErrorMsg) ;
+    jpeg_abort((j_common_ptr)&self->decompressor) ;
+    fclose(fp) ;
     return ;
   }
 
@@ -313,7 +336,6 @@ void create_readers(int requestedNumReaders)
   }
 }
 
-
 void atExit()
 {
   delete_readers() ;
@@ -342,7 +364,7 @@ void mexFunction(int nout, mxArray *out[],
   mexAtExit(atExit) ;
 
   if (nin < 1) {
-    mexErrMsgTxt("There is less than one arguments.") ;
+    mexErrMsgTxt("There are less than one argument.") ;
   }
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {

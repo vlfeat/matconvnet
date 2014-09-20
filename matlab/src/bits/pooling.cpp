@@ -134,6 +134,10 @@ void pooling_cpu<double>(double* pooled,
 /*                                         maxPoolingBackward (CPU) */
 /* ---------------------------------------------------------------- */
 
+/* 
+ assume the output array to be cleared or otherwise
+ properly initialised: accumulates the derivative
+ */
 template<typename T>
 void poolingBackward_cpu(T* dzdx,
                          T const* data,

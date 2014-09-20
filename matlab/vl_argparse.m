@@ -47,8 +47,8 @@ while ai <= length(args)
     moreArgs = cat(2, fieldnames(args{ai}), struct2cell(args{ai}))' ;
     [conf,r] = vl_argparse(conf, moreArgs(:)) ;
     remainingArgs = cat(2, remainingArgs, r) ;
-    ai = ai +1 ;    
-    continue ; 
+    ai = ai +1 ;
+    continue ;
   end
   if ~ischar(paramName)
     error('The name of the parameter number %d is not a string nor a structure', (ai-1)/2+1) ;
@@ -57,19 +57,19 @@ while ai <= length(args)
     error('Parameter-value pair expected (missing value?).') ;
   end
   value = args{ai+1} ;
-  if isfield(conf,paramName)
-    conf.(paramName) = value ;
-  else
-    % try case-insensitive
-    i = find(strcmpi(paramName, names)) ;
-    if isempty(i)
-      if nargout < 2
-        error('Unknown parameter ''%s''.', paramName) ;
-      else
-        remainingArgs(end+1:end+2) = args(ai:ai+1) ;
-      end
+  i = find(strcmpi(paramName, names)) ;
+  if isempty(i)
+    if nargout < 2
+      error('Unknown parameter ''%s''.', paramName) ;
     else
-      conf.(names{i}) = value ;
+      remainingArgs(end+1:end+2) = args(ai:ai+1) ;
+    end
+  else
+    paramName = names{i} ;
+    if isstruct(conf.(paramName))
+      [conf.(paramName),r] = vl_argparse(conf.(paramName), {value}) ;
+    else
+      conf.(paramName) = value ;
     end
   end
   ai = ai + 2 ;

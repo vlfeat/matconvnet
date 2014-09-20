@@ -97,6 +97,18 @@ function res = vl_simplenn(net, x, dzdy, varargin)
 %
 %     - layer.type = 'softmaxloss'
 %     - layer.class: the ground-truth class.
+%
+%   Custom layer::
+%     This can be used to specify custom layers.
+%
+%     - layer.type = 'custom'
+%     - layer.forward: a function handle computing the block.
+%     - layer.backward: a function handle computing the block derivative.
+%
+%     The first function is called as res(i+1) = forward(layer, res(i), res(i+1))
+%     where res() is the struct array specified before. The second function is
+%     called as res(i) = backward(layer, res(i), res(i+1)). Note that the
+%     `layer` structure can contain additional fields if needed.
 
 
 % Copyright (C) 2014 Andrea Vedaldi.
@@ -108,6 +120,7 @@ function res = vl_simplenn(net, x, dzdy, varargin)
 opts.res = [] ;
 opts.conserveMemory = false ;
 opts.disableDropout = false ;
+opts.freezeDropout = false ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -156,9 +169,13 @@ for i=1:n
     case 'dropout'
       if opts.disableDropout
         res(i+1).x = res(i).x ;
+      elseif opts.freezeDropout
+        [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate, 'mask', res(i+1).aux) ;
       else
         [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
       end
+    case 'custom'
+      res(i+1) = l.forward(l, res(i), res(i+1)) ;
     otherwise
       error('Unknown layer type %s', l.type) ;
   end
@@ -197,13 +214,15 @@ if doder
       case 'relu'
         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
-        res(i).dzdx = vl_nnoffset(res(i).x, l.param, res(i+1).dzdx) ;
+        res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
       case 'dropout'
         if opts.disableDropout
           res(i).dzdx = res(i+1).dzdx ;
         else
           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
         end
+      case 'custom'
+        res(i) = l.backward(l, res(i), res(i+1)) ;
     end
     if opts.conserveMemory
       res(i+1).dzdx = [] ;

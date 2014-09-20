@@ -20,12 +20,13 @@ end
 for l=1:numel(net.layers)
   switch net.layers{l}.type
     case 'conv'
-      net.layers{l}.filters = moveop(net.layers{l}.filters) ;
-      net.layers{l}.biases = moveop(net.layers{l}.biases) ;
-    case 'fully'
-      net.layers{l}.w = moveop(net.layers{l}.w) ;
-      net.layers{l}.b = moveop(net.layers{l}.b) ;
+      for f = {'filters', 'biases', 'filtersMomentum', 'biasesMomentum'}
+        f = char(f) ;
+        if isfield(net.layers{l}, f)
+          net.layers{l}.(f) = moveop(net.layers{l}.(f)) ;
+        end
+      end
     otherwise
-      % nothing to do
+      % nothing to do ?
   end
 end
