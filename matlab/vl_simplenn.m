@@ -200,6 +200,11 @@ if doder
             vl_nnconv(res(i).x, l.filters, l.biases, ...
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
+        if opts.conserveMemory & gpuMode
+          % MATALB 2014a behaviour is odd: under memory pressure
+          % it will slows down if the GPU is not synchronized here
+          wait(gpuDevice) ;
+        end
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
@@ -226,11 +231,6 @@ if doder
     end
     if opts.conserveMemory
       res(i+1).dzdx = [] ;
-    end
-    if gpuMode
-      %gpu =gpuDevice ;
-      %fprintf('bkg: %d %.1f\n', i, gpu.FreeMemory/1024^2) ;
-      %wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;
   end
