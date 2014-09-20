@@ -45,12 +45,34 @@ vlmxOption  options [] = {
 } ;
 
 /* ---------------------------------------------------------------- */
-/*                                                  Dispatcher func */
+/*                                                            Cache */
 /* ---------------------------------------------------------------- */
 
 #ifdef ENABLE_GPU
+bool cublasInitialized = false ;
 cublasHandle_t thisCublasHandle ;
 #endif
+
+bool persistentDataInitialized = false ;
+PackedData temp ;
+PackedData allOnes ;
+
+void atExit()
+{
+  packed_data_deinit (&temp)  ;
+  packed_data_deinit (&allOnes)  ;
+#ifdef ENABLE_GPU
+  if (cublasInitialized) {
+    mexPrintf("destroy\n");
+    cublasDestroy(thisCublasHandle) ;
+    cublasInitialized = false ;
+  }
+#endif
+}
+
+/* ---------------------------------------------------------------- */
+/*                                                  Dispatcher func */
+/* ---------------------------------------------------------------- */
 
 static void
 sgemv_dispatch(bool gpuMode,
@@ -317,20 +339,6 @@ col2im_dispatch(bool gpuMode,
 }
 
 /* ---------------------------------------------------------------- */
-/*                                                            Cache */
-/* ---------------------------------------------------------------- */
-
-bool persistentDataInitialized = false ;
-PackedData temp ;
-PackedData allOnes ;
-
-void atExit()
-{
-  packed_data_deinit (&temp)  ;
-  packed_data_deinit (&allOnes)  ;
-}
-
-/* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
 
@@ -493,9 +501,12 @@ void mexFunction(int nout, mxArray *out[],
   gpuMode = (data.mode == matlabGpuArray) ;
   if (gpuMode) {
     mxInitGPU() ;
-    stat = cublasCreate(&thisCublasHandle) ;
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-      mexErrMsgTxt("Could not initialize cuBLAS.") ;
+    if (!cublasInitialized) {
+      stat = cublasCreate(&thisCublasHandle) ;
+      if (stat != CUBLAS_STATUS_SUCCESS) {
+        mexErrMsgTxt("Could not initialize cuBLAS.") ;
+      }
+      cublasInitialized = true ;
     }
   }
 #endif
@@ -919,10 +930,6 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
-
-#ifdef ENABLE_GPU
-  if (gpuMode) { cublasDestroy(thisCublasHandle) ; }
-#endif
 
   packed_data_deinit(&data) ;
   packed_data_deinit(&filters) ;
