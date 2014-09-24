@@ -93,7 +93,7 @@ for l=setdiff(1:9,6)
       end
 
     case 4
-      disp('testing vl_nnconv with fully connected identity filtets') ;
+      disp('testing vl_nnconv with fully connected identity filters') ;
       x = grandn(1,1,10,4,'single') ;
       b = grandn(1,size(x,3),'single') ;
       y = vl_nnconv(x,[],b,'verbose') ;
