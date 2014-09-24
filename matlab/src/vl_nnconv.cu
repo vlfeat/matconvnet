@@ -497,7 +497,7 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
 
 #if ENABLE_GPU
-  gpuMode = (data.mode == matlabGpuArray) ;
+  gpuMode = (data.mode == matlabGpuArrayWrapper) ;
   if (gpuMode) {
     mxInitGPU() ;
     if (!cublasInitialized) {
@@ -514,13 +514,13 @@ void mexFunction(int nout, mxArray *out[],
   hasBiases = biases.geom.numElements > 0 ;
 
   /* check for GPU/data class consistency */
-  if (gpuMode && (filters.mode != matlabGpuArray & hasFilters)) {
+  if (gpuMode && (filters.mode != matlabGpuArrayWrapper & hasFilters)) {
     mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
   }
-  if (gpuMode && (biases.mode != matlabGpuArray & hasBiases)) {
+  if (gpuMode && (biases.mode != matlabGpuArrayWrapper & hasBiases)) {
     mexErrMsgTxt("DATA is a GPU array but BIASES is not.") ;
   }
-  if (gpuMode && (derOutput.mode != matlabGpuArray & backMode)) {
+  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper & backMode)) {
     mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
   }
   if (data.geom.classID != mxSINGLE_CLASS) {
@@ -669,14 +669,14 @@ void mexFunction(int nout, mxArray *out[],
   /* auxiliary buffers */
   if (hasBiases) {
     if (allOnes.memorySize < allOnesGeom.numElements * sizeof(float) ||
-        (allOnes.mode == matlabGpuArray || allOnes.mode == cudaMallocMemory) != gpuMode) {
+        (allOnes.mode == matlabGpuArray || allOnes.mode == matlabGpuArrayWrapper) != gpuMode) {
       packed_data_deinit (&allOnes) ;
       packed_data_init_with_geom (&allOnes, gpuMode, allOnesGeom, true, true, 1.0f) ;
     }
   }
   if (!fullyConnectedMode) {
     if (temp.memorySize < tempGeom.numElements * sizeof(float) ||
-        (temp.mode == matlabGpuArray || temp.mode == cudaMallocMemory) != gpuMode) {
+        (temp.mode == matlabGpuArray || temp.mode == matlabGpuArrayWrapper) != gpuMode) {
       packed_data_deinit (&temp) ;
       packed_data_init_with_geom (&temp, gpuMode, tempGeom, true, false, 0);
     }
