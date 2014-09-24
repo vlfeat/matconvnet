@@ -1,4 +1,4 @@
-function vl_test_nnlayers(gpu)
+function vl_test_nnlayers(gpu,tests)
 
 range = 100 ;
 
@@ -13,7 +13,12 @@ end
 
 rng(1) ;
 
-for l=setdiff(1:9,6)
+if nargin < 2
+  tests = 1:9 ;
+end
+
+for l = tests
+  fprintf('test number %d\n', l)
   switch l
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;
@@ -325,6 +330,7 @@ for l=setdiff(1:9,6)
 
     case 6
       disp('testing vl_nnnormalize') ;
+
       % the derivative for d=1 is not very stable numerically
       for d=2:17
         param = [d, .1, .5, .75] ;
@@ -332,7 +338,7 @@ for l=setdiff(1:9,6)
         y = vl_nnnormalize(x,param,'verbose') ;
         dzdy = grandn(size(y),'single') ;
         dzdx = vl_nnnormalize(x,param,dzdy,'verbose') ;
-        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 1e-3,0.1) ;
+        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 1e-3, 0.3) ;
       end
 
       for d=1:7
