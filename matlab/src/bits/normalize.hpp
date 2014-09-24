@@ -22,6 +22,7 @@ void normalize_cpu(T* pooled,
                    size_t width,
                    size_t height,
                    size_t depth,
+                   size_t num,
                    size_t normDetph,
                    T kappa, T alpha, T beta) ;
 
@@ -32,6 +33,7 @@ void normalizeBackward_cpu(T* dzdx,
                            size_t width,
                            size_t height,
                            size_t depth,
+                           size_t num,
                            size_t normDetph,
                            T kappa, T alpha, T beta) ;
 
@@ -42,6 +44,7 @@ void normalize_gpu(T* pooled,
                    size_t width,
                    size_t height,
                    size_t depth,
+                   size_t num,
                    size_t normDetph,
                    T kappa, T alpha, T beta) ;
 
@@ -52,6 +55,7 @@ void normalizeBackward_gpu(T* dzdx,
                            size_t width,
                            size_t height,
                            size_t depth,
+                           size_t num,
                            size_t normDetph,
                            T kappa, T alpha, T beta) ;
 #endif
