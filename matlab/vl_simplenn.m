@@ -1,4 +1,4 @@
-function res = vl_simplenn(net, x, dzdy, varargin)
+function res = vl_simplenn(net, x, dzdy, res, varargin)
 % VL_SIMPLENN  Evaluates a simple CNN
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
@@ -133,9 +133,7 @@ end
 
 gpuMode = isa(x, 'gpuArray') ;
 
-res = opts.res ;
-opt.res = [] ;
-if (nargin <= 3) || isempty(res)
+if nargin <= 3 || isempty(res)
   res = struct(...
     'x', cell(1,n+1), ...
     'dzdx', cell(1,n+1), ...
@@ -200,6 +198,11 @@ if doder
             vl_nnconv(res(i).x, l.filters, l.biases, ...
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
+        if opts.conserveMemory & gpuMode
+          % MATALB 2014a behaviour is odd: under memory pressure
+          % it will slows down if the GPU is not synchronized here
+          wait(gpuDevice) ;
+        end
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
@@ -226,11 +229,6 @@ if doder
     end
     if opts.conserveMemory
       res(i+1).dzdx = [] ;
-    end
-    if gpuMode
-      %gpu =gpuDevice ;
-      %fprintf('bkg: %d %.1f\n', i, gpu.FreeMemory/1024^2) ;
-      %wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;
   end

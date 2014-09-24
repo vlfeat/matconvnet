@@ -104,7 +104,9 @@ names = horzcat(names{:}) ;
 labels = horzcat(labels{:}) ;
 
 if numel(names) ~= 1281167
-  warning('Found %d training images instead of 1281167', numel(names)) ;
+  warning('Found %d training images instead of 1,281,167. Dropping training set.', numel(names)) ;
+  names = {} ;
+  labels =[] ;
 end
 
 names = strcat(['train' filesep], names) ;
@@ -122,16 +124,18 @@ ims = dir(fullfile(opts.dataDir, 'images', 'val', '*.JPEG')) ;
 names = sort({ims.name}) ;
 labels = textread(valLabelsPath, '%d') ;
 
-if numel(labels) ~= 50e3
-  warning('Found %d instead of 50000 validation images', numel(labels))
-end
-
-if ~isempty(valBlacklistPath)
-  black = textread(valBlacklistPath, '%d') ;
-  fprintf('blacklisting %d validation images\n', numel(black)) ;
-  keep = setdiff(1:numel(names), black) ;
-  names = names(keep) ;
-  labels = labels(keep) ;
+if numel(ims) ~= 50e3
+  warning('Found %d instead of 50,000 validation images. Dropping validation set.', numel(ims))
+  names = {} ;
+  labels =[] ;
+else
+  if ~isempty(valBlacklistPath)
+    black = textread(valBlacklistPath, '%d') ;
+    fprintf('blacklisting %d validation images\n', numel(black)) ;
+    keep = setdiff(1:numel(names), black) ;
+    names = names(keep) ;
+    labels = labels(keep) ;
+  end
 end
 
 names = strcat(['val' filesep], names) ;
@@ -150,7 +154,7 @@ names = sort({ims.name}) ;
 labels = zeros(1, numel(names)) ;
 
 if numel(labels) ~= 100e3
-  warning('Found %d instead of 100000 test images', numel(labels))
+  warning('Found %d instead of 100,000 test images', numel(labels))
 end
 
 names = strcat(['test' filesep], names) ;

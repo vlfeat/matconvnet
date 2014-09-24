@@ -13,11 +13,8 @@ function y = vl_nnrelu(x,dzdy)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-if nargin <= 1
-  y = max(x,single(0)) ;
-  %y = x .* (x > single(0)) ;
+if nargin <= 1 || isempty(dzdy)
+  y = max(x, single(0)) ;
 else
-  y = dzdy ;
-  %y(x <= 0) = 0 ;
-  y = y .* (x > single(0)) ;
+  y = dzdy .* (x > single(0)) ;
 end
