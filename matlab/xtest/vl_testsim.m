@@ -4,7 +4,8 @@ function vl_testsim(a,b,tau)
 %   and if their L^infinity difference is smaller than TAU.
 %
 %   VL_TEST(A,B) selects TAU automatically by looking at the
-%   dynamic range of the data.
+%   dynamic range of the data. The same happens if TAU is the empty
+%   matrix.
 
 % Copyright (C) 2014 Andrea Vedaldi.
 % All rights reserved.
@@ -18,7 +19,7 @@ assert(isequal(size(a),size(b))) ;
 if isempty(a), return ; end
 delta = a - b ;
 %max(abs(a(:)-b(:)))
-if nargin < 3
+if nargin < 3 || isempty(tau)
   maxv = max([max(a(:)), max(b(:))]) ;
   minv = min([min(a(:)), min(b(:))]) ;
   tau = 1e-2 * (maxv - minv) + 1e-4 * max(maxv, -minv) ;
