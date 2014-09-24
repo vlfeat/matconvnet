@@ -18,7 +18,7 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
 NAME = matconvnet
-VER = 1.0-beta5
+VER = 1.0-beta6
 DIST = $(NAME)-$(VER)
 MARKDOWN = markdown2
 HOST = vlfeat-admin:sites/sandbox-matconvnet
