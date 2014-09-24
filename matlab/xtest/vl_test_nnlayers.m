@@ -332,7 +332,7 @@ for l=setdiff(1:9,6)
         y = vl_nnnormalize(x,param,'verbose') ;
         dzdy = grandn(size(y),'single') ;
         dzdx = vl_nnnormalize(x,param,dzdy,'verbose') ;
-        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 1e-3) ;
+        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 1e-3,0.1) ;
       end
 
       for d=1:7
