@@ -14,6 +14,7 @@ opts.learningRate = 0.001 ;
 opts.continue = false ;
 opts.expDir = 'data/exp' ;
 opts.conserveMemory = false ;
+opts.sync = true ;
 opts.prefetch = false ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
@@ -130,7 +131,9 @@ for epoch=1:opts.numEpochs
 
     % backprop
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one, res, 'conserveMemory', opts.conserveMemory) ;
+    res = vl_simplenn(net, im, one, res, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync) ;
     info.train = updateError(opts, info.train, net, res) ;
 
     % gradient step
@@ -183,7 +186,9 @@ for epoch=1:opts.numEpochs
     end
 
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, [], res, 'disableDropout', true) ;
+    res = vl_simplenn(net, im, [], res, ...
+      'disableDropout', true, ...
+      'sync', opts.sync) ;
     info.val = updateError(opts, info.val, net, res) ;
 
     % print information
