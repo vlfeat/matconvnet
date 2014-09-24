@@ -107,10 +107,9 @@ for epoch=1:opts.numEpochs
   if prevLr ~= lr
     fprintf('learning rate changed (%f --> %f): resetting momentum\n', prevLr, lr) ;
     for l=1:numel(net.layers)
-      ly = net.layers{l} ;
-      if ~strcmp(ly.type, 'conv'), continue ; end
-      ly.filtersMomentum = 0 * ly.filtersMomentum ;
-      ly.biasesMomentum = 0 * ly.biasesMomentum ;
+      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
+      net.layers{l}.filtersMomentum = 0 * net.layers{l}.filtersMomentum ;
+      net.layers{l}.biasesMomentum = 0 * net.layers{l}.biasesMomentum ;
     end
   end
 
@@ -136,22 +135,22 @@ for epoch=1:opts.numEpochs
 
     % gradient step
     for l=1:numel(net.layers)
-      ly = net.layers{l} ;
-      if ~strcmp(ly.type, 'conv'), continue ; end
+      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
 
-      ly.filtersMomentum = ...
-        opts.momentum * ly.filtersMomentum ...
-          - (lr * ly.filtersLearningRate) * (opts.weightDecay * ly.filtersWeightDecay) * ly.filters ...
-          - (lr * ly.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
+      net.layers{l}.filtersMomentum = ...
+        opts.momentum * net.layers{l}.filtersMomentum ...
+          - (lr * net.layers{l}.filtersLearningRate) * ...
+          (opts.weightDecay * net.layers{l}.filtersWeightDecay) * net.layers{l}.filters ...
+          - (lr * net.layers{l}.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
 
-      ly.biasesMomentum = ...
-        opts.momentum * ly.biasesMomentum ...
-          - (lr * ly.biasesLearningRate) * (opts.weightDecay * ly.biasesWeightDecay) * ly.biases ...
-          - (lr * ly.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
+      net.layers{l}.biasesMomentum = ...
+        opts.momentum * net.layers{l}.biasesMomentum ...
+          - (lr * net.layers{l}.biasesLearningRate) * ....
+          (opts.weightDecay * net.layers{l}.biasesWeightDecay) * net.layers{l}.biases ...
+          - (lr * net.layers{l}.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
 
-      ly.filters = ly.filters + ly.filtersMomentum ;
-      ly.biases = ly.biases + ly.biasesMomentum ;
-      net.layers{l} = ly ;
+      net.layers{l}.filters = net.layers{l}.filters + net.layers{l}.filtersMomentum ;
+      net.layers{l}.biases = net.layers{l}.biases + net.layers{l}.biasesMomentum ;
     end
 
     % print information
