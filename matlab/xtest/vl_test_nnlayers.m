@@ -19,6 +19,12 @@ end
 
 for l = tests
   fprintf('test number %d\n', l)
+  % resets random number generator to obtain reproducible results
+  if gpu
+    parallel.gpu.rng(0, 'combRecursive');
+  else
+    rng(0, 'combRecursive') ;
+  end
   switch l
     case 1
       disp('testing vl_nnsoftamxloss multiple images convolutional') ;
@@ -336,9 +342,9 @@ for l = tests
         param = [d, .1, .5, .75] ;
         x = grandn(3,2,10,4,'single') ;
         y = vl_nnnormalize(x,param,'verbose') ;
-        dzdy = grandn(size(y),'single') ;
+        dzdy = grand(size(y),'single')-0.5 ;
         dzdx = vl_nnnormalize(x,param,dzdy,'verbose') ;
-        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 1e-3, 0.3) ;
+        vl_testder(@(x) vl_nnnormalize(x,param), x, dzdy, dzdx, range * 2e-3, 0.3) ;
       end
 
       for d=1:7
