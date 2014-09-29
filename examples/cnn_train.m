@@ -73,9 +73,11 @@ end
 info.train.objective = [] ;
 info.train.error = [] ;
 info.train.topFiveError = [] ;
+info.train.speed = [] ;
 info.val.objective = [] ;
 info.val.error = [] ;
 info.val.topFiveError = [] ;
+info.val.speed = [] ;
 
 lr = 0 ;
 res = [] ;
@@ -100,9 +102,11 @@ for epoch=1:opts.numEpochs
   info.train.objective(end+1) = 0 ;
   info.train.error(end+1) = 0 ;
   info.train.topFiveError(end+1) = 0 ;
+  info.train.speed(end+1) = 0 ;
   info.val.objective(end+1) = 0 ;
   info.val.error(end+1) = 0 ;
   info.val.topFiveError(end+1) = 0 ;
+  info.val.speed(end+1) = 0 ;
 
   % reset momentum if needed
   if prevLr ~= lr
@@ -134,7 +138,6 @@ for epoch=1:opts.numEpochs
     res = vl_simplenn(net, im, one, res, ...
       'conserveMemory', opts.conserveMemory, ...
       'sync', opts.sync) ;
-    info.train = updateError(opts, info.train, net, res) ;
 
     % gradient step
     for l=1:numel(net.layers)
@@ -158,7 +161,10 @@ for epoch=1:opts.numEpochs
 
     % print information
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/batch_time) ;
+    speed = numel(batch)/batch_time ;
+    info.train = updateError(opts, info.train, net, res, batch_time) ;
+
+    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
     n = t + numel(batch) - 1 ;
     fprintf(' err %.1f err5 %.1f', ...
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
@@ -189,11 +195,13 @@ for epoch=1:opts.numEpochs
     res = vl_simplenn(net, im, [], res, ...
       'disableDropout', true, ...
       'sync', opts.sync) ;
-    info.val = updateError(opts, info.val, net, res) ;
 
     % print information
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/batch_time) ;
+    speed = numel(batch)/batch_time ;
+    info.val = updateError(opts, info.val, net, res, batch_time) ;
+
+    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
     n = t + numel(batch) - 1 ;
     fprintf(' err %.1f err5 %.1f', ...
       info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
@@ -204,9 +212,11 @@ for epoch=1:opts.numEpochs
   info.train.objective(end) = info.train.objective(end) / numel(train) ;
   info.train.error(end) = info.train.error(end) / numel(train)  ;
   info.train.topFiveError(end) = info.train.topFiveError(end) / numel(train) ;
+  info.train.speed(end) = numel(val) / info.train.speed(end) ;
   info.val.objective(end) = info.val.objective(end) / numel(val) ;
   info.val.error(end) = info.val.error(end) / numel(val) ;
   info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
+  info.val.speed(end) = numel(val) / info.val.speed(end) ;
   save(sprintf(modelPath,epoch), 'net', 'info') ;
 
   figure(1) ; clf ;
@@ -240,7 +250,7 @@ for epoch=1:opts.numEpochs
 end
 
 % -------------------------------------------------------------------------
-function info = updateError(opts, info, net, res)
+function info = updateError(opts, info, net, res, speed)
 % -------------------------------------------------------------------------
 predictions = gather(res(end-1).x) ;
 sz = size(predictions) ;
@@ -248,6 +258,7 @@ n = prod(sz(1:2)) ;
 
 labels = net.layers{end}.class ;
 info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
+info.speed(end) = info.speed(end) + speed ;
 switch opts.errorType
   case 'multiclass'
     [~,predictions] = sort(predictions, 3, 'descend') ;
