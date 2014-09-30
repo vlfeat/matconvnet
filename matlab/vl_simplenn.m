@@ -178,8 +178,10 @@ for i=1:n
     otherwise
       error('Unknown layer type %s', l.type) ;
   end
-  if opts.conserveMemory
-    % TODO: forget unnecesary intermediate computations
+  if opts.conserveMemory & ~doder & i < numel(net.layers) - 1
+    % TODO: forget unnecesary intermediate computations even when
+    % derivatives are required
+    res(i).x = [] ;
   end
   if gpuMode & opts.sync
     % This should make things slower, but on MATLAB 2014a it is necessary

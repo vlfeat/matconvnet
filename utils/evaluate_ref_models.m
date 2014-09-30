@@ -8,7 +8,9 @@ models = {...
   'caffe-alex', ...
   'vgg-s', ...
   'vgg-m', ...
-  'vgg-f'} ;
+  'vgg-f', ...
+  'vgg-verydeep-16', ...
+  'vgg-verydeep-19'} ;
 
 for i = 1:numel(models)
   opts.dataDir = 'data/imagenet12' ;
@@ -17,11 +19,12 @@ for i = 1:numel(models)
   opts.modelPath = sprintf('data/models/imagenet-%s.mat', models{i}) ;
   opts.lite = false ;
   opts.numFetchThreads = 12 ;
-  opts.train.batchSize = 256 ;
+  opts.train.batchSize = 64 ;
   opts.train.numEpochs = 1 ;
   opts.train.useGpu = true ;
   opts.train.prefetch = true ;
   opts.train.expDir = opts.expDir ;
+  opts.train.conserveMemory = true ;
 
   resultPath = fullfile(opts.expDir, 'results.mat') ;
   if ~exist(resultPath)

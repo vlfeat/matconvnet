@@ -49,6 +49,14 @@ used in MatConvNet.
 > 3. These models are provided here for convenience, but please credit
 >    the original authors.
 
+- VGG models form the
+  [Very Deep Convolutional Networks](http://www.robots.ox.ac.uk/~karen/)
+  - **Citation:** `Very Deep Convolutional Networks for Large-Scale Image Recognition`
+    *Karen Simonyan and Andrew Zisserman,* arXiv technical report, 2014,
+    ([paper](http://arxiv.org/abs/1409.1556/))
+  - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat)
+  - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat)
+
 - VGG models from the
   [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
   paper (v1.0.1):
