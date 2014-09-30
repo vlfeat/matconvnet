@@ -1,4 +1,4 @@
-bet# MatConvNet: CNNs for MATLAB
+# MatConvNet: CNNs for MATLAB
 
 **MatConvNet** is a MATLAB toolbox implementing *Convolutional Neural
 Networks* (CNNs) for computer vision applications. It is simple,
@@ -60,23 +60,23 @@ used in MatConvNet.
 - VGG models from the
   [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
   paper (v1.0.1):
+  - **Citation:** `Return of the Devil in the Details: Delving Deep
+    into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
+    Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
+    ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
   - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
   - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
   - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
   - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
   - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
   - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
-  - **Citation:** `Return of the Devil in the Details: Delving Deep
-    into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
-    Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
-    ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
 
 - Berkeley
   [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
-  (version downloaded on July 2014):
+  (version downloaded on September 2014):
+  - **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
   - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
   - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
-  - **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
 
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
