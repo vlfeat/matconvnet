@@ -404,7 +404,6 @@ for name in layers_name_param:
                                      support, pad, stride) + [num_output_channels]
   matlab_layers.append(mk)
 
-
 # --------------------------------------------------------------------
 #                                                Reshape and transpose
 # --------------------------------------------------------------------

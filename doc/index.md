@@ -78,7 +78,25 @@ used in MatConvNet.
   - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
   - **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
 
-For example, in order to run ImageNet-S on a test image, use:
+This is a summary of the performance of these models on the ILSVRC
+2012 validation data:
+
+|               model|top-1 err.|top-5 err.|  images/s|
+-------------------------------------------------------
+|           caffe-ref|      42.4|      19.6|     132.9|
+|          caffe-alex|      42.6|      19.6|     131.4|
+|               vgg-s|      36.7|      15.5|     120.0|
+|               vgg-m|      37.8|      16.1|     127.6|
+|               vgg-f|      41.9|      19.3|     147.0|
+|     vgg-verydeep-19|      30.5|      11.3|      40.3|
+|     vgg-verydeep-16|      30.9|      11.2|      46.2|
+
+Note that these error rates are computed on a single centre-crop and
+are therefore higher than what reported in some publications, where
+multiple evaluations per image are combined.
+
+*Example usage** In order to run, say, `imagenet-vgg-s` on a test
+ image, use:
 
     % setup MtConvNet in MATLAB
     run matlab/vl_setupnn
