@@ -58,7 +58,7 @@
             # CkeyLinkerName:
             # CkeyLinkerVersion:
             CC="$NVCC"
-            MW_SDK_TEMP="find `xcode-select -print-path` -name MacOSX10.8.sdk"
+            MW_SDK_TEMP="find `xcode-select -print-path` -name MacOSX10.9.sdk"
             MW_SDKROOT=`$MW_SDK_TEMP`
             MACOSX_DEPLOYMENT_TARGET='10.8'
             ARCHS='x86_64'
@@ -80,7 +80,7 @@
             CXXOPTIMFLAGS='-O2 -DNDEBUG'
             CXXDEBUGFLAGS='-g'
 #
-            LD="xcrun -sdk macosx10.8 clang++"
+            LD="xcrun -sdk macosx10.9 clang++"
             LDEXTENSION='.mexmaci64'
             LDFLAGS="-arch $ARCHS -Wl,-syslibroot,$MW_SDKROOT -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
             LDFLAGS="$LDFLAGS -bundle -Wl,-exported_symbols_list,$TMW_ROOT/extern/lib/$Arch/$MAPFILE"
