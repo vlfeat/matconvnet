@@ -170,6 +170,13 @@ for epoch=1:opts.numEpochs
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
     fprintf('\n') ;
 
+    figure(100) ;
+    plot([[res.time];[res.backwardTime]]') ;
+    legend('forward computation', 'backward computation') ;
+    xlabel('netowrk layer') ;
+    ylabel('time') ;
+    drawnow ;
+    
     % debug info
     if opts.plotDiagnostics
       figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
