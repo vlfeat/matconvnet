@@ -1,4 +1,4 @@
-# MatConvNet: CNNs for MATLAB
+bet# MatConvNet: CNNs for MATLAB
 
 **MatConvNet** is a MATLAB toolbox implementing *Convolutional Neural
 Networks* (CNNs) for computer vision applications. It is simple,
@@ -6,7 +6,7 @@ efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
 - [Homepage](http://www.vlfeat.org/matconvnet)
-- Tarball for [version 1.0-beta6](download/matconvnet-1.0-beta6.tar.gz)
+- Tarball for [version 1.0-beta7](download/matconvnet-1.0-beta7.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
 - [Installation instructions](#installing)
@@ -51,9 +51,9 @@ used in MatConvNet.
 
 - VGG models form the
   [Very Deep Convolutional Networks](http://www.robots.ox.ac.uk/~karen/)
-  - **Citation:** `Very Deep Convolutional Networks for Large-Scale Image Recognition`
-    *Karen Simonyan and Andrew Zisserman,* arXiv technical report, 2014,
-    ([paper](http://arxiv.org/abs/1409.1556/))
+  - **Citation:** `Very Deep Convolutional Networks for Large-Scale
+  Image Recognition', *Karen Simonyan and Andrew Zisserman,* arXiv
+  technical report, 2014, ([paper](http://arxiv.org/abs/1409.1556/)):
   - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat)
   - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat)
 
@@ -81,8 +81,9 @@ used in MatConvNet.
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
+
 |               model|top-1 err.|top-5 err.|  images/s|
--------------------------------------------------------
+|--------------------|----------|----------|----------|
 |           caffe-ref|      42.4|      19.6|     132.9|
 |          caffe-alex|      42.6|      19.6|     131.4|
 |               vgg-s|      36.7|      15.5|     120.0|
@@ -95,8 +96,8 @@ Note that these error rates are computed on a single centre-crop and
 are therefore higher than what reported in some publications, where
 multiple evaluations per image are combined.
 
-*Example usage** In order to run, say, `imagenet-vgg-s` on a test
- image, use:
+**Example usage.** In order to run, say, `imagenet-vgg-s` on a test
+image, use:
 
     % setup MtConvNet in MATLAB
     run matlab/vl_setupnn
@@ -277,7 +278,8 @@ donation of the GPUs used to develop this software.
 
 ## Changes
 
-- 1.0-beta6 (September 2014) Performance improvements
+- 1.0-beta7 (September 2014) Adds VGG verydeep models.
+- 1.0-beta6 (September 2014) Performance improvements.
 - 1.0-beta5 (September 2014) Bugfixes, adds more documentation,
   improves ImageNet example.
 - 1.0-beta4 (August 2014) Further cleanup.
