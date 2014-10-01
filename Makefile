@@ -49,6 +49,7 @@ NVCCOPTS = \
 
 ifneq ($(DEBUG),)
 MEXOPTS += -g
+MEXOPTS_GPU += -g
 NVCCOPTS += -g
 endif
 
