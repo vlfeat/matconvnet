@@ -59,8 +59,11 @@ PackedData allOnes ;
 
 void atExit()
 {
-  packed_data_deinit (&temp)  ;
-  packed_data_deinit (&allOnes)  ;
+  if (persistentDataInitialized) {
+    packed_data_deinit (&temp)  ;
+    packed_data_deinit (&allOnes)  ;
+    persistentDataInitialized = false ;
+  }
 #ifdef ENABLE_GPU
   if (cublasInitialized) {
     cublasDestroy(thisCublasHandle) ;
@@ -407,9 +410,9 @@ void mexFunction(int nout, mxArray *out[],
   packed_data_init_empty(&derFilters) ;
   packed_data_init_empty(&derBiases) ;
   if (!persistentDataInitialized) {
-    persistentDataInitialized = true ;
     packed_data_init_empty(&temp) ;
     packed_data_init_empty(&allOnes) ;
+    persistentDataInitialized = true ;
   }
 
   /* -------------------------------------------------------------- */
