@@ -1,4 +1,4 @@
-function vl_simplenn_display(net, res)
+function info = vl_simplenn_display(net, res)
 % VL_SIMPLENN_DISPLAY  Simple CNN statistics
 %    VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
 
@@ -12,6 +12,8 @@ fields={'layer', 'type', 'support', 'stride', 'pad', 'dim', 'fdim', 'field', 'me
 if nargin > 1
   fields = {fields{:}, 'xwhd', 'xmem', 'dxmem'} ;
 end
+
+do_print = (nargout == 0) ;
 
 for w=fields
   switch char(w)
@@ -27,7 +29,7 @@ for w=fields
     case 'dxmem', s = 'c/g dx MB' ;
     otherwise, s = char(w) ;
   end
-  fprintf('%10s',s) ;
+  if do_print, fprintf('%10s',s) ; end
   for l=1:numel(net.layers)
     ly=net.layers{l} ;
     switch char(w)
@@ -122,15 +124,24 @@ for w=fields
         rmem(1:2,l) = [a;b] ;
         s=sprintf('%.0f/%.0f', a/1024^2, b/1024^2) ;
     end
-    fprintf('|%7s', s) ;
+    if do_print, fprintf('|%7s', s) ; end
   end
-  fprintf('|\n') ;
+  if do_print, fprintf('|\n') ; end
 end
-[a,b] = xmem(net) ;
-fprintf('total network CPU/GPU memory: %.1f/%1.f MB\n', a/1024^2, b/1024^2) ;
-if nargin > 1
-  [a,b] = xmem(res) ;
-  fprintf('total result CPU/GPU memory: %.1f/%1.f MB\n', a/1024^2, b/1024^2) ;
+if do_print
+  [a,b] = xmem(net) ;
+  fprintf('total network CPU/GPU memory: %.1f/%1.f MB\n', a/1024^2, b/1024^2) ;
+  if nargin > 1
+    [a,b] = xmem(res) ;
+    fprintf('total result CPU/GPU memory: %.1f/%1.f MB\n', a/1024^2, b/1024^2) ;
+  end
+end
+
+if nargout > 0
+  info.support = support ;
+  info.receptiveField = field ;
+  info.stride = stride ;
+  info.pad = pad ;
 end
 
 % -------------------------------------------------------------------------
