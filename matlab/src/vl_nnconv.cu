@@ -517,14 +517,14 @@ void mexFunction(int nout, mxArray *out[],
   hasBiases = biases.geom.numElements > 0 ;
 
   /* check for GPU/data class consistency */
-  if (gpuMode && (filters.mode != matlabGpuArrayWrapper & hasFilters)) {
-    mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
+  if (hasFilters && ! packed_data_are_compatible(&data, &filters)) {
+    mexErrMsgTxt("DATA and FILTERS are not both CPU or GPU arrays.") ;
   }
-  if (gpuMode && (biases.mode != matlabGpuArrayWrapper & hasBiases)) {
-    mexErrMsgTxt("DATA is a GPU array but BIASES is not.") ;
+  if (hasBiases && ! packed_data_are_compatible(&data, &biases)) {
+    mexErrMsgTxt("DATA and BIASES are not both CPU or GPU arrays.") ;
   }
-  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper & backMode)) {
-    mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
+  if (backMode && ! packed_data_are_compatible(&data, &derOutput)) {
+    mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
   }
   if (data.geom.classID != mxSINGLE_CLASS) {
     mexErrMsgTxt("DATA is not of class SINGLE.");

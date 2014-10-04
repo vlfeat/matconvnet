@@ -286,4 +286,20 @@ mxArray* packed_data_deinit_extracting_array(PackedData * map)
   return array ;
 }
 
+bool packed_data_are_compatible(PackedData const * a, PackedData const * b)
+{
+  switch (a->mode) {
+  case empty:
+    return true ;
+  case matlabArray:
+  case matlabArrayWrapper:
+    return (b->mode == matlabArray || b->mode == matlabArrayWrapper) ;
+  case matlabGpuArray:
+  case matlabGpuArrayWrapper:
+    return (b->mode == matlabGpuArray || b->mode == matlabGpuArrayWrapper) ;
+  default:
+    abort() ;
+  }
+}
+
 #endif
