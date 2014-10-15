@@ -18,7 +18,7 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
 NAME = matconvnet
-VER = 1.0-beta5
+VER = 1.0-beta7
 DIST = $(NAME)-$(VER)
 MARKDOWN = markdown2
 HOST = vlfeat-admin:sites/sandbox-matconvnet
@@ -49,6 +49,7 @@ NVCCOPTS = \
 
 ifneq ($(DEBUG),)
 MEXOPTS += -g
+MEXOPTS_GPU += -g
 NVCCOPTS += -g
 endif
 
@@ -157,7 +158,7 @@ doc/index.html : doc/.build/index.html.raw doc/template.html
 
 doc/.build/index.html.raw : doc/index.md
 	mkdir -p doc/.build
-	$(MARKDOWN) $(<) > $(@)
+	$(MARKDOWN) -x tables $(<) > $(@)
 
 # Other targets
 info:

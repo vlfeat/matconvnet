@@ -34,10 +34,10 @@ typedef struct PackedDataGeometry_
 typedef enum PackedDataMode_
 {
   empty,
+  matlabArray,
   matlabArrayWrapper,
   matlabGpuArray,
-  matlabMallocMemory,
-  cudaMallocMemory
+  matlabGpuArrayWrapper
 } PackedDataMode ;
 
 typedef struct PackedData_
@@ -107,7 +107,8 @@ packed_data_init_with_array (PackedData * map, mxArray const* array)
 
 #ifdef ENABLE_GPU
   if (mxIsGPUArray(array)) {
-    map->mode = matlabGpuArray ;
+    map->mode = matlabGpuArrayWrapper ;
+    map->array = (mxArray*) array ;
     map->gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(array) ;
     map->memory = (float*) mxGPUGetDataReadOnly(map->gpuArray) ;
     classID = mxGPUGetClassID(map->gpuArray) ;
@@ -121,6 +122,9 @@ packed_data_init_with_array (PackedData * map, mxArray const* array)
     }
     map->mode = matlabArrayWrapper ;
     map->array = (mxArray*) array ;
+#ifdef ENABLE_GPU
+    map->gpuArray = NULL ;
+#endif
     map->memory = (float*) mxGetData(map->array) ;
     classID = mxGetClassID(map->array) ;
     dimensions = mxGetDimensions(map->array) ;
@@ -154,71 +158,58 @@ packed_data_init_with_geom (PackedData * map,
                             float value)
 {
   assert(geom.classID == mxSINGLE_CLASS) ;
-  float * memory = NULL ;
+  mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
+  mwSize dimensions_ [4] = {0} ;
 
   packed_data_init_empty(map) ;
   map->geom = geom ;
   map->memorySize = map->geom.numElements * sizeof(float) ;
 
   /* create a CPU array with the specified values */
-  if (! (gpuMode && (!initialize || value == 0))) {
-    if (!initialize) {
-      memory = (float*)mxMalloc(map->memorySize) ;
-    } else {
-      if (value == 0) {
-        memory = (float*)mxCalloc(1, map->memorySize) ;
-      } else {
-        memory = (float*)mxMalloc(map->memorySize) ;
-        for (int i = 0 ; i < geom.numElements ; ++i) { memory[i] = value ; }
+  if (!gpuMode) {
+    map->mode = matlabArray ;
+    if (!initialize || (initialize && value != 0)) {
+      /* do not initialize, or initialize with something other than 0 */
+      map->memory = (float*)mxMalloc(map->memorySize) ;
+      map->array = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
+#ifdef ENABLE_GPU
+      map->gpuArray = NULL ;
+#endif
+      mxSetData(map->array, map->memory) ;
+      mxSetDimensions(map->array, dimensions, 4) ;
+      if (initialize) {
+        for (int i = 0 ; i < geom.numElements ; ++i) { map->memory[i] = value ; }
       }
+    } else {
+      /* initialize with zero */
+      map->array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
+      map->memory = (float*)mxGetData(map->array) ;
     }
   }
 
 #ifdef ENABLE_GPU
-  if (gpuMode) {
-    cudaError_t err ;
-    if (!persistent) {
-      /* if not persistent, create a GPU array */
-      mwSize dimensions [4] = {geom.height, geom.width, geom.depth, geom.size} ;
-      map->gpuArray = mxGPUCreateGPUArray
+  else {
+    map->mode = matlabGpuArray ;
+    map->gpuArray = mxGPUCreateGPUArray
       (4, dimensions, mxSINGLE_CLASS, mxREAL,
        (initialize && value == 0) ? MX_GPU_INITIALIZE_VALUES : MX_GPU_DO_NOT_INITIALIZE) ;
-      map->mode = matlabGpuArray ;
-      map->memory = (float*) mxGPUGetData(map->gpuArray) ;
-      if (initialize && value != 0) {
-        err = cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
-        if (err != cudaSuccess) {
-          mexPrintf("cudaMemcpy: error (%s)\n", cudaGetErrorString(err)) ;
-        }
-      }
-    } else {
-      /* if persistent, use CUDA to allocate the memory (MATLAB does not have persistent GPU arrays) */
-      map->mode = cudaMallocMemory ;
-      err = cudaMalloc((void**)&map->memory, map->memorySize) ;
+    map->array = mxGPUCreateMxArrayOnGPU(map->gpuArray) ;
+    map->memory = (float*) mxGPUGetData(map->gpuArray) ;
+    if (initialize && value != 0) {
+      /* initialize with something other than zero */
+      float * memory = (float*)mxMalloc(map->memorySize) ;
+      for (int i = 0 ; i < geom.numElements ; ++i) { memory[i] = value ; }
+      cudaError_t err = cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
       if (err != cudaSuccess) {
         mexPrintf("cudaMemcpy: error (%s)\n", cudaGetErrorString(err)) ;
       }
-      if (initialize) {
-        if (value == 0) {
-          err = cudaMemset(map->memory, 0, map->memorySize) ;
-          if (err != cudaSuccess) {
-            mexPrintf("cudaMemset: error (%s)\n", cudaGetErrorString(err)) ;
-          }
-        } else {
-          err = cudaMemcpy(map->memory, memory, map->memorySize, cudaMemcpyHostToDevice) ;
-          if (err != cudaSuccess) {
-            mexPrintf("cudaMemcpy: error (%s)\n", cudaGetErrorString(err)) ;
-          }
-        }
-      }
+      mxFree(memory) ;
     }
-    if (memory) { mxFree(memory) ; memory = NULL ; }
-  } else
+  }
 #endif
-  {
-    map->mode = matlabMallocMemory ;
-    map->memory = memory ;
-    if (persistent) { mexMakeMemoryPersistent(map->memory) ; }
+
+  if (persistent) {
+    mexMakeArrayPersistent(map->array) ;
   }
 }
 
@@ -229,13 +220,25 @@ packed_data_init_with_geom (PackedData * map,
 void packed_data_deinit (PackedData * map)
 {
   switch (map->mode) {
-    case empty: break ;
-    case matlabArrayWrapper : break ;
-    case matlabMallocMemory : mxFree(map->memory) ; break ;
+
+  case matlabArray:
+    mxDestroyArray(map->array) ;
+    break ;
+  case matlabArrayWrapper:
+    break ;
+  case empty:
+    break ;
+
 #ifdef ENABLE_GPU
-    case cudaMallocMemory : cudaFree(map->memory) ; break ;
-    case matlabGpuArray : mxGPUDestroyGPUArray(map->gpuArray) ; break ;
+  case matlabGpuArray:
+    mxGPUDestroyGPUArray(map->gpuArray) ;
+    mxDestroyArray(map->array) ;
+    break ;
+  case matlabGpuArrayWrapper:
+    mxGPUDestroyGPUArray(map->gpuArray) ;
+    break ;
 #endif
+
     default: assert(false) ;
   }
   packed_data_init_empty(map) ;
@@ -260,32 +263,43 @@ void packed_data_deinit (PackedData * map)
 
 mxArray* packed_data_deinit_extracting_array(PackedData * map)
 {
-  mxArray* array ;
+  mxArray* array = map->array ;
+
   switch (map->mode) {
-    case empty : assert(false) ; break ;
-    case matlabArrayWrapper : assert(false) ; break ;
-    case cudaMallocMemory : assert(false) ; break ;
-    case matlabMallocMemory :
-    {
-      mwSize dimensions [4] = {map->geom.height, map->geom.width, map->geom.depth, map->geom.size} ;
-      mwSize dimensions_ [4] = {0,0,0,0} ;
-      array = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
-      mxSetData(array, map->memory) ;
-      mxSetDimensions(array, dimensions, 4) ;
-      map->mode = empty ;
-      map->memory = NULL ;
-      break ;
-    }
-    case matlabGpuArray :
-    {
+
+  case matlabArray:
+  case matlabArrayWrapper:
+  case empty:
+    break ;
+
 #ifdef ENABLE_GPU
-      array = mxGPUCreateMxArrayOnGPU(map->gpuArray) ;
+  case matlabGpuArray:
+  case matlabGpuArrayWrapper:
+    mxGPUDestroyGPUArray(map->gpuArray) ;
+    break ;
 #endif
-      break ;
-    }
+
+  default: assert(false) ;
   }
-  packed_data_deinit(map) ;
-  return array;
+  packed_data_init_empty(map) ;
+
+  return array ;
+}
+
+bool packed_data_are_compatible(PackedData const * a, PackedData const * b)
+{
+  switch (a->mode) {
+  case empty:
+    return true ;
+  case matlabArray:
+  case matlabArrayWrapper:
+    return (b->mode == matlabArray || b->mode == matlabArrayWrapper) ;
+  case matlabGpuArray:
+  case matlabGpuArrayWrapper:
+    return (b->mode == matlabGpuArray || b->mode == matlabGpuArrayWrapper) ;
+  default:
+    abort() ;
+  }
 }
 
 #endif

@@ -99,14 +99,14 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
 
 #if ENABLE_GPU
-  gpuMode = (data.mode == matlabGpuArray) ;
+  gpuMode = (data.mode == matlabGpuArrayWrapper) ;
   if (gpuMode) {
     mxInitGPU() ;
   }
 #endif
 
   /* check GPU/data class consistency */
-  if (gpuMode && (derOutput.mode != matlabGpuArray & backMode)) {
+  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper & backMode)) {
     mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
   }
   if (data.geom.classID != mxSINGLE_CLASS) {
@@ -171,58 +171,49 @@ void mexFunction(int nout, mxArray *out[],
 
   if (!backMode) {
     packed_data_init_with_geom(&output, gpuMode, outputGeom, false, true, 0) ;
+    //packed_data_init_with_geom(&output, gpuMode, outputGeom, false, false, 0) ;
   } else {
     packed_data_init_with_geom(&derData, gpuMode, derDataGeom, false, true, 0) ;
   }
 
-  for (int image = 0 ; image < data.geom.size ; ++image) {
-    ptrdiff_t dataOffset = (data.geom.height*data.geom.width*data.geom.depth) * image ;
-    ptrdiff_t outputOffset = (output.geom.height*output.geom.width*output.geom.depth) * image ;
-    ptrdiff_t derOutputOffset = (derOutput.geom.height*derOutput.geom.width*derOutput.geom.depth) * image ;
-
-    if (backMode) {
-      /* ---------------------------------------------------------- */
-      /*                                              Backward mode */
-      /* ---------------------------------------------------------- */
-      if (gpuMode) {
+  if (!backMode) {
+    /* forward */
+    if (gpuMode) {
 #ifdef ENABLE_GPU
-        normalizeBackward_gpu<float>(derData.memory + dataOffset,
-                                     data.memory + dataOffset,
-                                     derOutput.memory + derOutputOffset,
-                                     data.geom.height, data.geom.width, data.geom.depth,
-                                     normDepth, normKappa, normAlpha, normBeta) ;
+      normalize_gpu<float>(output.memory,
+                           data.memory,
+                           data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
+                           normDepth, normKappa, normAlpha, normBeta) ;
 #else
-        assert(false) ;
+      assert(false) ;
 #endif
-      } else {
-        normalizeBackward_cpu<float>(derData.memory + dataOffset,
-                                     data.memory + dataOffset,
-                                     derOutput.memory + derOutputOffset,
-                                     data.geom.height, data.geom.width, data.geom.depth,
-                                     normDepth, normKappa, normAlpha, normBeta) ;
-      }
     } else {
-      /* ---------------------------------------------------------- */
-      /*                                               Forward mode */
-      /* ---------------------------------------------------------- */
-      if (gpuMode) {
+      normalize_cpu<float>(output.memory,
+                           data.memory,
+                           data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
+                           normDepth, normKappa, normAlpha, normBeta) ;
+    }
+  } else {
+    /* backward */
+    if (gpuMode) {
 #ifdef ENABLE_GPU
-        normalize_gpu<float>(output.memory + outputOffset,
-                             data.memory + dataOffset,
-                             data.geom.height, data.geom.width, data.geom.depth,
-                             normDepth, normKappa, normAlpha, normBeta) ;
+      normalizeBackward_gpu<float>(derData.memory,
+                                   data.memory,
+                                   derOutput.memory,
+                                   data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
+                                   normDepth, normKappa, normAlpha, normBeta) ;
 #else
-        assert(false) ;
+      assert(false) ;
 #endif
-      } else {
-        normalize_cpu<float>(output.memory + outputOffset,
-                             data.memory + dataOffset,
-                             data.geom.height, data.geom.width, data.geom.depth,
-                             normDepth, normKappa, normAlpha, normBeta) ;
-      }
+    } else {
+      normalizeBackward_cpu<float>(derData.memory,
+                                   data.memory,
+                                   derOutput.memory,
+                                   data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
+                                   normDepth, normKappa, normAlpha, normBeta) ;
     }
   }
-  
+
   /* -------------------------------------------------------------- */
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */

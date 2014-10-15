@@ -6,7 +6,7 @@ efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
 - [Homepage](http://www.vlfeat.org/matconvnet)
-- Tarball for [version 1.0-beta5](download/matconvnet-1.0-beta5.tar.gz)
+- Tarball for [version 1.0-beta7](download/matconvnet-1.0-beta7.tar.gz)
 - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
 - [Installation instructions](#installing)
@@ -49,28 +49,55 @@ used in MatConvNet.
 > 3. These models are provided here for convenience, but please credit
 >    the original authors.
 
+- VGG models form the
+  [Very Deep Convolutional Networks for Large-Scale Visual Recognition](http://www.robots.ox.ac.uk/~vgg/research/very_deep/)
+  project
+  - **Citation:** `Very Deep Convolutional Networks for Large-Scale
+  Image Recognition', *Karen Simonyan and Andrew Zisserman,* arXiv
+  technical report, 2014, ([paper](http://arxiv.org/abs/1409.1556/)).
+  - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat)
+  - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat)
+
 - VGG models from the
   [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
   paper (v1.0.1):
+  - **Citation:** `Return of the Devil in the Details: Delving Deep
+    into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
+    Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
+    ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
   - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
   - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
   - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
   - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
   - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
   - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
-  - **Citation:** `Return of the Devil in the Details: Delving Deep
-    into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
-    Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
-    ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
 
 - Berkeley
   [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
-  (version downloaded on July 2014):
+  (version downloaded on September 2014):
+  - **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
   - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
   - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
-  - **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
 
-For example, in order to run ImageNet-S on a test image, use:
+This is a summary of the performance of these models on the ILSVRC
+2012 validation data:
+
+|               model|top-1 err.|top-5 err.|  images/s|
+|--------------------|----------|----------|----------|
+|           caffe-ref|      42.4|      19.6|     132.9|
+|          caffe-alex|      42.6|      19.6|     131.4|
+|               vgg-s|      36.7|      15.5|     120.0|
+|               vgg-m|      37.8|      16.1|     127.6|
+|               vgg-f|      41.9|      19.3|     147.0|
+|     vgg-verydeep-19|      30.5|      11.3|      40.3|
+|     vgg-verydeep-16|      30.9|      11.2|      46.2|
+
+Note that these error rates are computed on a single centre-crop and
+are therefore higher than what reported in some publications, where
+multiple evaluations per image are combined.
+
+**Example usage.** In order to run, say, `imagenet-vgg-s` on a test
+image, use:
 
     % setup MtConvNet in MATLAB
     run matlab/vl_setupnn
@@ -251,6 +278,8 @@ donation of the GPUs used to develop this software.
 
 ## Changes
 
+- 1.0-beta7 (September 2014) Adds VGG verydeep models.
+- 1.0-beta6 (September 2014) Performance improvements.
 - 1.0-beta5 (September 2014) Bugfixes, adds more documentation,
   improves ImageNet example.
 - 1.0-beta4 (August 2014) Further cleanup.

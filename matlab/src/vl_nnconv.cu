@@ -59,8 +59,11 @@ PackedData allOnes ;
 
 void atExit()
 {
-  packed_data_deinit (&temp)  ;
-  packed_data_deinit (&allOnes)  ;
+  if (persistentDataInitialized) {
+    packed_data_deinit (&temp)  ;
+    packed_data_deinit (&allOnes)  ;
+    persistentDataInitialized = false ;
+  }
 #ifdef ENABLE_GPU
   if (cublasInitialized) {
     cublasDestroy(thisCublasHandle) ;
@@ -407,9 +410,9 @@ void mexFunction(int nout, mxArray *out[],
   packed_data_init_empty(&derFilters) ;
   packed_data_init_empty(&derBiases) ;
   if (!persistentDataInitialized) {
-    persistentDataInitialized = true ;
     packed_data_init_empty(&temp) ;
     packed_data_init_empty(&allOnes) ;
+    persistentDataInitialized = true ;
   }
 
   /* -------------------------------------------------------------- */
@@ -497,7 +500,7 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
 
 #if ENABLE_GPU
-  gpuMode = (data.mode == matlabGpuArray) ;
+  gpuMode = (data.mode == matlabGpuArrayWrapper) ;
   if (gpuMode) {
     mxInitGPU() ;
     if (!cublasInitialized) {
@@ -514,14 +517,14 @@ void mexFunction(int nout, mxArray *out[],
   hasBiases = biases.geom.numElements > 0 ;
 
   /* check for GPU/data class consistency */
-  if (gpuMode && (filters.mode != matlabGpuArray & hasFilters)) {
-    mexErrMsgTxt("DATA is a GPU array but FILTERS is not.") ;
+  if (hasFilters && ! packed_data_are_compatible(&data, &filters)) {
+    mexErrMsgTxt("DATA and FILTERS are not both CPU or GPU arrays.") ;
   }
-  if (gpuMode && (biases.mode != matlabGpuArray & hasBiases)) {
-    mexErrMsgTxt("DATA is a GPU array but BIASES is not.") ;
+  if (hasBiases && ! packed_data_are_compatible(&data, &biases)) {
+    mexErrMsgTxt("DATA and BIASES are not both CPU or GPU arrays.") ;
   }
-  if (gpuMode && (derOutput.mode != matlabGpuArray & backMode)) {
-    mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
+  if (backMode && ! packed_data_are_compatible(&data, &derOutput)) {
+    mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
   }
   if (data.geom.classID != mxSINGLE_CLASS) {
     mexErrMsgTxt("DATA is not of class SINGLE.");
@@ -669,14 +672,14 @@ void mexFunction(int nout, mxArray *out[],
   /* auxiliary buffers */
   if (hasBiases) {
     if (allOnes.memorySize < allOnesGeom.numElements * sizeof(float) ||
-        (allOnes.mode == matlabGpuArray || allOnes.mode == cudaMallocMemory) != gpuMode) {
+        (allOnes.mode == matlabGpuArray || allOnes.mode == matlabGpuArrayWrapper) != gpuMode) {
       packed_data_deinit (&allOnes) ;
       packed_data_init_with_geom (&allOnes, gpuMode, allOnesGeom, true, true, 1.0f) ;
     }
   }
   if (!fullyConnectedMode) {
     if (temp.memorySize < tempGeom.numElements * sizeof(float) ||
-        (temp.mode == matlabGpuArray || temp.mode == cudaMallocMemory) != gpuMode) {
+        (temp.mode == matlabGpuArray || temp.mode == matlabGpuArrayWrapper) != gpuMode) {
       packed_data_deinit (&temp) ;
       packed_data_init_with_geom (&temp, gpuMode, tempGeom, true, false, 0);
     }

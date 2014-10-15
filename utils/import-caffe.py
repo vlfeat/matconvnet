@@ -18,6 +18,7 @@ import scipy
 import scipy.io
 import scipy.misc
 import google.protobuf
+from ast import literal_eval as make_tuple
 
 # --------------------------------------------------------------------
 #                                                     Helper functions
@@ -86,6 +87,11 @@ parser.add_argument('--average-image',
                     type=argparse.FileType('rb'),
                     nargs='?',
                     help='Average image')
+parser.add_argument('--average-value',
+                    type=str,
+                    nargs='?',
+                    default=None,
+                    help='Average image value')
 parser.add_argument('--synsets',
                     type=argparse.FileType('r'),
                     nargs='?',
@@ -218,6 +224,11 @@ if args.average_image:
     average_image = avgim_data['mean_img']
   else:
     print 'Unsupported average image format {}'.format(avgim_ext)
+elif args.average_value:
+  rgb = make_tuple(args.average_value)
+  print 'Using average image value', rgb
+  # this will be resized later to a constant image
+  average_image = np.array(rgb,dtype=float).reshape(1,1,3,order='F')
 
 # --------------------------------------------------------------------
 #                                                        Load synseths
@@ -401,7 +412,6 @@ for name in layers_name_param:
   layer_input_size = get_output_size(layer_input_size,
                                      support, pad, stride) + [num_output_channels]
   matlab_layers.append(mk)
-
 
 # --------------------------------------------------------------------
 #                                                Reshape and transpose

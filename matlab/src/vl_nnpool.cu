@@ -167,14 +167,14 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
 
 #if ENABLE_GPU
-  gpuMode = (data.mode == matlabGpuArray) ;
+  gpuMode = (data.mode == matlabGpuArrayWrapper) ;
   if (gpuMode) {
     mxInitGPU() ;
   }
 #endif
 
   /* check GPU/data class consistency */
-  if (gpuMode && (derOutput.mode != matlabGpuArray & backMode)) {
+  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper & backMode)) {
     mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
   }
   if (data.geom.classID != mxSINGLE_CLASS) {

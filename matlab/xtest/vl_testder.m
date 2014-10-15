@@ -1,7 +1,11 @@
-function vl_testder(g,x,dzdy,dzdx,delta)
+function vl_testder(g,x,dzdy,dzdx,delta,tau)
 
 if nargin < 5
   delta = 1e-3 ;
+end
+
+if nargin < 6
+  tau = [] ;
 end
 
 dzdy = gather(dzdy) ;
@@ -16,5 +20,5 @@ for i=1:numel(x)
   factors = dzdy .* (y_ - y)/delta ;
   dzdx_(i) = dzdx_(i) + sum(factors(:)) ;
 end
-vl_testsim(dzdx, dzdx_);
+vl_testsim(dzdx, dzdx_, tau);
 

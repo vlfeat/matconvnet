@@ -14,6 +14,7 @@ opts.learningRate = 0.001 ;
 opts.continue = false ;
 opts.expDir = 'data/exp' ;
 opts.conserveMemory = false ;
+opts.sync = true ;
 opts.prefetch = false ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
@@ -72,9 +73,11 @@ end
 info.train.objective = [] ;
 info.train.error = [] ;
 info.train.topFiveError = [] ;
+info.train.speed = [] ;
 info.val.objective = [] ;
 info.val.error = [] ;
 info.val.topFiveError = [] ;
+info.val.speed = [] ;
 
 lr = 0 ;
 res = [] ;
@@ -99,18 +102,19 @@ for epoch=1:opts.numEpochs
   info.train.objective(end+1) = 0 ;
   info.train.error(end+1) = 0 ;
   info.train.topFiveError(end+1) = 0 ;
+  info.train.speed(end+1) = 0 ;
   info.val.objective(end+1) = 0 ;
   info.val.error(end+1) = 0 ;
   info.val.topFiveError(end+1) = 0 ;
+  info.val.speed(end+1) = 0 ;
 
   % reset momentum if needed
   if prevLr ~= lr
     fprintf('learning rate changed (%f --> %f): resetting momentum\n', prevLr, lr) ;
     for l=1:numel(net.layers)
-      ly = net.layers{l} ;
-      if ~strcmp(ly.type, 'conv'), continue ; end
-      ly.filtersMomentum = 0 * ly.filtersMomentum ;
-      ly.biasesMomentum = 0 * ly.biasesMomentum ;
+      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
+      net.layers{l}.filtersMomentum = 0 * net.layers{l}.filtersMomentum ;
+      net.layers{l}.biasesMomentum = 0 * net.layers{l}.biasesMomentum ;
     end
   end
 
@@ -131,32 +135,36 @@ for epoch=1:opts.numEpochs
 
     % backprop
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one, res, 'conserveMemory', opts.conserveMemory) ;
-    info.train = updateError(opts, info.train, net, res) ;
+    res = vl_simplenn(net, im, one, res, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync) ;
 
     % gradient step
     for l=1:numel(net.layers)
-      ly = net.layers{l} ;
-      if ~strcmp(ly.type, 'conv'), continue ; end
+      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
 
-      ly.filtersMomentum = ...
-        opts.momentum * ly.filtersMomentum ...
-          - (lr * ly.filtersLearningRate) * (opts.weightDecay * ly.filtersWeightDecay) * ly.filters ...
-          - (lr * ly.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
+      net.layers{l}.filtersMomentum = ...
+        opts.momentum * net.layers{l}.filtersMomentum ...
+          - (lr * net.layers{l}.filtersLearningRate) * ...
+          (opts.weightDecay * net.layers{l}.filtersWeightDecay) * net.layers{l}.filters ...
+          - (lr * net.layers{l}.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
 
-      ly.biasesMomentum = ...
-        opts.momentum * ly.biasesMomentum ...
-          - (lr * ly.biasesLearningRate) * (opts.weightDecay * ly.biasesWeightDecay) * ly.biases ...
-          - (lr * ly.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
+      net.layers{l}.biasesMomentum = ...
+        opts.momentum * net.layers{l}.biasesMomentum ...
+          - (lr * net.layers{l}.biasesLearningRate) * ....
+          (opts.weightDecay * net.layers{l}.biasesWeightDecay) * net.layers{l}.biases ...
+          - (lr * net.layers{l}.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
 
-      ly.filters = ly.filters + ly.filtersMomentum ;
-      ly.biases = ly.biases + ly.biasesMomentum ;
-      net.layers{l} = ly ;
+      net.layers{l}.filters = net.layers{l}.filters + net.layers{l}.filtersMomentum ;
+      net.layers{l}.biases = net.layers{l}.biases + net.layers{l}.biasesMomentum ;
     end
 
     % print information
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/batch_time) ;
+    speed = numel(batch)/batch_time ;
+    info.train = updateError(opts, info.train, net, res, batch_time) ;
+
+    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
     n = t + numel(batch) - 1 ;
     fprintf(' err %.1f err5 %.1f', ...
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
@@ -184,12 +192,17 @@ for epoch=1:opts.numEpochs
     end
 
     net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, [], res, 'disableDropout', true) ;
-    info.val = updateError(opts, info.val, net, res) ;
+    res = vl_simplenn(net, im, [], res, ...
+      'disableDropout', true, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync) ;
 
     % print information
     batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)', batch_time, numel(batch)/batch_time) ;
+    speed = numel(batch)/batch_time ;
+    info.val = updateError(opts, info.val, net, res, batch_time) ;
+
+    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
     n = t + numel(batch) - 1 ;
     fprintf(' err %.1f err5 %.1f', ...
       info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
@@ -200,9 +213,11 @@ for epoch=1:opts.numEpochs
   info.train.objective(end) = info.train.objective(end) / numel(train) ;
   info.train.error(end) = info.train.error(end) / numel(train)  ;
   info.train.topFiveError(end) = info.train.topFiveError(end) / numel(train) ;
+  info.train.speed(end) = numel(train) / info.train.speed(end) ;
   info.val.objective(end) = info.val.objective(end) / numel(val) ;
   info.val.error(end) = info.val.error(end) / numel(val) ;
   info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
+  info.val.speed(end) = numel(val) / info.val.speed(end) ;
   save(sprintf(modelPath,epoch), 'net', 'info') ;
 
   figure(1) ; clf ;
@@ -236,7 +251,7 @@ for epoch=1:opts.numEpochs
 end
 
 % -------------------------------------------------------------------------
-function info = updateError(opts, info, net, res)
+function info = updateError(opts, info, net, res, speed)
 % -------------------------------------------------------------------------
 predictions = gather(res(end-1).x) ;
 sz = size(predictions) ;
@@ -244,6 +259,7 @@ n = prod(sz(1:2)) ;
 
 labels = net.layers{end}.class ;
 info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
+info.speed(end) = info.speed(end) + speed ;
 switch opts.errorType
   case 'multiclass'
     [~,predictions] = sort(predictions, 3, 'descend') ;

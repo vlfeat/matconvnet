@@ -119,6 +119,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 
 opts.res = [] ;
 opts.conserveMemory = false ;
+opts.sync = false ;
 opts.disableDropout = false ;
 opts.freezeDropout = false ;
 opts = vl_argparse(opts, varargin);
@@ -177,12 +178,15 @@ for i=1:n
     otherwise
       error('Unknown layer type %s', l.type) ;
   end
-  if opts.conserveMemory
+  if opts.conserveMemory & ~doder & i < numel(net.layers) - 1
+    % TODO: forget unnecesary intermediate computations even when
+    % derivatives are required
+    res(i).x = [] ;
   end
-  if gpuMode
-    %gpu =gpuDevice ;
-    %fprintf('fwd: %d %.1f\n', i, gpu.FreeMemory/1024^2) ;
-    %wait(gpuDevice) ;
+  if gpuMode & opts.sync
+    % This should make things slower, but on MATLAB 2014a it is necessary
+    % for any decent performance.
+    wait(gpuDevice) ;
   end
   res(i).time = toc(res(i).time) ;
 end
@@ -198,11 +202,6 @@ if doder
             vl_nnconv(res(i).x, l.filters, l.biases, ...
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
-        if opts.conserveMemory & gpuMode
-          % MATALB 2014a behaviour is odd: under memory pressure
-          % it will slows down if the GPU is not synchronized here
-          wait(gpuDevice) ;
-        end
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
@@ -229,6 +228,9 @@ if doder
     end
     if opts.conserveMemory
       res(i+1).dzdx = [] ;
+    end
+    if gpuMode & opts.sync
+      wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;
   end
