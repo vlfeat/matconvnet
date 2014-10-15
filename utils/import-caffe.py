@@ -470,6 +470,7 @@ print 'Exporting to {}'.format(args.output.name)
 classes = {}
 if synsets_wnid: classes['name'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
 if synsets_name: classes['description'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
+if not classes: classes = [];
 
 mnet = {
   'layers': np.array(matlab_layers).reshape(1,-1),
