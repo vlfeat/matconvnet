@@ -47,17 +47,11 @@ MEXFLAGS_GPU = \
 -f "$(MEXOPTS)" \
  $(MEXFLAGS)
 SHELL = /bin/bash # sh not good enough
-
-# at least compute 2.0 required
 NVCC = $(CUDAROOT)/bin/nvcc
-NVCCOPTS = \
--gencode=arch=compute_20,code=sm_21 \
--gencode=arch=compute_30,code=sm_30
 
 ifneq ($(DEBUG),)
 MEXFLAGS += -g
 MEXFLAGS_GPU += -g
-NVCCOPTS += -g
 endif
 
 # Mac OS X Intel
@@ -67,7 +61,6 @@ endif
 
 # Linux
 ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
-NVCCOPTS += --compiler-options=-fPIC
 MEXFLAGS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
 endif
 
@@ -127,7 +120,9 @@ matlab/mex/.build/%.o : matlab/src/bits/%.cpp
 	mv -f "$(notdir $(@))" "$(@)"
 
 matlab/mex/.build/%.o : matlab/src/bits/%.cu
-	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
+	MW_NVCC_PATH='$(NVCC)' \
+	$(MEX) -c $(MEXFLAGS_GPU) "$(<)" $(nvcc_filter)
+	mv -f "$(notdir $(@))" "$(@)"
 
 # MEX files
 ifneq ($(ENABLE_GPU),)
