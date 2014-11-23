@@ -8,28 +8,32 @@
 # This file is part of the VLFeat library and is made available under
 # the terms of the BSD license (see the COPYING file).
 
-# For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
-
+# Code
 ENABLE_GPU ?=
 ENABLE_IMREADJPEG ?=
 DEBUG ?=
 ARCH ?= maci64
-CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
+CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 
-#CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
+# Remark: each MATLAB version requires a particular CUDA Toolkit version.
+# Note that multiple CUDA Toolkits can be installed.
 #MATLABROOT ?= /Applications/MATLAB_R2013b.app
-#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
 
-NAME = matconvnet
-VER = 1.0-beta7
-DIST = $(NAME)-$(VER)
+# Documentation
 MARKDOWN = markdown2
 HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
 PDFLATEX = pdflatex
 BIBTEX = bibtex
+
+# Maintenance
+NAME = matconvnet
+VER = 1.0-beta7
+DIST = $(NAME)-$(VER)
 RSYNC = rsync
 
 # --------------------------------------------------------------------
@@ -65,7 +69,7 @@ MEXFLAGS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
 endif
 
 # --------------------------------------------------------------------
-#                                                           Do the job
+#                                                      Build MEX files
 # --------------------------------------------------------------------
 
 nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
@@ -124,7 +128,7 @@ matlab/mex/.build/%.o : matlab/src/bits/%.cu
 	$(MEX) -c $(MEXFLAGS_GPU) "$(<)" $(nvcc_filter)
 	mv -f "$(notdir $(@))" "$(@)"
 
-# MEX files
+# MEX code
 ifneq ($(ENABLE_GPU),)
 # prefer .cu over .cpp and .c when GPU is enabled; this rule must come before the following ones
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.build/.stamp $(cpp_tgt)
@@ -138,12 +142,15 @@ matlab/mex/%.mex$(MEXARCH) : matlab/src/%.c $(cpp_tgt)
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp $(cpp_tgt)
 	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
 
-# This MEX files does not require so many binary dependencies (in particular, no GPU code)
+# This MEX file does not require GPU code, but requires libjpeg
 matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXFLAGS+=-I/opt/local/include -L/opt/local/lib -ljpeg
 matlab/mex/vl_imreadjpeg.mex$(MEXARCH): matlab/src/vl_imreadjpeg.c
 	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)"
 
-# Other targets
+# --------------------------------------------------------------------
+#                                                        Documentation
+# --------------------------------------------------------------------
+
 doc: doc/index.html doc/matconvnet-manual.pdf
 
 doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
@@ -162,7 +169,10 @@ doc/.build/index.html.raw : doc/index.md
 	mkdir -p doc/.build
 	$(MARKDOWN) -x tables $(<) > $(@)
 
-# Other targets
+# --------------------------------------------------------------------
+#                                                          Maintenance
+# --------------------------------------------------------------------
+
 info:
 	@echo "mex_src=$(mex_src)"
 	@echo "mex_tgt=$(mex_tgt)"
@@ -176,7 +186,7 @@ clean:
 	rm -rf matlab/mex/.build
 
 distclean: clean
-	rm -rf matlab/mex/
+	rm -rf matlab/mex
 	rm -f doc/index.html doc/matconvnet-manual.pdf
 	rm -f $(NAME)-*.tar.gz
 
