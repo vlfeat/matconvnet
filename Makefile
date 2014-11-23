@@ -17,6 +17,11 @@ ARCH ?= maci64
 CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
+#MATLABROOT ?= /Applications/MATLAB_R2013b.app
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
+#MATLABROOT ?= /Applications/MATLAB_R2014b.app
+
 NAME = matconvnet
 VER = 1.0-beta7
 DIST = $(NAME)-$(VER)
@@ -35,10 +40,12 @@ RSYNC = rsync
 MEX = $(MATLABROOT)/bin/mex
 MEXEXT = $(MATLABROOT)/bin/mexext
 MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
-MEXOPTS = -largeArrayDims -lmwblas
-MEXOPTS_GPU = \
--DENABLE_GPU -f matlab/src/config/mex_CUDA_$(ARCH).xml \
--largeArrayDims -lmwblas
+MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
+MEXFLAGS = -largeArrayDims -lmwblas
+MEXFLAGS_GPU = \
+-DENABLE_GPU \
+-f "$(MEXOPTS)" \
+ $(MEXFLAGS)
 SHELL = /bin/bash # sh not good enough
 
 # at least compute 2.0 required
@@ -48,20 +55,20 @@ NVCCOPTS = \
 -gencode=arch=compute_30,code=sm_30
 
 ifneq ($(DEBUG),)
-MEXOPTS += -g
-MEXOPTS_GPU += -g
+MEXFLAGS += -g
+MEXFLAGS_GPU += -g
 NVCCOPTS += -g
 endif
 
 # Mac OS X Intel
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
-MEXOPTS_GPU += -L$(CUDAROOT)/lib -lcublas -lcudart
+MEXFLAGS_GPU += -L$(CUDAROOT)/lib -lcublas -lcudart
 endif
 
 # Linux
 ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
 NVCCOPTS += --compiler-options=-fPIC
-MEXOPTS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
+MEXFLAGS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
 endif
 
 # --------------------------------------------------------------------
@@ -100,48 +107,48 @@ mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 
 cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
+cpp_tgt:=$(subst matlab/src/bits/,matlab/mex/.build/,$(cpp_tgt))
 
 .PHONY: all, distclean, clean, info, pack, post, post-doc, doc
 
 all: $(mex_tgt)
 
-matlab/mex/.stamp:
-	mkdir matlab/mex ; touch matlab/mex/.stamp
+# Create build directory
+matlab/mex/.build/.stamp:
+	mkdir -p matlab/mex/.build ; touch matlab/mex/.build/.stamp
+$(mex_tgt): matlab/mex/.build/.stamp
+$(cpp_tgt): matlab/mex/.build/.stamp
 
 # Standard code
-matlab/src/bits/%.o : matlab/src/bits/%.cpp
-	$(MEX) -c $(MEXOPTS) "$(<)"
+.PRECIOUS: matlab/mex/.build/%.o
+
+matlab/mex/.build/%.o : matlab/src/bits/%.cpp
+	$(MEX) -c $(MEXFLAGS) "$(<)"
 	mv -f "$(notdir $(@))" "$(@)"
 
-matlab/src/bits/%.o : matlab/src/bits/%.cu
+matlab/mex/.build/%.o : matlab/src/bits/%.cu
 	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
 
 # MEX files
-matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXOPTS+=-I/opt/local/include -L/opt/local/lib -ljpeg
-
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.c matlab/mex/.stamp $(cpp_tgt)
-	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
-
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
-	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
-
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
-ifeq ($(ENABLE_GPU),)
-	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
-	$(MEX) $(MEXOPTS) \
-	  "matlab/mex/$(*).cpp" $(cpp_tgt) \
-	  -output "$(@)" \
-	  $(nvcc_filter)
-	rm -f "matlab/mex/$(*).cpp"
-else
-	echo $(@)
-	MW_NVCC_PATH='$(NVCC)' $(MEX) \
-	   -output "$(@)" \
-	   "$(<)" $(cpp_tgt) \
-	   $(MEXOPTS_GPU) \
-	   $(nvcc_filter)
+ifneq ($(ENABLE_GPU),)
+# prefer .cu over .cpp and .c when GPU is enabled; this rule must come before the following ones
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.build/.stamp $(cpp_tgt)
+	MW_NVCC_PATH='$(NVCC)' \
+	$(MEX) $(MEXFLAGS_GPU) "$(<)" -output "$(@)" $(cpp_tgt) $(nvcc_filter)
 endif
 
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.c $(cpp_tgt)
+	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
+
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp $(cpp_tgt)
+	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
+
+# This MEX files does not require so many binary dependencies (in particular, no GPU code)
+matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXFLAGS+=-I/opt/local/include -L/opt/local/lib -ljpeg
+matlab/mex/vl_imreadjpeg.mex$(MEXARCH): matlab/src/vl_imreadjpeg.c
+	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)"
+
+# Other targets
 doc: doc/index.html doc/matconvnet-manual.pdf
 
 doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
@@ -171,6 +178,7 @@ clean:
 	find . -name '*~' -delete
 	rm -f $(cpp_tgt)
 	rm -rf doc/.build
+	rm -rf matlab/mex/.build
 
 distclean: clean
 	rm -rf matlab/mex/

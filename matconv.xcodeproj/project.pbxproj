@@ -12,6 +12,9 @@
 		2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D375DCA18A848E2008A97EE /* im2col.cpp */; };
 		2D375DCD18A848E2008A97EE /* im2col.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D375DCB18A848E2008A97EE /* im2col.hpp */; };
 		2D95CDA518EDE3A50076E3A2 /* im2col_gpu.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */; };
+		2D9DC1CC1A209EBF0053CB7D /* vl_nnconv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */; };
+		2D9DC1D01A209EFD0053CB7D /* vl_nnnormalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */; };
+		2D9DC1D11A209EFD0053CB7D /* vl_nnpool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */; };
 		2DADAFF718E6430500165C90 /* normalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DADAFF518E6430500165C90 /* normalize.cpp */; };
 		2DADAFF818E6430500165C90 /* normalize.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DADAFF618E6430500165C90 /* normalize.hpp */; };
 		2DE27163197A5531001768CA /* vl_imreadjpeg.c in Sources */ = {isa = PBXBuildFile; fileRef = 2DE27162197A5531001768CA /* vl_imreadjpeg.c */; };
@@ -75,6 +78,9 @@
 		2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = im2col_gpu.cu; path = matlab/src/bits/im2col_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = pooling_gpu.cu; path = matlab/src/bits/pooling_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = normalize_gpu.cu; path = matlab/src/bits/normalize_gpu.cu; sourceTree = "<group>"; };
+		2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnconv.cpp; path = matlab/src/vl_nnconv.cpp; sourceTree = "<group>"; };
+		2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnnormalize.cpp; path = matlab/src/vl_nnnormalize.cpp; sourceTree = "<group>"; };
+		2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnpool.cpp; path = matlab/src/vl_nnpool.cpp; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
 		2DADAFF518E6430500165C90 /* normalize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = normalize.cpp; path = matlab/src/bits/normalize.cpp; sourceTree = "<group>"; };
 		2DADAFF618E6430500165C90 /* normalize.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = normalize.hpp; path = matlab/src/bits/normalize.hpp; sourceTree = "<group>"; };
@@ -134,12 +140,15 @@
 		2D375DBD18A7F796008A97EE /* src */ = {
 			isa = PBXGroup;
 			children = (
-				2D6D0420196A892E00022E96 /* config */,
 				2D375DCE18A84923008A97EE /* bits */,
-				2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */,
+				2D6D0420196A892E00022E96 /* config */,
 				2DE27162197A5531001768CA /* vl_imreadjpeg.c */,
-				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
+				2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */,
+				2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */,
+				2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */,
 				2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */,
+				2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */,
+				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -330,9 +339,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				2DE27163197A5531001768CA /* vl_imreadjpeg.c in Sources */,
+				2D9DC1CC1A209EBF0053CB7D /* vl_nnconv.cpp in Sources */,
 				2D375DCC18A848E2008A97EE /* im2col.cpp in Sources */,
 				2D06568918AA79BB006545B4 /* pooling.cpp in Sources */,
 				2DADAFF718E6430500165C90 /* normalize.cpp in Sources */,
+				2D9DC1D11A209EFD0053CB7D /* vl_nnpool.cpp in Sources */,
+				2D9DC1D01A209EFD0053CB7D /* vl_nnnormalize.cpp in Sources */,
 				2D95CDA518EDE3A50076E3A2 /* im2col_gpu.cu in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
