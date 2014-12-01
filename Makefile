@@ -8,23 +8,32 @@
 # This file is part of the VLFeat library and is made available under
 # the terms of the BSD license (see the COPYING file).
 
-# For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
-
+# Code
 ENABLE_GPU ?=
 ENABLE_IMREADJPEG ?=
 DEBUG ?=
 ARCH ?= maci64
-CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
+CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 
-NAME = matconvnet
-VER = 1.0-beta7
-DIST = $(NAME)-$(VER)
+# Remark: each MATLAB version requires a particular CUDA Toolkit version.
+# Note that multiple CUDA Toolkits can be installed.
+#MATLABROOT ?= /Applications/MATLAB_R2013b.app
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
+#MATLABROOT ?= /Applications/MATLAB_R2014b.app
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
+
+# Documentation
 MARKDOWN = markdown2
 HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
 PDFLATEX = pdflatex
 BIBTEX = bibtex
+
+# Maintenance
+NAME = matconvnet
+VER = 1.0-beta7
+DIST = $(NAME)-$(VER)
 RSYNC = rsync
 
 # --------------------------------------------------------------------
@@ -35,37 +44,32 @@ RSYNC = rsync
 MEX = $(MATLABROOT)/bin/mex
 MEXEXT = $(MATLABROOT)/bin/mexext
 MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
-MEXOPTS = -largeArrayDims -lmwblas
-MEXOPTS_GPU = \
--DENABLE_GPU -f matlab/src/config/mex_CUDA_$(ARCH).xml \
--largeArrayDims -lmwblas
+MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
+MEXFLAGS = -largeArrayDims -lmwblas
+MEXFLAGS_GPU = \
+-DENABLE_GPU \
+-f "$(MEXOPTS)" \
+ $(MEXFLAGS)
 SHELL = /bin/bash # sh not good enough
-
-# at least compute 2.0 required
 NVCC = $(CUDAROOT)/bin/nvcc
-NVCCOPTS = \
--gencode=arch=compute_20,code=sm_21 \
--gencode=arch=compute_30,code=sm_30
 
 ifneq ($(DEBUG),)
-MEXOPTS += -g
-MEXOPTS_GPU += -g
-NVCCOPTS += -g
+MEXFLAGS += -g
+MEXFLAGS_GPU += -g
 endif
 
 # Mac OS X Intel
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
-MEXOPTS_GPU += -L$(CUDAROOT)/lib -lcublas -lcudart
+MEXFLAGS_GPU += -L$(CUDAROOT)/lib -lcublas -lcudart
 endif
 
 # Linux
 ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
-NVCCOPTS += --compiler-options=-fPIC
-MEXOPTS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
+MEXFLAGS_GPU += -L$(CUDAROOT)/lib64 -lcublas -lcudart
 endif
 
 # --------------------------------------------------------------------
-#                                                           Do the job
+#                                                      Build MEX files
 # --------------------------------------------------------------------
 
 nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
@@ -100,47 +104,52 @@ mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 
 cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
+cpp_tgt:=$(subst matlab/src/bits/,matlab/mex/.build/,$(cpp_tgt))
 
 .PHONY: all, distclean, clean, info, pack, post, post-doc, doc
 
 all: $(mex_tgt)
 
-matlab/mex/.stamp:
-	mkdir matlab/mex ; touch matlab/mex/.stamp
+# Create build directory
+matlab/mex/.build/.stamp:
+	mkdir -p matlab/mex/.build ; touch matlab/mex/.build/.stamp
+$(mex_tgt): matlab/mex/.build/.stamp
+$(cpp_tgt): matlab/mex/.build/.stamp
 
 # Standard code
-matlab/src/bits/%.o : matlab/src/bits/%.cpp
-	$(MEX) -c $(MEXOPTS) "$(<)"
+.PRECIOUS: matlab/mex/.build/%.o
+
+matlab/mex/.build/%.o : matlab/src/bits/%.cpp
+	$(MEX) -c $(MEXFLAGS) "$(<)"
 	mv -f "$(notdir $(@))" "$(@)"
 
-matlab/src/bits/%.o : matlab/src/bits/%.cu
-	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
+matlab/mex/.build/%.o : matlab/src/bits/%.cu
+	MW_NVCC_PATH='$(NVCC)' \
+	$(MEX) -c $(MEXFLAGS_GPU) "$(<)" $(nvcc_filter)
+	mv -f "$(notdir $(@))" "$(@)"
 
-# MEX files
-matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXOPTS+=-I/opt/local/include -L/opt/local/lib -ljpeg
-
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.c matlab/mex/.stamp $(cpp_tgt)
-	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
-
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
-	$(MEX) $(MEXOPTS) "$(<)" -output "$(@)" $(cu_tgt) $(nvcc_filter)
-
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
-ifeq ($(ENABLE_GPU),)
-	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
-	$(MEX) $(MEXOPTS) \
-	  "matlab/mex/$(*).cpp" $(cpp_tgt) \
-	  -output "$(@)" \
-	  $(nvcc_filter)
-	rm -f "matlab/mex/$(*).cpp"
-else
-	echo $(@)
-	MW_NVCC_PATH='$(NVCC)' $(MEX) \
-	   -output "$(@)" \
-	   "$(<)" $(cpp_tgt) \
-	   $(MEXOPTS_GPU) \
-	   $(nvcc_filter)
+# MEX code
+ifneq ($(ENABLE_GPU),)
+# prefer .cu over .cpp and .c when GPU is enabled; this rule must come before the following ones
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.build/.stamp $(cpp_tgt)
+	MW_NVCC_PATH='$(NVCC)' \
+	$(MEX) $(MEXFLAGS_GPU) "$(<)" -output "$(@)" $(cpp_tgt) $(nvcc_filter)
 endif
+
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.c $(cpp_tgt)
+	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
+
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp $(cpp_tgt)
+	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
+
+# This MEX file does not require GPU code, but requires libjpeg
+matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXFLAGS+=-I/opt/local/include -L/opt/local/lib -ljpeg
+matlab/mex/vl_imreadjpeg.mex$(MEXARCH): matlab/src/vl_imreadjpeg.c
+	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)"
+
+# --------------------------------------------------------------------
+#                                                        Documentation
+# --------------------------------------------------------------------
 
 doc: doc/index.html doc/matconvnet-manual.pdf
 
@@ -160,7 +169,10 @@ doc/.build/index.html.raw : doc/index.md
 	mkdir -p doc/.build
 	$(MARKDOWN) -x tables $(<) > $(@)
 
-# Other targets
+# --------------------------------------------------------------------
+#                                                          Maintenance
+# --------------------------------------------------------------------
+
 info:
 	@echo "mex_src=$(mex_src)"
 	@echo "mex_tgt=$(mex_tgt)"
@@ -171,9 +183,10 @@ clean:
 	find . -name '*~' -delete
 	rm -f $(cpp_tgt)
 	rm -rf doc/.build
+	rm -rf matlab/mex/.build
 
 distclean: clean
-	rm -rf matlab/mex/
+	rm -rf matlab/mex
 	rm -f doc/index.html doc/matconvnet-manual.pdf
 	rm -f $(NAME)-*.tar.gz
 
