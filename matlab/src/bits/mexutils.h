@@ -21,6 +21,11 @@ the terms of the BSD license (see the COPYING file).
 #include<stdarg.h>
 #include<assert.h>
 
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#endif
+
 typedef mwSize vl_size ;
 typedef int unsigned  vl_uint  ;
 typedef int vl_bool ;
