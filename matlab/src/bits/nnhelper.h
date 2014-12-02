@@ -299,6 +299,7 @@ bool packed_data_are_compatible(PackedData const * a, PackedData const * b)
     return (b->mode == matlabGpuArray || b->mode == matlabGpuArrayWrapper) ;
   default:
     abort() ;
+    return false;
   }
 }
 
