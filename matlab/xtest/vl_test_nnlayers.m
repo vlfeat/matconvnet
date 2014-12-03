@@ -1,4 +1,7 @@
 function vl_test_nnlayers(gpu,tests)
+% VL_TEST_NNLAYERS Test the layers with numeric differentiation
+%    VL_TEST_NNLAYERS Test the CPU implementation.
+%    VL_TEST_NNLAYERS(true) Test the GPU implementation.
 
 range = 100 ;
 
