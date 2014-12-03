@@ -1,10 +1,15 @@
 function vl_compilenn( varargin )
 % VL_COMPILENN  Compile the MatConvNet toolbox
 %    VL_COMPILENN() function compiles the MatConvNet toolbox.
-%    This function need properly configured mex compilation environment
+%    Simple compilation tool for Windows 64 platforms without need for Make
+%    implementation.
+%    This function needs properly configured mex compilation environment
 %    (see 'mex -setup').
-%    For GPU code, nvcc must be in PATH.
-%    Tested with Matlab R2014a, Visual C++ 2010 and CUDA Toolkit 6.5.
+%    For GPU code, 'nvcc' must be in PATH.
+%    GPU compilation tested on configurations: 
+%      Windows 7 x64, Matlab R2014a, Visual C++ 2010 and CUDA Toolkit 6.5.
+%        (unable to compile with Visual C++ 2013).
+%      Windows 8 x64, Matlab R2014a, Visual C++ 2013 and CUDA Tollkit 6.5.
 %    
 %  VL_COMPILENN accepts the following options:
 %  enable_gpu : [false]
@@ -19,6 +24,8 @@ function vl_compilenn( varargin )
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+dest_dir = fullfile('matlab', 'mex');
+if ~exist(dest_dir, 'dir'), mkdir(dest_dir); end
 run(fullfile(fileparts(mfilename('fullpath')), 'vl_setupnn.m'));
 
 opts.enable_gpu = false;
@@ -31,35 +38,33 @@ opts = vl_argparse(opts, varargin);
 % Libraries
 mex_libs = {'-largeArrayDims','-lmwblas'};
 cumex_libs = {'-lcudart', '-lcufft', '-lcublas'};
+cupath = '';
 switch computer
   case 'PCWIN64'
     arch = 'win64';
     cumex_libs = [cumex_libs '-lgpu'];
     objext = 'obj';
     check_clpath();
-  case 'GLNXA64'
-    arch = 'glnxa64';
-    cumex_libs = [cumex_libs, '-lmwgpu'];
-    objext = 'o';
+    % On some machines, CUDA lib is not int linker libpath, add it just in
+    % case.
+    if opts.enable_gpu, cupath = getcupath(); end;
+  otherwise
+    error('Unsupported platform. For Linux and Mac OS X please use "!make".');
 end
 
 % Compiler options
 mex_opts = {};
-cumex_opts = {['-L/MATLAB_ROOT/bin/' arch]};
+cumex_opts = {['-L/MATLAB_ROOT/bin/' arch], ['-L' cupath]};
 nvcc_opts = ['-Xcompiler /MD -DENABLE_GPU '...
-  '-I/MATLAB_ROOT/extern/include '...
-  '-I/MATLAB_ROOT/toolbox/distcomp/gpu/extern/include'];
+  '-I"' fullfile(matlabroot, 'extern','include') '" '...
+  '-I"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'];
 if opts.verbose
   mex_opts{end+1} = '-v';
   nvcc_opts = ['-v ' nvcc_opts];
 end
 
-% Directories
-dest_dir = fullfile('matlab', 'mex');
 src_dir = fullfile('matlab', 'src');
 tmp_dir = fullfile('matlab', 'mex', '.build');
-
-if ~exist(dest_dir, 'dir'), mkdir(dest_dir); end
 if ~exist(tmp_dir, 'dir'), mkdir(tmp_dir); end
 
 bits_src  = @(name) fullfile(src_dir, 'bits', [name '.cpp']);
@@ -71,7 +76,7 @@ cubits_dst = @(name) fullfile(tmp_dir, [name '.o']);
 mex_dst   = @(name) fullfile(dest_dir, [name '.' mexext]);
 
 % Definitions of compile operations
-  do.mex = @(src, dst, objfiles) ...
+do.mex = @(src, dst, objfiles) ...
   mex(mex_opts{:}, mex_libs{:}, src, '-output', dst, objfiles{:});
 do.mexc = @(src, dst) [mex('-c', src, mex_opts{:}), ...
   movefile(objfilename(src), dst)];
@@ -79,7 +84,7 @@ do.cumex = @(src, dst, objfiles) ...
   mex(mex_opts{:}, cumex_opts{:}, mex_libs{:}, cumex_libs{:}, src, ...
   '-output', dst, objfiles{:});
 do.cumexc = @(src, dst, objfiles) ...
-  system(sprintf('nvcc -O3 -DNDEBUG -c %s %s -o %s', src, nvcc_opts, dst));  
+  systemc(sprintf('nvcc -O3 -DNDEBUG -c %s %s -o %s', src, nvcc_opts, dst));  
 
 % Compile the common CPU objects
 bits_files = {'im2col', 'pooling', 'normalize', 'subsample'};
@@ -111,14 +116,35 @@ else
   end
 end
 
+  function [status] = systemc(cmd)
+    [status] = system(cmd);
+    if status, error('%s failed.', cmd); end
+  end
+
   function fn = objfilename(src)
     [~, fn] = fileparts(src); fn = [fn '.' objext];
+  end
+
+  function [cupath] = getcupath()
+    nvcc_path = whichc('nvcc');
+    if isnan(nvcc_path), error('NVCC not found in your path.'); end;
+    nvcc_dir = fileparts(nvcc_path);
+    cupath = fullfile(nvcc_dir(1:end-3), 'lib', 'x64');
+  end
+  
+  function p = whichc(cmd)
+    switch computer
+      case 'PCWIN64'
+        [st, p] = system(sprintf('where %s', cmd));
+        if st, p = nan;
+        else p = p(1:end-1); end;
+    end
   end
 
   function check_clpath()
     % Checks whether the cl.ext is in the path (needed for the nvcc). If
     % not, tries to guess the location out of mex configuration.
-    status = system('cl.exe');
+    status = system('cl.exe -help');
     if status == 1
       warning('CL.EXE not found in PATH. Trying to guess out of mex setup.');
       cc = mex.getCompilerConfigurations('c++');
