@@ -13,10 +13,11 @@ models = {...
   'vgg-verydeep-16'} ;
 
 for i = 1:numel(models)
-  opts.dataDir = 'data/imagenet12' ;
-  opts.expDir = sprintf('data/models-eval/%s', models{i}) ;
+  opts.dataDir = fullfile('data','imagenet12') ;
+  opts.expDir = fullfile('data','models-eval', models{i}) ;
   opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-  opts.modelPath = sprintf('data/models/imagenet-%s.mat', models{i}) ;
+  opts.modelPath = fullfile('data', 'models', ...
+    sprintf('imagenet-%s.mat', models{i})) ;
   opts.lite = false ;
   opts.numFetchThreads = 12 ;
   opts.train.batchSize = 64 ;
@@ -38,7 +39,7 @@ fprintf('|%20s|%10s|%10s|%10s|\n', 'model', 'top-1 err.', 'top-5 err.', 'images/
 fprintf('%s\n', repmat('-',1,20+10+10+10+5)) ;
 
 for i = 1:numel(models)
-  opts.expDir = sprintf('data/models-eval/%s', models{i}) ;
+  opts.expDir = fullfile('data', 'models-eval', models{i}) ;
   resultPath = fullfile(opts.expDir, 'results.mat') ;
   load(resultPath, 'results') ;
 

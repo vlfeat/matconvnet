@@ -1,10 +1,10 @@
-function cnn_mnist(varargin)
+function [net, info] = cnn_mnist(varargin)
 % CNN_MNIST  Demonstrated MatConNet on MNIST
 
-run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+run(fullfile(fileparts(mfilename('fullpath')),'..','matlab','vl_setupnn.m')) ;
 
-opts.dataDir = 'data/mnist' ;
-opts.expDir = 'data/mnist-baseline' ;
+opts.dataDir = fullfile('data','mnist') ;
+opts.expDir = fullfile('data','mnist-baseline') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train.batchSize = 100 ;
 opts.train.numEpochs = 100 ;
@@ -18,7 +18,7 @@ opts = vl_argparse(opts, varargin) ;
 %                                                         Prepare data
 % --------------------------------------------------------------------
 
-if exist(opts.imdbPath)
+if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
 else
   imdb = getMnistImdb(opts) ;
@@ -72,7 +72,7 @@ if opts.train.useGpu
   imdb.images.data = gpuArray(imdb.images.data) ;
 end
 
-[net,info] = cnn_train(net, imdb, @getBatch, ...
+[net, info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
     'val', find(imdb.images.set == 3)) ;
 
