@@ -88,13 +88,13 @@ for epoch=1:opts.numEpochs
   lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
 
   % fast-forward to where we stopped
-  modelPath = fullfile(opts.expDir, 'net-epoch-%d.mat') ;
+  modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
   if opts.continue
-    if exist(sprintf(modelPath, epoch),'file'), continue ; end
+    if exist(modelPath(epoch),'file'), continue ; end
     if epoch > 1
       fprintf('resuming by loading epoch %d\n', epoch-1) ;
-      load(sprintf(modelPath, epoch-1), 'net', 'info') ;
+      load(modelPath(epoch-1), 'net', 'info') ;
     end
   end
 
@@ -220,7 +220,7 @@ for epoch=1:opts.numEpochs
   info.val.error(end) = info.val.error(end) / numel(val) ;
   info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
   info.val.speed(end) = numel(val) / info.val.speed(end) ;
-  save(sprintf(modelPath,epoch), 'net', 'info') ;
+  save(modelPath(epoch), 'net', 'info') ;
 
   figure(1) ; clf ;
   subplot(1,2,1) ;
