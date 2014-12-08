@@ -33,8 +33,10 @@ if isnan(opts.train), opts.train = [] ; end
 
 for i=1:numel(net.layers)
   if ~strcmp(net.layers{i}.type,'conv'), continue; end
-  net.layers{i}.filtersMomentum = zeros('like',net.layers{i}.filters) ;
-  net.layers{i}.biasesMomentum = zeros('like',net.layers{i}.biases) ;
+  net.layers{i}.filtersMomentum = zeros(size(net.layers{i}.filters), ...
+    class(net.layers{i}.filters)) ;
+  net.layers{i}.biasesMomentum = zeros(size(net.layers{i}.biases), ...
+    class(net.layers{i}.biases)) ; %#ok<*ZEROLIKE>
   if ~isfield(net.layers{i}, 'filtersLearningRate')
     net.layers{i}.filtersLearningRate = 1 ;
   end
