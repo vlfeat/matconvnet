@@ -6,7 +6,9 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
 \usepackage{pgfplots} 
-\usepackage{minted}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{textcomp}
 \usepackage[colorlinks]{hyperref}
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
@@ -25,6 +27,33 @@
 
 \tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] \tikzstyle{data} = []
 \tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+
+% Taken inspiration from http://www.tjansson.dk/2008/11/using-lstlisting-to-include-code-in-latex/
+\definecolor{listinggray}{gray}{0.9}
+\definecolor{lbcolor}{rgb}{0.8,0.8,0.8}
+\lstset{
+	%backgroundcolor=\color{lbcolor},
+	tabsize=4,
+	rulecolor=,
+	language=matlab,
+	basicstyle=\footnotesize,
+	upquote=true,
+	columns=fixed,
+	aboveskip={1.2\baselineskip},
+	belowskip={1.2\baselineskip},
+	showstringspaces=false,
+	extendedchars=true,
+	breaklines=false,
+	prebreak = \raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+	%frame=single,
+	showtabs=false,
+	showspaces=false,
+	showstringspaces=false,
+	identifierstyle=\ttfamily,
+	keywordstyle=\color[rgb]{0,0,1},
+	commentstyle=\itshape\color[rgb]{0.133,0.545,0.133},
+	stringstyle=\color[rgb]{0.627,0.126,0.941},
+}
 
 % ------------------------------------------------------------------
 \begin{document}
@@ -556,12 +585,13 @@ It is easy enough to combine the computational blocks of Sect.~\ref{s:blocks} in
 % ------------------------------------------------------------------
 
 \verb!vl_simplenn! is easy to use with pre-trained models (see the homepage to download some). For example, the following code downloads a model pre-trained on the ImageNet data and applies it to one of MATLAB stock images:
-\begin{minted}{matlab}
-% setup MtConvNet in MATLAB
+\begin{lstlisting}[language=Matlab]
+% setup MatConvNet in MATLAB
 run matlab/vl_setupnn
 
 % download a pre-trained CNN from the web
-urlwrite('http://www.vlfeat.org/sandbox-matconvnet/models/imagenet-vgg-f.mat', ...
+urlwrite(...
+  'http://www.vlfeat.org/sandbox-matconvnet/models/imagenet-vgg-f.mat', ...
   'imagenet-vgg-f.mat') ;
 net = load('imagenet-vgg-f.mat') ;
 
@@ -570,24 +600,24 @@ im = imread('peppers.png') ;
 im_ = single(im) ; % note: 255 range
 im_ = imresize(im_, net.normalization.imageSize(1:2)) ;
 im_ = im_ - net.normalization.averageImage ;
-\end{minted}
+\end{lstlisting}
 Note that the image should be preprocessed before running the network. While preprocessing specifics depend on the model, the pre-trained model contain a \verb!net.normalization! field that describes the type of preprocessing that is expected. Note in particular that this network takes images of a fixed size as input and requires removing the mean; also, image intensities are normalized in the range [0,255].
 
 The next step is running the CNN. This will return a \verb!res! structure with the output of the network layers:
-\begin{minted}{matlab}
+\begin{lstlisting}[language=Matlab]
 % run the CNN
 res = vl_simplenn(net, im_) ;
-\end{minted}
+\end{lstlisting}
 
 The output of the last layer can be used to classify the image. The class names are contained in the \verb!net! structure for convenience:
-\begin{minted}{matlab}
+\begin{lstlisting}[language=Matlab]
 % show the classification result
 scores = squeeze(gather(res(end).x)) ;
 [bestScore, best] = max(scores) ;
 figure(1) ; clf ; imagesc(im) ;
 title(sprintf('%s (%d), score %.3f',...
 net.classes.description{best}, best, bestScore)) ;
-\end{minted}
+\end{lstlisting}
 
 Note that several extensions are possible. First, images can be cropped rather than rescaled. Second, multiple crops can be fed to the network and results averaged, usually for improved results. Third, the output of the network can be used as generic features for image encoding.
 
