@@ -156,10 +156,10 @@ doc: doc/index.html doc/matconvnet-manual.pdf
 doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 	mkdir -p doc/.build
 	ln -sf ../references.bib doc/.build/references.bib
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
+	$(PDFLATEX) -shell-escape -file-line-error -output-directory=doc/.build/ "$(<)"
 	cd doc/.build ; $(BIBTEX) matconvnet-manual
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
+	$(PDFLATEX) -shell-escape -file-line-error -output-directory=doc/.build/ "$(<)"
+	$(PDFLATEX) -shell-wscape -file-line-error -output-directory=doc/.build/ "$(<)"
 	cp -f doc/.build/matconvnet-manual.pdf doc/
 
 doc/index.html : doc/.build/index.html.raw doc/template.html

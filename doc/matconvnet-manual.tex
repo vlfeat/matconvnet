@@ -6,6 +6,7 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
 \usepackage{pgfplots} 
+\usepackage{minted}
 \usepackage[colorlinks]{hyperref}
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
@@ -555,7 +556,7 @@ It is easy enough to combine the computational blocks of Sect.~\ref{s:blocks} in
 % ------------------------------------------------------------------
 
 \verb!vl_simplenn! is easy to use with pre-trained models (see the homepage to download some). For example, the following code downloads a model pre-trained on the ImageNet data and applies it to one of MATLAB stock images:
-\begin{verbatim}
+\begin{minted}{matlab}
 % setup MtConvNet in MATLAB
 run matlab/vl_setupnn
 
@@ -569,24 +570,24 @@ im = imread('peppers.png') ;
 im_ = single(im) ; % note: 255 range
 im_ = imresize(im_, net.normalization.imageSize(1:2)) ;
 im_ = im_ - net.normalization.averageImage ;
-\end{verbatim}
+\end{minted}
 Note that the image should be preprocessed before running the network. While preprocessing specifics depend on the model, the pre-trained model contain a \verb!net.normalization! field that describes the type of preprocessing that is expected. Note in particular that this network takes images of a fixed size as input and requires removing the mean; also, image intensities are normalized in the range [0,255].
 
 The next step is running the CNN. This will return a \verb!res! structure with the output of the network layers:
-\begin{verbatim}
+\begin{minted}{matlab}
 % run the CNN
 res = vl_simplenn(net, im_) ;
-\end{verbatim}
+\end{minted}
 
 The output of the last layer can be used to classify the image. The class names are contained in the \verb!net! structure for convenience:
-\begin{verbatim}
+\begin{minted}{matlab}
 % show the classification result
 scores = squeeze(gather(res(end).x)) ;
 [bestScore, best] = max(scores) ;
 figure(1) ; clf ; imagesc(im) ;
 title(sprintf('%s (%d), score %.3f',...
 net.classes.description{best}, best, bestScore)) ;
-\end{verbatim}
+\end{minted}
 
 Note that several extensions are possible. First, images can be cropped rather than rescaled. Second, multiple crops can be fed to the network and results averaged, usually for improved results. Third, the output of the network can be used as generic features for image encoding.
 
