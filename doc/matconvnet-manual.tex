@@ -36,6 +36,10 @@ Andrea Vedaldi
 Karel Lenc}
 \date{}
 \maketitle{}
+\vspace{-3em}
+\section*{Abstract}
+\vlnn is an implementation of Convolutional Neural Networks in MATLAB with seamless support for computations on CPU or GPU. The toolbox is designed with emphasis on simplicity and flexibility by exposing simple and fast network building blocks to higher level language with easy prototyping abilities, such as MATLAB. In this document we describe implementation details with precise mathematical definition of its modules.
+
 \tableofcontents{}
 % ------------------------------------------------------------------
 
@@ -46,12 +50,12 @@ Karel Lenc}
 \vlnn is a simple MATLAB toolbox implementing Convolutional Neural Networks (CNN) for computer vision applications. Section~\ref{s:intro} provides a brief introduction to CNNs, explaining their modular structure and fundamental concepts such as back-propagation. Section~\ref{s:blocks} lists all the computational building blocks implemented in \vlnn that can be combined to create CNNs. Section~\ref{s:wrappers} discusses more abstract CNN wrappers and example code and models.
 
 % ------------------------------------------------------------------
-\section{Introduction to convolutional neural netowrks}\label{s:intro}
+\section{Introduction to convolutional neural networks}\label{s:intro}
 % ------------------------------------------------------------------
 
-A \emph{Convolutional Neural Network} (CNN) is can be viewed as a function $f$ mapping some data $\bx$, for example an image, on some output vector $\by$. The function $f$ is the composition of a sequence (or directed acyclic graph) of simpler functional blocks $f_1,\dots,f_L$. Furthermore, all or some of these blocks are \emph{convolutional}, in the sense that they take an image as input and produce an image as output by applying a translation invariant and local operator, such as a linear filter. \vlnn contains implementation for the most commonly used computational blocks (Section~\ref{s:blocks}). These can be used stand-alone in your own code, or through a few simple wrappers. New blocks are also easy to create and combine with the existing ones.
+A \emph{Convolutional Neural Network} (CNN) can be viewed as a function $f$ mapping some data $\bx$, for example an image, on some output vector $\by$. The function $f$ is a composition of a sequence (or a directed acyclic graph) of simpler functional blocks $f_1,\dots,f_L$. Furthermore, some of these blocks are \emph{convolutional}, in the sense that they map an input image to an output image by applying a translation invariant local operator, e.g. a linear filter. The \vlnn toolbox contains implementation for the most commonly used computational blocks (described in Section~\ref{s:blocks}) which can be used either stand-alone, or through provided simple wrappers. Thanks to the modular structure, it is a simple task to create and combine new blocks with the existing ones. %New blocks are also easy to create and combine with the existing ones.
 
-Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_n$. These are \emph{discriminatively learned from example data} such that the resulting function $f$ does something useful. A typical example is image classification; in this case the output of the CNN is a vector $\by=f(\bx)\in\real^C$ containing the confidence that $\bx$ belong to any of $C$ possible classes. Given training data $(\bx^{(i)},\by^{(i)})$ (where $\by^{(i)}$ is the indicator vector of the class of $\bx^{(i)}$, the parameters are learned by solving
+Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_L$. These are \emph{discriminatively learned from example data} such that the resulting function $f$ does some useful mapping. A typical example is image classification; in this case the output of the CNN is a vector $\by=f(\bx)\in\real^C$ containing the confidence that $\bx$ belong to any of $C$ possible classes. Given training data $(\bx^{(i)},\by^{(i)})$ (where $\by^{(i)}$ is the indicator vector of the class of $\bx^{(i)}$), the parameters are learned by solving
 \begin{equation}\label{e:objective}
  \argmin_{\bw_1,\dots\bw_n}
  \frac{1}{n}\sum_{i=1}^n
@@ -62,9 +66,9 @@ Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_n$. These are \emp
 \end{equation}
 where $\ell$ is a suitable \emph{loss function} (e.g. the hinge or log loss).
 
-The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundred-thousands or even million of examples. Therefore efficiency is a paramount. The objective is usually optimized using a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by stepping down the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn implements the ability of evaluating derivatives in all the computational blocks. It also contain several examples of training small and large models using these features, although it is easy to write customised solvers.
+The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundred-thousands or even million of examples. Therefore efficiency is a paramount. The objective is usually optimized using a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by moving towards the local minima in the direction of the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn implements the ability of evaluating derivatives in all the computational blocks. It also contain several examples of training small and large models using these features, although it is easy to write customised solvers.
 
-While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore a high evaluation speed is a practical requirement. Larger models, in particular, may require in practice to run calculations on a GPU. \vlnn has integrated GPU support based on nVidia CUDA.
+While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore a high evaluation speed is a practical requirement. Larger models, in particular, may require to run calculations on a GPU. \vlnn has integrated GPU support based on NVIDIA CUDA.
 
 % ------------------------------------------------------------------
 \subsection{\vlnn on a glance}\label{s:vlnn}
@@ -74,8 +78,8 @@ While CNNs are relatively efficient to compute, training requires iterating many
 
 \vlnn contains the following elements:
 \begin{itemize}
-\item \emph{CNN computational blocks.} A set of optimised routines computing fundamental building blocks of a CNN. For example, a convolution block is implemented by \verb!y=vl_nnconv(x,f,b)! where \verb!x! is an image, \verb!f! a filter bank, and \verb!b! a vector of biases (Section~\ref{s:evaluation}). The derivatives are computed as
-\verb![dzdx,dzdf,dzdb] = vl_nnconv(x,f,b,dzdy)! where \verb!dzdy! is the derivative of the CNN output w.r.t \verb!y!~(Section~\ref{s:evaluation}). Section~\ref{s:blocks} describes all the blocks in detail.
+\item \emph{CNN computational blocks.} A set of optimised routines computing fundamental building blocks of a CNN. For example, a convolution block is implemented by \linebreak \verb!y=vl_nnconv(x,f,b)! where \verb!x! is an image, \verb!f! a filter bank, and \verb!b! a vector of biases (Section~\ref{s:convolution}). The derivatives are computed as
+\verb![dzdx,dzdf,dzdb] = vl_nnconv(x,f,b,dzdy)! where \verb!dzdy! is the derivative of the CNN output w.r.t \verb!y!~(Section~\ref{s:convolution}). Section~\ref{s:blocks} describes all the blocks in detail.
 \item \emph{CNN wrappers.} \vlnn provides a simple wrapper, suitably invoked by \verb!vl_simplenn!, that implements a CNN with a linear topology (a chain of blocks). This is good enough to run most of current state-of-the-art models for image classification. You are invited to look at the implementation of this function, as it is a great starting point to understand how to implement more complex CNNs.
 \item \emph{Example applications.} \vlnn provides several example of learning CNNs with stochastic gradient descent and CPU or GPU, on MNIST, CIFAR10, and ImageNet data.
 \item \emph{Pre-trained models.} \vlnn provides several state-of-the-art pre-trained CNN models that can be used off-the-shelf, either to classify images or to produce image encodings in the spirit of Caffe or DeCAF.
