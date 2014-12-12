@@ -12,12 +12,21 @@ function vl_compilenn( varargin )
 %      Windows 8 x64, Matlab R2014a, Visual C++ 2013 and CUDA Tollkit 6.5.
 %    
 %  VL_COMPILENN accepts the following options:
-%  enable_gpu : [false]
-%    Enable GPU support.
+%  enable_gpu :
+%    When true, enables GPU support.
 %
-%  verbose : [false]
+%  verbose :
 %    When true, set the verbose flags for the compilers.
 %  
+%  In case of GPU compilation, following options are also used:
+%  cuda_path : 
+%    CUDA toolkit path (root toolkit path). By default set to:
+%    'c:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v5.5'
+%
+%  cuda_arch : 
+%    NVCC arguments specifying the target GPU architecture. By default, set
+%    to include PTX code and binaries for compute capabilities 2.0 and 3.0.
+%    See NVCC documentation for details.
 
 % Copyright (C) 2014 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
@@ -30,6 +39,9 @@ run(fullfile(fileparts(mfilename('fullpath')), 'vl_setupnn.m'));
 
 opts.enable_gpu = false;
 opts.verbose = false;
+opts.cuda_path = 'c:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v5.5';
+opts.cuda_arch = ['-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
+  '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
 opts = vl_argparse(opts, varargin);
 
 % TODO debug mode
@@ -37,32 +49,56 @@ opts = vl_argparse(opts, varargin);
 
 % Libraries
 mex_libs = {'-largeArrayDims','-lmwblas'};
-cumex_libs = {'-lcudart', '-lcufft', '-lcublas'};
-cupath = '';
+cumex_libs = {'-lcudart', '-lcufft', '-lcublas', '-lgpu'};
+
+% OS specific options
+nvcc_opts = '';
+mex_opts = {};
 switch computer
   case 'PCWIN64'
     arch = 'win64';
-    cumex_libs = [cumex_libs '-lgpu'];
+    culib_path = 'x64';
+    nvcc_command = 'nvcc.exe';
+    nvcc_opts = [nvcc_opts '-Xcompiler  /MD ']; % Compile as dynamic lib
     objext = 'obj';
     check_clpath();
-    % On some machines, CUDA lib is not int linker libpath, add it just in
-    % case.
-    if opts.enable_gpu, cupath = getcupath(); end;
   otherwise
     error('Unsupported platform. For Linux and Mac OS X please use "!make".');
 end
 
-% Compiler options
-mex_opts = {};
-cumex_opts = {['-L/MATLAB_ROOT/bin/' arch], ['-L' cupath]};
-nvcc_opts = ['-Xcompiler /MD -DENABLE_GPU '...
-  '-I"' fullfile(matlabroot, 'extern','include') '" '...
-  '-I"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'];
+% CUDA options
+if opts.enable_gpu
+  if ~exist(opts.cuda_path, 'dir')
+    error('Invalid CUDA path'); 
+  end
+  
+  culib_path = fullfile(opts.cuda_path, 'lib', culib_path);
+  if ~exist(culib_path, 'dir')
+    error('CUDA lib dir %s does not exist.', culib_path); 
+  end;
+  
+  nvcc_path = fullfile(opts.cuda_path, 'bin', nvcc_command);
+  if ~exist(nvcc_path, 'file')
+    error('NVCC not found.'); 
+  end;
+  
+  % Compiler options
+  cumex_opts = {['-L/MATLAB_ROOT/bin/' arch], ['-L' culib_path]};
+  nvcc_opts = [nvcc_opts , ...
+    opts.cuda_arch...
+    ' -DENABLE_GPU'...
+    ' -I"' fullfile(matlabroot, 'extern','include') '"'...
+    ' -I"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'];
+  if opts.verbose
+    nvcc_opts = ['-v ' nvcc_opts];
+  end
+end;
+
 if opts.verbose
-  mex_opts{end+1} = '-v';
-  nvcc_opts = ['-v ' nvcc_opts];
+  mex_opts{end+1} = '-v'; 
 end
 
+% Set directories
 src_dir = fullfile('matlab', 'src');
 tmp_dir = fullfile('matlab', 'mex', '.build');
 if ~exist(tmp_dir, 'dir'), mkdir(tmp_dir); end
@@ -80,11 +116,14 @@ do.mex = @(src, dst, objfiles) ...
   mex(mex_opts{:}, mex_libs{:}, src, '-output', dst, objfiles{:});
 do.mexc = @(src, dst) [mex('-c', src, mex_opts{:}), ...
   movefile(objfilename(src), dst)];
-do.cumex = @(src, dst, objfiles) ...
-  mex(mex_opts{:}, cumex_opts{:}, mex_libs{:}, cumex_libs{:}, src, ...
-  '-output', dst, objfiles{:});
-do.cumexc = @(src, dst, objfiles) ...
-  systemc(sprintf('nvcc -O3 -DNDEBUG -c %s %s -o %s', src, nvcc_opts, dst));  
+if opts.enable_gpu
+  do.cumex = @(src, dst, objfiles) ...
+    mex(mex_opts{:}, cumex_opts{:}, mex_libs{:}, cumex_libs{:}, src, ...
+    '-output', dst, objfiles{:});
+  do.cumexc = @(src, dst, objfiles) ...
+    systemc(sprintf('"%s" -O3 -DNDEBUG -c %s %s -o %s', ...
+    nvcc_path, src, nvcc_opts, dst));
+end
 
 % Compile the common CPU objects
 bits_files = {'im2col', 'pooling', 'normalize', 'subsample'};
@@ -123,22 +162,6 @@ end
 
   function fn = objfilename(src)
     [~, fn] = fileparts(src); fn = [fn '.' objext];
-  end
-
-  function [cupath] = getcupath()
-    nvcc_path = whichc('nvcc');
-    if isnan(nvcc_path), error('NVCC not found in your path.'); end;
-    nvcc_dir = fileparts(nvcc_path);
-    cupath = fullfile(nvcc_dir(1:end-3), 'lib', 'x64');
-  end
-  
-  function p = whichc(cmd)
-    switch computer
-      case 'PCWIN64'
-        [st, p] = system(sprintf('where %s', cmd));
-        if st, p = nan;
-        else p = p(1:end-1); end;
-    end
   end
 
   function check_clpath()

@@ -36,7 +36,7 @@ function imdb = cnn_imagenet_setup_data(varargin)
 %    sufficient RAM is available). Reading images off disk with a
 %    sufficient speed is crucial for fast training.
 
-opts.dataDir = 'data/imagenet12' ;
+opts.dataDir = fullfile('data','imagenet12') ;
 opts.lite = false ;
 opts = vl_argparse(opts, varargin) ;
 

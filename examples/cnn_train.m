@@ -12,7 +12,7 @@ opts.batchSize = 256 ;
 opts.useGpu = false ;
 opts.learningRate = 0.001 ;
 opts.continue = false ;
-opts.expDir = 'data/exp' ;
+opts.expDir = fullfile('data','exp') ;
 opts.conserveMemory = false ;
 opts.sync = true ;
 opts.prefetch = false ;
@@ -22,7 +22,7 @@ opts.errorType = 'multiclass' ;
 opts.plotDiagnostics = false ;
 opts = vl_argparse(opts, varargin) ;
 
-if ~exist(opts.expDir), mkdir(opts.expDir) ; end
+if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
 if isnan(opts.train), opts.train = [] ; end
@@ -33,8 +33,10 @@ if isnan(opts.train), opts.train = [] ; end
 
 for i=1:numel(net.layers)
   if ~strcmp(net.layers{i}.type,'conv'), continue; end
-  net.layers{i}.filtersMomentum = zeros('like',net.layers{i}.filters) ;
-  net.layers{i}.biasesMomentum = zeros('like',net.layers{i}.biases) ;
+  net.layers{i}.filtersMomentum = zeros(size(net.layers{i}.filters), ...
+    class(net.layers{i}.filters)) ;
+  net.layers{i}.biasesMomentum = zeros(size(net.layers{i}.biases), ...
+    class(net.layers{i}.biases)) ; %#ok<*ZEROLIKE>
   if ~isfield(net.layers{i}, 'filtersLearningRate')
     net.layers{i}.filtersLearningRate = 1 ;
   end
@@ -86,13 +88,13 @@ for epoch=1:opts.numEpochs
   lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
 
   % fast-forward to where we stopped
-  modelPath = fullfile(opts.expDir, 'net-epoch-%d.mat') ;
+  modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
   if opts.continue
-    if exist(sprintf(modelPath, epoch),'file'), continue ; end
+    if exist(modelPath(epoch),'file'), continue ; end
     if epoch > 1
       fprintf('resuming by loading epoch %d\n', epoch-1) ;
-      load(sprintf(modelPath, epoch-1), 'net', 'info') ;
+      load(modelPath(epoch-1), 'net', 'info') ;
     end
   end
 
@@ -218,7 +220,7 @@ for epoch=1:opts.numEpochs
   info.val.error(end) = info.val.error(end) / numel(val) ;
   info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
   info.val.speed(end) = numel(val) / info.val.speed(end) ;
-  save(sprintf(modelPath,epoch), 'net', 'info') ;
+  save(modelPath(epoch), 'net', 'info') ;
 
   figure(1) ; clf ;
   subplot(1,2,1) ;
