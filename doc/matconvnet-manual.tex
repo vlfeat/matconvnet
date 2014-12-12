@@ -14,6 +14,7 @@
 \newcommand{\vv}{\operatorname{vec}}
 \newcommand{\diag}{\operatorname{diag}}
 \newcommand{\vlnn}{\textsc{MatConvNet}\xspace}
+\newcommand{\cpp}{C{}\texttt{++}~}
 
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
@@ -98,6 +99,9 @@ where $\ell$ is a suitable \emph{loss function} (e.g. the hinge or log loss).
 The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundred-thousands or even millions of examples. Therefore efficiency is a paramount. Optimization often uses a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by moving towards the local minima in the direction of the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn can evaluate the derivatives of all the computational blocks. It also contains several examples of training small and large models using these capabilities and a default solver, although it is easy to write customized solvers on top of the library.
 
 While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore the computation speed is very important in practice. Larger models, in particular, may require the use of GPU to be trained in a reasonable time. \vlnn has integrated GPU support based on NVIDIA CUDA and MATLAB built-in CUDA capabilities.
+
+There are other libraries which implement the CNN architecture. The most notable frameworks implemented in \cpp are Cuda-Convnet, the original CNN implementation by \cite{krizhevsky12imagenet} and Caffe~\cite{jia13caffe}, which inspired internals of \vlnn. Caffe has a Matlab interface, however the network definitions are written in custom language. A powerful Torch7 toolbox \cite{collobert2011torch7}, implemented in Lua, aims for creating a general machine learning framework and has implementation for all CNN building blocks. Another framework, Theano \cite{bergstra2010}, is a Python library which directly solves mathematical expressions and allows to define CNN architectures. Both of these libraries can perform computations on CPU and GPU.
+Among Matlab toolboxes, there is a DeepLearningToolbox \cite{deepltbx12} which implements all algorithms in pure Matlab which has its speed limitations.
 
 % ------------------------------------------------------------------
 \subsection{\vlnn on a glance}\label{s:vlnn}
@@ -639,7 +643,7 @@ For large scale experiments, such as learning a network for ImageNet, a NVIDIA G
 \item Compile also the \verb!vl_imreadjpeg! function. Currently, reading JPEG images from disk is a bottleneck and this function can partially alleviate this problem (in the future it should remove the bottleneck almost entirely). See the homepage for instructions.
 \end{itemize}
 
-Once your setup is ready, you should be able to run \verb!examples/cnn_imagenet! (edit the file and change any flag as needed to enable GPU support and image prefetching on multiple threads).
+Once your setup is ready, you should be able to run \verb!examples/cnn_imagenet! (edit the file and change any flag as needed to enable GPU support and image pre-fetching on multiple threads).
 
 If all goes well, you should expect to be able to train with 200-300 images/sec.
 
