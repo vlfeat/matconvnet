@@ -100,9 +100,6 @@ The optimization problem~\eqref{e:objective} is usually non-convex and very larg
 
 While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore the computation speed is very important in practice. Larger models, in particular, may require the use of GPU to be trained in a reasonable time. \vlnn has integrated GPU support based on NVIDIA CUDA and MATLAB built-in CUDA capabilities.
 
-There are other libraries which implement the CNN architecture. The most notable frameworks implemented in \cpp are Cuda-Convnet, the original CNN implementation by \cite{krizhevsky12imagenet} and Caffe~\cite{jia13caffe}, which inspired internals of \vlnn. Caffe has a Matlab interface, however the network definitions are written in custom language. A powerful Torch7 toolbox \cite{collobert2011torch7}, implemented in Lua, aims for creating a general machine learning framework and has implementation for all CNN building blocks. Another framework, Theano \cite{bergstra2010}, is a Python library which directly solves mathematical expressions and allows to define CNN architectures. Both of these libraries can perform computations on CPU and GPU.
-Among Matlab toolboxes, there is a DeepLearningToolbox \cite{deepltbx12} which implements all algorithms in pure Matlab which has its speed limitations.
-
 % ------------------------------------------------------------------
 \subsection{\vlnn on a glance}\label{s:vlnn}
 % ------------------------------------------------------------------
@@ -657,6 +654,9 @@ If all goes well, you should expect to be able to train with 200-300 images/sec.
 \item \emph{Power.} The implementation can run the latest models such as Krizhevsky~\textit{et al.}~\cite{krizhevsky12imagenet}, including the DeCAF and Caffe variants, and variants from the Oxford Visual Geometry Group. Pre-learned features for different tasks can be easily downloaded.
 \item \emph{Efficiency.} The implementation is quite efficient, supporting both CPU and GPU computation (in the latest versions of MALTAB).
 \item \emph{Self contained.} The implementation is fully self-contained, requiring only MATLAB and a compatible C/C++ compiler to work (GPU code requires the freely-available CUDA DevKit). Several fully-functional image classification examples are included.\end{itemize}
+
+
+There are many other CNN implementations. Caffe is a \cpp framework which defines the network architecture in a tailor-made language, similarly as Cuda-Convnet \cite{krizhevsky12imagenet}, which limits its flexibility for prototyping. DeepLearningToolbox \cite{deepltbx12} is a toolbox with CNN implementation, but as it is fully written in Matlab, its processing speed is limiting for large scale problems. Besides that, there are multiple-purpose machine learning frameworks which support blocks needed for convolutional networks (e.g. Torch7 toolbox \cite{collobert2011torch7} which uses Lua or Python framework Theano \cite{bergstra2010}) but none of them supports Matlab as a scripting language.
 
 % ------------------------------------------------------------------
 \subsection{Acknowledgments}\label{s:ack}
