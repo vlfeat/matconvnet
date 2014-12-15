@@ -9,6 +9,14 @@ function vl_compilenn( varargin )
 %    EnableGpu:: false
 %       Set to true in order to enable GPU support.
 %
+%    enableImreadJpeg:: false
+%       Set true to compile VL_IMREADJPEG. In order to succesfully compile,
+%       libjpeg must be in linker search path. To adjust mex parameters,
+%       see option 'imreadJpegFlags'.
+%
+%    imreadJpegFlags:: {'-ljpeg'}
+%       Specify mex flags for vl_imreadjpeg compilation.
+%
 %    Verbose:: false
 %       Set to true to turn on the verbose flag in the compiler.
 %
@@ -60,7 +68,7 @@ function vl_compilenn( varargin )
 %    GPUDEVICE output. You can override it by setting the 'CudaArch'
 %    parameter (e.g. in case of multiple GPUs with various architectures).
 %
-%    See also: VL_SETUPNN(),
+%    See also: VL_SETUPNN(), VL_IMREADJPEG(),
 %    http://mathworks.com/help/distcomp/run-mex-functions-containing-cuda-code.html
 
 % Copyright (C) 2014 Karel Lenc and Andrea Vedaldi.
@@ -73,12 +81,15 @@ function vl_compilenn( varargin )
 root = fileparts(fileparts(mfilename('fullpath'))) ;
 run(fullfile(root, 'matlab', 'vl_setupnn.m')) ;
 
-opts.enableGpu   = false;
-opts.verbose     = false;
-opts.debug       = false;
-opts.cudaRoot    = [];
-opts.cudaArch    = [];
-opts.defCudaArch = ['-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
+opts.enableGpu        = false;
+opts.enableImreadJpeg = false;
+opts.imreadJpegFlags  = {'-ljpeg'};
+opts.verbose          = false;
+opts.debug            = false;
+opts.cudaRoot         = [];
+opts.cudaArch         = [];
+opts.defCudaArch      = [...
+  '-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
   '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
 opts.cuObjMethod = guess_cuobj_method();
 opts = vl_argparse(opts, varargin);
@@ -145,6 +156,10 @@ else
     mex_dir, mex_opts);
 end
 
+if opts.enableImreadJpeg
+  imr_src = fullfile(root, 'matlab', 'src', 'vl_imreadjpeg.c');
+  mex_link({imr_src}, {}, [mex_libs opts.imreadJpegFlags], mex_dir, mex_opts);
+end
 
 % -------------------------------------------------------------------------
 function objs = cpp_compile(srcs, tmp_dir, mex_opts)
