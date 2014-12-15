@@ -78,6 +78,8 @@ opts.verbose     = false;
 opts.debug       = false;
 opts.cudaRoot    = [];
 opts.cudaArch    = [];
+opts.defCudaArch = ['-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
+  '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
 opts.cuObjMethod = guess_cuobj_method();
 opts = vl_argparse(opts, varargin);
 
@@ -167,15 +169,17 @@ if isempty(opts.cudaArch)
   fprintf('Guessing GPU compute capability...\n');
   try
     gpu_device = gpuDevice();
+      arch_code = strrep(gpu_device, '.', '');
+    opts.cudaArch = ...
+      sprintf('-gencode=arch=compute_%d,code=\"sm_%d,compute_%d\" ', ...
+      repmat(arch_code, 1, 3));
   catch
-    error('Unable to evaluate gpuDevice() - set ''CudaArch'' option?');
+    warning('Unable to evaluate gpuDevice(). Using default CUDA arch.');
+    opts.cudaArch = opts.defCudaArch;
   end
-  arch_code = strrep(gpu_device, '.', '');
-  opts.cudaArch = ...
-    sprintf('-gencode=arch=compute_%d,code=\"sm_%d,compute_%d\" ', ...
-    repmat(arch_code, 1, 3));
-  fpirntf('nvcc arch set to %s.\n', opts.cudaArch);
-  fprintf('Override with ''CudaArch'' option.\n');
+
+  fprintf('nvcc arch set to %s. ', opts.cudaArch);
+  fprintf('Can be changed with ''CudaArch'' option.\n');
 end
 
 % nvcc options
@@ -192,7 +196,7 @@ end
 % System specific options
 switch computer
   case 'PCWIN64'
-    nvcc_opts = [nvcc_opts '-Xcompiler  /MD']; % Use dynamic linker
+    nvcc_opts = [nvcc_opts '  -Xcompiler  /MD']; % Use dynamic linker
     check_clpath(); % check whether cl.exe in path
   case {'MACI64', 'GLNXA64'}
     nvcc_opts = [nvcc_opts ' -Xcompiler -fPIC'];
@@ -202,7 +206,7 @@ objs = cell(1, numel(srcs));
 for i=1:numel(srcs)
   [~,base] = fileparts(srcs{i}) ;
   objs{i} = fullfile(tmp_dir, [base '.' objext]) ;
-  nvcc_cmd = sprintf('"%s" -c %s %s -o %s', nvcc_path, srcs{i}, ...
+  nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', nvcc_path, srcs{i}, ...
     nvcc_opts, objs{i});
   if opts.verbose, fprintf('Running: %s\n', nvcc_cmd); end
   status = system(nvcc_cmd);
@@ -322,7 +326,7 @@ else
     return;
   end
 end
-fprintf('CUDA root guessed as: "%s".\nOverride with ''cudaRoot'' option.\n', ...
+fprintf('CUDA root guessed as: "%s", can be changed with ''cudaRoot'' option.\n', ...
   cuda_root);
 
 % -------------------------------------------------------------------------
