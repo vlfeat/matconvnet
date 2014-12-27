@@ -1,0 +1,35 @@
+site_name: MatConvNet
+markdown_extensions: ['extra', 'mathjax']
+theme: bootstrap
+
+extra_css: ['css/tables.css','css/admonitions.css','css/fixes.css']
+extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML','js/mathjaxhelper.js']
+
+repo_url: https://github.com/vlfeat/matconvnet
+
+pages:
+- ['index.md', 'MatConvNet: CNNs for MATLAB']
+
+- ['install.md', 'Getting Started', 'Installing']
+- ['pretrained.md', 'Getting Started', 'Pretrained models']
+- ['gpu.md', 'Getting Started', 'Using GPU code']
+- ['about.md', 'Getting Started', 'About']
+
+- ['functions.md', 'Functions', 'Overview']
+- ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
+- ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
+- ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
+- ['mfiles/vl_nndropout.md', 'Functions', 'vl_nndropout']
+- ['mfiles/vl_nnloss.md', 'Functions', 'vl_nnloss']
+- ['mfiles/vl_nnnoffset.md', 'Functions', 'vl_nnnoffset']
+- ['mfiles/vl_nnnormalize.md', 'Functions', 'vl_nnnormalize']
+- ['mfiles/vl_nnpool.md', 'Functions', 'vl_nnpool']
+- ['mfiles/vl_nnrelu.md', 'Functions', 'vl_nnrelu']
+- ['mfiles/vl_nnsoftmax.md', 'Functions', 'vl_nnsoftmax']
+- ['mfiles/vl_nnsoftmaxloss.md', 'Functions', 'vl_nnsoftmaxloss']
+- ['mfiles/vl_rootnn.md', 'Functions', 'vl_rootnn']
+- ['mfiles/vl_setupnn.md', 'Functions', 'vl_setupnn']
+- ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
+- ['mfiles/vl_simplenn_diagnose.md', 'Functions', 'vl_simplenn_diagnose']
+- ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_implenn_display']
+- ['mfiles/vl_simplenn_move.md', 'Functions', 'vl_simplenn_move']

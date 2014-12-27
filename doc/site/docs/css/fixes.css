@@ -1,0 +1,50 @@
+
+/* Prevent blockquotes to be giant-sized */
+blockquote p {
+font-size: inherit;
+font-style: italic;
+}
+
+
+/* Nicer font for code samples */
+code, kbd, pre, samp {
+font-family: "Lucida Console","Courier New",monospace;
+font-size: 12px;
+}
+
+/* Formatting for kbd items (keyboard shortcuts) */
+kbd {
+background-color: #e7e7e7;
+background-image: -moz-linear-gradient(#fefefe, #e7e7e7);
+background-image: -webkit-linear-gradient(#fefefe, #e7e7e7);
+background-image: linear-gradient(#fefefe, #e7e7e7);
+background-repeat: repeat-x;
+border-radius: 2px;
+border: 1px solid #cfcfcf;
+color: #000;
+padding: 4px 3px 2px 3px;
+line-height: 10px;
+display: inline-block;
+}
+
+/* Solves the problem of jumping to section and being hidden by fixed nav-bar */
+/* https://github.com/twbs/bootstrap/issues/1768 */
+*[id]:before {
+  display: block;
+  content: " ";
+  margin-top: -70px;
+  height: 70px;
+  visibility: hidden;
+}
+
+/* Hides the prev, next and github links when browser width is between 768 and 1200px */
+@media (min-width: 768px) and (max-width: 1199px) {
+	.nav.navbar-nav.navbar-right
+	{
+		display: none;
+	}
+}
+
+canvas {
+  background-color: transparent;
+}

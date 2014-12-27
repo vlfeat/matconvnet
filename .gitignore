@@ -13,3 +13,5 @@ doc/.build
 index.html
 matconvnet-*.tar.gz
 local
+doc/site/docs/mfiles
+doc/site/site
