@@ -28,7 +28,9 @@ mfile_src=$(addprefix matlab/src/, $(mfiles))
 mfile_doc=$(patsubst %.m,%.md,$(addprefix $(site)/mfiles/, $(mfiles)))
 mds=$(widlcard doc/site/docs/*.md)
 
-doc: doc/site/site/index.html doc/matconvnet-manual.pdf
+doc: doc-site doc-manual
+doc-site: doc/site/site/index.html
+doc-manual: doc/matconvnet-manual.pdf
 
 doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 	mkdir -p doc/.build

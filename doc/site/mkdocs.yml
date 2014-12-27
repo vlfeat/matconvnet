@@ -33,3 +33,5 @@ pages:
 - ['mfiles/vl_simplenn_diagnose.md', 'Functions', 'vl_simplenn_diagnose']
 - ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_implenn_display']
 - ['mfiles/vl_simplenn_move.md', 'Functions', 'vl_simplenn_move']
+
+- ['developers.md', 'Developers']

@@ -20,7 +20,21 @@ This library may be merged in the future with
 style, so if you are familiar with VLFeat, you should be right at home
 here.
 
-# Copyright and acknowledgments
+# Changes
+
+<a name='changes'></a>
+
+- 1.0-beta8 (December 2014) New website. Experimental Windows support.
+- 1.0-beta7 (September 2014) Adds VGG verydeep models.
+- 1.0-beta6 (September 2014) Performance improvements.
+- 1.0-beta5 (September 2014) Bugfixes, adds more documentation,
+  improves ImageNet example.
+- 1.0-beta4 (August 2014) Further cleanup.
+- 1.0-beta3 (August 2014) Cleanup.
+- 1.0-beta2 (July 2014) Adds a set of standard models.
+- 1.0-beta1 (June 2014) First public release
+
+# Copyright
 
 This package was created and is currently maintained by
 [Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi) and Karel
@@ -41,6 +55,8 @@ Lenc. It is distributed under the permissive BSD license (see the file
     PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES,
     INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
     MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+# Acknowledgments
 
 The implementation of the computational blocks in this library, and in
 particular of the convolution operator, is inspired by
