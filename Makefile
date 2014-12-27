@@ -23,18 +23,13 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
 
-# Documentation
-MARKDOWN = markdown2
-HOST = vlfeat-admin:sites/sandbox-matconvnet
-GIT = git
-PDFLATEX = pdflatex
-BIBTEX = bibtex
-
 # Maintenance
 NAME = matconvnet
 VER = 1.0-beta7
 DIST = $(NAME)-$(VER)
 RSYNC = rsync
+HOST = vlfeat-admin:sites/sandbox-matconvnet
+GIT = git
 
 # --------------------------------------------------------------------
 #                                                        Configuration
@@ -111,8 +106,8 @@ cpp_tgt:=$(subst matlab/src/bits/,matlab/mex/.build/,$(cpp_tgt))
 all: $(mex_tgt)
 
 # Create build directory
-matlab/mex/.build/.stamp:
-	mkdir -p matlab/mex/.build ; touch matlab/mex/.build/.stamp
+%/.stamp:
+	mkdir -p $(@)/ ; touch $(@)/.stamp
 $(mex_tgt): matlab/mex/.build/.stamp
 $(cpp_tgt): matlab/mex/.build/.stamp
 
@@ -151,41 +146,24 @@ matlab/mex/vl_imreadjpeg.mex$(MEXARCH): matlab/src/vl_imreadjpeg.c
 #                                                        Documentation
 # --------------------------------------------------------------------
 
-doc: doc/index.html doc/matconvnet-manual.pdf
-
-doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
-	mkdir -p doc/.build
-	ln -sf ../references.bib doc/.build/references.bib
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
-	cd doc/.build ; $(BIBTEX) matconvnet-manual
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
-	cp -f doc/.build/matconvnet-manual.pdf doc/
-
-doc/index.html : doc/.build/index.html.raw doc/template.html
-	sed -e '/%MARKDOWN%/{r doc/.build/index.html.raw' -e 'd;}' doc/template.html  > $(@)
-
-doc/.build/index.html.raw : doc/index.md
-	mkdir -p doc/.build
-	$(MARKDOWN) -x tables $(<) > $(@)
+include doc/Makefile
 
 # --------------------------------------------------------------------
 #                                                          Maintenance
 # --------------------------------------------------------------------
 
-info:
+info: doc-info
 	@echo "mex_src=$(mex_src)"
 	@echo "mex_tgt=$(mex_tgt)"
 	@echo "cpp_src=$(cpp_src)"
 	@echo "cpp_tgt=$(cpp_tgt)"
 
-clean:
+clean: doc-clean
 	find . -name '*~' -delete
 	rm -f $(cpp_tgt)
-	rm -rf doc/.build
 	rm -rf matlab/mex/.build
 
-distclean: clean
+distclean: clean doc-distclean
 	rm -rf matlab/mex
 	rm -f doc/index.html doc/matconvnet-manual.pdf
 	rm -f $(NAME)-*.tar.gz
@@ -202,4 +180,5 @@ post-models:
 	$(RSYNC) -aP data/models/*.mat $(HOST)/models/
 
 post-doc: doc
-	$(RSYNC) -aP README.md doc/{index.html,matconvnet-manual.pdf} $(HOST)/
+	$(RSYNC) -aP README.md doc/matconvnet-manual.pdf $(HOST)/
+	$(RSYNC) -aP README.md doc/site/site/ $(HOST)/
