@@ -1,5 +1,5 @@
-/** @file vl_nnconv.cu
- ** @brief Convolution block
+/** @file vl_imreadjpeg.cu
+ ** @brief Asynchronous multi-threaded jpeg loading
  ** @author Andrea Vedaldi
  **/
 

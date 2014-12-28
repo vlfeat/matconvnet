@@ -174,7 +174,7 @@ void mexFunction(int nout, mxArray *out[],
 #endif
 
   /* check GPU/data class consistency */
-  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper & backMode)) {
+  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper && backMode)) {
     mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
   }
   if (data.geom.classID != mxSINGLE_CLASS) {

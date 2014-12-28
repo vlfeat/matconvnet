@@ -16,16 +16,18 @@ the terms of the BSD license (see the COPYING file).
 #include <cmath>
 #include <blas.h>
 #include <string.h>
-#include <x86intrin.h>
 
 /* ---------------------------------------------------------------- */
 /*                                                  normalize (CPU) */
 /* ---------------------------------------------------------------- */
 
+#ifndef _MSC_VER
+#include <x86intrin.h>
 #pragma GCC optimize ("fast-math")
 #pragma GCC optimize ("tree-vectorize")
 //#pragma GCC target ("veclibabi=svml")
 //#pragma GCC target "sse4"
+#endif
 #define restrict __restrict
 
 #define VL_NNNORMALIZE_FAST
@@ -50,10 +52,10 @@ inline double fast_pow(double x, double y)
   double const pexp2 = 0.227411277760219 ;
   double const pexp1 = 0.693147180559945 ;
   typedef long long int int_t;
-  const int_t offset = 1023L << 52 ;
+  const int_t offset = 1023LL << 52 ;
 
   int_t ix = *(int_t*)&x - offset ;
-  int_t imx = (ix & ((1L<<52)-1L)) + offset;
+  int_t imx = (ix & ((1LL<<52)-1LL)) + offset;
   double fx = (double)(ix >> 52) ;
   double mx = *((double*)&imx) - 1 ;
   double mx2 = mx*mx ;
@@ -69,7 +71,7 @@ inline double fast_pow(double x, double y)
   // double tz = fz + rz ;
 
   //  mexPrintf("%g %g -- ix %ld imx %ld fx %g mx %g t %g\n", x,y, ix,imx, fx, mx, t) ;
-  *((int_t*)&z) = (int_t)(tz * (1L<<52)) + offset ;
+  *((int_t*)&z) = (int_t)(tz * (1LL<<52)) + offset ;
   //z = exp(t * log(2.0)) ;
   return z ;
 }
@@ -140,8 +142,8 @@ void normalize_cpu(T* normalized,
 {
   int t ;
   int m1 = ((signed)normDepth-1)/2 ;
-  int m2 = normDepth - m1 - 1 ;
-  int offset = width*height ;
+  int m2 = (int)normDepth - m1 - 1 ;
+  int offset = (int)width*(int)height ;
 #ifndef VL_NNNORMALIZE_FAST
   for (int k = 0 ; k < num ; ++k) {
     for (int h = 0 ; h < height ; ++h) {
@@ -174,18 +176,18 @@ void normalize_cpu(T* normalized,
       T const* xam = data + offset * (t-m1-1) ;
       T const* xap = data + offset * (t+m2) ;
       T *end = acc + width*height ;
-      if (0 <= tm & tp < depth) {
+      if (0 <= tm && tp < depth) {
         for(T *xacc = acc ; xacc != end ; ++xacc, ++xam, ++xap) {
           T am = *xam ;
           T ap = *xap ;
           *xacc += ap*ap - am*am ;
         }
-      } else if (0 > tm & tp < depth) {
+      } else if (0 > tm && tp < depth) {
         for(T *xacc = acc ; xacc != end ; ++xacc, ++xap) {
           T ap = *xap ;
           *xacc += ap*ap ;
         }
-      } else if (0 <= tm & tp >= depth) {
+      } else if (0 <= tm && tp >= depth) {
         for(T *xacc = acc ; xacc != end ; ++xacc, ++xam) {
           T am = *xam ;
           *xacc -= am*am ;
@@ -230,7 +232,7 @@ void normalize_cpu<double>(double* normalized,
 
 
 /* ---------------------------------------------------------------- */
-/*                                                  normalize (CPU) */
+/*                                         normalize-backward (CPU) */
 /* ---------------------------------------------------------------- */
 
 template<typename T>
@@ -245,8 +247,8 @@ void normalizeBackward_cpu(T* normalized,
                            T kappa, T alpha, T beta)
 {
   int m1 = ((signed)normDepth-1)/2 ;
-  int m2 = normDepth - m1 - 1 ;
-  int offset = width*height ;
+  int m2 = (int)normDepth - m1 - 1 ;
+  int offset = (int)width*(int)height ;
   T ab2 = 2*alpha*beta ;
   int t, q ;
 
@@ -303,18 +305,18 @@ void normalizeBackward_cpu(T* normalized,
         T const* restrict datap_ = data + offset * tp ;
         T *end = acc + width*height ;
 
-        if (0 <= tm & tp < depth) {
+        if (0 <= tm && tp < depth) {
           for(T * restrict acc_ = acc ; acc_ != end ; ++acc_, ++datap_, ++datam_) {
             T am = *datam_ ;
             T ap = *datap_ ;
             *acc_ += ap*ap - am*am ;
           }
-        } else if (0 > tm & tp < depth) {
+        } else if (0 > tm && tp < depth) {
           for(T * restrict acc_ = acc ; acc_ != end ; ++acc_, ++datap_) {
             T ap = *datap_ ;
             *acc_ += ap*ap ;
           }
-        } else if (0 <= tm & tp >= depth) {
+        } else if (0 <= tm && tp >= depth) {
           for(T * restrict acc_ = acc ; acc_ != end ; ++acc_, ++datam_) {
             T am = *datam_ ;
             *acc_ -= am*am ;
@@ -349,9 +351,9 @@ void normalizeBackward_cpu(T* normalized,
       plane t.
     */
     for (t = 1 ; t < (signed)depth ; ++t) {
-      T restrict * acc2_ = acc2 + t * offset ;
-      T const restrict * src_ = acc2_ - offset ;
-      T const * end = acc2_ + offset ;
+      T * restrict acc2_ = acc2 + t * offset ;
+      T const* restrict src_ = acc2_ - offset ;
+      T const* end = acc2_ + offset ;
       for( ; acc2_ != end ; ++acc2_, ++src_) {
         *acc2_ += *src_ ;
       }

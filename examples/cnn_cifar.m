@@ -1,10 +1,11 @@
 function cnn_cifar(varargin)
 % CNN_CIFAR   Demonstrates MatConvNet on CIFAR
 
-run(fullfile(fileparts(mfilename('fullpath')), '../matlab/vl_setupnn.m')) ;
+run(fullfile(fileparts(mfilename('fullpath')), ...
+  '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.dataDir = 'data/cifar' ;
-opts.expDir = 'data/cifar-baseline' ;
+opts.dataDir = fullfile('data','cifar') ;
+opts.expDir = fullfile('data','cifar-baseline') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train.batchSize = 100 ;
 opts.train.numEpochs = 20 ;
@@ -18,7 +19,7 @@ opts = vl_argparse(opts, varargin) ;
 %                                                         Prepare data
 % --------------------------------------------------------------------
 
-if exist(opts.imdbPath)
+if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
 else
   imdb = getCifarImdb(opts) ;
