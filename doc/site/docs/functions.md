@@ -46,5 +46,6 @@ to do this.
 
 - [`vl_argparse`](mfiles/vl_argparse.md) A helper function to parse
   optional arugments.
+- [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fiels in the toolbox.
 - [`vl_rootnn`](mfiles/vl_rootnn.md) Return the path to the MatConvNet toolbox installation.
 - [`vl_setpunn`](mfiles/vl_setupnn.md) Setup MatConvNet for use in MATLAB.

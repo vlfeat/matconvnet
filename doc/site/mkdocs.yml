@@ -18,6 +18,7 @@ pages:
 - ['functions.md', 'Functions', 'Overview']
 - ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
 - ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
+- ['mfiles/vl_compilenn.md', 'Functions', 'vl_compilenn']
 - ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
 - ['mfiles/vl_nndropout.md', 'Functions', 'vl_nndropout']
 - ['mfiles/vl_nnloss.md', 'Functions', 'vl_nnloss']
@@ -31,7 +32,7 @@ pages:
 - ['mfiles/vl_setupnn.md', 'Functions', 'vl_setupnn']
 - ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
 - ['mfiles/vl_simplenn_diagnose.md', 'Functions', 'vl_simplenn_diagnose']
-- ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_implenn_display']
+- ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_simplenn_display']
 - ['mfiles/vl_simplenn_move.md', 'Functions', 'vl_simplenn_move']
 
 - ['developers.md', 'Developers']

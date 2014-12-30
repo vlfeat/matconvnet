@@ -8,6 +8,7 @@ site=doc/site/docs
 
 mfiles=\
 vl_argparse.m \
+vl_compilenn.m \
 vl_nnconv.m \
 vl_nndropout.m \
 vl_nnloss.m \
