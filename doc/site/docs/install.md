@@ -13,26 +13,62 @@ issuing the command:
 
     > vl_test_nnlayers
 
+To test the GPU version of the library (provided that you have a GPU
+and have compiled the corresponding support), use
+
+    > vl_test_nnlayers(true)
+
+Note that this is actually slower than the CPU version; this is
+expected and an artifact of the test code.
+
 ## Compiling
 
 <a name='compiling'/></a>
 
-Compiling the CPU version of MatConvNet is simple (presently Linux and
-Mac OS X are supported; Windows should work, up to some modifications
-to `vl_imreadjpeg.c`).  The simplest compilation method is to use
-supplied `Makefile`:
+### Compiling from MATLAB
+
+Make sure that you have a C++ compiler configured in MATLAB (see `mex
+-setup`). Then the simplest method to compile the library is to use
+the provided [`vl_compilenn`](mfiles/vl_compilenn) command:
+
+    > run <path to MatConvNet>/matlab/vl_setupnn
+    > vl_compilenn()
+
+Read the [function documentation](mfiles/vl_compilenn) for further
+information on the options.
+
+To compile the GPU code, you will also need a copy of the NVIDIA CUDA
+Devkit, preferably corresponding to your MATLAB version, and a NVIDA
+GPU with compute capability 2.0 or greater. Then
+
+    > vl_compilenn('enableGpu', true)
+
+should do the trick.
+
+If you want to run experiments on ImageNet or similar large scale
+dataset, the `vl_imreadjpeg` function is also needed. This requires a
+copy of LibJPEG to be installed in your system and usable by the C++
+compiler. To compile this file use:
+
+    > vl_compilenn('enableGpu', true, 'enableImreadJpeg', true)
+
+At present, this function is supported only under Mac and Linux.
+
+### Compiling from the Shell
+
+This method works only for Mac and Linux and uses the supplied
+`Makefile`:
 
     > make ARCH=<your arch> MATLABROOT=<path to MATLAB>
 
 This requires MATLAB to be correctly configured with a suitable
-compiler (usually XCode for Mac, gcc for Linux, Visual C for Windows).
+compiler (usually Xcode for Mac, GCC for Linux, Visual C for Windows).
 For example:
 
     > make ARCH=maci64 MATLABROOT=/Applications/MATLAB_R2014a.app
 
-would work for a Mac with MATLAB R2014 installed in its default
-folder. Other supported architectures are `glnxa64` (for Linux) and
-`win64` (for Windows).
+should work for a Mac with MATLAB R2014 installed in its default
+location. The other supported architecture is `glnxa64` (for Linux).
 
 Compiling the GPU version requries some more configuration. First of
 all, you will need a recent version of MATLAB (e.g. R2014a). Secondly,

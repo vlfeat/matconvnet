@@ -9,9 +9,9 @@ example CNNs are included to classify and encode images.
     - Tarball for [version 1.0-beta8](download/matconvnet-1.0-beta8.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
     - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
-    - [Installation instructions](install)
 
 *   **Getting started**
+    - [Installation instructions](install)
     - [Using pre-trained models](pretrained)
     - [Training your own models](training)
     - [Working with GPU accelerated code](gpu)
