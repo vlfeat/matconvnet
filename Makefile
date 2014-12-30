@@ -25,7 +25,7 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta7
+VER = 1.0-beta8
 DIST = $(NAME)-$(VER)
 RSYNC = rsync
 HOST = vlfeat-admin:sites/sandbox-matconvnet
