@@ -12,6 +12,7 @@ pages:
 
 - ['install.md', 'Getting Started', 'Installing']
 - ['pretrained.md', 'Getting Started', 'Pretrained models']
+- ['training.md', 'Getting Started', 'Training new models']
 - ['gpu.md', 'Getting Started', 'Using GPU code']
 - ['about.md', 'Getting Started', 'About']
 
