@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Copyright 2013 The MathWorks, Inc. -->
+<!-- Copyright 2013-2014 The MathWorks, Inc. -->
 <config
     Name="nvcc"
     ShortName="nvcc"
@@ -27,25 +27,25 @@
           CMDLINE1="$CXX -c $DEFINES $INCLUDE $NVCCFLAGS $CXXFLAGS $OPTIM $SRC -o $OBJ"
           CMDLINE2="$LDXX $LDFLAGS $LINKOPTIM $LINKEXPORT $OBJS $CXXLIBS $LINKLIBS -o $EXE"
           CMDLINE3="rm -f $OBJ"
-
+          
           CXX="$NVCC"
           DEFINES="$MATLABMEX"
           MATLABMEX="-DMATLAB_MEX_FILE"
-          NVCCFLAGS="-gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=&#92;&quot;sm_30,compute_30&#92;&quot; -m 64 $NVCC_FLAGS"
+          NVCCFLAGS="-gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=sm_30 -m 64 $NVCC_FLAGS"
           CXXFLAGS="--compiler-bindir=$CLANG_COMPILER --compiler-options=-fno-common,-arch,$ARCHS,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET,-fexceptions,-isysroot,$ISYSROOT"
-          INCLUDE="-I&quot;$MATLABROOT/extern/include&quot; -I&quot;$MATLABROOT/simulink/include&quot; -I&quot;$MATLABROOT/toolbox/distcomp/gpu/extern/include/&quot;"
+          INCLUDE="-I&quot;$MATLABROOT/extern/include&quot; -I&quot;$MATLABROOT/simulink/include&quot; -I&quot;$MATLABROOT/toolbox/distcomp/gpu/extern/include/&quot;" 
           CXXOPTIMFLAGS="-O2 -DNDEBUG"
           CXXDEBUGFLAGS="-g"
           ARCHS="x86_64"
-
-          LDXX="$XCRUN_DIR/xcrun -sdk macosx10.9 clang++"
+          
+          LDXX="$XCRUN_DIR/xcrun clang++"
           LDFLAGS="-stdlib=libstdc++ -Wl,-twolevel_namespace -undefined error -arch $ARCHS -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -Wl,-syslibroot,$ISYSROOT $LDBUNDLE $LINKEXPORT"
           LDBUNDLE="-bundle"
           LINKEXPORT="-Wl,-exported_symbols_list,&quot;$MATLABROOT/extern/lib/$ARCH/mexFunction.map&quot;"
           LINKLIBS="-L&quot;$MATLABROOT/bin/$ARCH&quot; -lmx -lmex -lmat -lm -lmwgpu -lcudart"
           LDOPTIMFLAGS="-O"
           LDDEBUGFLAGS="-g"
-
+          
           OBJEXT=".o"
           LDEXT=".mexmaci64"
           MACOSX_DEPLOYMENT_TARGET='10.8'>
@@ -61,7 +61,8 @@
                     <fileExists name="$$/nvcc" />
                 </and>
                 <cmdReturns name="which nvcc" />
-                <fileExists name="/usr/local/cuda-5.5/bin/nvcc" />
+                <fileExists name="/Developer/NVIDIA/CUDA-6.0/bin/nvcc" /> <!-- Default install location -->
+                <fileExists name="/usr/local/cuda/bin/nvcc" />            <!-- Recent CUDA versions symlink here -->
             </or>
         </NVCC>
         <CLANG_COMPILER>
@@ -82,19 +83,9 @@
         </XCRUN_DIR>
         <ISYSROOT>
           <and>
-              <cmdReturns name="xcode-select -print-path"/>
-              <cmdReturns name="find $$ -name MacOSX10.9.sdk" />
+              <cmdReturns name="xcrun --show-sdk-path"/>
               <dirExists name="$$" />
          </and>
         </ISYSROOT>
-        <!-- User needs to agree to license of the version (or higher) that we support -->
-<!--        <XCODE_AGREED_VERSION>
-            <and diagnostic="Xcode is installed, but its license has not been accepted. Run Xcode and accept its license agreement." >
-
-                <cmdReturns name="&#10;agreed=$(defaults read com.apple.dt.Xcode Idexcodeversionforagreedtogmlicense) &#10; if echo $agreed | grep -E '[\.\&quot;]' >/dev/null; then &#10; lhs=`expr &quot;$agreed&quot; : '\([0-9]*\)[\.].*'` &#10;  rhs=`expr &quot;$agreed&quot; : '[0-9]*[\.]\(.*\)$'` &#10; if echo $rhs | grep -E '[\.&quot;]' >/dev/null; then &#10; rhs=`expr &quot;$rhs&quot; : '\([0-9]*\)[\.].*'` &#10; fi &#10; if [ $lhs -gt 4 ] || ( [ $lhs -eq 4 ] &amp;&amp; [ $rhs -ge 3 ] ); then &#10; echo $agreed &#10; else &#10; exit 1&#10; fi &#10; fi" />
-
-             <cmdReturns name="&#10; echo 5.0 &#10;" />
-            </and>
-        </XCODE_AGREED_VERSION>-->
     </locationFinder>
 </config>
