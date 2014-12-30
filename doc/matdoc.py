@@ -10,11 +10,10 @@ from optparse import OptionParser
 
 usage = """usage: %prog [options] <mfile>
 
-Extracts the comments from the specified <mfile> and print a Markdown
+Extracts the comments from the specified <mfile> and prints a Markdown
 version of them."""
 
 optparser = OptionParser(usage=usage)
-
 optparser.add_option(
     "-v", "--verbose",
     dest    = "verb",
@@ -91,7 +90,7 @@ def render_L(tree, context):
     print "%s%s" % (context,tree.text)
 
 def render_DH(tree, context):
-    print "%s**%s** %s" % (context, tree.description, tree.inner_text)
+    print "%s**%s** [*%s*]" % (context, tree.description.strip(), tree.inner_text.strip())
 
 def render_DI(tree, context):
     context.push(Frame("    ", "*   "))

@@ -10,40 +10,47 @@
 # the terms of the BSD license (see the COPYING file).
 
 """
-MDOC fromats the help block of a MATLAB M-file based on a simple set
-of rules. Pharagraphs, verbatim sections, lists and other structures
-are automatically instantiated by looking at blank lines, indentation
-and a few decoration symbols.
+MatDocParser is an interpreter for the MatDoc format. This is a simplified and
+stricter version of Markdown suitable to commenting MATLAB functions. the format
+is easily understood from an example:
 
-The documentation starts at a conventional indentation level N (by
-default 2). A block of non-epmty lines prefixed by N characters is
-considered a paragraph. For instance
+A paragraph starts on a new line.
+And continues on following lines.
 
- |  Bla bla bla
- |  bla bla bla.
- |
- |  Bla bla.
+Indenting with a whitespace introduces a verbatim code section:
 
-generates two pharagraps. If there are more than N white spaces,
-then the block is taken verbatim instead (and rendered in <pre> HTML
-tags). For instance
+   Like this
+    This continues it
 
- |  Bla bla bla
- |   Code Code Code
- |
- |   Code Code Code
+Different paragraphs are separated by blank lines.
 
-generates one paragraph followed by one verbatim section.
+* The *, -, + symbols at the beginning of a line introduce a list.
+  Which can be continued on follwing paragraphs by proper indentation.
+
+  Multiple paragraphs in a list item are also supported.
+
+* This is the second item of the same list.
+
+It is also possible to have definition lists such as
+
+Term1:: Short description 2
+   Longer explanation.
+
+   Behaves like a list item.
+
+Term2:: Short description 2
+Term3:: Short description 3
+  Longer explanations are optional.
 """
 
 import sys
 import os
 import re
 
-__mpname__           = 'MDocFormatter'
-__version__          = '0.1'
-__date__             = '2008-01-01'
-__description__      = 'MDoc formatting module'
+__mpname__           = 'MatDocParser'
+__version__          = '1.0-beta1'
+__date__             = '2014-12-29'
+__description__      = 'MatDoc MATLAB inline function description interpreter.'
 __long_description__ = __doc__
 __license__          = 'BSD'
 __author__           = 'Andrea Vedaldi'
@@ -112,7 +119,7 @@ class Lexer(object):
             x.text = x.description + "::" + x.inner_text
             return x
         # a line of type '  * <inner_contet>'
-        match = re.match(r"(\s*)([-\*#]\s*)(\S.*)\n?$", line)
+        match = re.match(r"(\s*)([-\*+]\s*)(\S.*)\n?$", line)
         if match:
             x = BH()
             x.indent = len(match.group(1))
