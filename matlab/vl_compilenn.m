@@ -40,8 +40,8 @@ function vl_compilenn( varargin )
 %         with the `CudaRoot` option.
 %
 %    `CudaRoot`:: guessed automatically
-%         This option specifies the path to the CUDA Devkit to use
-%         for compilation.
+%       This option specifies the path to the CUDA Devkit to use
+%       for compilation.
 %
 %    `EnableImreadJpeg`:: `false`
 %       Set true to compile `vl_imreadjpeg()`. In order to successfully
@@ -300,9 +300,7 @@ end
 vl_setupnn() ;
 
 % --------------------------------------------------------------------
-% --------------------------------------------------------------------
 %                                                           MEX recipe
-% --------------------------------------------------------------------
 % --------------------------------------------------------------------
 
 % --------------------------------------------------------------------
@@ -326,9 +324,7 @@ for i=1:numel(srcs)
 end
 
 % --------------------------------------------------------------------
-% --------------------------------------------------------------------
 %                                                          NVCC recipe
-% --------------------------------------------------------------------
 % --------------------------------------------------------------------
 
 % --------------------------------------------------------------------
@@ -373,9 +369,7 @@ for i=1:numel(srcs)
 end
 
 % --------------------------------------------------------------------
-% --------------------------------------------------------------------
 %                                                    Utility functions
-% --------------------------------------------------------------------
 % --------------------------------------------------------------------
 
 % --------------------------------------------------------------------
@@ -397,11 +391,11 @@ mver = [1e4 1e2 1] * sscanf(version, '%d.%d.%d') ;
 if mver <= 80200, ext = 'sh' ; else ext = 'xml' ; end
 arch = computer('arch') ;
 switch arch
-  case {'glnxa64', 'win64'}
+  case {'win64'}
     config_dir = fullfile(matlabroot, 'toolbox', ...
                           'distcomp', 'gpu', 'extern', ...
-                          'src', 'mex', 'glnxa64') ;
-  case {'maci64'}
+                          'src', 'mex', arch) ;
+  case {'maci64', 'glnxa64'}
     config_dir = fullfile(root, 'matlab', 'src', 'config') ;
 end
 conf_file = fullfile(config_dir, ['mex_CUDA_' arch '.' ext]);
@@ -523,17 +517,6 @@ if status ~= 0
   else
     fprintf('Location of nvcc (%s) added to your PATH.\n', cuda_bin_path);
   end
-end
-
-% --------------------------------------------------------------------
-function method = guess_cuobj_method()
-% --------------------------------------------------------------------
-% Guess CUDA compilation method
-switch computer
-  case 'PCWIN64', method = 'nvcc';
-  case 'MACI64',  method = 'mex';
-  case 'GLNXA64', method = 'mex';
-  otherwise, error('Unsupported architecture %s.', computer) ;
 end
 
 % --------------------------------------------------------------------
