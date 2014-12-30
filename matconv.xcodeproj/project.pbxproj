@@ -71,10 +71,23 @@
 		2D6FC8A319B672A800C1CF41 /* subsample.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = subsample.cpp; path = matlab/src/bits/subsample.cpp; sourceTree = "<group>"; };
 		2D6FC8A419B672D900C1CF41 /* subsample.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = subsample.hpp; path = matlab/src/bits/subsample.hpp; sourceTree = "<group>"; };
 		2D6FC8A519B672EE00C1CF41 /* subsample_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = subsample_gpu.cu; path = matlab/src/bits/subsample_gpu.cu; sourceTree = "<group>"; };
-		2D717F1E19B3A2A50028FE9E /* index.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = index.md; path = doc/index.md; sourceTree = "<group>"; };
+		2D708AAA1A52F61A004E7D42 /* about.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = about.md; sourceTree = "<group>"; };
+		2D708AAC1A52F61A004E7D42 /* fixes.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = fixes.css; sourceTree = "<group>"; };
+		2D708AAD1A52F61A004E7D42 /* tables.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = tables.css; sourceTree = "<group>"; };
+		2D708AAE1A52F61A004E7D42 /* developers.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = developers.md; sourceTree = "<group>"; };
+		2D708AAF1A52F61A004E7D42 /* functions.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = functions.md; sourceTree = "<group>"; };
+		2D708AB01A52F61A004E7D42 /* gpu.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = gpu.md; sourceTree = "<group>"; };
+		2D708AB11A52F61A004E7D42 /* index.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = index.md; sourceTree = "<group>"; };
+		2D708AB21A52F61A004E7D42 /* install.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = install.md; sourceTree = "<group>"; };
+		2D708AB41A52F61A004E7D42 /* mathjaxhelper.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = mathjaxhelper.js; sourceTree = "<group>"; };
+		2D708AC81A52F61A004E7D42 /* pretrained.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = pretrained.md; sourceTree = "<group>"; };
+		2D708AC91A52F61A004E7D42 /* training.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = training.md; sourceTree = "<group>"; };
+		2D708ACA1A52F61A004E7D42 /* mkdocs.yml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = mkdocs.yml; path = doc/site/mkdocs.yml; sourceTree = "<group>"; };
+		2D708ACB1A52F65C004E7D42 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = doc/Makefile; sourceTree = "<group>"; };
+		2D708ACC1A52F65C004E7D42 /* matdoc.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = matdoc.py; path = doc/matdoc.py; sourceTree = "<group>"; };
+		2D708ACD1A52F65C004E7D42 /* matdocparser.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = matdocparser.py; path = doc/matdocparser.py; sourceTree = "<group>"; };
 		2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "matconvnet-manual.tex"; path = "doc/matconvnet-manual.tex"; sourceTree = "<group>"; };
 		2D717F2019B3A2A50028FE9E /* references.bib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = references.bib; path = doc/references.bib; sourceTree = "<group>"; };
-		2D717F2119B3A2A50028FE9E /* template.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = template.html; path = doc/template.html; sourceTree = "<group>"; };
 		2D95CDA318EDE3A50076E3A2 /* im2col_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = im2col_gpu.cu; path = matlab/src/bits/im2col_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA818EEA9790076E3A2 /* pooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = pooling_gpu.cu; path = matlab/src/bits/pooling_gpu.cu; sourceTree = "<group>"; };
 		2D95CDA918EEAC900076E3A2 /* normalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = normalize_gpu.cu; path = matlab/src/bits/normalize_gpu.cu; sourceTree = "<group>"; };
@@ -194,14 +207,60 @@
 			name = config;
 			sourceTree = "<group>";
 		};
+		2D708AA81A52F60B004E7D42 /* site */ = {
+			isa = PBXGroup;
+			children = (
+				2D708AA91A52F61A004E7D42 /* docs */,
+				2D708ACB1A52F65C004E7D42 /* Makefile */,
+				2D708ACC1A52F65C004E7D42 /* matdoc.py */,
+				2D708ACD1A52F65C004E7D42 /* matdocparser.py */,
+				2D708ACA1A52F61A004E7D42 /* mkdocs.yml */,
+			);
+			name = site;
+			sourceTree = "<group>";
+		};
+		2D708AA91A52F61A004E7D42 /* docs */ = {
+			isa = PBXGroup;
+			children = (
+				2D708AAB1A52F61A004E7D42 /* css */,
+				2D708AB31A52F61A004E7D42 /* js */,
+				2D708AAA1A52F61A004E7D42 /* about.md */,
+				2D708AAE1A52F61A004E7D42 /* developers.md */,
+				2D708AAF1A52F61A004E7D42 /* functions.md */,
+				2D708AB01A52F61A004E7D42 /* gpu.md */,
+				2D708AB11A52F61A004E7D42 /* index.md */,
+				2D708AB21A52F61A004E7D42 /* install.md */,
+				2D708AC81A52F61A004E7D42 /* pretrained.md */,
+				2D708AC91A52F61A004E7D42 /* training.md */,
+			);
+			name = docs;
+			path = doc/site/docs;
+			sourceTree = "<group>";
+		};
+		2D708AAB1A52F61A004E7D42 /* css */ = {
+			isa = PBXGroup;
+			children = (
+				2D708AAC1A52F61A004E7D42 /* fixes.css */,
+				2D708AAD1A52F61A004E7D42 /* tables.css */,
+			);
+			path = css;
+			sourceTree = "<group>";
+		};
+		2D708AB31A52F61A004E7D42 /* js */ = {
+			isa = PBXGroup;
+			children = (
+				2D708AB41A52F61A004E7D42 /* mathjaxhelper.js */,
+			);
+			path = js;
+			sourceTree = "<group>";
+		};
 		2D717F2219B3A2AB0028FE9E /* doc */ = {
 			isa = PBXGroup;
 			children = (
+				2D708AA81A52F60B004E7D42 /* site */,
 				2D6D042D196A896300022E96 /* README.md */,
-				2D717F1E19B3A2A50028FE9E /* index.md */,
 				2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */,
 				2D717F2019B3A2A50028FE9E /* references.bib */,
-				2D717F2119B3A2A50028FE9E /* template.html */,
 			);
 			name = doc;
 			sourceTree = "<group>";
