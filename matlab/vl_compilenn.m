@@ -190,34 +190,34 @@ end
 % CUDA MEX and NVCC arguments
 opts.verbose && fprintf('%s: enable GPU: %d\n', mfilename, opts.enableGpu) ;
 if opts.enableGpu
-  if isempty(opts.cudaRoot)
-    opts.cudaRoot = search_cuda_devkit(opts);
-  end
+
+  % Get CUDA Devkit and other CUDA paths
+  if isempty(opts.cudaRoot), opts.cudaRoot = search_cuda_devkit(opts); end
   check_nvcc(opts.cudaRoot);
-
-  opts.verbose && fprintf('%s:\tCUDA: using CUDA Devkit ''%s''\n', ...
-    mfilename, opts.cudaRoot) ;
-
+  opts.verbose && fprintf('%s:\tCUDA: using CUDA Devkit ''%s''.\n', ...
+                          mfilename, opts.cudaRoot) ;
   switch arch
     case 'win64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib', 'x64') ;
     case 'maci64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib') ;
     case 'glnxa64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib64') ;
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
+  opts.nvccPath = fullfile(opts.cudaRoot, 'bin', 'nvcc') ;
 
+  % Get CUDA arch string (GPU capabilities)
+  if isempty(opts.cudaArch), opts.cudaArch = get_cuda_arch(opts) ; end
+  opts.verbose && fprintf('%s:\tCUDA: CUDA NVCC arch string: ''%s''.\n', ...
+                          mfilename, opts.cudaArch) ;
+
+  % Get CUDA compilation method
   if isempty(opts.cudaMethod)
     switch arch
       case 'win64', opts.cudaMethod = 'nvcc' ;
-      case {'maci64', 'glnxa64'}
-        opts.cudaMethod = 'mex' ;
-        nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc') ;
-        if ~strcmp(getenv('MW_NVCC_PATH'), nvcc_path)
-          warning('Setting the ''MW_NVCC_PATH'' environment variable to ''%s''', nvcc_path) ;
-          setenv('MW_NVCC_PATH', nvcc_path) ;
-        end
+      case {'maci64', 'glnxa64'}, opts.cudaMethod = 'mex' ;
     end
   end
 
+  % Get CUDA flags
   mex_cu_libs = {mex_libs{:}, ...
                  ['-L' fullfile(matlabroot, 'bin', arch)], ...
                  ['-L' opts.cudaLibDir], ...
@@ -226,15 +226,26 @@ if opts.enableGpu
   if strcmp(computer, 'PCWIN64')
     mex_cu_libs{end+1} = '-lgpu';
   end
-  mex_cu_opts = mex_opts;
+  mex_cu_opts = mex_opts ;
   mex_cu_opts{end+1} = '-DENABLE_GPU' ;
   switch opts.cudaMethod
-    case 'mex', mex_cu_opts = [mex_cu_opts {'-f' mex_cuda_config(root)}];
+    case 'mex'
+      mex_cu_opts = [mex_cu_opts {'-f' mex_cuda_config(root)}];
+      mex_cu_opts{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;
+      if ~strcmp(getenv('MW_NVCC_PATH'), opts.nvccPath)
+        warning('Setting the ''MW_NVCC_PATH'' environment variable to ''%s''', ...
+                opts.nvccPath) ;
+        setenv('MW_NVCC_PATH', opts.nvccPath) ;
+      end
+
     case 'nvcc'
       mex_cu_opts = [mex_cu_opts {'-cxx'}];
-      if strcmp(arch, 'maci64')
-        mex_cu_opts{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
-        mex_cu_opts{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
+      switch arch
+        case 'maci64'
+          mex_cu_opts{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
+          mex_cu_opts{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
+        case 'glnxa64'
+          mex_cu_libs{end+1} = '-lmwgpu' ;
       end
   end
 
@@ -246,7 +257,8 @@ if opts.enableGpu
 
   if strcmp(opts.cudaMethod, 'nvcc')
     nvcc_opts = nvcc_get_opts(opts) ;
-    opts.verbose && fprintf('%s:\tCUDA: NVCC compiler options: %s\n', mfilename, nvcc_opts) ;
+    opts.verbose && fprintf('%s:\tCUDA: NVCC compiler options: %s\n', ...
+                            mfilename, nvcc_opts) ;
   end
 end
 
@@ -322,27 +334,9 @@ end
 % --------------------------------------------------------------------
 function nvcc_opts = nvcc_get_opts(opts)
 % --------------------------------------------------------------------
-% Search CUDA arch
-if isempty(opts.cudaArch)
-  opts.verbose && fprintf('%s:\tCUDA: determining GPU compute capability (use the ''CudaArch'' option to override)\n', mfilename);
-  try
-    gpu_device = gpuDevice();
-    arch_code = strrep(gpu_device.ComputeCapability, '.', '');
-    opts.cudaArch = ...
-      sprintf('-gencode=arch=compute_%s,code=\\\"sm_%s,compute_%s\\\" ', ...
-              arch_code, arch_code, arch_code) ;
-  catch
-    opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU;'
-                        'falling back to default\n'], mfilename);
-    opts.cudaArch = opts.defCudaArch;
-  end
-  opts.verbose && fprintf(...
-    '%s:\tCUDA: NVCC compute capability set to %s .\n', ...
-    mfilename, opts.cudaArch) ;
-end
 
-% nvcc options
-nvcc_opts = [opts.cudaArch, ' -DENABLE_GPU' ...
+nvcc_opts = [...
+  opts.cudaArch, ' -DENABLE_GPU' ...
   ' -I"' fullfile(matlabroot, 'extern', 'include') '"' ...
   ' -I"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'];
 if opts.verbose > 1
@@ -370,8 +364,9 @@ nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
 for i=1:numel(srcs)
   [~,base] = fileparts(srcs{i}) ;
   objs{i} = fullfile(bld_dir, [base '.' objext]) ;
-  nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', nvcc_path, srcs{i}, ...
-    nvcc_opts, objs{i});
+  nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', ...
+                     nvcc_path, srcs{i}, ...
+                     nvcc_opts, objs{i});
   opts.verbose && fprintf('%s: CUDA: %s\n', mfilename, nvcc_cmd) ;
   status = system(nvcc_cmd);
   if status, error('Command %s failed.', nvcc_cmd); end;
@@ -400,8 +395,15 @@ function conf_file = mex_cuda_config(root)
 % Get mex CUDA config file
 mver = [1e4 1e2 1] * sscanf(version, '%d.%d.%d') ;
 if mver <= 80200, ext = 'sh' ; else ext = 'xml' ; end
-arch = lower(computer);
-config_dir = fullfile(root, 'matlab', 'src', 'config');
+arch = computer('arch') ;
+switch arch
+  case {'glnxa64', 'win64'}
+    config_dir = fullfile(matlabroot, 'toolbox', ...
+                          'distcomp', 'gpu', 'extern', ...
+                          'src', 'mex', 'glnxa64') ;
+  case {'maci64'}
+    config_dir = fullfile(root, 'matlab', 'src', 'config') ;
+end
 conf_file = fullfile(config_dir, ['mex_CUDA_' arch '.' ext]);
 fprintf('%s:\tCUDA: MEX config file: ''%s''\n', mfilename, conf_file);
 
@@ -533,3 +535,20 @@ switch computer
   case 'GLNXA64', method = 'mex';
   otherwise, error('Unsupported architecture %s.', computer) ;
 end
+
+% --------------------------------------------------------------------
+function cudaArch = get_cuda_arch(opts)
+% --------------------------------------------------------------------
+opts.verbose && fprintf('%s:\tCUDA: determining GPU compute capability (use the ''CudaArch'' option to override)\n', mfilename);
+try
+  gpu_device = gpuDevice();
+  arch_code = strrep(gpu_device.ComputeCapability, '.', '');
+  cudaArch = ...
+      sprintf('-gencode=arch=compute_%s,code=\\\"sm_%s,compute_%s\\\" ', ...
+              arch_code, arch_code, arch_code) ;
+catch
+  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU;'
+                      'falling back to default\n'], mfilename);
+  cudaArch = opts.defCudaArch;
+end
+
