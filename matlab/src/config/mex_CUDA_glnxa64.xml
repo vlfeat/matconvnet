@@ -41,7 +41,7 @@
           LDFLAGS="-pthread -Wl,--no-undefined "
           LDTYPE="-shared"
           LINKEXPORT="-Wl,--version-script,&quot;$MATLABROOT/extern/lib/$ARCH/mexFunction.map&quot;"
-          LINKLIBS="-Wl,-rpath-link,$MATLABROOT/bin/$ARCH -L&quot;$MATLABROOT/bin/$ARCH&quot; -lmx -lmex -lmat -lm -lmwgpu $MATLABROOT/bin/$ARCH/libcudart.so.5.5"
+          LINKLIBS="-Wl,-rpath-link,$MATLABROOT/bin/$ARCH -L&quot;$MATLABROOT/bin/$ARCH&quot; -lmx -lmex -lmat -lm -lmwgpu $MATLABROOT/bin/$ARCH/libcudart.so.[0-9].[0-9]"
           LDOPTIMFLAGS="-O"
           LDDEBUGFLAGS="-g"
 
@@ -62,7 +62,6 @@
                 <fileExists name="/usr/local/cuda-5.5/bin/nvcc" />
             </or>
         </NVCC>
-
         <GCC>
             <cmdReturns name="which g++" />
         </GCC>
