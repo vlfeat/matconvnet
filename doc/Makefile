@@ -27,7 +27,7 @@ vl_simplenn_move.m
 
 mfile_src=$(addprefix matlab/src/, $(mfiles))
 mfile_doc=$(patsubst %.m,%.md,$(addprefix $(site)/mfiles/, $(mfiles)))
-mds=$(widlcard doc/site/docs/*.md)
+mds=$(wildcard doc/site/docs/*.md)
 
 doc: doc-site doc-manual
 doc-site: doc/site/site/index.html
