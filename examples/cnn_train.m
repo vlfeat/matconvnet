@@ -91,7 +91,12 @@ for epoch=1:opts.numEpochs
   modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
   if opts.continue
-    if exist(modelPath(epoch),'file'), continue ; end
+    if exist(sprintf(modelPath, epoch),'file')
+      if epoch == opts.numEpochs
+        load(sprintf(modelPath, epoch), 'net', 'info') ;
+      end
+      continue ;
+    end
     if epoch > 1
       fprintf('resuming by loading epoch %d\n', epoch-1) ;
       load(modelPath(epoch-1), 'net', 'info') ;
