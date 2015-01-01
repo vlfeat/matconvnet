@@ -113,8 +113,8 @@ for w=fields
         end
         s=sprintf('%d', dimension(1,l)) ;
       case 'xwhd'
-        sz=size(res(l+1).x) ;
-        s=sprintf('%dx%dx%d%d', sz(1), sz(2), sz(3), sz(4)')
+        for d=1:4, sz(d) = size(res(l+1).x,1) ; end        
+        s=sprintf('%dx%dx%d%d', sz(1), sz(2), sz(3), sz(4)) ;
       case 'xmem'
         [a,b]=xmem(res(l+1).x) ;
         rmem(1:2,l) = [a;b] ;
