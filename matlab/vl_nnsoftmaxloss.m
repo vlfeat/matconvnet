@@ -16,7 +16,7 @@ function Y = vl_nnsoftmaxloss(X,c,dzdy)
 %    convolutionally at all spatial locations.
 %
 %    DZDX = VL_NNSOFTMAXLOSS(X, C, DZDY) computes the derivative DZDX
-%    of the CNN with respect to the input X given the derivative DZDY
+%    of the CNN output Z with respect to the input X given the derivative DZDY
 %    with respect to the block output Y. DZDX has the same dimension
 %    as X.
 
@@ -42,7 +42,7 @@ else
   assert(isequal(sz_, [sz(1) sz(2) 1 sz(4)])) ;
 end
 
-% convert to indeces
+% convert to indices
 c_ = 0:numel(c)-1 ;
 c_ = 1 + ...
   mod(c_, sz(1)*sz(2)) + ...

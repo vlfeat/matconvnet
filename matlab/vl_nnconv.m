@@ -7,7 +7,7 @@
 %    below.
 %
 %    [DZDX, DZDF, DZDB] = VL_NNCONV(X, F, B, DZDY) computes the
-%    derivatives of the nework output Z w.r.t. the data X and
+%    derivatives of the network output Z w.r.t. the data X and
 %    parameters F, B given the derivative w.r.t the output Y. If B is
 %    the empty matrix, then DZDB is also empty.
 %
@@ -44,7 +44,7 @@
 %      1 <= FW <= W + 2*(PADLEFT+PADRIGHT).
 %
 %    The output a is a SINGLE array of dimension YH x YW x K x N of
-%    N images with K challens and size:
+%    N images with K channels and size:
 %
 %      YH = floor((H + (PADTOP+PADBOTTOM) - FH)/STRIDEY) + 1,
 %      YW = floor((W + (PADLEFT+PADRIGHT) - FW)/STRIDEX) + 1.
