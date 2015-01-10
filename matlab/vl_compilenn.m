@@ -239,12 +239,15 @@ if opts.enableGpu
       end
 
     case 'nvcc'
-      mex_cu_opts = [mex_cu_opts {'-cxx'}];
       switch arch
         case 'maci64'
+          mex_cu_opts = [mex_cu_opts {'-cxx'}];
           mex_cu_opts{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
           mex_cu_opts{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
         case 'glnxa64'
+          % Mex is unable to recognise whether C or C++ when linking only,
+          % adding -cxx option solves that.
+          mex_cu_opts = [mex_cu_opts {'-cxx'}];
           mex_cu_libs{end+1} = '-lmwgpu' ;
       end
   end
@@ -452,7 +455,7 @@ paths = {getenv('MW_NVCC_PATH')} ;
 paths = [paths, which_nvcc(opts)] ;
 for v = {'5.5', '6.0', '6.5', '7.0'}
   paths{end+1} = sprintf('/Developer/NVIDIA/CUDA-%s/bin/nvcc', char(v)) ;
-  paths{end+1} = sprintf('C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v%s', char(v)) ;
+  paths{end+1} = sprintf('C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v%s\\bin\\nvcc.exe', char(v)) ;
 end
 paths{end+1} = sprintf('/usr/local/cuda/bin/nvcc') ;
 
@@ -488,7 +491,7 @@ function [valid, cuver]  = validate_nvcc(opts, nvcc_path)
 valid = false ;
 cuver = 0 ;
 if ~isempty(nvcc_path)
-  [status, output] = system(sprintf('%s --version', nvcc_path)) ;
+  [status, output] = system(sprintf('"%s" --version', nvcc_path)) ;
   valid = (status == 0) ;
 end
 if ~valid, return ; end
@@ -530,7 +533,7 @@ try
       sprintf('-gencode=arch=compute_%s,code=\\\"sm_%s,compute_%s\\\" ', ...
               arch_code, arch_code, arch_code) ;
 catch
-  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU;'
+  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU;' ...
                       'falling back to default\n'], mfilename);
   cudaArch = opts.defCudaArch;
 end
