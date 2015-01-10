@@ -433,7 +433,7 @@ switch computer('arch')
   case 'win64'
     [~, paths] = system('where nvcc.exe');
     paths = strtrim(paths);
-    paths = patsh(strfind(paths, '.exe'));
+    paths = paths(strfind(paths, '.exe'));
   case {'maci64', 'glnxa64'}
     [~, paths] = system('which nvcc');
     paths = strtrim(paths) ;
