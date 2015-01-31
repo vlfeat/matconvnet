@@ -12,8 +12,12 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "bits/mexutils.h"
-#include "bits/nnhelper.h"
-#include "bits/normalize.hpp"
+#include "bits/nnnormalize.hpp"
+#include "bits/datamex.hpp"
+
+#if ENABLE_GPU
+#include "bits/datacu.hpp"
+#endif
 
 #include <assert.h>
 
@@ -28,6 +32,25 @@ vlmxOption  options [] = {
   {0,                  0,   0                     }
 } ;
 
+/* ---------------------------------------------------------------- */
+/*                                                          Context */
+/* ---------------------------------------------------------------- */
+
+vl::Context context ;
+
+/*
+ Resetting the context here resolves a crash when MATLAB quits and
+ the ~Context function is implicitly called on unloading the MEX file.
+ */
+void atExit()
+{
+  context.reset() ;
+}
+
+/* ---------------------------------------------------------------- */
+/*                                                       MEX driver */
+/* ---------------------------------------------------------------- */
+
 enum {
   IN_DATA = 0, IN_PARAM, IN_DEROUTPUT, IN_END
 } ;
@@ -39,37 +62,16 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  /* inputs */
-  PackedData data ;
-  PackedData derOutput ;
-
-  /* outputs */
-  PackedData output ;
-  PackedData derData  ;
-  PackedDataGeometry outputGeom ;
-  PackedDataGeometry derDataGeom  ;
-
   size_t normDepth ;
   double normAlpha ;
   double normKappa ;
   double normBeta ;
-
-#ifdef ENABLE_GPU
-  bool gpuMode = false ;
-#else
-  bool const gpuMode = false ;
-#endif
   bool backMode = false ;
 
   int verbosity = 0 ;
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
-
-  packed_data_init_empty(&data) ;
-  packed_data_init_empty(&derOutput) ;
-  packed_data_init_empty(&output) ;
-  packed_data_init_empty(&derData) ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
@@ -95,25 +97,14 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  packed_data_init_with_array (&data, in[IN_DATA]) ;
-  if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
+  vl::MexTensor data(in[IN_DATA]) ;
+  vl::MexTensor derOutput(backMode ? in[IN_DEROUTPUT] : NULL) ;
 
-#if ENABLE_GPU
-  gpuMode = (data.mode == matlabGpuArrayWrapper) ;
-  if (gpuMode) {
-    mxInitGPU() ;
+  if (backMode && ! vl::areCompatible(data, derOutput)) {
+    mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
   }
-#endif
-
-  /* check GPU/data class consistency */
-  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper) && backMode) {
-    mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
-  }
-  if (data.geom.classID != mxSINGLE_CLASS) {
-    mexErrMsgTxt("DATA is not of class SINGLE.");
-  }
-  if (backMode && (derOutput.geom.classID != mxSINGLE_CLASS)) {
-    mexErrMsgTxt("DEROUTPUT is not of class SINGLE.");
+  if (backMode && (data.getGeometry() != derOutput.getGeometry())) {
+    mexErrMsgTxt("DATA and DEROUTPUT do not have the same size.") ;
   }
 
   if (!mxIsNumeric(in[IN_PARAM]) ||
@@ -127,42 +118,31 @@ void mexFunction(int nout, mxArray *out[],
   normKappa = mxGetPr(in[IN_PARAM])[1]  ;
   normAlpha = mxGetPr(in[IN_PARAM])[2]  ;
   normBeta = mxGetPr(in[IN_PARAM])[3]  ;
-
-  packed_data_geom_init(&outputGeom,
-                        mxSINGLE_CLASS,
-                        data.geom.height,
-                        data.geom.width,
-                        data.geom.depth,
-                        data.geom.size) ;
-
-  derDataGeom = data.geom ;
-
-  if (verbosity > 0) {
-    mexPrintf("vl_nnnormalize: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
-              normDepth, normKappa, normAlpha, normBeta) ;
-    packed_data_geom_display(&data.geom, "vl_nnnormalize: data") ;
-
-    if (backMode) {
-      packed_data_geom_display(&derOutput.geom, "vl_nnnormalize: derOutput") ;
-      packed_data_geom_display(&derDataGeom, "vl_nnnormalize: derData") ;
-    } else {
-      packed_data_geom_display(&outputGeom, "vl_nnnormalize: output") ;
-    }
-  }
-
-  if (backMode) {
-    if (derOutput.geom.height != outputGeom.height ||
-        derOutput.geom.width != outputGeom.width ||
-        derOutput.geom.depth != outputGeom.depth ||
-        derOutput.geom.size != outputGeom.size)
-    {
-      mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;
-    }
-  }
-
   if (normDepth < 1) {
     mexErrMsgTxt("The normalization depth is smaller than 1.") ;
+  }
+
+  /* Create output buffers */
+  vl::Device type = data.getMemoryType() ;
+  vl::MexTensor output ;
+  vl::MexTensor derData ;
+  if (!backMode) {
+    output = vl::MexTensor(type, data.getGeometry()) ;
+  } else {
+    derData = vl::MexTensor(type, data.getGeometry()) ;
+  }
+
+  if (verbosity > 0) {
+    mexPrintf("vl_nnnormalize: mode %s; %s\n",  (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
+              normDepth, normKappa, normAlpha, normBeta) ;
+    vl::print("vl_nnpool: data: ", data) ;
+    if (backMode) {
+      vl::print("vl_nnpool: derOutput: ", derOutput) ;
+      vl::print("vl_nnpool: derData: ", derData) ;
+    } else {
+      vl::print("vl_nnpool: output: ", output) ;
+    }
   }
 
   /* -------------------------------------------------------------- */
@@ -170,59 +150,24 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   if (!backMode) {
-    packed_data_init_with_geom(&output, gpuMode, outputGeom, false, true, 0) ;
-    //packed_data_init_with_geom(&output, gpuMode, outputGeom, false, false, 0) ;
+    vl::nnnormalize_forward(context,
+                            output, data,
+                            normDepth,
+                            normKappa, normAlpha, normBeta) ;
   } else {
-    packed_data_init_with_geom(&derData, gpuMode, derDataGeom, false, true, 0) ;
-  }
-
-  if (!backMode) {
-    /* forward */
-    if (gpuMode) {
-#ifdef ENABLE_GPU
-      normalize_gpu<float>(output.memory,
-                           data.memory,
-                           data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
-                           normDepth, normKappa, normAlpha, normBeta) ;
-#else
-      assert(false) ;
-#endif
-    } else {
-      normalize_cpu<float>(output.memory,
-                           data.memory,
-                           data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
-                           normDepth, normKappa, normAlpha, normBeta) ;
-    }
-  } else {
-    /* backward */
-    if (gpuMode) {
-#ifdef ENABLE_GPU
-      normalizeBackward_gpu<float>(derData.memory,
-                                   data.memory,
-                                   derOutput.memory,
-                                   data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
-                                   normDepth, normKappa, normAlpha, normBeta) ;
-#else
-      assert(false) ;
-#endif
-    } else {
-      normalizeBackward_cpu<float>(derData.memory,
-                                   data.memory,
-                                   derOutput.memory,
-                                   data.geom.height, data.geom.width, data.geom.depth, data.geom.size,
-                                   normDepth, normKappa, normAlpha, normBeta) ;
-    }
+    vl::nnnormalize_backward(context,
+                             derData, data, derOutput,
+                             normDepth,
+                             normKappa, normAlpha, normBeta) ;
   }
 
   /* -------------------------------------------------------------- */
-  /*                                                        Cleanup */
+  /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
-  packed_data_deinit(&data) ;
   if (backMode) {
-    packed_data_deinit(&derOutput) ;
-    out[OUT_RESULT] = packed_data_deinit_extracting_array(&derData) ;
+    out[OUT_RESULT] = derData.relinquish() ;
   } else {
-    out[OUT_RESULT] = packed_data_deinit_extracting_array(&output) ;
+    out[OUT_RESULT] = output.relinquish() ;
   }
 }

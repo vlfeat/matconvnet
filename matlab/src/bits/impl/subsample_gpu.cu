@@ -12,18 +12,24 @@
  the terms of the BSD license (see the COPYING file).
  */
 
-#include "gpu.hpp"
 #include "subsample.hpp"
-
+#include "../datacu.hpp"
 #include <assert.h>
 #include <float.h>
+#include <iostream>
+
+#ifndef ENABLE_GPU
+#error "subsample_gpu.cu cannot be compiled without GPU support"
+#endif
+
+using namespace vl ;
 
 /* ---------------------------------------------------------------- */
-/*                                                  subsample (GPU) */
+/*                                                subsample forward */
 /* ---------------------------------------------------------------- */
 
-template<typename T>
-__global__ void subsample_gpu_kernel
+template<typename T> __global__ void
+subsample_gpu_kernel
 (T* subsampled,
  const T* data,
  const int subsampledWidth,
@@ -58,19 +64,18 @@ __global__ void subsample_gpu_kernel
   }
 }
 
-
-template<typename T>
-void subsample_gpu(T* subsampled,
-                   T const* data,
-                   size_t width,
-                   size_t height,
-                   size_t depth,
-                   size_t strideX,
-                   size_t strideY,
-                   size_t padLeft,
-                   size_t padRight,
-                   size_t padTop,
-                   size_t padBottom)
+template<typename T> static void
+subsample_forward_gpu(T* subsampled,
+                      T const* data,
+                      size_t width,
+                      size_t height,
+                      size_t depth,
+                      size_t strideX,
+                      size_t strideY,
+                      size_t padLeft,
+                      size_t padRight,
+                      size_t padTop,
+                      size_t padBottom)
 {
   int subsampledWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
   int subsampledHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
@@ -90,31 +95,20 @@ void subsample_gpu(T* subsampled,
   }
 }
 
-template
-void subsample_gpu<float>(float* subsampled,
-                          float const* data,
-                          size_t width,
-                          size_t height,
-                          size_t depth,
-                          size_t strideX,
-                          size_t strideY,
-                          size_t padLeft,
-                          size_t padRight,
-                          size_t padTop,
-                          size_t padBottom) ;
-
-template
-void subsample_gpu<double>(double* subsampled,
-                           double const* data,
-                           size_t width,
-                           size_t height,
-                           size_t depth,
-                           size_t strideX,
-                           size_t strideY,
-                           size_t padLeft,
-                           size_t padRight,
-                           size_t padTop,
-                           size_t padBottom) ;
+template <> int
+vl::impl::subsample_forward<vl::GPU, float>(vl::Context& context,
+                                            float* subsampled,
+                                            float const* data,
+                                            size_t height, size_t width, size_t depth,
+                                            size_t strideY, size_t strideX,
+                                            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+{
+  subsample_forward_gpu<float>(subsampled, data,
+                               height, width, depth,
+                               strideY, strideX,
+                               padTop, padBottom, padLeft, padRight) ;
+  return 0 ;
+}
 
 /* ---------------------------------------------------------------- */
 /*                                          subsampleBackward (GPU) */
@@ -154,17 +148,17 @@ __global__ void subsampleBackward_gpu_kernel
 }
 
 template<typename T>
-void subsampleBackward_gpu(T* dzdx,
-                           T const* dzdy,
-                           size_t width,
-                           size_t height,
-                           size_t depth,
-                           size_t strideX,
-                           size_t strideY,
-                           size_t padLeft,
-                           size_t padRight,
-                           size_t padTop,
-                           size_t padBottom)
+void subsample_backward_gpu(T* dzdx,
+                            T const* dzdy,
+                            size_t width,
+                            size_t height,
+                            size_t depth,
+                            size_t strideX,
+                            size_t strideY,
+                            size_t padLeft,
+                            size_t padRight,
+                            size_t padTop,
+                            size_t padBottom)
 {
   int subsampledWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
   int subsampledHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
@@ -185,15 +179,17 @@ void subsampleBackward_gpu(T* dzdx,
   }
 }
 
-template
-void subsampleBackward_gpu<float>(float* dzdx,
-                                  float const* dzdy,
-                                  size_t width,
-                                  size_t height,
-                                  size_t depth,
-                                  size_t strideX,
-                                  size_t strideY,
-                                  size_t padLeft,
-                                  size_t padRight,
-                                  size_t padTop,
-                                  size_t padBottom) ;
+template <> int
+vl::impl::subsample_backward<vl::GPU, float>(vl::Context& context,
+                                             float* derData,
+                                             float const* derSubsampled,
+                                             size_t height, size_t width, size_t depth,
+                                             size_t strideY, size_t strideX,
+                                             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+{
+  subsample_backward_gpu<float>(derData, derSubsampled,
+                                height, width, depth,
+                                strideY, strideX,
+                                padTop, padBottom, padLeft, padRight) ;
+  return 0 ;
+}
