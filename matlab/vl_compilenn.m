@@ -244,6 +244,7 @@ if opts.enableGpu
         case 'maci64'
           mex_cu_opts{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
           mex_cu_opts{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
+          mex_cu_libs{end+1} = '-lmwgpu' ;
         case 'glnxa64'
           mex_cu_libs{end+1} = '-lmwgpu' ;
       end
