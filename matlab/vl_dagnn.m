@@ -118,8 +118,6 @@ function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 % TODO add support for conserve memory
-% TODO solve inputs
-% TODO currently allows only single output
 
 opts.res = [] ;
 opts.sync = false ;

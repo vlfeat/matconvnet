@@ -221,6 +221,8 @@ if doder
         if opts.disableDropout
           res(i).dzdx = res(i+1).dzdx ;
         else
+          % Why is mask from the next layer? It is stored to the same layer
+          % as x
           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
         end
       case 'custom'
