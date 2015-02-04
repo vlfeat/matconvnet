@@ -135,12 +135,11 @@ else
 end
 
 numInputs = numel(x);
-inputNames = {x.name};
 inputs = {x.x};
 
 gpuMode = all(cellfun(@(a) isa(a, 'gpuArray'), inputs)) ;
 
-[arcs, bufferNames] = vl_dagnn_getarcs(net, inputs);
+[arcs, bufferNames] = vl_dagnn_getarcs(net, x);
 
 if nargin <= 3 || isempty(res)
   res = struct(...
@@ -150,6 +149,10 @@ if nargin <= 3 || isempty(res)
     'aux', cell(1,n+numInputs), ...
     'time', num2cell(zeros(1,n+numInputs)), ...
     'backwardTime', num2cell(zeros(1,n+numInputs))) ;
+else
+  for ni = 1:numel(inputs)
+    res(ni).x = inputs{ni};
+  end
 end
 
 for li=1:n
@@ -177,8 +180,11 @@ for li=1:n
       assert(numel(inbi) == 1);
       res(outbi).x = vl_nnloss(res(inbi).x, l.class) ;
     case 'softmaxloss'
-      assert(numel(inbi) == 1);
-      res(outbi).x = vl_nnsoftmaxloss(res(inbi).x, l.class) ;
+      if(numel(inbi) == 1)
+        res(outbi).x = vl_nnsoftmaxloss(res(inbi).x, l.class) ;
+      else
+        res(outbi).x = vl_nnsoftmaxloss(res(inbi(1)).x, res(inbi(2)).x) ;
+      end
     case 'relu'
       assert(numel(inbi) == 1);
       res(outbi).x = vl_nnrelu(res(inbi).x) ;

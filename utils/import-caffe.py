@@ -290,6 +290,7 @@ print layers_name_data
 
 # scan all layers in net_param
 matlab_layers = []
+inputs_map = {}
 for name in layers_name_param:
   index = layers_name_param.index(name)
   layer = net_param.layers[index]
@@ -304,15 +305,35 @@ for name in layers_name_param:
   pad = [0,0,0,0]
   stride = [1,1]
   inputs = layer.bottom
-  input_sizes = [output_sizes[x] for x in inputs]
+  outputs = layer.top
 
   print 'Processing layer {} ({}, {})'.format(index, name, ltype)
-  for isz in input_sizes:
-    print '  Layer input size: {} {} {}'.format(isz[0],isz[1],isz[2])
+
+  for ii in range(0, len(inputs)):
+    while inputs[ii] in inputs_map:
+      print '  Mapping input {} -> {}.'.format(inputs[ii], inputs_map[inputs[ii]])
+      inputs[ii] = inputs_map[inputs[ii]]
+  for io in range(0, len(outputs)):
+    while outputs[io] in inputs_map:
+      print '  Mapping output {} -> {}.'.format(outputs[io], inputs_map[outputs[io]])
+      outputs[io] = inputs_map[outputs[io]]
+  
+  if len(inputs) == 1 and len(outputs) == 1:
+    if inputs[0] == outputs[0]:
+      print '  Layer {} performs in-place operation, separating'.format(layer.name)
+      inputs_map[inputs[0]] = layer.name
+      outputs[0] = layer.name
+  
+  input_sizes = [output_sizes[x] for x in inputs]
+  print '  Inputs:'
+  for ii in range(0, len(inputs)):
+    print '    {}: {} {} {}'.format(inputs[ii], input_sizes[ii][0],
+                                    input_sizes[ii][1],input_sizes[ii][2])
+  print '  Outputs:',outputs
 
   if name in layers_name_data:
     index = layers_name_data.index(name)
-    if args.caffe_variant in ['caffe']:
+    if args.caffe_variant in ['caffe', 'caffe_0115']:
       layer_data = net_data.layers[index]
     else:
       layer_data = net_data.layers[index].layer
@@ -438,7 +459,8 @@ for name in layers_name_param:
     if hasattr(layer, 'dropout_param'): param = layer.dropout_param
     mk['rate']= float(param.dropout_ratio)
     if args.remove_dropout:
-      print '   Removing dropout layer'
+      print '   Removing dropout layer, creating map {} -> {}'.format(outputs[0], inputs[0])
+      inputs_map[outputs[0]] = inputs[0]
       continue
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'softmax':
@@ -446,6 +468,9 @@ for name in layers_name_param:
       sys.exit('Invalid number of inputs')
     output_sizes[layer.name] = input_sizes[0]
     mk['type'] = 'softmax'
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype == 'softmax_loss':
+    mk['type'] = 'softmaxloss'
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'concat':
     mk['type'] = 'concat'
@@ -460,10 +485,16 @@ for name in layers_name_param:
       output_sizes[layer.name] = output_size
     else:
       sys.exit('Invalid concat dimension')
+    mdim_map = [4, 3, 1, 2]
+    mk['dim'] = mdim_map[concat_dim]
     
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'data':
     # Do not insert data layers
+    continue
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype == 'accuracy':
+    # Do not insert accuracy layer
     continue
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   else:
