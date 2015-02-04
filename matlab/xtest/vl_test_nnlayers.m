@@ -17,7 +17,7 @@ end
 rng(1) ;
 
 if nargin < 2
-  tests = 1:9 ;
+  tests = 1:10 ;
 end
 
 for l = tests
@@ -402,5 +402,18 @@ for l = tests
       dzdy = grandn(size(y),'single') ;
       dzdx = vl_nndropout(x,dzdy,'mask',mask) ;
       vl_testder(@(x) vl_nndropout(x,'mask',mask), x, dzdy, dzdx, 1e-3*range) ;
+      
+    case 10
+      disp('testing vl_nnconcat') ;
+      sz = [4,5,10,3];
+      x = {grandn(sz,'single'), grandn(sz,'single'), grandn(sz,'single')};
+      
+      for dim = 1:3
+        y = vl_nnconcat(x, dim) ;
+        assert(size(y, dim) == sz(dim)*numel(x));
+        dzdy = grandn(size(y),'single') ;
+        dzdx = vl_nnconcat(x,dim, dzdy) ;
+        vl_testder(@(x) vl_nnconcat(x,dim), x, dzdy, dzdx, 1e-3*range) ;
+      end
   end
 end

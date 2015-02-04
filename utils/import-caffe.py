@@ -133,6 +133,8 @@ elif args.caffe_variant == 'caffe-old':
   import proto.caffe_old_pb2 as caffe_pb2
 elif args.caffe_variant == 'caffe':
   import proto.caffe_pb2 as caffe_pb2
+elif args.caffe_variant == 'caffe_0115':
+  import proto.caffe_0115_pb2 as caffe_pb2
 elif args.caffe_variant == '?':
   print 'Supported variants: caffe, cafe-old, vgg-caffe'
   sys.exit(0)
@@ -270,9 +272,17 @@ else:
   layers_name_data = [x.name for x in net_data.layers]
 
 pool_methods = ['max', 'avg']
-layer_input_size = [net_param.input_dim[2],
-                    net_param.input_dim[3],
-                    net_param.input_dim[1]]
+if len(net_param.input_dim) > 0:
+  layer_input_size = [net_param.input_dim[2],
+                      net_param.input_dim[3],
+                      net_param.input_dim[1]]
+else:
+  data_idx = layers_name_param.index('data')
+  layer = net_param.layers[data_idx]
+  layer_input_size = [layer.transform_param.crop_size,
+                      layer.transform_param.crop_size,
+                      3]
+output_sizes = {'data': layer_input_size, 'label': [1,1,1]}
 
 print 'Converting {} layers'.format(len(net_param.layers))
 print layers_name_param
@@ -287,18 +297,18 @@ for name in layers_name_param:
   ltype = layer.type
   if not isinstance(ltype, basestring): ltype = layers_type[ltype]
 
-  print 'Processing layer {} ({}, {})'.format(index, name, ltype)
-  print '  Layer input size: {} {} {}'.format(layer_input_size[0],
-                                              layer_input_size[1],
-                                              layer_input_size[2])
-
   # search for a corresponding layer in net_data
   arrays = []
   param = layer
   support = [1,1]
   pad = [0,0,0,0]
   stride = [1,1]
-  num_output_channels = layer_input_size[2]
+  inputs = layer.bottom
+  input_sizes = [output_sizes[x] for x in inputs]
+
+  print 'Processing layer {} ({}, {})'.format(index, name, ltype)
+  for isz in input_sizes:
+    print '  Layer input size: {} {} {}'.format(isz[0],isz[1],isz[2])
 
   if name in layers_name_data:
     index = layers_name_data.index(name)
@@ -314,6 +324,10 @@ for name in layers_name_param:
   mk = {'name': layer.name}
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   if ltype == 'conv':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    layer_input_size = input_sizes[0]
+    
     mk['type'] = 'conv'
     if hasattr(layer, 'convolution_param'): param = layer.convolution_param
     if hasattr(layer, 'kernelsize'): support = [param.kernelsize]*2
@@ -332,11 +346,22 @@ for name in layers_name_param:
       mk['biases'] = np.zeros([1,num_output_channels],dtype='float32')
     mk['pad'] = pad
     mk['stride'] = stride
+
+    output_size = get_output_size(layer_input_size,
+                                  support, pad, stride) + [num_output_channels]
+    output_sizes[layer.name] = output_size
+    
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'relu':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    output_sizes[layer.name] = input_sizes[0]
     mk['type'] = 'relu'
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'lrn':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    output_sizes[layer.name] = input_sizes[0]
     mk['type'] = 'normalize'
     if hasattr(layer, 'lrn_param'): param = layer.lrn_param
     local_size = float(param.local_size)
@@ -347,6 +372,11 @@ for name in layers_name_param:
     mk['param'] = np.array([local_size, kappa, alpha/local_size, beta])
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'pool':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    layer_input_size = input_sizes[0]
+    num_output_channels = layer_input_size[2]
+    
     mk['type'] = 'pool'
     if hasattr(layer, 'pooling_param'): param = layer.pooling_param
     if hasattr(layer, 'kernelsize'): support = [param.kernelsize]*2
@@ -363,8 +393,15 @@ for name in layers_name_param:
     mk['method'] = pool_methods[param.pool]
     mk['pad'] = pad
     mk['stride'] = stride
+    output_size = get_output_size(layer_input_size,
+                                  support, pad, stride) + [num_output_channels]
+    output_sizes[layer.name] = output_size
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'innerproduct' or ltype == 'inner_product':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    layer_input_size = input_sizes[0]
+    
     mk['type'] = 'conv'
     if hasattr(layer, 'inner_product_param'): param = layer.inner_product_param
     support = [layer_input_size[0], layer_input_size[1]]
@@ -389,8 +426,14 @@ for name in layers_name_param:
       mk['biases'] = np.zeros([1,num_output_channels],dtype='float32')
     mk['pad'] = pad
     mk['stride'] = stride
+    output_size = get_output_size(layer_input_size,
+                                  support, pad, stride) + [num_output_channels]
+    output_sizes[layer.name] = output_size
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'dropout':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    output_sizes[layer.name] = input_sizes[0]
     mk['type'] = 'dropout'
     if hasattr(layer, 'dropout_param'): param = layer.dropout_param
     mk['rate']= float(param.dropout_ratio)
@@ -399,18 +442,41 @@ for name in layers_name_param:
       continue
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'softmax':
+    if len(inputs) > 1:
+      sys.exit('Invalid number of inputs')
+    output_sizes[layer.name] = input_sizes[0]
     mk['type'] = 'softmax'
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype == 'concat':
+    mk['type'] = 'concat'
+    concat_dim = layer.concat_param.concat_dim
+    if concat_dim == 0: # concat along the num_inputs
+      output_sizes[layer.name] = input_sizes[0]
+    elif concat_dim > 0 and concat_dim < 4:
+      output_size = input_sizes[0]
+      cdim_map = [-1, 2, 0, 1]
+      cdim = cdim_map[concat_dim]
+      output_size[cdim] = sum([a[cdim] for a in input_sizes])
+      output_sizes[layer.name] = output_size
+    else:
+      sys.exit('Invalid concat dimension')
+    
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype == 'data':
+    # Do not insert data layers
+    continue
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   else:
     mk['type'] = ltype
     print 'Warning: unknown layer type', ltype
+    
   print '  Support:',support
   print '  Pad:',pad
   print '  Stride:',stride
   for f in ['pad', 'stride', 'pool']:
     if f in mk: mk[f] = [float(i) for i in mk[f]]
-  layer_input_size = get_output_size(layer_input_size,
-                                     support, pad, stride) + [num_output_channels]
+  mk['inputs'] = inputs
+
   matlab_layers.append(mk)
 
 # --------------------------------------------------------------------
@@ -436,13 +502,8 @@ for i in range(0,len(matlab_layers)):
 # --------------------------------------------------------------------
 
 mkn = {}
-if len(net_param.input_dim) > 0:
-  mkn['imageSize']=np.array([ \
-      net_param.input_dim[2], \
-        net_param.input_dim[3], \
-        net_param.input_dim[1]],dtype=float).reshape(1,-1)
-else:
-  mkn['imageSize']=np.array([0,0],dtype=float)
+mkn['imageSize']=np.array(output_sizes['data'],dtype=float).reshape(1,-1)
+
 if average_image is not None:
   x = numpy.linspace(0, average_image.shape[1]-1, mkn['imageSize'][0,1])
   y = numpy.linspace(0, average_image.shape[0]-1, mkn['imageSize'][0,0])

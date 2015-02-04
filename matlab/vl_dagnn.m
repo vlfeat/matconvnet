@@ -1,4 +1,4 @@
-function res = vl_dagnn(net, x, dzdy, res, varargin)
+function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
 % VL_DAGNN  Evaluates a DAG CNN
 %   RES = VL_DAGNN(NET, X) evaluates the convnet NET on inputs X.
 %   RES = VL_DAGNN(NET, X, DZDY) evaluates the convnent NET and its
@@ -119,6 +119,7 @@ function res = vl_dagnn(net, x, dzdy, res, varargin)
 
 % TODO add support for conserve memory
 % TODO solve inputs
+% TODO currently allows only single output
 
 opts.res = [] ;
 opts.sync = false ;
@@ -139,67 +140,63 @@ inputs = {x.x};
 
 gpuMode = all(cellfun(@(a) isa(a, 'gpuArray'), inputs)) ;
 
-% Check that layer names exist
-assert(all(cellfun(@(a) isfield(a, 'name'), net.layers)));
-lnames = [inputNames, ...
-  cellfun(@(a) a.name, net.layers, 'UniformOutput', false)];
+[arcs, bufferNames] = vl_dagnn_getarcs(net, inputs);
 
 if nargin <= 3 || isempty(res)
   res = struct(...
     'x', [inputs cell(1,n)], ...
-    'name', lnames, ...
+    'name', bufferNames, ...
     'dzdx', cell(1,n+numInputs), ...
-    'dzdw', cell(1,n+numInputs), ...
     'aux', cell(1,n+numInputs), ...
     'time', num2cell(zeros(1,n+numInputs)), ...
     'backwardTime', num2cell(zeros(1,n+numInputs))) ;
 end
 
-assert(all(cellfun(@(a) isfield(a, 'inputs'), net.layers)));
-arcs = getarcs(net.layers, lnames, numInputs);
-
 for li=1:n
   l = net.layers{li} ;
-  bi = li + numInputs; % Current buffer index
-  res(bi).time = tic ;
-  inis = arcs(1, arcs(2,:) == bi); % Input buffer indexes
-  inputs = {res(inis).x};
+  inbi = arcs(2, arcs(1,:) == li); % indices of input buffers
+  outbi = unique(arcs(3, arcs(1,:) == li)); % indices of output buffers
+  assert(numel(outbi) == 1);
+  res(outbi).time = tic ;
   switch l.type
     case 'conv'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnconv(inputs{1}, l.filters, l.biases, ...
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnconv(res(inbi).x, l.filters, l.biases, ...
         'pad', l.pad, 'stride', l.stride) ;
     case 'pool'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnpool(inputs{1}, l.pool, 'pad', ...
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnpool(res(inbi).x, l.pool, 'pad', ...
         l.pad, 'stride', l.stride, 'method', l.method) ;
     case 'normalize'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnnormalize(inputs{1}, l.param) ;
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnnormalize(res(inbi).x, l.param) ;
     case 'softmax'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnsoftmax(inputs{1}) ;
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnsoftmax(res(inbi).x) ;
     case 'loss'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnloss(inputs{1}, l.class) ;
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnloss(res(inbi).x, l.class) ;
     case 'softmaxloss'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnsoftmaxloss(inputs{1}, l.class) ;
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnsoftmaxloss(res(inbi).x, l.class) ;
     case 'relu'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnrelu(inputs{1}) ;
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnrelu(res(inbi).x) ;
     case 'noffset'
-      assert(numel(inputs) == 1);
-      res(bi).x = vl_nnnoffset(inputs{1}, l.param) ;
+      assert(numel(inbi) == 1);
+      res(outbi).x = vl_nnnoffset(res(inbi).x, l.param) ;
     case 'dropout'
-      assert(numel(inputs) == 1);
+      assert(numel(inbi) == 1);
       if opts.disableDropout
-        res(bi).x = inputs{1} ;
+        res(outbi).x = res(inbi).x ;
       else
-        [res(bi).x, res(bi).aux] = vl_nndropout(inputs{1}, 'rate', l.rate);
+        [res(outbi).x, res(outbi).aux] = vl_nndropout(res(inbi).x, ...
+          'rate', l.rate);
       end
+    case 'concat'
+      res(outbi).x = vl_nnconcat({res(inbi).x}, l.dim) ;
     case 'custom'
-      res(bi) = l.forward(l, res(inis), res(bi)) ;
+      res(outbi) = l.forward(l, res(inbi), res(bi)) ;
     otherwise
       error('Unknown layer type %s', l.type) ;
   end
@@ -208,113 +205,73 @@ for li=1:n
     % for any decent performance.
     wait(gpuDevice) ;
   end
-  res(bi).time = toc(res(bi).time) ;
+  res(outbi).time = toc(res(outbi).time) ;
 end
 
-% TODO check if BP way is correct, maybe with testing whether a chain
-% network works?
-
 if doder
+  % Initialise to zeros
+  for ri = 1:numel(res)-1
+    if isempty(res(ri).dzdx)
+      res(ri).dzdx = zeros(size(res(ri).x), 'like', res(ri).x);
+    else
+      res(ri).dzdx(:) = 0;
+    end
+  end
   res(n + numInputs).dzdx = dzdy ;
+  dzdws = cell(1, numel(net.layers)); % Weight derivatives
   
   for li=n:-1:1
     l = net.layers{li} ;
-    % The last already has the dzdx set
-    bi = li + numInputs - 1;
-    res(bi).backwardTime = tic ;
-    succsIdxs = arcs(2, arcs(1,:) == bi);
-    dzdxs = {res(succsIdxs).dzdx};
-    switch l.type
-      case 'conv'
-        [res(bi).dzdx, res(bi).dzdw{1}, res(bi).dzdw{2}] = funsum(...
-          @(dzdx) vl_nnconv(res(bi).x, l.filters, l.biases, ...
-            dzdx, 'pad', l.pad, 'stride', l.stride), ...
-          dzdxs, 3) ;
-      case 'pool'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnpool(res(bi).x, l.pool, dzdx, ...
-            'pad', l.pad, 'stride', l.stride, 'method', l.method),...
-          dzdxs, 1) ;
-      case 'normalize'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnnormalize(res(bi).x, l.param, dzdx), ...
-          dzdxs, 1) ;
-      case 'softmax'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnsoftmax(res(bi).x, dzdx), ...
-          dzdxs, 1);
-      case 'loss'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnloss(res(bi).x, l.class, dzdx), ...
-          dzdxs, 1);
-      case 'softmaxloss'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnsoftmaxloss(res(bi).x, l.class, dzdx), ...
-          dzdxs, 1);
-      case 'relu'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnrelu(res(bi).x, dzdx), ...
-          dzdxs, 1);
-      case 'noffset'
-        res(bi).dzdx = funsum(...
-          @(dzdx) vl_nnnoffset(res(bi).x, l.param, dzdx), ...
-          dzdxs, 1);
-      case 'dropout'
-        if opts.disableDropout
-          res(bi).dzdx = funsum(@(dzdx) dzdx, dzdxs, 1) ;
-        else
-          res(bi).dzdx = funsum(...
-            @(dzdx) vl_nndropout(res(bi).x, dzdx, 'mask', res(bi).aux), ...
-            dzdxs, 1) ;
-        end
-      case 'custom'
-        res(bi) = l.backward(l, res(bi), res(succsIdxs)) ;
+    inbi = arcs(2, arcs(1,:) == li); % indices of input buffers
+    outbi = unique(arcs(3, arcs(1,:) == li)); % indices of output buffers
+    assert(numel(outbi) == 1);
+    dzdy = res(outbi).dzdx;
+    res(outbi).backwardTime = tic ;
+    for ini = inbi
+      dzdx = [];
+      switch l.type
+        case 'conv'
+          [dzdx, dzdw_f, dzdw_b] = ...
+            vl_nnconv(res(inbi).x, l.filters, l.biases, dzdy, 'pad', ...
+            l.pad, 'stride', l.stride) ;
+          if isempty(dzdws{li})
+            dzdws{li} = {dzdw_f, dzdw_b};
+          else
+            dzdws{li} = {dzdws{li}{1} + dzdw_f, dzdws{li}{2} + dzdw_b};
+          end
+        case 'pool'
+          dzdx = vl_nnpool(res(inbi).x, l.pool, dzdy, ...
+            'pad', l.pad, 'stride', l.stride, 'method', l.method);
+        case 'normalize'
+          dzdx = vl_nnnormalize(res(inbi).x, l.param, dzdy) ;
+        case 'softmax'
+          dzdx = vl_nnsoftmax(res(inbi).x, dzdy);
+        case 'loss'
+          dzdx = vl_nnloss(res(inbi).x, l.class, dzdy);
+        case 'softmaxloss'
+          dzdx = vl_nnsoftmaxloss(res(inbi).x, l.class, dzdy);
+        case 'relu'
+          dzdx = vl_nnrelu(res(inbi).x, dzdy);
+        case 'noffset'
+          dzdx = vl_nnnoffset(res(inbi).x, l.param, dzdy);
+        case 'concat'
+          dzdx = vl_concat({res(inbi).x}, l.dim, dzdy);
+        case 'dropout'
+          if opts.disableDropout
+            dzdx = dzdy;
+          else
+            dzdx = vl_nndropout(res(inbi).x, dzdy, 'mask', res(outbi).aux) ;
+          end
+        case 'custom'
+          res(inbi) = l.backward(l, res(inbi), res(outbi)) ;
+      end
+      if ~isempty(dzdx)
+        res(inbi).dzdx = res(inbi).dzdx + dzdx;
+      end
     end
     if gpuMode && opts.sync
       wait(gpuDevice) ;
     end
-    res(bi).backwardTime = toc(res(bi).backwardTime) ;
+    res(outbi).backwardTime = toc(res(outbi).backwardTime) ;
   end
-end
-
-
-function arcs = getarcs(layers, lnames, numInputs)
-arcs = [];
-for li = 1:numel(layers)
-  inputs = layers{li}.inputs;
-  [tfnd, pred] = ismember(inputs, lnames);
-  if any(tfnd == 0)
-    error('Inputs {%s} for layer %s not found', ...
-      strjoin(inputs(~tfnd), ', '), layers{li}.name);
-  end;
-  arcs = [arcs [pred; (li+numInputs)*ones(1, numel(pred))]];
-end
-
-function varargout = funsum(fun, args, numArgOut)
-% FUNSUM Accummulate function results
-%   [OUT1, OUT2, ...] = FUNSUM(FUN, ARGS, NUMARGS) Calls function FUN for
-%   each argument from cell array ARGS and accummulate NUMARGS outputs.
-%   Currently supports at most 3 output arguments.
-
-assert(numel(args) >= 1);
-assert(numArgOut >= 1 && numArgOut <= 3);
-
-varargout = funcal(fun, args{1}, numArgOut);
-for ai = 2:numel(args)
-  % Unfortunately, matlab does not have in-place sum
-  tmp = funcal(fund, args{ai}, numArgOut);
-  varargout = arrayfun(@(i) varargout{i} + tmp{i}, 'UniformOutput', false);
-end
-
-function out = funcal(fun, arg, numArgOut)
-switch numArgOut
-  case 1
-    [out1] = fun(arg);
-    out = {out1};
-  case 2
-    [out1, out2] = fun(arg);
-    out = {out1, out2};
-  case 3
-    [out1, out2, out3] = fun(arg);
-    out = {out1, out2, out3};
 end
