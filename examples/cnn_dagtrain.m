@@ -1,9 +1,14 @@
-function [net, info] = cnn_train(net, imdb, getBatch, varargin)
+function [net, info] = cnn_dagtrain(net, imdb, getBatch, varargin)
 % CNN_TRAIN   Demonstrates training a CNN
 %    CNN_TRAIN() is an example learner implementing stochastic gradient
 %    descent with momentum to train a CNN for image classification.
 %    It can be used with different datasets by providing a suitable
 %    getBatch function.
+
+% TODO fix so that only single dagtrain is needed
+% TODO networks can have more outputs - solve how this is decided here (so
+% far solved by hardcoded indexes). Maybe a searching for the accuracy
+% layers?
 
 opts.train = [] ;
 opts.val = [] ;

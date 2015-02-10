@@ -5,6 +5,8 @@
 # Models are written to <MATCONVNET>/data/models
 # You can delete <MATCONVNET>/data/tmp after conversion
 
+# TODO apply patch to prototxt which will resize the outputs of cls layers from 205 -> 1000 (maybe sed?)
+
 CAFFE_URL=http://dl.caffe.berkeleyvision.org/
 GOOGLENET_PROTO_URL=http://vision.princeton.edu/pvt/GoogLeNet/ImageNet/train_val_googlenet.prototxt
 GOOGLENET_MODEL_URL=http://vision.princeton.edu/pvt/GoogLeNet/ImageNet/imagenet_googlenet.caffemodel

@@ -118,6 +118,8 @@ function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 % TODO add support for conserve memory
+% TODO solve precomputing the arcs and the schedules (unique takes quite a
+% bit of time).
 
 opts.res = [] ;
 opts.sync = false ;
