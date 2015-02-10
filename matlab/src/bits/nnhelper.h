@@ -36,8 +36,8 @@ typedef enum PackedDataMode_
   empty,
   matlabArray,
   matlabArrayWrapper,
-  matlabGpuArray,
-  matlabGpuArrayWrapper
+  matlabGpuArray,       // Owned by mex
+  matlabGpuArrayWrapper // Owned by matlab
 } PackedDataMode ;
 
 typedef struct PackedData_
@@ -212,6 +212,34 @@ packed_data_init_with_geom (PackedData * map,
     mexMakeArrayPersistent(map->array) ;
   }
 }
+
+/*
+ * Checks whether an GPU array is valid.
+ * Becomes invalid e.g. in case of re-initialisation of the GPU.
+ */
+bool packed_data_is_valid (PackedData * map)
+{
+  bool res = true;
+  switch (map->mode) {
+  case matlabArray:
+    break ;
+  case matlabArrayWrapper:
+    break ;
+  case empty:
+    break ;
+#ifdef ENABLE_GPU
+  case matlabGpuArray:
+    res = mxGPUIsValidGPUData(map->array);
+    break ;
+  case matlabGpuArrayWrapper:
+    res = mxGPUIsValidGPUData(map->array);
+    break ;
+#endif
+    default: assert(false) ;
+  }
+  return res;
+}
+
 
 /*
  This function deinits a packed data structure. It does the following:

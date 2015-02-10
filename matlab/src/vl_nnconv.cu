@@ -385,6 +385,8 @@ void mexFunction(int nout, mxArray *out[],
 #if ENABLE_GPU
   cublasStatus_t stat;
   bool gpuMode = false ;
+  bool allOnesIsValid = true;
+  bool tempIsValid = true;
 #else
   bool const gpuMode = false ;
 #endif
@@ -503,6 +505,16 @@ void mexFunction(int nout, mxArray *out[],
   gpuMode = (data.mode == matlabGpuArrayWrapper) ;
   if (gpuMode) {
     mxInitGPU() ;
+    allOnesIsValid = packed_data_is_valid(&allOnes);
+    tempIsValid = packed_data_is_valid(&temp);
+    if (!allOnesIsValid || !tempIsValid) {
+      if (cublasInitialized) {
+        if (verbosity)
+          mexWarnMsgTxt("Invalid buffers, reinitialising.");
+        cublasInitialized = false;
+      }
+    }
+
     if (!cublasInitialized) {
       stat = cublasCreate(&thisCublasHandle) ;
       if (stat != CUBLAS_STATUS_SUCCESS) {
@@ -670,16 +682,19 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   /* auxiliary buffers */
+
   if (hasBiases) {
     if (allOnes.memorySize < allOnesGeom.numElements * sizeof(float) ||
-        (allOnes.mode == matlabGpuArray || allOnes.mode == matlabGpuArrayWrapper) != gpuMode) {
+        (allOnes.mode == matlabGpuArray || allOnes.mode == matlabGpuArrayWrapper) != gpuMode ||
+        !allOnesIsValid) {
       packed_data_deinit (&allOnes) ;
       packed_data_init_with_geom (&allOnes, gpuMode, allOnesGeom, true, true, 1.0f) ;
     }
   }
   if (!fullyConnectedMode) {
     if (temp.memorySize < tempGeom.numElements * sizeof(float) ||
-        (temp.mode == matlabGpuArray || temp.mode == matlabGpuArrayWrapper) != gpuMode) {
+        (temp.mode == matlabGpuArray || temp.mode == matlabGpuArrayWrapper) != gpuMode ||
+        !tempIsValid) {
       packed_data_deinit (&temp) ;
       packed_data_init_with_geom (&temp, gpuMode, tempGeom, true, false, 0);
     }
