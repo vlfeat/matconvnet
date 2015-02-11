@@ -95,7 +95,6 @@ nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
 cpp_src :=
 mex_src :=
 
-
 # Files that are compiled as CPP or CU depending on whether GPU support
 # is enabled.
 ext := $(if $(ENABLE_GPU),cu,cpp)
@@ -152,12 +151,13 @@ all: $(mex_tgt)
 
 # Create build directory
 %/.stamp:
-	mkdir -p $(@)/ ; touch $(@)/.stamp
+	mkdir -p $(*)/ ; touch $(*)/.stamp
 $(mex_tgt): matlab/mex/.build/impl/.stamp
 $(cpp_tgt): matlab/mex/.build/impl/.stamp
 
 # Standard code
 .PRECIOUS: matlab/mex/.build/%.o
+.PRECIOUS: %/.stamp
 
 ifeq ($(CUDAHACK),)
 include Makefile.mex
