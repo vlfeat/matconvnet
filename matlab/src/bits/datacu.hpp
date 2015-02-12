@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
 //
 
-#ifndef __matconv__datacu__
-#define __matconv__datacu__
-
-#include "data.hpp"
+#ifndef __vl__datacu__
+#define __vl__datacu__
 
 #ifndef ENABLE_GPU
-#error "datacu.hpp cannot be used without GPU support"
+#error "datacu.hpp cannot be compiled without GPU support"
 #endif
 
+#include "data.hpp"
+#include <string>
 #include <cuda.h>
 #include <cublas_v2.h>
 #if __CUDA_ARCH__ >= 200
@@ -30,25 +30,54 @@
 namespace vl {
   class CudaHelper {
   public:
+    // Cuda errors
+    cudaError_t getLastCudaError() const ;
+    std::string const& getLastCudaErrorMessage() const ;
+    vl::Error catchCudaError(char const* description = NULL) ;
+
+    // CuBLAS support
+    cublasStatus_t getCublasHandle(cublasHandle_t* handle) ;
+    cublasStatus_t getLastCublasError() const ;
+    std::string const& getLastCublasErrorMessage() const ;
+    vl::Error catchCublasError(cublasStatus_t status,
+                               char const* description = NULL) ;
+
+#if ENABLE_CUDNN
+    // CuDNN support
+    cudnnStatus_t getCudnnHandle(cudnnHandle_t* handle) ;
+    bool isCudnnEnabled() const ;
+    void setCudnnEnabled(bool active) ;
+    cudnnStatus_t getLastCudnnError() const ;
+    std::string const& getLastCudnnErrorMessage() const ;
+    vl::Error catchCudnnError(cudnnStatus_t status,
+                              char const* description = NULL) ;
+#endif
+
+  protected:
     CudaHelper() ;
     ~CudaHelper() ;
-
-    cublasStatus_t getCuBLASHandle(cublasHandle_t* handle) ;
-#if ENABLE_CUDNN
-    bool isCudnnActive() const ;
-    void setCudnnActive(bool active) ;
-    cudnnStatus_t getCuDNNHandle(cudnnHandle_t* handle) ;
-#endif
+    friend class Context ;
 
   private:
-    cublasHandle_t cuBLASHandle ;
-    bool isCuBLASInitialized ;
+    cudaError_t lastCudaError ;
+    std::string lastCudaErrorMessage ;
+
+    // CuBLAS
+    cublasHandle_t cublasHandle ;
+    bool isCublasInitialized ;
+    cublasStatus_t lastCublasError ;
+    std::string lastCublasErrorMessage ;
 
 #if ENABLE_CUDNN
-    bool cudnnActive ;
-    cudnnHandle_t cuDNNHandle ;
-    bool isCuDNNInitialized ;
+    // CuDNN
+    cudnnStatus_t lastCudnnError ;
+    std::string lastCudnnErrorMessage ;
+    cudnnHandle_t cudnnHandle ;
+    bool isCudnnInitialized ;
+    bool cudnnEnabled ;
 #endif
+
+
   } ;
 }
-#endif /* defined(__matconv__datacu__) */
+#endif /* defined(__vl__datacu__) */

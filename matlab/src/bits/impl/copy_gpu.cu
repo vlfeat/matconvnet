@@ -12,13 +12,13 @@
 using namespace vl ;
 using namespace vl::impl ;
 
-template <> int
+template <> vl::Error
 vl::impl::copy<vl::GPU, float>(float * dest,
                                float const * src,
                                size_t numElements)
 {
   cudaMemcpy(dest, src, numElements * sizeof(float), cudaMemcpyDeviceToDevice) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
 

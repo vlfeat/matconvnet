@@ -11,15 +11,15 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __matconv__im2row__
-#define __matconv__im2row__
+#ifndef __vl__im2row__
+#define __vl__im2row__
 
 #include "../data.hpp"
 #include <stddef.h>
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   im2row(vl::Context& context,
          type* stacked,
          type const* data,
@@ -28,7 +28,7 @@ namespace vl { namespace impl {
          size_t strideY, size_t strideX,
          size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   row2im(vl::Context& context,
          type* data,
          type const* stacked,
@@ -40,7 +40,7 @@ namespace vl { namespace impl {
 
   /* Specializations */
 
-  template <> int
+  template<> vl::Error
   im2row<vl::CPU, float>(vl::Context& context,
                          float* stacked,
                          float const* data,
@@ -49,7 +49,7 @@ namespace vl { namespace impl {
                          size_t strideY, size_t strideX,
                          size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template <> int
+  template<> vl::Error
   row2im<vl::CPU, float>(vl::Context& context,
                          float* data,
                          float const* stacked,
@@ -59,7 +59,7 @@ namespace vl { namespace impl {
                          size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
 #if ENABLE_GPU
-  template <> int
+  template<> vl::Error
   im2row<vl::GPU, float>(vl::Context& context,
                          float* stacked,
                          float const* data,
@@ -68,7 +68,7 @@ namespace vl { namespace impl {
                          size_t strideY, size_t strideX,
                          size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template <> int
+  template<> vl::Error
   row2im<vl::GPU, float>(vl::Context& context,
                          float* data,
                          float const* stacked,
@@ -80,4 +80,4 @@ namespace vl { namespace impl {
 
 } }
 
-#endif /* defined(__matconv__im2row__) */
+#endif /* defined(__vl__im2row__) */

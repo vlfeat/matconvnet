@@ -141,7 +141,7 @@ im2row_cpu(T* stacked,
   }
 }
 
-template <> int
+template <> vl::Error
 vl::impl::im2row<vl::CPU, float>(vl::Context& context,
                                  float* stacked,
                                  float const* data,
@@ -155,7 +155,7 @@ vl::impl::im2row<vl::CPU, float>(vl::Context& context,
                     windowHeight, windowWidth,
                     strideY, strideX,
                     padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -217,7 +217,7 @@ row2im_cpu(T* data,
   }
 }
 
-template <> int
+template <> vl::Error
 vl::impl::row2im<vl::CPU, float>(vl::Context& context,
                                  float* data,
                                  float const* stacked,
@@ -231,5 +231,5 @@ vl::impl::row2im<vl::CPU, float>(vl::Context& context,
                     windowHeight, windowWidth,
                     strideY, strideX,
                     padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }

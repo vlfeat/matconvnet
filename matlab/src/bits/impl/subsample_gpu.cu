@@ -64,8 +64,9 @@ subsample_gpu_kernel
   }
 }
 
-template<typename T> static void
-subsample_forward_gpu(T* subsampled,
+template<typename T> static vl::Error
+subsample_forward_gpu(Context & context,
+                      T* subsampled,
                       T const* data,
                       size_t width,
                       size_t height,
@@ -87,15 +88,10 @@ subsample_forward_gpu(T* subsampled,
    width, height,
    strideX, strideY,
    padLeft, padTop);
-  if (cudaGetLastError() != cudaSuccess) {
-    std::cout
-    <<"subsample_gpu_kernel error ("
-    <<cudaGetErrorString(cudaGetLastError())
-    <<")"<<std::endl ;
-  }
+  return context.setError(context.getCudaHelper().catchCudaError("subsample_backward_gpu<>: ")) ;
 }
 
-template <> int
+template <> vl::Error
 vl::impl::subsample_forward<vl::GPU, float>(vl::Context& context,
                                             float* subsampled,
                                             float const* data,
@@ -103,11 +99,13 @@ vl::impl::subsample_forward<vl::GPU, float>(vl::Context& context,
                                             size_t strideY, size_t strideX,
                                             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
 {
-  subsample_forward_gpu<float>(subsampled, data,
-                               height, width, depth,
-                               strideY, strideX,
-                               padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  vl::Error error ;
+  error = subsample_forward_gpu<float>(context,
+                                       subsampled, data,
+                                       height, width, depth,
+                                       strideY, strideX,
+                                       padTop, padBottom, padLeft, padRight) ;
+  return context.passError(error, "subsample_forward<GPU,float>: ") ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -147,18 +145,19 @@ __global__ void subsampleBackward_gpu_kernel
   }
 }
 
-template<typename T>
-void subsample_backward_gpu(T* dzdx,
-                            T const* dzdy,
-                            size_t width,
-                            size_t height,
-                            size_t depth,
-                            size_t strideX,
-                            size_t strideY,
-                            size_t padLeft,
-                            size_t padRight,
-                            size_t padTop,
-                            size_t padBottom)
+template<typename T> vl::Error
+subsample_backward_gpu(vl::Context& context,
+                       T* dzdx,
+                       T const* dzdy,
+                       size_t width,
+                       size_t height,
+                       size_t depth,
+                       size_t strideX,
+                       size_t strideY,
+                       size_t padLeft,
+                       size_t padRight,
+                       size_t padTop,
+                       size_t padBottom)
 {
   int subsampledWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
   int subsampledHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
@@ -171,15 +170,10 @@ void subsample_backward_gpu(T* dzdx,
    width, height,
    strideX, strideY,
    padLeft, padTop);
-  if (cudaGetLastError() != cudaSuccess) {
-    std::cout
-    <<"subsampleBackward_gpu_kernel error ("
-    <<cudaGetErrorString(cudaGetLastError())
-    <<")"<<std::endl ;
-  }
+  return context.setError(context.getCudaHelper().catchCudaError("subsample_backward_gpu<>: ")) ;
 }
 
-template <> int
+template <> vl::Error
 vl::impl::subsample_backward<vl::GPU, float>(vl::Context& context,
                                              float* derData,
                                              float const* derSubsampled,
@@ -187,9 +181,11 @@ vl::impl::subsample_backward<vl::GPU, float>(vl::Context& context,
                                              size_t strideY, size_t strideX,
                                              size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
 {
-  subsample_backward_gpu<float>(derData, derSubsampled,
-                                height, width, depth,
-                                strideY, strideX,
-                                padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  vl::Error error ;
+  error = subsample_backward_gpu<float>(context,
+                                        derData, derSubsampled,
+                                        height, width, depth,
+                                        strideY, strideX,
+                                        padTop, padBottom, padLeft, padRight) ;
+  return context.passError(error, "subsample_backward<GPU,float>: ") ;
 }

@@ -6,8 +6,8 @@
 //  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
 //
 
-#ifndef __matconv__nnconv_blas__
-#define __matconv__nnconv_blas__
+#ifndef __vl__nnconv_blas__
+#define __vl__nnconv_blas__
 
 #include "im2row.hpp"
 #include "blashelper.hpp"
@@ -15,7 +15,7 @@
 
 namespace vl { namespace impl {
 
-  template<vl::Device arch, typename type> inline int
+  template<vl::Device arch, typename type> inline vl::Error
   nnconv_forward_blas(Context& context,
                       Tensor output,
                       Tensor data,
@@ -25,7 +25,7 @@ namespace vl { namespace impl {
                       int padTop, int padBottom,
                       int padLeft, int padRight) ;
 
-  template<vl::Device arch, typename type> inline int
+  template<vl::Device arch, typename type> inline vl::Error
   nnconv_backward_blas(Context& context,
                        Tensor derData,
                        Tensor derFilters,
@@ -40,39 +40,39 @@ namespace vl { namespace impl {
 } }
 
 /*
- 
+
  One image at a time is processed.
- 
+
  Filters are (optionally) divided in to groups, one for each group of dimensions.
 
 
-                        patchVolume                  numFilters                                 
-                +-------------------------+   +-----------------------+                         
-                                                                                                
-                filtersVolume              numFiltersPerGroup                                   
-                +------------+------------+   +-----------+-----------+      +--------+--------+
-                |            |            |   |           |           |      |        |        |
-                |            |            |   |  filter   |           |      |        |        |
-                |            |            |   |  group 1  |     0     |  =   |        |        |
-                |            |            |   |           |           |      |        |        |
-                |            |            |   |           |           |      |        |        |
-                |            |            |   +-----------------------+      |        |        |
-numOutputPixels |   grp. 1   |   grp. 2   |   |           |           |      |        |        |
-                |            |            |   |           |  filter   |      |        |        |
-                |            |            |   |     0     |  group 2  |      |        |        |
-                |            |            |   |           |           |      |        |        |
-                |            |            |   |           |           |      |        |        |
-                |            |            |   +-----------+-----------+      |        |        |
-                |            |            |                                  |        |        |
-                |            |            |            filters               |        |        |
-                |            |            |                                  |        |        |
-                +------------+------------+                                  +--------+--------+
-                                                                                                
-                           temp                                                     output      
+ patchVolume                  numFilters
+ +-------------------------+   +-----------------------+
+
+ filtersVolume              numFiltersPerGroup
+ +------------+------------+   +-----------+-----------+      +--------+--------+
+ |            |            |   |           |           |      |        |        |
+ |            |            |   |  filter   |           |      |        |        |
+ |            |            |   |  group 1  |     0     |  =   |        |        |
+ |            |            |   |           |           |      |        |        |
+ |            |            |   |           |           |      |        |        |
+ |            |            |   +-----------------------+      |        |        |
+ numOutputPixels |   grp. 1   |   grp. 2   |   |           |           |      |        |        |
+ |            |            |   |           |  filter   |      |        |        |
+ |            |            |   |     0     |  group 2  |      |        |        |
+ |            |            |   |           |           |      |        |        |
+ |            |            |   |           |           |      |        |        |
+ |            |            |   +-----------+-----------+      |        |        |
+ |            |            |                                  |        |        |
+ |            |            |            filters               |        |        |
+ |            |            |                                  |        |        |
+ +------------+------------+                                  +--------+--------+
+
+ temp                                                     output
 
  */
 
-template<vl::Device arch, typename type> inline int
+template<vl::Device arch, typename type> inline vl::Error
 vl::impl::nnconv_forward_blas(Context& context,
                               Tensor output,
                               Tensor data,
@@ -86,6 +86,8 @@ vl::impl::nnconv_forward_blas(Context& context,
   assert(data) ;
   assert(filters) ;
 
+  vl::Error error ;
+
   ptrdiff_t numGroups = data.getDepth() / filters.getDepth() ;
   ptrdiff_t numFiltersPerGroup = filters.getSize() / numGroups ;
   ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
@@ -94,21 +96,26 @@ vl::impl::nnconv_forward_blas(Context& context,
 
   type* tempMemory = (type*) context.getWorkspace(arch, tempVolume * sizeof(type)) ;
   type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                         get_type_id<type>(),
+                                                         get_vl_type<type>(),
                                                          numOutputPixels) ;
+  if (tempMemory == NULL || allOnesMemory == NULL) {
+    error = context.getLastError() ;
+    goto done ;
+  }
 
   for (int image = 0 ; image < data.getSize() ; ++image) {
 
     ptrdiff_t dataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
     ptrdiff_t outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
 
-    vl::impl::im2row<arch,type>(context,
-                                tempMemory,
-                                (type*)data.getMemory() + dataOffset,
-                                data.getHeight(), data.getWidth(), data.getDepth(),
-                                filters.getHeight(), filters.getWidth(),
-                                strideY, strideX,
-                                padTop, padBottom, padLeft, padRight) ;
+    error = vl::impl::im2row<arch,type>(context,
+                                        tempMemory,
+                                        (type*)data.getMemory() + dataOffset,
+                                        data.getHeight(), data.getWidth(), data.getDepth(),
+                                        filters.getHeight(), filters.getWidth(),
+                                        strideY, strideX,
+                                        padTop, padBottom, padLeft, padRight) ;
+    if (error != vl::vlSuccess) { goto done ; }
 
     for (int g = 0 ; g < numGroups ; ++ g) {
       ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
@@ -116,33 +123,37 @@ vl::impl::nnconv_forward_blas(Context& context,
       ptrdiff_t outputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
       type alpha = 1 ;
       type beta = 0 ;
-      gemm<arch,type>(context,
-                      'n', 'n',
-                      numOutputPixels, numFiltersPerGroup, filtersVolume,
-                      alpha,
-                      tempMemory + tempGrpOffset, numOutputPixels,
-                      (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
-                      beta,
-                      (type*)output.getMemory() + outputOffset + outputGrpOffset, numOutputPixels) ;
+      error = gemm<arch,type>(context,
+                              'n', 'n',
+                              numOutputPixels, numFiltersPerGroup, filtersVolume,
+                              alpha,
+                              tempMemory + tempGrpOffset, numOutputPixels,
+                              (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
+                              beta,
+                              (type*)output.getMemory() + outputOffset + outputGrpOffset, numOutputPixels) ;
+      if (error != vl::vlSuccess) { goto done ; }
     }
 
     if (biases) {
       type alpha = 1 ;
       type beta = 1 ;
-      gemm<arch,type>(context,
-                      'n', 'n',
-                      numOutputPixels, biases.getNumElements(), 1,
-                      alpha,
-                      allOnesMemory, numOutputPixels,
-                      (type*)biases.getMemory(), 1,
-                      beta,
-                      (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+      error = gemm<arch,type>(context,
+                              'n', 'n',
+                              numOutputPixels, biases.getNumElements(), 1,
+                              alpha,
+                              allOnesMemory, numOutputPixels,
+                              (type*)biases.getMemory(), 1,
+                              beta,
+                              (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+      if (error != vl::vlSuccess) { goto done ; }
     }
   }
-  return 0 ;
+
+done:
+  return context.passError(error, "nnconv_forward_blas<>: ") ;
 }
 
-template<vl::Device arch, typename type> inline int
+template<vl::Device arch, typename type> inline vl::Error
 vl::impl::nnconv_backward_blas(Context& context,
                                Tensor derData,
                                Tensor derFilters,
@@ -158,6 +169,8 @@ vl::impl::nnconv_backward_blas(Context& context,
   assert(filters) ;
   assert(derOutput) ;
 
+  vl::Error error ;
+
   ptrdiff_t numGroups = data.getDepth() / filters.getDepth() ;
   ptrdiff_t numFiltersPerGroup = filters.getSize() / numGroups ;
   ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
@@ -166,9 +179,12 @@ vl::impl::nnconv_backward_blas(Context& context,
 
   type* tempMemory = (type*) context.getWorkspace(arch, tempVolume * sizeof(type)) ;
   type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                         get_type_id<type>(),
+                                                         get_vl_type<type>(),
                                                          numOutputPixels) ;
-
+  if (tempMemory == NULL || allOnesMemory == NULL) {
+    error = context.getLastError() ;
+    goto done ;
+  }
 
   for (int image = 0 ; image < data.getSize() ; ++image) {
 
@@ -177,13 +193,14 @@ vl::impl::nnconv_backward_blas(Context& context,
 
     /* compute derFilters dz/dF */
     if (derFilters) {
-      vl::impl::im2row<arch,type>(context,
-                                  (type*)tempMemory,
-                                  (type*)data.getMemory() + derDataOffset,
-                                  data.getHeight(), data.getWidth(), data.getDepth(),
-                                  filters.getHeight(), filters.getWidth(),
-                                  strideY, strideX,
-                                  padTop, padBottom, padLeft, padRight) ;
+      error = vl::impl::im2row<arch,type>(context,
+                                          (type*)tempMemory,
+                                          (type*)data.getMemory() + derDataOffset,
+                                          data.getHeight(), data.getWidth(), data.getDepth(),
+                                          filters.getHeight(), filters.getWidth(),
+                                          strideY, strideX,
+                                          padTop, padBottom, padLeft, padRight) ;
+      if (error != vl::vlSuccess) { return error ; }
       for (int g = 0 ; g < numGroups ; ++ g) {
         ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
         ptrdiff_t tempGrpOffset = numOutputPixels * filtersVolume * g ;
@@ -191,14 +208,15 @@ vl::impl::nnconv_backward_blas(Context& context,
         /* dzdF = temp' * dzdY */
         type alpha = 1 ;
         type beta = (image > 0) ; /* this saves init. the output array with 0 */
-        gemm<arch,type>(context,
-                        't', 'n',
-                        filtersVolume, numFiltersPerGroup, numOutputPixels,
-                        alpha,
-                        tempMemory + tempGrpOffset, numOutputPixels,
-                        (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
-                        beta,
-                        (type*)derFilters.getMemory() + filterGrpOffset, filtersVolume) ;
+        error = gemm<arch,type>(context,
+                                't', 'n',
+                                filtersVolume, numFiltersPerGroup, numOutputPixels,
+                                alpha,
+                                tempMemory + tempGrpOffset, numOutputPixels,
+                                (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
+                                beta,
+                                (type*)derFilters.getMemory() + filterGrpOffset, filtersVolume) ;
+        if (error != vl::vlSuccess) { return error ; }
       }
     }
 
@@ -206,14 +224,15 @@ vl::impl::nnconv_backward_blas(Context& context,
     if (derBiases) {
       type alpha = 1 ;
       type beta = (image > 0) ; /* this saves init. the output array with 0 */
-      gemv<arch,type>(context,
-                      't',
-                      numOutputPixels, filters.getSize(),
-                      alpha, /* alpha */
-                      derOutput.getMemory() + derOutputOffset, numOutputPixels,
-                      allOnesMemory, 1,
-                      beta, /* beta */
-                      derBiases.getMemory(), 1) ;
+      error = gemv<arch,type>(context,
+                              't',
+                              numOutputPixels, filters.getSize(),
+                              alpha, /* alpha */
+                              derOutput.getMemory() + derOutputOffset, numOutputPixels,
+                              allOnesMemory, 1,
+                              beta, /* beta */
+                              derBiases.getMemory(), 1) ;
+      if (error != vl::vlSuccess) { return error ; }
     }
 
     /* compute derData dz/dx */
@@ -224,25 +243,29 @@ vl::impl::nnconv_backward_blas(Context& context,
         ptrdiff_t derOutputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
         float alpha = 1 ;
         float beta = 0 ;
-        gemm<arch,type>(context,
-                        'n', 't',
-                        numOutputPixels, filtersVolume, numFiltersPerGroup,
-                        alpha,
-                        (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
-                        (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
-                        beta,
-                        tempMemory + tempGrpOffset, numOutputPixels) ;
+        error = gemm<arch,type>(context,
+                                'n', 't',
+                                numOutputPixels, filtersVolume, numFiltersPerGroup,
+                                alpha,
+                                (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
+                                (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
+                                beta,
+                                tempMemory + tempGrpOffset, numOutputPixels) ;
+        if (error != vl::vlSuccess) { return error ; }
       }
-      vl::impl::row2im<arch,type>(context,
-                                  (type*)derData.getMemory() + derDataOffset,
-                                  tempMemory,
-                                  data.getHeight(), data.getWidth(), data.getDepth(),
-                                  filters.getHeight(), filters.getWidth(),
-                                  strideY, strideX,
-                                  padTop, padBottom, padLeft, padRight) ;
+      error = vl::impl::row2im<arch,type>(context,
+                                          (type*)derData.getMemory() + derDataOffset,
+                                          tempMemory,
+                                          data.getHeight(), data.getWidth(), data.getDepth(),
+                                          filters.getHeight(), filters.getWidth(),
+                                          strideY, strideX,
+                                          padTop, padBottom, padLeft, padRight) ;
+      if (error != vl::vlSuccess) { return error ; }
     }
   }
-  return 0 ;
+
+done:
+  return context.passError(error, "nnconv_backward_blas<>: ") ;
 }
 
-#endif /* defined(__matconv__nnconv_blas__) */
+#endif /* defined(__vl__nnconv_blas__) */

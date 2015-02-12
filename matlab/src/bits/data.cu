@@ -16,16 +16,42 @@
 
 using namespace vl ;
 
+
+/* -------------------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------------- */
+
+const char *
+vl::getErrorMessage(Error error)
+{
+  static char const * messages[] = {
+    "success",
+    "unsupported error",
+    "cuda error",
+    "cudnn error",
+    "cublas error",
+    "out of memory error",
+    "out of GPU memory error",
+    "unknown error"
+  } ;
+  if (error < vlSuccess || error > vlErrorUnknown) {
+    error = vlErrorUnknown ;
+  }
+  return messages[error] ;
+}
+
 /* -------------------------------------------------------------------
  * Context
  * ---------------------------------------------------------------- */
 
 vl::Context::Context()
-: cpuWorkspace(0), cpuWorkspaceSize(0),
+:
+lastError(vl::vlSuccess), lastErrorMessage(),
+cpuWorkspace(0), cpuWorkspaceSize(0),
 gpuWorkspace(0), gpuWorkspaceSize(0),
-cudaHelper(0)
+cudaHelper(NULL)
 { }
-
+    
 vl::CudaHelper &
 vl::Context::getCudaHelper()
 {
@@ -41,6 +67,7 @@ vl::Context::getCudaHelper()
 
 void vl::Context::reset()
 {
+  resetLastError() ;
   clearWorkspace(CPU) ;
   clearAllOnes(CPU) ;
 #if ENABLE_GPU
@@ -61,6 +88,76 @@ vl::Context::~Context()
 }
 
 /* -------------------------------------------------------------------
+ * Errors
+ * ---------------------------------------------------------------- */
+
+void
+vl::Context::resetLastError()
+{
+  lastError = vl::vlSuccess ;
+  lastErrorMessage = std::string() ;
+}
+
+vl::Error
+vl::Context::passError(vl::Error error, char const* description)
+{
+  if (error != vl::vlSuccess) {
+    if (description) {
+      lastErrorMessage = std::string(description) + ": " + lastErrorMessage ;
+    }
+  }
+  return error ;
+}
+
+vl::Error
+vl::Context::setError(vl::Error error, char const* description)
+{
+  if (error != vl::vlSuccess ) {
+    lastError = error ;
+    std::string message = getErrorMessage(error) ;
+    if (description) {
+      message = std::string(description) + " [" + message + "]" ;
+    }
+#if ENABLE_GPU
+    if (error == vl::vlErrorCuda) {
+      std::string cudaMessage = getCudaHelper().getLastCudaErrorMessage() ;
+      if (cudaMessage.length() > 0) {
+        message += " [cuda: " + cudaMessage + "]" ;
+      }
+    }
+    if (error == vl::vlErrorCublas) {
+      std::string cublasMessage = getCudaHelper().getLastCublasErrorMessage() ;
+      if (cublasMessage.length() > 0) {
+        message += " [cublas:" + cublasMessage + "]" ;
+      }
+    }
+#endif
+#if ENABLE_CUDNN
+    if (error == vl::vlErrorCudnn) {
+      std::string cudnnMessage = getCudaHelper().getLastCudnnErrorMessage() ;
+      if (cudnnMessage.length() > 0) {
+        message += " [cudnn: " + cudnnMessage + "]" ;
+      }
+    }
+#endif
+    lastErrorMessage = message ;
+  }
+  return error ;
+}
+
+vl::Error
+vl::Context::getLastError() const
+{
+  return lastError ;
+}
+
+std::string const&
+vl::Context::getLastErrorMessage() const
+{
+  return lastErrorMessage ;
+}
+
+/* -------------------------------------------------------------------
  * getWorkspace
  * ---------------------------------------------------------------- */
 
@@ -72,21 +169,25 @@ vl::Context::getWorkspace(Device device, size_t size)
       if (cpuWorkspaceSize < size) {
         clearWorkspace(CPU) ;
         cpuWorkspace = malloc(size) ;
+        if (cpuWorkspace == NULL) {
+          setError(vl::vlErrorOutOfMemory, "getWorkspace") ;
+          return NULL ;
+        }
         cpuWorkspaceSize = size ;
-        //std::cout<<"Context: allocated "<<size<< " bytes of CPU memory."<<std::endl ;
       }
-      //std::cout<<"Context: requested "<<size<< " bytes of CPU memory."<<std::endl ;
       return cpuWorkspace ;
 
     case GPU:
 #if ENABLE_GPU
       if (gpuWorkspaceSize < size) {
         clearWorkspace(GPU) ;
-        cudaMalloc(&gpuWorkspace, size) ;
+        cudaError_t status = cudaMalloc(&gpuWorkspace, size) ;
+        if (status != cudaSuccess) {
+          setError(getCudaHelper().catchCudaError(), "getWorkspace") ;
+          return NULL ;
+        }
         gpuWorkspaceSize = size ;
-        //std::cout<<"Context: allocated "<<size<< " bytes of GPU memory."<<std::endl ;
       }
-      //std::cout<<"Context: requested "<<size<< " bytes of GPU memory."<<std::endl ;
       return gpuWorkspace ;
 #else
       assert(false) ;
@@ -132,8 +233,8 @@ vl::Context::clearWorkspace(Device device)
  * ---------------------------------------------------------------- */
 
 #if ENABLE_GPU
-template<typename type>
-__global__ void setToOnes (type * data, int size)
+template<typename type> __global__ void
+setToOnes (type * data, int size)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x ;
   if (index < size) data[index] = type(1.0) ;
@@ -143,17 +244,26 @@ __global__ void setToOnes (type * data, int size)
 void *
 vl::Context::getAllOnes(Device device, Type type, size_t size)
 {
-  int typeSize = (type == FLOAT) ? sizeof(float) : sizeof(double) ;
+  int typeSize = (type == vlTypeFloat) ? sizeof(float) : sizeof(double) ;
 
   switch (device) {
+    default:
+      assert(false) ;
+      lastError = vl::vlErrorUnknown ;
+      return NULL ;
+
     case CPU:
       if (cpuAllOnesSize < size || cpuAllOnesType != type) {
         clearAllOnes(CPU) ;
         cpuAllOnes = malloc(size * typeSize) ;
+        if (cpuAllOnes == NULL) {
+          setError(vlErrorOutOfMemory, "getAllOnes") ;
+          return NULL ;
+        }
         cpuAllOnesType = type ;
         cpuAllOnesSize = size ;
         for (int i = 0 ; i < size ; ++i) {
-          if (type == FLOAT) {
+          if (type == vlTypeFloat) {
             ((float*)cpuAllOnes)[i] = 1.0f ;
           } else {
             ((double*)cpuAllOnes)[i] = 1.0 ;
@@ -165,11 +275,16 @@ vl::Context::getAllOnes(Device device, Type type, size_t size)
     case GPU:
 #if ENABLE_GPU
       if (gpuAllOnesSize < size || gpuAllOnesType != type) {
+        cudaError_t status ;
         clearAllOnes(GPU) ;
-        cudaMalloc(&gpuAllOnes, size * typeSize) ;
+        status = cudaMalloc(&gpuAllOnes, size * typeSize) ;
+        if (status != cudaSuccess) {
+          setError(getCudaHelper().catchCudaError(), "getAllOnes") ;
+          return NULL ;
+        }
         gpuAllOnesType = type ;
         gpuAllOnesSize = size ;
-        if (type == FLOAT) {
+        if (type == vlTypeFloat) {
           setToOnes<float>
           <<<divideUpwards(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
           ((float*)gpuAllOnes, size) ;
@@ -178,15 +293,15 @@ vl::Context::getAllOnes(Device device, Type type, size_t size)
           <<<divideUpwards(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
           ((double*)gpuAllOnes, size) ;
         }
+        setError(getCudaHelper().catchCudaError(), "getAllOnes") ;
+        return NULL ;
       }
       return gpuAllOnes ;
 #else
       assert(false) ;
+      lastError = vl::vlErrorUnknown ;
       return NULL ;
 #endif
-    default:
-      assert(false) ;
-      return NULL ;
   }
 }
 
@@ -262,6 +377,6 @@ TensorGeometry vl::Tensor::getGeometry() const
 
 float * vl::Tensor::getMemory() { return memory ; }
 vl::Device vl::Tensor::getMemoryType() const { return memoryType ; }
-bool vl::Tensor::isNull() const { return memory != NULL ; }
-vl::Tensor::operator bool() const { return isNull() ; }
+bool vl::Tensor::isNull() const { return memory == NULL ; }
+vl::Tensor::operator bool() const { return !isNull() ; }
 

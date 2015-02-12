@@ -153,7 +153,7 @@ pooling_forward_cpu(type* pooled,
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_max_forward<vl::CPU, float>(float* pooled,
                                               float const* data,
                                               size_t height, size_t width, size_t depth,
@@ -167,10 +167,10 @@ vl::impl::pooling_max_forward<vl::CPU, float>(float* pooled,
                                        poolHeight, poolWidth,
                                        strideY, strideX,
                                        padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_average_forward<vl::CPU, float>(float* pooled,
                                               float const* data,
                                               size_t height, size_t width, size_t depth,
@@ -184,7 +184,7 @@ vl::impl::pooling_average_forward<vl::CPU, float>(float* pooled,
                                        poolHeight, poolWidth,
                                        strideY, strideX,
                                        padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -234,7 +234,7 @@ pooling_backward_cpu(type* derData,
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_max_backward<vl::CPU, float>(float* derData,
                                                float const* data,
                                                float const* derPooled,
@@ -249,10 +249,10 @@ vl::impl::pooling_max_backward<vl::CPU, float>(float* derData,
                                                 poolHeight, poolWidth,
                                                 strideY, strideX,
                                                 padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_average_backward<vl::CPU, float>(float* derData,
                                                float const* derOutput,
                                                size_t height, size_t width, size_t depth,
@@ -266,5 +266,5 @@ vl::impl::pooling_average_backward<vl::CPU, float>(float* derData,
                                                 poolHeight, poolWidth,
                                                 strideY, strideX,
                                                 padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }

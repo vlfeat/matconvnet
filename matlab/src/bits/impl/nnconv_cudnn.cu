@@ -18,11 +18,22 @@
 
 using namespace vl ;
 
+#define CHECK(x) \
+{ \
+cudnnError = x ; \
+if (cudnnError != CUDNN_STATUS_SUCCESS) { \
+  error = context.setError(context.getCudaHelper().catchCudnnError(cudnnError, \
+     STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
+  goto done ; \
+} }
+
+//#define CHECK(x) x
+
 /* ---------------------------------------------------------------- */
 /*                                             nnconv_forward_cudnn */
 /* ---------------------------------------------------------------- */
 
-template<> int
+template<> vl::Error
 vl::impl::nnconv_forward_cudnn<float>(Context& context,
                                       Tensor output,
                                       Tensor data,
@@ -37,120 +48,137 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
   assert(filters) ;
 
   cudnnTensorDescriptor_t outputDesc, biasesDesc, dataDesc ;
-  cudnnFilterDescriptor_t filtersDesc;
+  cudnnFilterDescriptor_t filtersDesc ;
   cudnnConvolutionDescriptor_t convDesc ;
-  cudnnConvolutionFwdAlgo_t algo;
+  cudnnConvolutionFwdAlgo_t algo ;
+  bool outputDescInitialized = false ;
+  bool biasesDescInitialized = false ;
+  bool dataDescInitialized = false ;
+  bool filtersDescInitialized = false ;
+  bool convDescInitialized = false ;
+
   void* workSpace = NULL ;
   size_t workSpaceSize ;
 
   int numGroups = data.getDepth() / filters.getDepth() ;
   int numFiltersPerGroup = filters.getSize() / numGroups ;
 
-  //std::cout<<"numGroups"<<numGroups<<std::endl;
-  //std::cout<<"numFiltersPerGroup"<<numFiltersPerGroup<<std::endl;
+  if (padLeft != padRight) return vl::vlErrorUnsupported ;
+  if (padTop != padBottom) return vl::vlErrorUnsupported ;
 
-  if (padLeft != padRight) return 1 ;
-  if (padTop != padBottom) return 1 ;
+  cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
+  vl::Error error = vl::vlSuccess ;
+  cudnnHandle_t handle ;
 
-  cudnnHandle_t handle;
-  context.getCudaHelper().getCuDNNHandle(&handle) ;
+  // Get CuDNN
+  CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
 
-  cudnnCreateTensorDescriptor(&outputDesc) ;
-  cudnnSetTensor4dDescriptorEx(outputDesc,
-                               CUDNN_DATA_FLOAT,
-                               output.getSize(), // sizes
-                               numFiltersPerGroup,
-                               output.getWidth(),
-                               output.getHeight(),
-                               output.getHeight()*output.getWidth()*output.getDepth(), //strides
-                               output.getHeight()*output.getWidth(),
-                               output.getHeight(),
-                               1) ;
+  // Get tensor descripotrs
+  CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
+  outputDescInitialized = true ;
+  CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
+                                     CUDNN_DATA_FLOAT,
+                                     output.getSize(), // sizes
+                                     numFiltersPerGroup,
+                                     output.getWidth(),
+                                     output.getHeight(),
+                                     output.getHeight()*output.getWidth()*output.getDepth(), //strides
+                                     output.getHeight()*output.getWidth(),
+                                     output.getHeight(),
+                                     1)) ;
 
-  cudnnCreateTensorDescriptor(&dataDesc) ;
-  cudnnSetTensor4dDescriptorEx(dataDesc,
-                               CUDNN_DATA_FLOAT,
-                               data.getSize(),
-                               data.getDepth() / numGroups,
-                               data.getWidth(),
-                               data.getHeight(),
-                               data.getHeight()*data.getWidth()*data.getDepth(), //strides
-                               data.getHeight()*data.getWidth(),
-                               data.getHeight(),
-                               1) ;
+  CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
+  dataDescInitialized = true ;
+  CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
+                                     CUDNN_DATA_FLOAT,
+                                     data.getSize(),
+                                     data.getDepth() / numGroups,
+                                     data.getWidth(),
+                                     data.getHeight(),
+                                     data.getHeight()*data.getWidth()*data.getDepth(), //strides
+                                     data.getHeight()*data.getWidth(),
+                                     data.getHeight(),
+                                     1)) ;
 
-  cudnnCreateFilterDescriptor(&filtersDesc) ;
-  cudnnSetFilter4dDescriptor(filtersDesc,
-                             CUDNN_DATA_FLOAT,
-                             numFiltersPerGroup,
-                             filters.getDepth(),
-                             filters.getWidth(),
-                             filters.getHeight()) ;
+  CHECK(cudnnCreateFilterDescriptor(&filtersDesc)) ;
+  filtersDescInitialized = true ;
+  CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
+                                   CUDNN_DATA_FLOAT,
+                                   numFiltersPerGroup,
+                                   filters.getDepth(),
+                                   filters.getWidth(),
+                                   filters.getHeight())) ;
 
   if (biases) {
-    cudnnCreateTensorDescriptor(&biasesDesc) ;
-    cudnnSetTensor4dDescriptor(biasesDesc,
-                               CUDNN_TENSOR_NCHW,
-                               CUDNN_DATA_FLOAT,
-                               1,
-                               biases.getNumElements() / numGroups,
-                               1,
-                               1) ;
+    CHECK(cudnnCreateTensorDescriptor(&biasesDesc)) ;
+    biasesDescInitialized = true ;
+    CHECK(cudnnSetTensor4dDescriptor(biasesDesc,
+                                     CUDNN_TENSOR_NCHW,
+                                     CUDNN_DATA_FLOAT,
+                                     1,
+                                     biases.getNumElements() / numGroups,
+                                     1,
+                                     1)) ;
   }
 
-  cudnnCreateConvolutionDescriptor(&convDesc) ;
-  cudnnSetConvolution2dDescriptor(convDesc,
-                                  padLeft, padTop,
-                                  strideX, strideY,
-                                  1,1, // upscale
-                                  CUDNN_CROSS_CORRELATION) ;
-  /* sanity check */
+  // Get convolution descriptor
+  CHECK(cudnnCreateConvolutionDescriptor(&convDesc)) ;
+  convDescInitialized = true ;
+  CHECK(cudnnSetConvolution2dDescriptor(convDesc,
+                                        padLeft, padTop,
+                                        strideX, strideY,
+                                        1,1, // upscale
+                                        CUDNN_CROSS_CORRELATION)) ;
+  // Sanity check
+#if 1
   {
     int n, c, h, w ;
     cudnnGetConvolution2dForwardOutputDim(convDesc,
                                           dataDesc,
                                           filtersDesc,
                                           &n, &c, &w, &h) ;
-    bool ok =
+    bool sane =
     output.getSize() == n &&
     numFiltersPerGroup == c &&
     output.getWidth() == w &&
     output.getHeight() == h ;
+    if (!sane) {
+      std::cout<<"nnconv_forward_cudnn: expected output size "
+      <<output.getWidth()<<" x "<<output.getHeight()<< " actual output size "
+      <<w<<" x "<<h<<std::endl ;
+    }
+  }
+#endif
 
-    if (!ok) {
+  // Get convolution algorithm
+  CHECK(cudnnGetConvolutionForwardAlgorithm(handle,
+                                            dataDesc,
+                                            filtersDesc,
+                                            convDesc,
+                                            outputDesc,
+                                            CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+                                            0,
+                                            &algo)) ;
 
-      std::cout<<"eeeeeee: "<<output.getWidth()<<" "<<w<<std::endl ;
-      std::cout<<"qqqqqqq: "<<output.getHeight()<<" "<<h<<std::endl ;
-      /*
-       assert(output.getSize() == n &&
-       output.getDepth() == c &&
-       output.getWidth() == w &&
-       output.getHeight() == h) ;
-       */
+  // Get workspace size
+  CHECK(cudnnGetConvolutionForwardWorkspaceSize(handle,
+                                                dataDesc,
+                                                filtersDesc,
+                                                convDesc,
+                                                outputDesc,
+                                                algo,
+                                                &workSpaceSize)) ;
+
+  // Get workspace
+  if (workSpaceSize > 0) {
+    workSpace = context.getWorkspace(vl::GPU, workSpaceSize) ;
+    if (workSpace == NULL) {
+      error = context.getLastError() ;
+      goto done ;
     }
   }
 
-  /* pick convolution algorithm */
-  cudnnGetConvolutionForwardAlgorithm(handle,
-                                      dataDesc,
-                                      filtersDesc,
-                                      convDesc,
-                                      outputDesc,
-                                      CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
-                                      0,
-                                      &algo) ;
-
-  /* get workspace */
-  cudnnGetConvolutionForwardWorkspaceSize(handle,
-                                          dataDesc,
-                                          filtersDesc,
-                                          convDesc,
-                                          outputDesc,
-                                          algo,
-                                          &workSpaceSize) ;
-  workSpace = context.getWorkspace(vl::GPU, workSpaceSize) ;
-
-  /* peform convolution */
+  // Perform convolution for each filter group
   for (int g = 0  ; g < numGroups ; ++g) {
     ptrdiff_t dataGrpOffset = (data.getHeight() * data.getWidth() * filters.getDepth()) *  g ;
 
@@ -160,42 +188,43 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
 
     float alpha = 1.0f ;
     float beta = 0.0f ;
-    cudnnConvolutionForward(handle,
-                            &alpha,
-                            dataDesc, data.getMemory() + dataGrpOffset,
-                            filtersDesc, filters.getMemory() + filtersGrpOffset,
-                            convDesc,
-                            algo,
-                            workSpace, workSpaceSize,
-                            &beta,
-                            outputDesc, output.getMemory() + outputGrpOffset) ;
+    CHECK(cudnnConvolutionForward(handle,
+                                  &alpha,
+                                  dataDesc, data.getMemory() + dataGrpOffset,
+                                  filtersDesc, filters.getMemory() + filtersGrpOffset,
+                                  convDesc,
+                                  algo,
+                                  workSpace, workSpaceSize,
+                                  &beta,
+                                  outputDesc, output.getMemory() + outputGrpOffset)) ;
 
     if (biases) {
       float alpha = 1.0f ;
       float beta = 1.0f ;
-      cudnnAddTensor(handle,
-                     CUDNN_ADD_SAME_C,
-                     &alpha,
-                     biasesDesc, biases.getMemory() + biasesGrpOffset,
-                     &beta,
-                     outputDesc, output.getMemory() + outputGrpOffset);
+      CHECK(cudnnAddTensor(handle,
+                           CUDNN_ADD_SAME_C,
+                           &alpha,
+                           biasesDesc, biases.getMemory() + biasesGrpOffset,
+                           &beta,
+                           outputDesc, output.getMemory() + outputGrpOffset)) ;
     }
   }
 
   /* cleanup */
-  cudnnDestroyConvolutionDescriptor(convDesc) ;
-  cudnnDestroyFilterDescriptor(filtersDesc) ;
-  cudnnDestroyTensorDescriptor(dataDesc) ;
-  if (biases) { cudnnDestroyTensorDescriptor(biasesDesc) ; }
-  cudnnDestroyTensorDescriptor(outputDesc) ;
-  return 0 ;
+done:
+  if (convDescInitialized) { cudnnDestroyConvolutionDescriptor(convDesc) ; }
+  if (filtersDescInitialized) { cudnnDestroyFilterDescriptor(filtersDesc) ; }
+  if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
+  if (biasesDescInitialized) { cudnnDestroyTensorDescriptor(biasesDesc) ; }
+  if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
+  return context.passError(error, "nnconv_forward_cudnn") ;
 }
 
 /* ---------------------------------------------------------------- */
 /*                                            nnconv_backward_cudnn */
 /* ---------------------------------------------------------------- */
 
-template<> int
+template<> vl::Error
 vl::impl::nnconv_backward_cudnn<float>(Context& context,
                                        Tensor derData,
                                        Tensor derFilters,
@@ -215,42 +244,55 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
   cudnnTensorDescriptor_t dataDesc, derBiasesDesc, derOutputDesc ;
   cudnnFilterDescriptor_t filtersDesc ;
   cudnnConvolutionDescriptor_t convDesc ;
-
-  if (padLeft != padRight) return 1 ;
-  if (padTop != padBottom) return 1 ;
+  bool dataDescInitialized = false ;
+  bool derBiasesDescInitialized = false ;
+  bool derOutputDescInitialized = false ;
+  bool filtersDescInitialized = false ;
+  bool convDescInitialized = false ;
 
   int numGroups = data.getDepth() / filters.getDepth() ;
   int numFiltersPerGroup = filters.getSize() / numGroups ;
 
-  cudnnHandle_t handle;
-  context.getCudaHelper().getCuDNNHandle(&handle) ;
+  if (padLeft != padRight) return vl::vlErrorUnsupported ;
+  if (padTop != padBottom) return vl::vlErrorUnsupported ;
 
-  cudnnCreateTensorDescriptor(&dataDesc) ;
-  cudnnSetTensor4dDescriptorEx(dataDesc,
-                               CUDNN_DATA_FLOAT,
-                               data.getSize(),
-                               data.getDepth() / numGroups,
-                               data.getWidth(),
-                               data.getHeight(),
-                               data.getHeight()*data.getWidth()*data.getDepth(), //strides
-                               data.getHeight()*data.getWidth(),
-                               data.getHeight(),
-                               1) ;
+  cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
+  vl::Error error = vl::vlSuccess ;
+  cudnnHandle_t handle ;
+
+  // Get CuDNN
+  CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+
+  // Get tensor descripotrs
+  CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
+  dataDescInitialized = true ;
+  CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
+                                     CUDNN_DATA_FLOAT,
+                                     data.getSize(),
+                                     data.getDepth() / numGroups,
+                                     data.getWidth(),
+                                     data.getHeight(),
+                                     data.getHeight()*data.getWidth()*data.getDepth(), //strides
+                                     data.getHeight()*data.getWidth(),
+                                     data.getHeight(),
+                                     1)) ;
 
   if (derBiases) {
-    cudnnCreateTensorDescriptor(&derBiasesDesc) ;
-    cudnnSetTensor4dDescriptor(derBiasesDesc,
-                               CUDNN_TENSOR_NCHW,
-                               CUDNN_DATA_FLOAT,
-                               1,
-                               derBiases.getNumElements() / numGroups,
-                               1,
-                               1) ;
+    CHECK(cudnnCreateTensorDescriptor(&derBiasesDesc)) ;
+    derBiasesDescInitialized = true ;
+    CHECK(cudnnSetTensor4dDescriptor(derBiasesDesc,
+                                     CUDNN_TENSOR_NCHW,
+                                     CUDNN_DATA_FLOAT,
+                                     1,
+                                     derBiases.getNumElements() / numGroups,
+                                     1,
+                                     1)) ;
   }
 
   if (derOutput) {
-    cudnnCreateTensorDescriptor(&derOutputDesc) ;
-    cudnnSetTensor4dDescriptorEx(derOutputDesc,
+    CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
+    derOutputDescInitialized = true ;
+    CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
                                  CUDNN_DATA_FLOAT,
                                  derOutput.getSize(), // sizes
                                  numFiltersPerGroup,
@@ -259,24 +301,27 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
                                  derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth(), //strides
                                  derOutput.getHeight()*derOutput.getWidth(),
                                  derOutput.getHeight(),
-                                 1) ;
+                                 1)) ;
   }
 
-  cudnnCreateFilterDescriptor(&filtersDesc) ;
-  cudnnSetFilter4dDescriptor(filtersDesc,
+  CHECK(cudnnCreateFilterDescriptor(&filtersDesc)) ;
+  filtersDescInitialized = true ;
+  CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                              CUDNN_DATA_FLOAT,
                              numFiltersPerGroup,
                              filters.getDepth(),
                              filters.getWidth(),
-                             filters.getHeight()) ;
+                             filters.getHeight())) ;
 
-  cudnnCreateConvolutionDescriptor(&convDesc) ;
-  cudnnSetConvolution2dDescriptor(convDesc,
+  CHECK(cudnnCreateConvolutionDescriptor(&convDesc)) ;
+  convDescInitialized = true ;
+  CHECK(cudnnSetConvolution2dDescriptor(convDesc,
                                   padLeft, padTop,
                                   strideX, strideY,
                                   1,1, // upscale
-                                  CUDNN_CROSS_CORRELATION) ;
+                                  CUDNN_CROSS_CORRELATION)) ;
 
+  // Perform backward convolution for each filter group
   for (int g = 0  ; g < numGroups ; ++g) {
 
     ptrdiff_t dataGrpOffset = (data.getHeight() * data.getWidth() * filters.getDepth()) *  g ;
@@ -287,44 +332,45 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
     if (derBiases) {
       float alpha = 1 ;
       float beta = 0 ;
-      cudnnConvolutionBackwardBias
+      CHECK(cudnnConvolutionBackwardBias
       (handle,
        &alpha,
        derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
        &beta,
-       derBiasesDesc, derBiases.getMemory() + derBiasesGrpOffset) ;
+       derBiasesDesc, derBiases.getMemory() + derBiasesGrpOffset)) ;
     }
     if (derFilters) {
       float alpha = 1 ;
       float beta = 0 ;
-      cudnnConvolutionBackwardFilter
+      CHECK(cudnnConvolutionBackwardFilter
       (handle,
        &alpha,
        dataDesc, data.getMemory() + dataGrpOffset,
        derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
        convDesc,
        &beta,
-       filtersDesc, derFilters.getMemory() + filtersGrpOffset) ;
+       filtersDesc, derFilters.getMemory() + filtersGrpOffset)) ;
     }
     if (derData) {
       float alpha = 1 ;
       float beta = 0 ;
-      cudnnConvolutionBackwardData
+      CHECK(cudnnConvolutionBackwardData
       (handle,
        &alpha,
        filtersDesc, filters.getMemory() + filtersGrpOffset,
        derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
        convDesc,
        &beta,
-       dataDesc, derData.getMemory() + dataGrpOffset) ;
+       dataDesc, derData.getMemory() + dataGrpOffset)) ;
     }
   }
 
-  cudnnDestroyConvolutionDescriptor(convDesc) ;
-  cudnnDestroyFilterDescriptor(filtersDesc) ;
-  if (derOutput) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-  if (derBiases) { cudnnDestroyTensorDescriptor(derBiasesDesc) ; }
-  cudnnDestroyTensorDescriptor(dataDesc) ;
-  return 0 ;
+done:
+  if (convDescInitialized) { cudnnDestroyConvolutionDescriptor(convDesc) ; }
+  if (filtersDescInitialized) { cudnnDestroyFilterDescriptor(filtersDesc) ; }
+  if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
+  if (derBiasesDescInitialized) { cudnnDestroyTensorDescriptor(derBiasesDesc) ; }
+  if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
+  return context.passError(error, "nnconv_backward_cudnn") ;
 }
 

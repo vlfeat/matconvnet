@@ -19,7 +19,7 @@
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   subsample_forward(vl::Context& context,
                     type* subsampled,
                     type const* data,
@@ -27,7 +27,7 @@ namespace vl { namespace impl {
                     size_t strideY, size_t strideX,
                     size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   subsample_backward(vl::Context& context,
                      type* derData,
                      type const* derSubsampled,
@@ -37,7 +37,7 @@ namespace vl { namespace impl {
 
   /* Specializations */
 
-  template <>  int
+  template<> vl::Error
   subsample_forward<vl::CPU, float>(vl::Context& context,
                                     float* subsampled,
                                     float const* data,
@@ -45,7 +45,7 @@ namespace vl { namespace impl {
                                     size_t strideY, size_t strideX,
                                     size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template <>  int
+  template<> vl::Error
   subsample_backward<vl::CPU, float>(vl::Context& context,
                                      float* derData,
                                      float const* derSubsampled,
@@ -54,7 +54,7 @@ namespace vl { namespace impl {
                                      size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
 #if ENABLE_GPU
-  template <>  int
+  template<> vl::Error
   subsample_forward<vl::GPU, float>(vl::Context& context,
                                     float* stacked,
                                     float const* data,
@@ -62,7 +62,7 @@ namespace vl { namespace impl {
                                     size_t strideY, size_t strideX,
                                     size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template <>  int
+  template<> vl::Error
   subsample_backward<vl::GPU, float>(vl::Context& context,
                                      float* derData,
                                      float const* derSubsampled,

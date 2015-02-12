@@ -260,7 +260,7 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  /* 
+  /*
    Detect fully connected mode (further optimisations):
    the output is 1 x 1 pixels,
    no padding,
@@ -326,83 +326,70 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
-  /* 
+  vl::Error error ;
+
+  /*
    special case: fully connected
    (could be done as a regular case, but it is faster this way)
    */
   if (fullyConnectedMode) {
-    int status ;
     if (!backMode) {
-      status = vl::nnfullyconnected_forward(context,
-                                            output,
+      error = vl::nnfullyconnected_forward(context,
+                                           output,
+                                           data,
+                                           filters,
+                                           biases) ;
+    } else {
+      error = vl::nnfullyconnected_backward(context,
+                                            derData,
+                                            derFilters,
+                                            derBiases,
                                             data,
                                             filters,
-                                            biases) ;
-    } else {
-      status = vl::nnfullyconnected_backward(context,
-                                             derData,
-                                             derFilters,
-                                             derBiases,
-                                             data,
-                                             filters,
-                                             derOutput) ;
-    }
-    if (status) {
-      mexWarnMsgTxt("vl_nnconv: error in nnfullyconnected\n") ;
+                                            derOutput) ;
     }
     goto done ;
   }
 
   /* special case: no filters = identity filter bank (subsample + bias) */
   if (!hasFilters) {
-    int status ;
     if (!backMode) {
-      status = vl::nnsubsample_forward(context,
-                                       output,
-                                       data,
-                                       biases,
+      error = vl::nnsubsample_forward(context,
+                                      output,
+                                      data,
+                                      biases,
+                                      strideY, strideX,
+                                      padTop, padBottom, padLeft, padRight) ;
+    } else {
+      error = vl::nnsubsample_backward(context,
+                                       derData,
+                                       derBiases,
+                                       derOutput,
                                        strideY, strideX,
                                        padTop, padBottom, padLeft, padRight) ;
-    } else {
-      status = vl::nnsubsample_backward(context,
-                                        derData,
-                                        derBiases,
-                                        derOutput,
-                                        strideY, strideX,
-                                        padTop, padBottom, padLeft, padRight) ;
-    }
-    if (status) {
-      mexWarnMsgTxt("vl_nnconv: error in nnsubsample\n") ;
     }
     goto done ;
   }
 
   /* regular case */
-  {
-    int status ;
-    if (!backMode) {
-      status = vl::nnconv_forward(context,
-                                  output,
-                                  data,
-                                  filters,
-                                  biases,
-                                  strideY, strideX,
-                                  padTop, padBottom, padLeft, padRight) ;
-    } else {
-      status = vl::nnconv_backward(context,
-                                   derData,
-                                   derFilters,
-                                   derBiases,
-                                   data,
-                                   filters,
-                                   derOutput,
-                                   strideY, strideX,
-                                   padTop, padBottom, padLeft, padRight) ;
-    }
-    if (status) {
-      mexWarnMsgTxt("vl_nnconv: error in nnconv\n") ;
-    }
-    goto done ;
+  if (!backMode) {
+    error = vl::nnconv_forward(context,
+                               output,
+                               data,
+                               filters,
+                               biases,
+                               strideY, strideX,
+                               padTop, padBottom, padLeft, padRight) ;
+  } else {
+    error = vl::nnconv_backward(context,
+                                derData,
+                                derFilters,
+                                derBiases,
+                                data,
+                                filters,
+                                derOutput,
+                                strideY, strideX,
+                                padTop, padBottom, padLeft, padRight) ;
   }
 
   /* -------------------------------------------------------------- */
@@ -410,9 +397,12 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
 done:
+  if (error != vl::vlSuccess) {
+    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
+  }
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] =(computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERBIASES] = (computeDerBiases & hasBiases) ? derBiases.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;

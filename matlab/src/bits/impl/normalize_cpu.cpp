@@ -211,7 +211,7 @@ normalize_forward_cpu(T* normalized,
 #endif
 }
 
-template<> int
+template<> vl::Error
 vl::impl::normalize_forward<vl::CPU, float>
 (float* normalized,
  float const* data,
@@ -222,7 +222,7 @@ vl::impl::normalize_forward<vl::CPU, float>
   normalize_forward_cpu<float>(normalized,data,
                                height,width,depth,size,
                                normDepth,kappa,alpha,beta) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -384,7 +384,7 @@ normalize_backward_cpu(T* normalized,
 #endif
 }
 
-template<> int
+template<> vl::Error
 vl::impl::normalize_backward<vl::CPU, float>
 (float* derData,
  float const* data,
@@ -396,5 +396,5 @@ vl::impl::normalize_backward<vl::CPU, float>
   normalize_backward_cpu<float>(derData,data,derNormalized,
                                 height,width,depth,size,
                                 normDepth,kappa,alpha,beta) ;
-  return 0 ;
+  return vlSuccess ;
 }

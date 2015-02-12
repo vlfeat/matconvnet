@@ -52,7 +52,7 @@ subsample_forward_cpu(T* subsampled,
   }
 }
 
-template <> int
+template <> vl::Error
 vl::impl::subsample_forward<vl::CPU, float>(vl::Context& context,
                                             float* subsampled,
                                             float const* data,
@@ -64,7 +64,7 @@ vl::impl::subsample_forward<vl::CPU, float>(vl::Context& context,
                                height, width, depth,
                                strideY, strideX,
                                padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }
 
 
@@ -105,7 +105,7 @@ subsample_backward_cpu(T* dzdx,
   }
 }
 
-template <> int
+template <> vl::Error
 vl::impl::subsample_backward<vl::CPU, float>(vl::Context& context,
                                              float* derData,
                                              float const* derSubsampled,
@@ -117,5 +117,5 @@ vl::impl::subsample_backward<vl::CPU, float>(vl::Context& context,
                                 height, width, depth,
                                 strideY, strideX,
                                 padTop, padBottom, padLeft, padRight) ;
-  return 0 ;
+  return vlSuccess ;
 }

@@ -64,7 +64,7 @@ pooling_max_kernel
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_max_forward<vl::GPU, float>(float* pooled,
                                               float const* data,
                                               size_t height, size_t width, size_t depth,
@@ -87,7 +87,7 @@ vl::impl::pooling_max_forward<vl::GPU, float>(float* pooled,
    padTop, padLeft);
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -136,7 +136,7 @@ pooling_average_kernel
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_average_forward<vl::GPU, float>
 (float* pooled,
  float const* data,
@@ -160,7 +160,7 @@ vl::impl::pooling_average_forward<vl::GPU, float>
    padTop, padLeft);
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -270,7 +270,7 @@ pooling_max_backward_kernel
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_max_backward<vl::GPU, float>(float* derData,
                                                float const* data,
                                                float const* derPooled,
@@ -294,7 +294,7 @@ vl::impl::pooling_max_backward<vl::GPU, float>(float* derData,
        padTop, padLeft);
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -351,7 +351,7 @@ pooling_average_backward_kernel(T* derData,
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::pooling_average_backward<vl::GPU, float>
 (float* derData,
  float const* derPooled,
@@ -376,5 +376,5 @@ vl::impl::pooling_average_backward<vl::GPU, float>
    padTop, padLeft);
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }

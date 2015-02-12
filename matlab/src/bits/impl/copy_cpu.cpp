@@ -12,12 +12,12 @@
 using namespace vl ;
 using namespace vl::impl ;
 
-template <> int
+template <> vl::Error
 vl::impl::copy<vl::CPU, float>(float * dest,
                                float const * src,
                                size_t numElements)
 {
   memcpy(dest, src, numElements * sizeof(float)) ;
-  return 0 ;
+  return vlSuccess ;
 }
 

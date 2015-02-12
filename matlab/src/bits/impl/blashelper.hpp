@@ -3,8 +3,8 @@
  ** @author Andrea Vedaldi
  **/
 
-#ifndef __matconv__blashelper__
-#define __matconv__blashelper__
+#ifndef __vl__blashelper__
+#define __vl__blashelper__
 
 #include "../data.hpp"
 
@@ -19,29 +19,29 @@
 /* ---------------------------------------------------------------- */
 
 template <typename type>
-struct get_type_id { operator vl::Type() const ; } ;
+struct get_vl_type { operator vl::Type() const ; } ;
 
 template <>
-struct get_type_id<float> { operator vl::Type() const { return vl::FLOAT ; } } ;
+struct get_vl_type<float> { operator vl::Type() const { return vl::vlTypeFloat ; } } ;
 
 template <>
-struct get_type_id<double> { operator vl::Type() const { return vl::DOUBLE ; } } ;
+struct get_vl_type<double> { operator vl::Type() const { return vl::vlTypeDouble ; } } ;
 
 /* ---------------------------------------------------------------- */
 /* GEMM helper                                                      */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device arch, typename type>
-void gemm(vl::Context& context,
+template<vl::Device arch, typename type> vl::Error
+gemm(vl::Context& context,
           char op1, char op2,
-          ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
-          type alpha,
-          type const * a, ptrdiff_t lda,
-          type const * b, ptrdiff_t ldb,
-          type beta,
+     ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+     type alpha,
+     type const * a, ptrdiff_t lda,
+     type const * b, ptrdiff_t ldb,
+     type beta,
           type * c, ptrdiff_t ldc) ;
 
-template<> inline void
+template<> inline vl::Error
 gemm<vl::CPU, float>(vl::Context& context,
                      char op1, char op2,
                      ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -58,10 +58,11 @@ gemm<vl::CPU, float>(vl::Context& context,
         (float*)b, &ldb,
         &beta,
         c, &ldc) ;
+  return vl::vlSuccess ;
 }
 
 #ifdef ENABLE_GPU
-template<> inline void
+template<> inline vl::Error
 gemm<vl::GPU, float>(vl::Context& context,
                      char op1, char op2,
                      ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -72,16 +73,21 @@ gemm<vl::GPU, float>(vl::Context& context,
                      float * c, ptrdiff_t ldc)
 {
   cublasHandle_t handle ;
-  context.getCudaHelper().getCuBLASHandle(&handle) ;
-  cublasSgemm(handle,
-              (op1 == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
-              (op2 == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
-              (int)m, (int)n, (int)k,
-              &alpha,
-              a, (int)lda,
-              b, (int)ldb,
-              &beta,
-              c, (int)ldc);
+  cublasStatus_t status ;
+  status = context.getCudaHelper().getCublasHandle(&handle) ;
+  if (status != CUBLAS_STATUS_SUCCESS) goto done ;
+  status = cublasSgemm(handle,
+                       (op1 == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
+                       (op2 == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
+                       (int)m, (int)n, (int)k,
+                       &alpha,
+                       a, (int)lda,
+                       b, (int)ldb,
+                       &beta,
+                       c, (int)ldc);
+done:
+  return context.setError
+  (context.getCudaHelper().catchCublasError(status, "cublasSgemm"), "gemm<>: ") ;
 }
 #endif
 
@@ -89,8 +95,8 @@ gemm<vl::GPU, float>(vl::Context& context,
 /* GEMV helper                                                      */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device arch, typename type>
-void gemv(vl::Context& context,
+template<vl::Device arch, typename type> vl::Error
+gemv(vl::Context& context,
           char op,
           ptrdiff_t m, ptrdiff_t n,
           type alpha,
@@ -99,7 +105,7 @@ void gemv(vl::Context& context,
           type beta,
           type * y, ptrdiff_t incy) ;
 
-template<> inline void
+template<> inline vl::Error
 gemv<vl::CPU, float>(vl::Context& context,
                      char op,
                      ptrdiff_t m, ptrdiff_t n,
@@ -115,10 +121,11 @@ gemv<vl::CPU, float>(vl::Context& context,
         (float*)x, &incx,
         &beta,
         y, &incy) ;
+  return vl::vlSuccess ;
 }
 
 #ifdef ENABLE_GPU
-template<> inline void
+template<> inline vl::Error
 gemv<vl::GPU, float>(vl::Context& context,
                      char op,
                      ptrdiff_t m, ptrdiff_t n,
@@ -129,16 +136,21 @@ gemv<vl::GPU, float>(vl::Context& context,
                      float * y, ptrdiff_t incy)
 {
   cublasHandle_t handle ;
-  context.getCudaHelper().getCuBLASHandle(&handle) ;
-  cublasSgemv(handle,
-              (op == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
-              (int)m, (int)n,
-              &alpha,
-              a, lda,
-              x, (int)incx,
-              &beta,
-              y, (int)incy) ;
+  cublasStatus_t status ;
+  status = context.getCudaHelper().getCublasHandle(&handle) ;
+  if (status != CUBLAS_STATUS_SUCCESS) goto done ;
+  status = cublasSgemv(handle,
+                       (op == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
+                       (int)m, (int)n,
+                       &alpha,
+                       a, lda,
+                       x, (int)incx,
+                       &beta,
+                       y, (int)incy) ;
+done:
+  return context.setError
+  (context.getCudaHelper().catchCublasError(status, "cublasSgemv"), "gemv<>: ") ;
 }
 #endif
 
-#endif /* defined(__matconv__blashelper__) */
+#endif /* defined(__vl__blashelper__) */

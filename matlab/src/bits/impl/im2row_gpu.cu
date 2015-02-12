@@ -118,7 +118,7 @@ im2row_gpu(T* stacked,
 }
 
 
-template <> int
+template <> vl::Error
 vl::impl::im2row<vl::GPU, float>(vl::Context& context,
                                  float* stacked,
                                  float const* data,
@@ -133,7 +133,7 @@ vl::impl::im2row<vl::GPU, float>(vl::Context& context,
                              windowHeight, windowWidth,
                              strideY, strideX,
                              padTop, padBottom, padLeft, padRight) ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 
@@ -292,7 +292,7 @@ row2im_gpu(T* data,
   return cudaPeekAtLastError() ;
 }
 
-template <> int
+template <> vl::Error
 vl::impl::row2im<vl::GPU, float>(vl::Context& context,
                                  float* data,
                                  float const* stacked,
@@ -307,5 +307,5 @@ vl::impl::row2im<vl::GPU, float>(vl::Context& context,
                              windowHeight, windowWidth,
                              strideY, strideX,
                              padTop, padBottom, padLeft, padRight) ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }

@@ -19,20 +19,21 @@ using namespace vl ;
 /*                                                   nnconv_forward */
 /* ---------------------------------------------------------------- */
 
-int vl::nnconv_forward(Context& context,
-                       Tensor output,
-                       Tensor data,
-                       Tensor filters,
-                       Tensor biases,
-                       int strideY, int strideX,
-                       int padTop, int padBottom,
-                       int padLeft, int padRight)
+vl::Error
+vl::nnconv_forward(Context& context,
+                   Tensor output,
+                   Tensor data,
+                   Tensor filters,
+                   Tensor biases,
+                   int strideY, int strideX,
+                   int padTop, int padBottom,
+                   int padLeft, int padRight)
 {
-  int status = 0 ;
+  vl::Error status = vlSuccess ;
   switch (output.getMemoryType()) {
     default:
       assert(false) ;
-      status = vl::ERROR ;
+      status = vl::vlErrorUnknown ;
       break ;
 
     case vl::CPU:
@@ -46,14 +47,14 @@ int vl::nnconv_forward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnActive()) {
+      if (context.getCudaHelper().isCudnnEnabled()) {
         status = vl::impl::nnconv_forward_cudnn<float>
         (context, output, data, filters, biases,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-        if (status == vl::SUCCESS) { return status ; }
-        if (status != vl::UNSUPPORTED) { return status ; }
+        if (status == vl::vlSuccess) { return status ; }
+        if (status != vl::vlErrorUnsupported) { goto done ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
@@ -65,6 +66,7 @@ int vl::nnconv_forward(Context& context,
       break ;
 #endif
   }
+done:
   return status ;
 }
 
@@ -72,22 +74,23 @@ int vl::nnconv_forward(Context& context,
 /*                                                  nnconv_backward */
 /* ---------------------------------------------------------------- */
 
-int vl::nnconv_backward(Context& context,
-                        Tensor derData,
-                        Tensor derFilters,
-                        Tensor derBiases,
-                        Tensor data,
-                        Tensor filters,
-                        Tensor derOutput,
-                        int strideY, int strideX,
-                        int padTop, int padBottom,
-                        int padLeft, int padRight)
+vl::Error
+vl::nnconv_backward(Context& context,
+                    Tensor derData,
+                    Tensor derFilters,
+                    Tensor derBiases,
+                    Tensor data,
+                    Tensor filters,
+                    Tensor derOutput,
+                    int strideY, int strideX,
+                    int padTop, int padBottom,
+                    int padLeft, int padRight)
 {
-  int status = 0 ;
+  vl::Error status = vl::vlSuccess ;
   switch (derOutput.getMemoryType()) {
     default:
       assert(false) ;
-      status = vl::ERROR ;
+      status = vl::vlErrorUnknown ;
       break ;
 
     case vl::CPU:
@@ -103,7 +106,7 @@ int vl::nnconv_backward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnActive()) {
+      if (context.getCudaHelper().isCudnnEnabled()) {
         status = vl::impl::nnconv_backward_cudnn<float>
         (context,
          derData, derFilters, derBiases,
@@ -111,7 +114,8 @@ int vl::nnconv_backward(Context& context,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-        if (status == vl::SUCCESS || status != vl::UNSUPPORTED) break ;
+        if (status == vl::vlSuccess) { return status ; }
+        if (status != vl::vlErrorUnsupported) { goto done ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
@@ -125,5 +129,6 @@ int vl::nnconv_backward(Context& context,
       break;
 #endif
   }
+done:
   return status ;
 }

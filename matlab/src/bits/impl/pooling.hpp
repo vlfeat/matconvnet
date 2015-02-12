@@ -22,7 +22,7 @@ namespace vl { namespace impl {
 
   /* Max pooling */
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   pooling_max_forward(type* pooled,
                       type const* data,
                       size_t height, size_t width, size_t depth,
@@ -30,7 +30,7 @@ namespace vl { namespace impl {
                       size_t strideY, size_t strideX,
                       size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   pooling_max_backward(type* derData,
                        type const* data,
                        type const* derPooled,
@@ -40,7 +40,7 @@ namespace vl { namespace impl {
                        size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
   /* Sum pooling */
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   pooling_average_forward(type* pooled,
                           type const* data,
                           size_t height, size_t width, size_t depth,
@@ -48,7 +48,7 @@ namespace vl { namespace impl {
                           size_t strideY, size_t strideX,
                           size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<vl::Device dev, typename type> int
+  template<vl::Device dev, typename type> vl::Error
   pooling_average_backward(type* derData,
                            type const* derPooled,
                            size_t height, size_t width, size_t depth,
@@ -58,7 +58,7 @@ namespace vl { namespace impl {
 
   /* Specializations: CPU, float */
 
-  template<> int
+  template<> vl::Error
   pooling_max_forward<vl::CPU, float>(float* pooled,
                                       float const* data,
                                       size_t height, size_t width, size_t depth,
@@ -66,7 +66,7 @@ namespace vl { namespace impl {
                                       size_t strideY, size_t strideX,
                                       size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<> int
+  template<> vl::Error
   pooling_max_backward<vl::CPU, float>(float* derData,
                                        float const* data,
                                        float const* derPooled,
@@ -75,7 +75,7 @@ namespace vl { namespace impl {
                                        size_t strideY, size_t strideX,
                                        size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<> int
+  template<> vl::Error
   pooling_average_forward<vl::CPU, float>(float* pooled,
                                           float const* data,
                                           size_t height, size_t width, size_t depth,
@@ -83,7 +83,7 @@ namespace vl { namespace impl {
                                           size_t strideY, size_t strideX,
                                           size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<> int
+  template<> vl::Error
   pooling_average_backward<vl::CPU, float>(float* derData,
                                            float const* derPooled,
                                            size_t height, size_t width, size_t depth,
@@ -94,7 +94,7 @@ namespace vl { namespace impl {
   /* Specializations: GPU, float */
 
 #if ENABLE_GPU
-  template<> int
+  template<> vl::Error
   pooling_max_forward<vl::GPU, float>(float* pooled,
                                       float const* data,
                                       size_t height, size_t width, size_t depth,
@@ -102,7 +102,7 @@ namespace vl { namespace impl {
                                       size_t strideY, size_t strideX,
                                       size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<> int
+  template<> vl::Error
   pooling_max_backward<vl::GPU, float>(float* derData,
                                        float const* data,
                                        float const* derPooled,
@@ -111,7 +111,7 @@ namespace vl { namespace impl {
                                        size_t strideY, size_t strideX,
                                        size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<> int
+  template<> vl::Error
   pooling_average_forward<vl::GPU, float>(float* pooled,
                                           float const* data,
                                           size_t height, size_t width, size_t depth,
@@ -119,7 +119,7 @@ namespace vl { namespace impl {
                                           size_t strideY, size_t strideX,
                                           size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-  template<> int
+  template<> vl::Error
   pooling_average_backward<vl::GPU, float>(float* derData,
                                            float const* derPooled,
                                            size_t height, size_t width, size_t depth,

@@ -68,7 +68,7 @@ normalize_forward_kernel
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::normalize_forward<vl::GPU, float>(float* normalized,
                                             float const* data,
                                             size_t width,
@@ -83,7 +83,7 @@ vl::impl::normalize_forward<vl::GPU, float>(float* normalized,
   (normalized, data, width, height, depth, size, normDepth, kappa, alpha, beta) ;
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -144,7 +144,7 @@ normalize_backward_kernel
   }
 }
 
-template<> int
+template<> vl::Error
 vl::impl::normalize_backward<vl::GPU, float>(float* derData,
                                              float const* data,
                                              float const* derNormalized,
@@ -160,7 +160,7 @@ vl::impl::normalize_backward<vl::GPU, float>(float* derData,
   (derData, data, derNormalized, width, height, depth, size, normDepth, kappa, alpha, beta) ;
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::SUCCESS : vl::ERROR ;
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 

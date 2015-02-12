@@ -240,20 +240,20 @@ void mexFunction(int nout, mxArray *out[],
     mexPrintf("vl_nnpool: mode %s; %s\n", (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
 #if ENABLE_CUDNN
     if (data.getMemoryType()==vl::GPU) {
-      mexPrintf("vl_nnpool: GPU algorithms: %s\n", context.getCudaHelper().isCudnnActive()?"cuDNN":"cuBLAS") ;
+      mexPrintf("vl_nnpool: GPU algorithms: %s\n", context.getCudaHelper().isCudnnEnabled()?"cuDNN":"cuBLAS") ;
     }
 #endif
     mexPrintf("vl_nnpool: stride: [%d %d], pad: [%d %d %d %d]\n",
               strideY, strideX,
               padTop, padBottom, padLeft, padRight) ;
-    vl::print("vl_nnconv: data: ", data) ;
+    vl::print("vl_nnpool: data: ", data) ;
     mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
     mexPrintf("vl_nnpool: method: %s\n", (method == vl::MAX) ? "max" : "avg") ;
     if (backMode) {
-      vl::print("vl_nnconv: derOutput: ", derOutput) ;
-      vl::print("vl_nnconv: derData: ", derData) ;
+      vl::print("vl_nnpool: derOutput: ", derOutput) ;
+      vl::print("vl_nnpool: derData: ", derData) ;
     } else {
-      vl::print("vl_nnconv: output: ", output) ;
+      vl::print("vl_nnpool: output: ", output) ;
     }
   }
 
@@ -261,26 +261,30 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
+  vl::Error error ;
   if (!backMode) {
-    vl::nnpooling_forward(context,
-                          output, data,
-                          method,
-                          poolHeight, poolWidth,
-                          strideY, strideX,
-                          padTop, padBottom, padLeft, padRight) ;
+    error = vl::nnpooling_forward(context,
+                                  output, data,
+                                  method,
+                                  poolHeight, poolWidth,
+                                  strideY, strideX,
+                                  padTop, padBottom, padLeft, padRight) ;
   } else {
-    vl::nnpooling_backward(context,
-                           derData, data, derOutput,
-                           method,
-                           poolHeight, poolWidth,
-                           strideY, strideX,
-                           padTop, padBottom, padLeft, padRight) ;
+    error = vl::nnpooling_backward(context,
+                                   derData, data, derOutput,
+                                   method,
+                                   poolHeight, poolWidth,
+                                   strideY, strideX,
+                                   padTop, padBottom, padLeft, padRight) ;
   }
 
   /* -------------------------------------------------------------- */
   /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
+  if (error != vl::vlSuccess) {
+    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
+  }
   if (backMode) {
     out[OUT_RESULT] = derData.relinquish() ;
   } else {

@@ -6,8 +6,8 @@
 //  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
 //
 
-#ifndef __matconv__datamex__
-#define __matconv__datamex__
+#ifndef __vl__datamex__
+#define __vl__datamex__
 
 #include "mex.h"
 
@@ -58,7 +58,9 @@ namespace vl {
   } ;
 
   void print(char const * str, TensorGeometry const & tensor) ;
+
+  void mexThrowError(Context const& context, vl::Error error) ;
 }
 
 
-#endif /* defined(__matconv__datamex__) */
+#endif /* defined(__vl__datamex__) */

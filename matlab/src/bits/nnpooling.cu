@@ -24,26 +24,27 @@ using namespace vl ;
 /*                                                nnpooling_forward */
 /* ---------------------------------------------------------------- */
 
-int vl::nnpooling_forward(vl::Context& context,
-                          vl::Tensor output,
-                          vl::Tensor data,
-                          PoolingMethod method,
-                          int poolHeight, int poolWidth,
-                          int strideY, int strideX,
-                          int padTop, int padBottom,
-                          int padLeft, int padRight)
+Error
+vl::nnpooling_forward(vl::Context& context,
+                      vl::Tensor output,
+                      vl::Tensor data,
+                      PoolingMethod method,
+                      int poolHeight, int poolWidth,
+                      int strideY, int strideX,
+                      int padTop, int padBottom,
+                      int padLeft, int padRight)
 {
-  int status = 0 ;
+  Error status = vlSuccess ;
   switch (output.getMemoryType()) {
     default:
       assert(false) ;
-      return vl::ERROR ;
+      return vl::vlErrorUnknown ;
 
     case vl::CPU:
       switch (method) {
         default:
           assert(false) ;
-          return vl::ERROR ;
+          return vl::vlErrorUnknown ;
         case vl::AVERAGE:
           status = vl::impl::pooling_average_forward<CPU,float>
           ((float*)output.getMemory(), (float const*)data.getMemory(),
@@ -68,13 +69,13 @@ int vl::nnpooling_forward(vl::Context& context,
 #ifdef ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnActive()) {
+      if (context.getCudaHelper().isCudnnEnabled()) {
         /*
          status = vl::impl::nnpooling_forward_cudnn<float>(context, output, data, filters, biases,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (status == vl::SUCCESS) { return status ; }
+         if (status == vl::vlSuccess) { return status ; }
          if (status != vl::UNSUPPORTED) { return status ; }
          */
         /* this case was not supported by CUDNN -- fallback */
@@ -83,7 +84,7 @@ int vl::nnpooling_forward(vl::Context& context,
       switch (method) {
         default:
           assert(false) ;
-          return vl::ERROR ;
+          return vl::vlErrorUnknown ;
         case vl::AVERAGE:
           status = vl::impl::pooling_average_forward<GPU,float>
           ((float*)output.getMemory(), (float const*)data.getMemory(),
@@ -103,37 +104,41 @@ int vl::nnpooling_forward(vl::Context& context,
            padLeft, padRight) ;
           break;
       }
+      if (status == vlErrorCuda) {
+        context.getCudaHelper().catchCudaError("pooling_*_forward") ;
+      }
       break ;
 #endif
   }
-  return status ;
+  return context.setError(status, "nnpooling_forward") ;
 }
 
 /* ---------------------------------------------------------------- */
 /*                                               nnpooling_backward */
 /* ---------------------------------------------------------------- */
 
-int vl::nnpooling_backward(Context& context,
-                           Tensor derData,
-                           Tensor data,
-                           Tensor derPooled,
-                           PoolingMethod method,
-                           int poolHeight, int poolWidth,
-                           int strideY, int strideX,
-                           int padTop, int padBottom,
-                           int padLeft, int padRight)
+Error
+vl::nnpooling_backward(Context& context,
+                       Tensor derData,
+                       Tensor data,
+                       Tensor derPooled,
+                       PoolingMethod method,
+                       int poolHeight, int poolWidth,
+                       int strideY, int strideX,
+                       int padTop, int padBottom,
+                       int padLeft, int padRight)
 {
-  int status = 0 ;
+  vl::Error status = vlSuccess ;
   switch (derData.getMemoryType()) {
     default:
       assert(false) ;
-      return vl::ERROR ;
+      return vl::vlErrorUnknown ;
 
     case vl::CPU:
       switch (method) {
         default:
           assert(false) ;
-          return vl::ERROR ;
+          return vl::vlErrorUnknown ;
         case vl::AVERAGE:
           status = vl::impl::pooling_average_backward<CPU,float>
           ((float*)derData.getMemory(), (float const*)derPooled.getMemory(),
@@ -158,13 +163,13 @@ int vl::nnpooling_backward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnActive()) {
+      if (context.getCudaHelper().isCudnnEnabled()) {
         /*
          status = vl::impl::nnpooling_backward_cudnn<float>(context, output, data, filters, biases,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (status == vl::SUCCESS) { return status ; }
+         if (status == vl::vlSuccess) { return status ; }
          if (status != vl::UNSUPPORTED) { return status ; }
          */
         /* this case was not supported by CUDNN -- fallback */
@@ -173,7 +178,7 @@ int vl::nnpooling_backward(Context& context,
       switch (method) {
         default:
           assert(false) ;
-          return vl::ERROR ;
+          return vl::vlErrorUnknown ;
         case vl::AVERAGE:
           status = vl::impl::pooling_average_backward<GPU,float>
           ((float*)derData.getMemory(), (float const*)derPooled.getMemory(),
@@ -193,8 +198,11 @@ int vl::nnpooling_backward(Context& context,
            padLeft, padRight) ;
           break ;
       }
+      if (status == vlErrorCuda) {
+        context.getCudaHelper().catchCudaError("pooling_*_backward") ;
+      }
       break ;
 #endif
   }
-  return status ;
+  return context.setError(status, "nnpooling_backward") ;
 }

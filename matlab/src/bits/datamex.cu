@@ -7,9 +7,39 @@
 //
 
 #include "datamex.hpp"
+#if ENABLE_GPU
+#include "datacu.hpp"
+#endif
 
 using namespace vl ;
 
+
+/*
+ The MexTensor class helps handling MATLAB CPU and GPU arrays.
+
+ The design is somewhat ackward to match MATLAB assumpitons.
+
+ The class can either:
+
+ - wrap an existing mxArray (or mxArray + mxGPUArray)
+ - or create a new mxArray (or mxArray + mxGPUArray)
+
+ In the last case, the array is released when the destructor is
+ called. However, this would normally interfere with MATLAB
+ automatic garbage collection upon raising an exception (which
+ can happen using mexErrMsgTxt() or, implicitly, when an array
+ creation function cannot complete, for example due to a memory error).
+
+ Therefore the constructors make the allocated memory persistent. C++ 
+ guarantees that the arrays are freeed upon error in the destructors.
+
+ Note that, upon cerating an array, errors such as running out of
+ CPU/GPU memory can occurr. In this case, MATLAB throws an error
+ and quits the MEX file (either implicitly or because we call
+ mexErrMsgTxt()). Hence constructors always complete with a well
+ defined object.
+
+ */
 
 void vl::print(char const * str, vl::TensorGeometry const & tensor)
 {
@@ -134,6 +164,16 @@ isArrayOwner(false)
 /* MexTensor(fill)                                                  */
 /* ---------------------------------------------------------------- */
 
+
+#if ENABLE_GPU
+template<typename type> __global__ void
+fill (type * data, type value, int size)
+{
+  int index = threadIdx.x + blockIdx.x * blockDim.x ;
+  if (index < size) data[index] = value ;
+}
+#endif
+
 vl::MexTensor::MexTensor(vl::Device type, vl::TensorGeometry const & geom, float value)
 : Tensor(NULL, 0, type, geom),
 array(NULL),
@@ -151,13 +191,14 @@ isArrayOwner(false)
     }
 #ifdef ENABLE_GPU
     else {
-      float * buffer = (float*)mxMalloc(memorySize) ;
-      for (int i = 0 ; i < getNumElements() ; ++i) { memory[i] = value ; }
-      cudaError_t err = cudaMemcpy(memory, buffer, memorySize, cudaMemcpyHostToDevice) ;
-      if (err != cudaSuccess) {
-        mexPrintf("cudaMemcpy: error (%s)\n", cudaGetErrorString(err)) ;
+      fill<float>
+      <<<divideUpwards(getNumElements(), VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+      ((float*)memory, getNumElements(), value) ;
+      cudaError_t error = cudaGetLastError() ;
+      if (error != cudaSuccess) {
+        clear() ;
+        mexErrMsgTxt((std::string("MexTensor: fill: CUDA error: ") + cudaGetErrorString(error)).c_str()) ;
       }
-      mxFree(buffer) ;
     }
 #endif
   }
@@ -217,20 +258,23 @@ void vl::MexTensor::allocUninitialized()
 {
   mwSize dimensions [4] = {height, width, depth, size} ;
   memorySize = getNumElements() * sizeof(float) ;
+  mxArray * newArray ;
   if (memoryType == vl::CPU) {
     mwSize dimensions_ [4] = {0} ;
     memory = (float*)mxMalloc(memorySize) ;
-    array = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
-    mxSetData((mxArray*)array, memory) ;
-    mxSetDimensions((mxArray*)array, dimensions, 4) ;
+    newArray = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
+    mxSetData(newArray, memory) ;
+    mxSetDimensions(newArray, dimensions, 4) ;
   }
 #ifdef ENABLE_GPU
   else {
     gpuArray = mxGPUCreateGPUArray(4, dimensions, mxSINGLE_CLASS, mxREAL, MX_GPU_DO_NOT_INITIALIZE) ;
-    array = mxGPUCreateMxArrayOnGPU(gpuArray) ;
+    newArray = mxGPUCreateMxArrayOnGPU(gpuArray) ;
     memory = (float*) mxGPUGetData((mxGPUArray*)gpuArray) ;
   }
 #endif
+  //mexMakeArrayPersistent(newArray) ; // avoid double free with MATALB garbage collector upon error
+  array = newArray ;
   isArrayOwner = true ;
 }
 
@@ -242,20 +286,22 @@ void vl::MexTensor::allocInitialized()
 {
   mwSize dimensions [4] = {height, width, depth, size} ;
   memorySize = getNumElements() * sizeof(float) ;
+  mxArray * newArray ;
   if (memoryType == vl::CPU) {
-    array = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
-    memory = (float*) mxGetData(array) ;
+    newArray = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
+    memory = (float*) mxGetData(newArray) ;
   }
 #ifdef ENABLE_GPU
   else {
     gpuArray = mxGPUCreateGPUArray(4, dimensions, mxSINGLE_CLASS, mxREAL, MX_GPU_INITIALIZE_VALUES) ;
-    array = mxGPUCreateMxArrayOnGPU(gpuArray) ;
+    newArray = mxGPUCreateMxArrayOnGPU(gpuArray) ;
     memory = (float*) mxGPUGetData((mxGPUArray*)gpuArray) ;
   }
 #endif
+  //mexMakeArrayPersistent(newArray) ; // avoid double free with MATALB garbage collector upon error
+  array = newArray ;
   isArrayOwner = true ;
 }
-
 
 
 

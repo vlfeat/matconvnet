@@ -10,7 +10,7 @@ function Y = vl_nnsoftmax(X,dzdY)
 %    convolutionally at all spatial locations.
 %
 %    DZDX = VL_NNSOFTMAX(X, DZDY) computes the derivative DZDX of the
-%    CNN otuoutwith respect to the input X given the derivative DZDY
+%    CNN output with respect to the input X given the derivative DZDY
 %    with respect to the block output Y. DZDX has the same dimension
 %    as X.
 

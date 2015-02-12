@@ -10,13 +10,32 @@
 #define __matconvnet_data_hpp__
 
 #include <cstddef>
+#include <string>
+
+#define STRINGIZE(x) STRINGIZE_HELPER(x)
+#define STRINGIZE_HELPER(x) #x
+#define FILELINE STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__)
 
 namespace vl {
-
   typedef int index_t ;
   enum Device { CPU, GPU }  ;
-  enum Type { FLOAT, DOUBLE } ;
-  enum Status { SUCCESS = 0, UNSUPPORTED = 1, ERROR = 2 } ;
+  enum Type {
+    vlTypeFloat,
+    vlTypeDouble
+  } ;
+
+  enum Error {
+    vlSuccess = 0,
+    vlErrorUnsupported,
+    vlErrorCuda,
+    vlErrorCudnn,
+    vlErrorCublas,
+    vlErrorOutOfMemory,
+    vlErrorOutOfGPUMemeory,
+    vlErrorUnknown
+  } ;
+  const char * getErrorMessage(Error error) ;
+
   class CudaHelper ;
 
   /* -----------------------------------------------------------------
@@ -45,6 +64,12 @@ namespace vl {
     void clearAllOnes(Device device) ;
     CudaHelper& getCudaHelper() ;
 
+    vl::Error passError(vl::Error error, char const * message = NULL) ;
+    vl::Error setError(vl::Error error, char const * message = NULL) ;
+    void resetLastError() ;
+    vl::Error getLastError() const ;
+    std::string const& getLastErrorMessage() const ;
+
   private:
     void * cpuWorkspace ;
     size_t cpuWorkspaceSize ;
@@ -59,6 +84,9 @@ namespace vl {
     void * gpuAllOnes ;
     size_t gpuAllOnesSize ;
     Type gpuAllOnesType ;
+
+    Error lastError ;
+    std::string lastErrorMessage ;
 
     CudaHelper * cudaHelper ;
   } ;

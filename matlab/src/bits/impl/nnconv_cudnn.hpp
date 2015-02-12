@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
 //
 
-#ifndef __matconv__recipies_cudnn__
-#define __matconv__recipies_cudnn__
+#ifndef __vl__recipies_cudnn__
+#define __vl__recipies_cudnn__
 
 #include "../data.hpp"
 #include "cudnn.h"
 
 namespace vl { namespace impl {
 
-  template<typename type> int
+  template<typename type> vl::Error
   nnconv_forward_cudnn(Context& context,
                        Tensor output,
                        Tensor data,
@@ -24,7 +24,7 @@ namespace vl { namespace impl {
                        int padLeft, int padRight,
                        int padTop, int padBottom) ;
 
-  template<typename type> int
+  template<typename type> vl::Error
   nnconv_backward_cudnn(Context& context,
                         Tensor derData,
                         Tensor derFilters,
@@ -38,7 +38,7 @@ namespace vl { namespace impl {
 
   /* specialisations */
 
-  template<> int
+  template<> vl::Error
   nnconv_forward_cudnn<float>(Context& context,
                               Tensor output,
                               Tensor data,
@@ -48,7 +48,7 @@ namespace vl { namespace impl {
                               int padLeft, int padRight,
                               int padTop, int padBottom) ;
 
-  template<> int
+  template<> vl::Error
   nnconv_backward_cudnn<float>(Context& context,
                                Tensor derData,
                                Tensor derFilters,
@@ -61,4 +61,4 @@ namespace vl { namespace impl {
                                int padTop, int padBottom) ;
 } }
 
-#endif /* defined(__matconv__recipies_cudnn__) */
+#endif /* defined(__vl__recipies_cudnn__) */

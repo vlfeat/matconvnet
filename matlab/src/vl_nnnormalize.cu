@@ -1,5 +1,5 @@
-/** @file gnormalize.cu
- ** @brief Normalization block
+/** @file vl_nnnormalize.cu
+ ** @brief Normalization function
  ** @author Andrea Vedaldi
  **/
 
@@ -136,12 +136,12 @@ void mexFunction(int nout, mxArray *out[],
     mexPrintf("vl_nnnormalize: mode %s; %s\n",  (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
     mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
               normDepth, normKappa, normAlpha, normBeta) ;
-    vl::print("vl_nnpool: data: ", data) ;
+    vl::print("vl_nnnormalize: data: ", data) ;
     if (backMode) {
-      vl::print("vl_nnpool: derOutput: ", derOutput) ;
-      vl::print("vl_nnpool: derData: ", derData) ;
+      vl::print("vl_nnnormalize: derOutput: ", derOutput) ;
+      vl::print("vl_nnnormalize: derData: ", derData) ;
     } else {
-      vl::print("vl_nnpool: output: ", output) ;
+      vl::print("vl_nnnormalize: output: ", output) ;
     }
   }
 
@@ -149,22 +149,27 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
+  vl::Error error ;
+
   if (!backMode) {
-    vl::nnnormalize_forward(context,
-                            output, data,
-                            normDepth,
-                            normKappa, normAlpha, normBeta) ;
+    error = vl::nnnormalize_forward(context,
+                                    output, data,
+                                    normDepth,
+                                    normKappa, normAlpha, normBeta) ;
   } else {
-    vl::nnnormalize_backward(context,
-                             derData, data, derOutput,
-                             normDepth,
-                             normKappa, normAlpha, normBeta) ;
+    error = vl::nnnormalize_backward(context,
+                                     derData, data, derOutput,
+                                     normDepth,
+                                     normKappa, normAlpha, normBeta) ;
   }
 
   /* -------------------------------------------------------------- */
   /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
+  if (error != vl::vlSuccess) {
+    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
+  }
   if (backMode) {
     out[OUT_RESULT] = derData.relinquish() ;
   } else {

@@ -57,6 +57,7 @@ case vlmxErrNotEnoughOutputArguments : errorString = "notEnoughOutputArguments" 
 case vlmxErrTooManyOutputArguments : errorString = "tooManyOutputArguments" ; break ; \
 case vlmxErrInvalidOption : errorString = "invalidOption" ; break ; \
 case vlmxErrInconsistentData : errorString = "inconsistentData" ; break ; \
+case vlmxErrExecution: errorString = "execution" ; break ; \
 default : errorString = "undefinedError" ; break ; \
 } \
 \
@@ -70,6 +71,7 @@ case vlmxErrNotEnoughOutputArguments: errorMessage = "Not enough output argument
 case vlmxErrTooManyOutputArguments: errorMessage = "Too many output arguments." ; break ; \
 case vlmxErrInconsistentData: errorMessage = "Inconsistent data." ; break ; \
 case vlmxErrInvalidOption: errorMessage = "Invalid option." ; break ; \
+case vlmxErrExecution: errorMessage = "Execution error." ; break ; \
 default: errorMessage = "Undefined error message." ; \
 } \
 }
@@ -115,7 +117,8 @@ typedef enum _VlmxErrorId {
   vlmxErrNotEnoughOutputArguments,
   vlmxErrTooManyOutputArguments,
   vlmxErrInvalidOption,
-  vlmxErrInconsistentData
+  vlmxErrInconsistentData,
+  vlmxErrExecution
 } VlmxErrorId ;
 
 

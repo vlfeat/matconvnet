@@ -17,93 +17,106 @@ using namespace vl ;
 /* nnfullyconnected_forward_impl                                    */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device arch, typename type>
-int nnfullyconnected_forward_impl(Context& context,
-                                  Tensor output,
-                                  Tensor data,
-                                  Tensor filters,
-                                  Tensor biases)
+template<vl::Device arch, typename type> vl::Error
+nnfullyconnected_forward_impl(Context& context,
+                              Tensor output,
+                              Tensor data,
+                              Tensor filters,
+                              Tensor biases)
 {
   float alpha = 1 ;
   float beta = 0 ;
+
+  vl::Error error ;
 
   if (filters) {
     ptrdiff_t filtersVolume = filters.getHeight() * filters.getWidth() * filters.getDepth() ;
     if (data.getSize() == 1) {
       /* one image in the stack */
-      gemv<arch,type>(context,
-                      't',
-                      filtersVolume, filters.getSize(),
-                      alpha,
-                      (type*)filters.getMemory(), filtersVolume,
-                      (type*)data.getMemory(), 1,
-                      beta,
-                      (type*)output.getMemory(), 1) ;
+      error = gemv<arch,type>(context,
+                              't',
+                              filtersVolume, filters.getSize(),
+                              alpha,
+                              (type*)filters.getMemory(), filtersVolume,
+                              (type*)data.getMemory(), 1,
+                              beta,
+                              (type*)output.getMemory(), 1) ;
+      if (error != vl::vlSuccess) { goto done ; }
     } else {
       /* multiple images in the stack */
-      gemm<arch,type>(context,
-                      't', 'n',
-                      filters.getSize(), data.getSize(), filtersVolume,
-                      alpha,
-                      (type*)filters.getMemory(), filtersVolume,
-                      (type*)data.getMemory(), filtersVolume,
-                      beta,
-                      (type*)output.getMemory(), filters.getSize()) ;
+      error = gemm<arch,type>(context,
+                              't', 'n',
+                              filters.getSize(), data.getSize(), filtersVolume,
+                              alpha,
+                              (type*)filters.getMemory(), filtersVolume,
+                              (type*)data.getMemory(), filtersVolume,
+                              beta,
+                              (type*)output.getMemory(), filters.getSize()) ;
+      if (error != vl::vlSuccess) { goto done ; }
     }
   } else {
-    vl::impl::copy<arch,type>(output.getMemory(),
-                              data.getMemory(),
-                              data.getNumElements()) ;
+    error = vl::impl::copy<arch,type>(output.getMemory(),
+                                      data.getMemory(),
+                                      data.getNumElements()) ;
   }
 
   if (biases) {
     float beta = 1 ;
     type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                           get_type_id<type>(),
+                                                           get_vl_type<type>(),
                                                            data.getSize()) ;
-    gemm<arch,type>(context, 'n', 'n',
-                    biases.getNumElements(), data.getSize(), 1,
-                    alpha,
-                    (type*)biases.getMemory(), biases.getNumElements(),
-                    allOnesMemory, 1,
-                    beta,
-                    (type*)output.getMemory(), biases.getNumElements()) ;
+    if (allOnesMemory == NULL) {
+      error = context.getLastError() ;
+      goto done ;
+    }
+    error = gemm<arch,type>(context, 'n', 'n',
+                            biases.getNumElements(), data.getSize(), 1,
+                            alpha,
+                            (type*)biases.getMemory(), biases.getNumElements(),
+                            allOnesMemory, 1,
+                            beta,
+                            (type*)output.getMemory(), biases.getNumElements()) ;
+    if (error != vl::vlSuccess) { goto done ; }
   }
-  return 0 ;
+done:
+  return context.passError(error, "nnfullyconnected_forward_impl<>: ") ;
 }
 
 /* ---------------------------------------------------------------- */
 /* nnfullyconnected_backward_impl                                   */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device arch, typename type>
-int nnfullyconnected_backward_impl(vl::Context& context,
-                                   vl::Tensor derData,
-                                   vl::Tensor derFilters,
-                                   vl::Tensor derBiases,
-                            vl::Tensor data,
-                                   vl::Tensor filters,
-                                   vl::Tensor derOutput)
+template<vl::Device arch, typename type> vl::Error
+nnfullyconnected_backward_impl(vl::Context& context,
+                               vl::Tensor derData,
+                               vl::Tensor derFilters,
+                               vl::Tensor derBiases,
+                               vl::Tensor data,
+                               vl::Tensor filters,
+                               vl::Tensor derOutput)
 {
   float alpha = 1 ;
   float beta = 0 ;
+
+  vl::Error error ;
 
   if (filters) {
     ptrdiff_t filtersVolume = filters.getHeight() * filters.getWidth() * filters.getDepth() ;
 
     if (derFilters) {
-      gemm<arch, type>(context,
-                       'n', 't',
-                       filtersVolume, filters.getSize(), data.getSize(),
-                       alpha,
-                       (type*)data.getMemory(), filtersVolume,
-                       (type*)derOutput.getMemory(), filters.getSize(),
-                       beta,
-                       (type*)derFilters.getMemory(), filtersVolume) ;
+      error = gemm<arch, type>(context,
+                               'n', 't',
+                               filtersVolume, filters.getSize(), data.getSize(),
+                               alpha,
+                               (type*)data.getMemory(), filtersVolume,
+                               (type*)derOutput.getMemory(), filters.getSize(),
+                               beta,
+                               (type*)derFilters.getMemory(), filtersVolume) ;
+      if (error != vl::vlSuccess) { goto done ; }
     }
 
     if (derData) {
-      gemm<arch, type>(context,
+      error = gemm<arch, type>(context,
                        'n', 'n',
                        filtersVolume, data.getSize(), filters.getSize(),
                        alpha,
@@ -111,6 +124,7 @@ int nnfullyconnected_backward_impl(vl::Context& context,
                        (type*)derOutput.getMemory(), filters.getSize(),
                        beta,
                        (type*)derData.getMemory(), filtersVolume) ;
+      if (error != vl::vlSuccess) { goto done ; }
     }
   } else {
     vl::impl::copy<arch,type>(derData.getMemory(),
@@ -120,10 +134,14 @@ int nnfullyconnected_backward_impl(vl::Context& context,
 
   if (derBiases) {
     type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                           get_type_id<type>(),
+                                                           get_vl_type<type>(),
                                                            derOutput.getSize()) ;
+    if (allOnesMemory == NULL) {
+      error = context.getLastError() ;
+      goto done ;
+    }
 
-    gemm<arch, type>(context,
+    error = gemm<arch, type>(context,
                      'n', 't',
                      1, derOutput.getDepth(), derOutput.getSize(),
                      alpha,
@@ -131,25 +149,29 @@ int nnfullyconnected_backward_impl(vl::Context& context,
                      (type*)derOutput.getMemory(), derOutput.getDepth(),
                      beta,
                      (type*)derBiases.getMemory(), 1) ;
+    if (error != vl::vlSuccess) { goto done ; }
+
   }
-  return 0 ;
+done:
+  return context.passError(error, "nnfullyconnected_backward_impl<>: ") ;
 }
 
 /* ---------------------------------------------------------------- */
 /* nnfullyconnected_forward                                         */
 /* ---------------------------------------------------------------- */
 
-int vl::nnfullyconnected_forward(Context& context,
+vl::Error
+vl::nnfullyconnected_forward(Context& context,
                                  Tensor output,
                                  Tensor data,
                                  Tensor filters,
                                  Tensor biases)
 {
-  int status = 0 ;
+  vl::Error status = vl::vlSuccess ;
   switch (data.getMemoryType()) {
     default:
       assert(false) ;
-      status = vl::ERROR ;
+      status = vl::vlErrorUnknown ;
       break ;
 
     case vl::CPU:
@@ -164,7 +186,7 @@ int vl::nnfullyconnected_forward(Context& context,
       break ;
 #endif
   }
-  return status ;
+  return context.passError(status, "nnfullyconnected_forward") ;
 }
 
 
@@ -172,7 +194,8 @@ int vl::nnfullyconnected_forward(Context& context,
 /* nnfullyconnected_backward                                        */
 /* ---------------------------------------------------------------- */
 
-int vl::nnfullyconnected_backward(vl::Context& context,
+vl::Error
+vl::nnfullyconnected_backward(vl::Context& context,
                              vl::Tensor derData,
                                   vl::Tensor derFilters,
                                   vl::Tensor derBiases,
@@ -180,11 +203,11 @@ int vl::nnfullyconnected_backward(vl::Context& context,
                                   vl::Tensor filters,
                                   vl::Tensor derOutput)
 {
-  int status = 0 ;
+  vl::Error status = vl::vlSuccess ;
   switch (derOutput.getMemoryType()) {
     default:
       assert(false) ;
-      status = vl::ERROR ;
+      status = vl::vlErrorUnknown ;
       break ;
 
     case vl::CPU:
@@ -199,7 +222,7 @@ int vl::nnfullyconnected_backward(vl::Context& context,
       break ;
 #endif
   }
-  return status ;
+  return context.passError(status, "nnfullyconnected_backward") ;
 }
 
 
