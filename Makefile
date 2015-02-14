@@ -2,7 +2,7 @@
 # author: Andrea Vedaldi
 # brief: matconvnet makefile for mex files
 
-# Copyright (C) 2007-14 Andrea Vedaldi and Brian Fulkerson.
+# Copyright (C) 2014-15 Andrea Vedaldi
 # All rights reserved.
 #
 # This file is part of the VLFeat library and is made available under
@@ -20,7 +20,9 @@ ARCH ?= maci64
 MATLABROOT ?= /Applications/MATLAB_R2014a.app
 CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 CUDNNROOT ?= $(CURDIR)/local/
-CUDAHACK ?= $(if $(ENABLE_CUDNN),yes,)
+CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
+LIBJPEG_INCLUDE ?= /opt/local/include
+LIBJPEG_LIB ?= /opt/local/lib
 
 # Remark: each MATLAB version requires a particular CUDA Toolkit version.
 # Note that multiple CUDA Toolkits can be installed.
@@ -31,7 +33,7 @@ CUDAHACK ?= $(if $(ENABLE_CUDNN),yes,)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta8
+VER = 1.0-beta9
 DIST = $(NAME)-$(VER)
 RSYNC = rsync
 HOST = vlfeat-admin:sites/sandbox-matconvnet
@@ -53,7 +55,7 @@ MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
 SHELL = /bin/bash # sh not good enough
 NVCC = $(CUDAROOT)/bin/nvcc
 
-# this is used *onyl* for the CUDAHACK method
+# this is used *onyl* for the 'nvcc' method
 NVCCFLAGS = \
 -gencode=arch=compute_30,code=\"sm_30,compute_30\" \
 -DENABLE_GPU \
@@ -85,7 +87,7 @@ MEXFLAGS_NVCC += -L$(CUDAROOT)/lib64
 endif
 
 MEXFLAGS_GPU += -lcublas -lcudart $(if $(ENABLE_CUDNN),-L$(CUDNNROOT) -lcudnn,)
-MEXFLAGS_NVCC += -lcublas -lcudart $(if $(ENABLE_CUDNN),-L$(CUDNNROOT) -lcudnn,) -v
+MEXFLAGS_NVCC += -lcublas -lcudart $(if $(ENABLE_CUDNN),-L$(CUDNNROOT) -lcudnn,)
 
 # --------------------------------------------------------------------
 #                                                      Build MEX files
@@ -129,6 +131,7 @@ endif
 # cuDNN-specific files
 ifneq ($(ENABLE_CUDNN),)
 cpp_src+=matlab/src/bits/impl/nnconv_cudnn.cu
+cpp_src+=matlab/src/bits/impl/nnpooling_cudnn.cu
 endif
 
 # Other files
@@ -159,7 +162,7 @@ $(cpp_tgt): matlab/mex/.build/impl/.stamp
 .PRECIOUS: matlab/mex/.build/%.o
 .PRECIOUS: %/.stamp
 
-ifeq ($(CUDAHACK),)
+ifeq ($(CUDAMETHOD),mex)
 include Makefile.mex
 else
 include Makefile.nvcc
