@@ -270,7 +270,7 @@ for l = tests
           vl_testsim(y, y_conv, 1e-3); % Does not pass with 1e-4
         end
       end
-      
+
       methods = {'max', 'avg'};
       for mi = 1:numel(methods)
         fprintf('testing vl_nnpool - %s', methods{mi}) ;

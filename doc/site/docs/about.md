@@ -24,6 +24,7 @@ here.
 
 <a name='changes'></a>
 
+- 1.0-beta9 (February 2015) CuDNN support. Major rewrite of the C/CUDA core.
 - 1.0-beta8 (December 2014) New website. Experimental Windows support.
 - 1.0-beta7 (September 2014) Adds VGG verydeep models.
 - 1.0-beta6 (September 2014) Performance improvements.
@@ -32,7 +33,7 @@ here.
 - 1.0-beta4 (August 2014) Further cleanup.
 - 1.0-beta3 (August 2014) Cleanup.
 - 1.0-beta2 (July 2014) Adds a set of standard models.
-- 1.0-beta1 (June 2014) First public release
+- 1.0-beta1 (June 2014) First public release.
 
 # Copyright
 
