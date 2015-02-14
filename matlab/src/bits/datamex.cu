@@ -13,7 +13,6 @@
 
 using namespace vl ;
 
-
 /*
  The MexTensor class helps handling MATLAB CPU and GPU arrays.
 
@@ -41,15 +40,39 @@ using namespace vl ;
 
  */
 
-void vl::print(char const * str, vl::TensorGeometry const & tensor)
+
+void vl::print(char const * str, vl::Tensor const & tensor)
 {
-  mexPrintf("%s[%d x %d x %d x %d] (%.2f MB)\n",
+  size_t size = tensor.getNumElements() * sizeof(float) ;
+  double scaled ;
+  const char * units ;
+  if (size < 1024) {
+    scaled = size ;
+    units = "B" ;
+  } else if (size < 1024*1024) {
+    scaled = size / 1024.0 ;
+    units = "KB" ;
+  } else if (size < 1024*1024*1024) {
+    scaled = size / (1024.0 * 1024.0) ;
+    units = "MB" ;
+  } else {
+    scaled = size / (1024.0 * 1024.0 * 1024.0) ;
+    units = "GB" ;
+  }
+  const char * dev = "" ;
+  switch (tensor.getMemoryType()) {
+    case vl::CPU : dev = "CPU" ; break ;
+    case vl::GPU : dev = "GPU" ; break ;
+  }
+  mexPrintf("%s[%d x %d x %d x %d | %.1f%s %s]\n",
             str,
             tensor.getHeight(),
             tensor.getWidth(),
             tensor.getDepth(),
             tensor.getSize(),
-            tensor.getNumElements() * sizeof(float) / (1024.0 * 1024.0)) ;
+            scaled,
+            units,
+            dev);
 }
 
 

@@ -1,13 +1,13 @@
 //
-//  recipies_cudnn.h
+//  nnconv_cudnn.h
 //  matconv
 //
 //  Created by Andrea Vedaldi on 30/01/2015.
 //  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
 //
 
-#ifndef __vl__recipies_cudnn__
-#define __vl__recipies_cudnn__
+#ifndef __vl__nnconv_cudnn__
+#define __vl__nnconv_cudnn__
 
 #include "../data.hpp"
 #include "cudnn.h"
@@ -61,4 +61,4 @@ namespace vl { namespace impl {
                                int padTop, int padBottom) ;
 } }
 
-#endif /* defined(__vl__recipies_cudnn__) */
+#endif /* defined(__vl__nnconv_cudnn__) */

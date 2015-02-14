@@ -13,8 +13,8 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "bits/mexutils.h"
-#include "bits/nnpooling.hpp"
 #include "bits/datamex.hpp"
+#include "bits/nnpooling.hpp"
 
 #if ENABLE_GPU
 #include "bits/datacu.hpp"
@@ -27,7 +27,9 @@ enum {
   opt_stride = 0,
   opt_pad,
   opt_method,
-  opt_verbose
+  opt_verbose,
+  opt_cudnn,
+  opt_no_cudnn,
 } ;
 
 /* options */
@@ -36,6 +38,8 @@ vlmxOption  options [] = {
   {"Pad",              1,   opt_pad               },
   {"Method",           1,   opt_method            },
   {"Verbose",          0,   opt_verbose           },
+  {"CUDNN",            0,   opt_cudnn             },
+  {"NoCUDNN",          0,   opt_no_cudnn          },
   {0,                  0,   0                     }
 } ;
 
@@ -77,7 +81,7 @@ void mexFunction(int nout, mxArray *out[],
   int padRight = 0 ;
   int padTop = 0 ;
   int padBottom = 0 ;
-  vl::PoolingMethod method = vl::MAX ;
+  vl::PoolingMethod method = vl::vlPoolingMax ;
   bool backMode = false ;
 
   int verbosity = 0 ;
@@ -153,13 +157,25 @@ void mexFunction(int nout, mxArray *out[],
            vlmxError(vlmxErrInvalidArgument, "METHOD is not a string.") ;
         }
         if (vlmxIsEqualToStringI(optarg, "max")) {
-          method = vl::MAX ;
+          method = vl::vlPoolingMax ;
         } else if (vlmxIsEqualToStringI(optarg, "avg")) {
-          method = vl::AVERAGE ;
+          method = vl::vlPoolingAverage ;
         } else {
           vlmxError(vlmxErrInvalidArgument, "METHOD is not a supported method.") ;
         }
         break;
+
+      case opt_no_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(false) ;
+#endif
+        break ;
+
+      case opt_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(true) ;
+#endif
+        break ;
 
       default:
         break ;
@@ -237,18 +253,22 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnpool: mode %s; %s\n", (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnpool: %s; %s", backMode?"backward":"forward", (data.getMemoryType()==vl::GPU) ? "GPU" : "CPU") ;
+    if (data.getMemoryType() == vl::GPU) {
 #if ENABLE_CUDNN
-    if (data.getMemoryType()==vl::GPU) {
-      mexPrintf("vl_nnpool: GPU algorithms: %s\n", context.getCudaHelper().isCudnnEnabled()?"cuDNN":"cuBLAS") ;
-    }
+      mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "MatConvNet") ;
+#else
+      mexPrintf("; MatConvNet\n") ;
 #endif
+    } else {
+      mexPrintf("; MatConvNet\n") ;
+    }
     mexPrintf("vl_nnpool: stride: [%d %d], pad: [%d %d %d %d]\n",
               strideY, strideX,
               padTop, padBottom, padLeft, padRight) ;
     vl::print("vl_nnpool: data: ", data) ;
     mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
-    mexPrintf("vl_nnpool: method: %s\n", (method == vl::MAX) ? "max" : "avg") ;
+    mexPrintf("vl_nnpool: method: %s\n", (method == vl::vlPoolingMax) ? "max" : "avg") ;
     if (backMode) {
       vl::print("vl_nnpool: derOutput: ", derOutput) ;
       vl::print("vl_nnpool: derData: ", derData) ;

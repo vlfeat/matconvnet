@@ -45,7 +45,7 @@ namespace vl {
 #if ENABLE_CUDNN
     // CuDNN support
     cudnnStatus_t getCudnnHandle(cudnnHandle_t* handle) ;
-    bool isCudnnEnabled() const ;
+    bool getCudnnEnabled() const ;
     void setCudnnEnabled(bool active) ;
     cudnnStatus_t getLastCudnnError() const ;
     std::string const& getLastCudnnErrorMessage() const ;

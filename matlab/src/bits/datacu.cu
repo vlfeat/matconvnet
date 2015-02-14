@@ -61,7 +61,8 @@ cublasStatus_t vl::CudaHelper::getCublasHandle(cublasHandle_t* handle)
  * ---------------------------------------------------------------- */
 
 #if ENABLE_CUDNN
-cudnnStatus_t vl::CudaHelper::getCudnnHandle(cudnnHandle_t* handle)
+cudnnStatus_t
+vl::CudaHelper::getCudnnHandle(cudnnHandle_t* handle)
 {
   if (!isCudnnInitialized) {
     cudnnStatus_t stat = cudnnCreate(&cudnnHandle) ;
@@ -72,12 +73,14 @@ cudnnStatus_t vl::CudaHelper::getCudnnHandle(cudnnHandle_t* handle)
   return CUDNN_STATUS_SUCCESS ;
 }
 
-bool vl::CudaHelper::isCudnnEnabled() const
+bool
+vl::CudaHelper::getCudnnEnabled() const
 {
   return cudnnEnabled ;
 }
 
-void vl::CudaHelper::setCudnnEnabled(bool active)
+void
+vl::CudaHelper::setCudnnEnabled(bool active)
 {
   cudnnEnabled = active ;
 }
@@ -99,7 +102,9 @@ getCublasErrorMessageFromStatus(cublasStatus_t status)
     case CUBLAS_STATUS_MAPPING_ERROR: return "CUBLAS_STATUS_MAPPING_ERROR";
     case CUBLAS_STATUS_EXECUTION_FAILED: return "CUBLAS_STATUS_EXECUTION_FAILED";
     case CUBLAS_STATUS_INTERNAL_ERROR: return "CUBLAS_STATUS_INTERNAL_ERROR";
+#if CUDA_VERSION >= 6000
     case CUBLAS_STATUS_NOT_SUPPORTED: return "CUBLAS_STATUS_NOT_SUPPORTED";
+#endif
 #if CUDA_VERSION >= 6050
     case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
 #endif

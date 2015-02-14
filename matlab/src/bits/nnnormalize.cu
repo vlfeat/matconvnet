@@ -47,7 +47,7 @@ vl::nnnormalize_forward(vl::Context& context,
 #ifdef ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnEnabled()) {
+      if (context.getCudaHelper().getCudnnEnabled()) {
         /*
          status = vl::impl::nnnormalize_forward_cudnn<float>(context, output, data, filters, biases,
          strideY, strideX,
@@ -101,7 +101,7 @@ vl::nnnormalize_backward(vl::Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnEnabled()) {
+      if (context.getCudaHelper().getCudnnEnabled()) {
         /*
          status = vl::impl::nnnormalize_backward_cudnn<float>(context, output, data, filters, biases,
          strideY, strideX,

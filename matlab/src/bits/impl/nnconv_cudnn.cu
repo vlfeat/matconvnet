@@ -8,7 +8,6 @@
 
 #include "nnconv_cudnn.hpp"
 #include <assert.h>
-#include <iostream.h>
 
 #if !defined(ENABLE_GPU) | !defined(ENABLE_CUDNN)
 #error "nnconv_cudnn.hpp cannot be compiled without GPU and CUDNN support."
@@ -26,8 +25,6 @@ if (cudnnError != CUDNN_STATUS_SUCCESS) { \
      STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
   goto done ; \
 } }
-
-//#define CHECK(x) x
 
 /* ---------------------------------------------------------------- */
 /*                                             nnconv_forward_cudnn */
@@ -142,11 +139,7 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
     numFiltersPerGroup == c &&
     output.getWidth() == w &&
     output.getHeight() == h ;
-    if (!sane) {
-      std::cout<<"nnconv_forward_cudnn: expected output size "
-      <<output.getWidth()<<" x "<<output.getHeight()<< " actual output size "
-      <<w<<" x "<<h<<std::endl ;
-    }
+    assert(sane) ;
   }
 #endif
 
@@ -217,7 +210,7 @@ done:
   if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
   if (biasesDescInitialized) { cudnnDestroyTensorDescriptor(biasesDesc) ; }
   if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-  return context.passError(error, "nnconv_forward_cudnn") ;
+  return context.passError(error, "nnconv_forward_cudnn: ") ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -371,6 +364,6 @@ done:
   if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
   if (derBiasesDescInitialized) { cudnnDestroyTensorDescriptor(derBiasesDesc) ; }
   if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-  return context.passError(error, "nnconv_backward_cudnn") ;
+  return context.passError(error, "nnconv_backward_cudnn: ") ;
 }
 

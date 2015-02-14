@@ -57,7 +57,7 @@ namespace vl {
     MexTensor(MexTensor const &) ;
   } ;
 
-  void print(char const * str, TensorGeometry const & tensor) ;
+  void print(char const * str, Tensor const & tensor) ;
 
   void mexThrowError(Context const& context, vl::Error error) ;
 }

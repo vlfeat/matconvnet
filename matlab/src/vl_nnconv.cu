@@ -12,14 +12,17 @@
  */
 
 #include "bits/mexutils.h"
-
-#include <memory>
-#include <assert.h>
-
 #include "bits/datamex.hpp"
 #include "bits/nnconv.hpp"
 #include "bits/nnfullyconnected.hpp"
 #include "bits/nnsubsample.hpp"
+
+#if ENABLE_GPU
+#include "bits/datacu.hpp"
+#endif
+
+#include <memory>
+#include <assert.h>
 
 /* option codes */
 enum {
@@ -29,6 +32,7 @@ enum {
   opt_no_der_data,
   opt_no_der_filters,
   opt_no_der_biases,
+  opt_cudnn,
   opt_no_cudnn,
 } ;
 
@@ -40,6 +44,7 @@ vlmxOption  options [] = {
   {"NoDerData",        0,   opt_no_der_data        },
   {"NoDerFilters",     0,   opt_no_der_filters     },
   {"NoDerBiases",      0,   opt_no_der_biases      },
+  {"CUDNN",            0,   opt_cudnn              },
   {"NoCUDNN",          0,   opt_no_cudnn           },
   {0,                  0,   0                      }
 } ;
@@ -81,12 +86,6 @@ void mexFunction(int nout, mxArray *out[],
   int padTop = 0 ;
   int padBottom = 0 ;
   int numFilterGroups = 1 ;
-
-#if ENABLE_CUDNN
-  bool cudnnMode = false ;
-#else
-  bool const cudnnMode = false ;
-#endif
 
   bool backMode = false ;
   bool hasFilters = false ;
@@ -178,7 +177,13 @@ void mexFunction(int nout, mxArray *out[],
 
       case opt_no_cudnn :
 #if ENABLE_CUDNN
-        cudnnMode = VL_FALSE ;
+        context.getCudaHelper().setCudnnEnabled(false) ;
+#endif
+        break ;
+
+      case opt_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(true) ;
 #endif
         break ;
 
@@ -299,16 +304,21 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnconv: mode %s; %s\n", (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
-    if (data.getMemoryType()==vl::GPU) {
-      mexPrintf("vl_nnconv: GPU algorithms: %s\n", cudnnMode?"cuDNN":"cuBLAS") ;
+    mexPrintf("vl_nnconv: %s; %s", backMode?"backward":"forward", (data.getMemoryType()==vl::GPU) ? "GPU" : "CPU") ;
+    if (data.getMemoryType() == vl::GPU) {
+#if ENABLE_CUDNN
+      mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "cuBLAS") ;
+#else
+      mexPrintf("; cuBLAS\n") ;
+#endif
+    } else {
+      mexPrintf("; BLAS\n") ;
     }
     mexPrintf("vl_nnconv: stride: [%d %d], pad: [%d %d %d %d]\n"
               "vl_nnconv: num filter groups: %d, has bias: %d, has filters: %d, is fully connected: %d\n",
               strideY, strideX,
               padTop, padBottom, padLeft, padRight,
               numFilterGroups, hasBiases, hasFilters, fullyConnectedMode) ;
-
     vl::print("vl_nnconv: data: ", data) ;
     if (hasFilters) { vl::print("vl_nnconv: filters: ", filters) ; }
     if (hasBiases) { vl::print("vl_nnconv: biases: ", biases) ; }

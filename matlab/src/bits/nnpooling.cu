@@ -14,7 +14,7 @@
 #endif
 
 #if ENABLE_CUDNN
-//#include "impl/pooling_cudnn.hpp"
+#include "impl/nnpooling_cudnn.hpp"
 #endif
 #include <assert.h>
 
@@ -45,7 +45,7 @@ vl::nnpooling_forward(vl::Context& context,
         default:
           assert(false) ;
           return vl::vlErrorUnknown ;
-        case vl::AVERAGE:
+        case vl::vlPoolingAverage:
           status = vl::impl::pooling_average_forward<CPU,float>
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
@@ -54,7 +54,7 @@ vl::nnpooling_forward(vl::Context& context,
            padTop, padBottom,
            padLeft, padRight) ;
           break ;
-        case vl::MAX:
+        case vl::vlPoolingMax:
           status = vl::impl::pooling_max_forward<CPU,float>
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
@@ -69,15 +69,16 @@ vl::nnpooling_forward(vl::Context& context,
 #ifdef ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnEnabled()) {
-        /*
-         status = vl::impl::nnpooling_forward_cudnn<float>(context, output, data, filters, biases,
+      if (context.getCudaHelper().getCudnnEnabled()) {
+        status = vl::impl::nnpooling_forward_cudnn<float>
+        (context, output, data,
+         method,
+         poolHeight, poolWidth,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (status == vl::vlSuccess) { return status ; }
-         if (status != vl::UNSUPPORTED) { return status ; }
-         */
+        if (status == vl::vlSuccess) { return status ; }
+        if (status != vl::vlErrorUnsupported) { return status ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
@@ -85,7 +86,7 @@ vl::nnpooling_forward(vl::Context& context,
         default:
           assert(false) ;
           return vl::vlErrorUnknown ;
-        case vl::AVERAGE:
+        case vl::vlPoolingAverage:
           status = vl::impl::pooling_average_forward<GPU,float>
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
@@ -94,7 +95,7 @@ vl::nnpooling_forward(vl::Context& context,
            padTop, padBottom,
            padLeft, padRight) ;
           break ;
-        case vl::MAX:
+        case vl::vlPoolingMax:
           status = vl::impl::pooling_max_forward<GPU,float>
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
@@ -105,12 +106,12 @@ vl::nnpooling_forward(vl::Context& context,
           break;
       }
       if (status == vlErrorCuda) {
-        context.getCudaHelper().catchCudaError("pooling_*_forward") ;
+        context.setError(context.getCudaHelper().catchCudaError("pooling_*_forward")) ;
       }
       break ;
 #endif
   }
-  return context.setError(status, "nnpooling_forward") ;
+  return context.passError(status, "nnpooling_forward: ") ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -139,7 +140,7 @@ vl::nnpooling_backward(Context& context,
         default:
           assert(false) ;
           return vl::vlErrorUnknown ;
-        case vl::AVERAGE:
+        case vl::vlPoolingAverage:
           status = vl::impl::pooling_average_backward<CPU,float>
           ((float*)derData.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
@@ -148,7 +149,7 @@ vl::nnpooling_backward(Context& context,
            padTop, padBottom,
            padLeft, padRight) ;
           break ;
-        case vl::MAX:
+        case vl::vlPoolingMax:
           status = vl::impl::pooling_max_backward<CPU,float>
           ((float*)derData.getMemory(), (float const*)data.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
@@ -163,23 +164,18 @@ vl::nnpooling_backward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().isCudnnEnabled()) {
-        /*
-         status = vl::impl::nnpooling_backward_cudnn<float>(context, output, data, filters, biases,
-         strideY, strideX,
-         padTop, padBottom,
-         padLeft, padRight) ;
-         if (status == vl::vlSuccess) { return status ; }
-         if (status != vl::UNSUPPORTED) { return status ; }
+      if (context.getCudaHelper().getCudnnEnabled()) {
+        /* 
+         Unfortunately CuDNN requires both the input and the output pooling arrays
+         to be available for computing derivatives, whereas MatConvNet only requires the input one.
          */
-        /* this case was not supported by CUDNN -- fallback */
       }
 #endif
       switch (method) {
         default:
           assert(false) ;
           return vl::vlErrorUnknown ;
-        case vl::AVERAGE:
+        case vl::vlPoolingAverage:
           status = vl::impl::pooling_average_backward<GPU,float>
           ((float*)derData.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
@@ -188,7 +184,7 @@ vl::nnpooling_backward(Context& context,
            padTop, padBottom,
            padLeft, padRight) ;
           break ;
-        case vl::MAX:
+        case vl::vlPoolingMax:
           status = vl::impl::pooling_max_backward<GPU,float>
           ((float*)derData.getMemory(), (float const*)data.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
@@ -199,10 +195,10 @@ vl::nnpooling_backward(Context& context,
           break ;
       }
       if (status == vlErrorCuda) {
-        context.getCudaHelper().catchCudaError("pooling_*_backward") ;
+        context.setError(context.getCudaHelper().catchCudaError("pooling_*_backward: ")) ;
       }
       break ;
 #endif
   }
-  return context.setError(status, "nnpooling_backward") ;
+  return context.passError(status, "nnpooling_backward: ") ;
 }
