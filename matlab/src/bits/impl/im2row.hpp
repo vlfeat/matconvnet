@@ -1,7 +1,6 @@
-/** @file im2row.hpp
- ** @brief Extracts feature map patches as rows of a matrix and back
- ** @author Andrea Vedaldi
- **/
+// @file im2row.hpp
+// @brief Stack image patches as matrix rows
+// @author Andrea Vedaldi
 
 /*
 Copyright (C) 2014-15 Andrea Vedaldi.

@@ -1,15 +1,14 @@
-/** @file normalize.cpp
- ** @brief Normalization block
- ** @author Andrea Vedaldi
- **/
+// @file normalize_cpu.cpp
+// @brief Normalize block implementation (CPU)
+// @author Andrea Vedaldi
 
 /*
- Copyright (C) 2014 Andrea Vedaldi.
- All rights reserved.
+Copyright (C) 2014-15 Andrea Vedaldi.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "normalize.hpp"
 #include "../data.hpp"

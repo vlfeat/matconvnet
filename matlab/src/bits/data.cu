@@ -1,14 +1,21 @@
-//
-//  data.cu
-//  matconv
-//
-//  Created by Andrea Vedaldi on 31/01/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file data.cu
+// @brief Basic data structures
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "data.hpp"
 #include <assert.h>
+
+#ifndef NDEBUG
 #include <iostream>
+#endif
 
 #if ENABLE_GPU
 #include "datacu.hpp"
@@ -78,13 +85,17 @@ void vl::Context::reset()
     cudaHelper = 0 ;
   }
 #endif
+#ifndef NDEBUG
   std::cout<<"Context::reset()"<<std::endl ;
+#endif
 }
 
 vl::Context::~Context()
 {
   reset() ;
+#ifndef NDEBUG
   std::cout<<"Context::~Context()"<<std::endl ;
+#endif
 }
 
 /* -------------------------------------------------------------------

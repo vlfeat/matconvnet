@@ -1,7 +1,14 @@
-/** @file blashelper.hpp
- ** @brief Helper functions to call BLAS and cuBLAS code
- ** @author Andrea Vedaldi
- **/
+// @file blashelper.hpp
+// @brief BLAS helpers
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2015 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef __vl__blashelper__
 #define __vl__blashelper__

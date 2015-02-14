@@ -1,10 +1,14 @@
-//
-//  nnconv_cudnn.h
-//  matconv
-//
-//  Created by Andrea Vedaldi on 30/01/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file nnconv_blas.hpp
+// @brief Convolution block CuDNN-based implementation.
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2015 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef __vl__nnconv_cudnn__
 #define __vl__nnconv_cudnn__

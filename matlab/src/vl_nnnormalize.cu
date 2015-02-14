@@ -1,10 +1,9 @@
-/** @file vl_nnnormalize.cu
- ** @brief Normalization function
- ** @author Andrea Vedaldi
- **/
+// @file vl_nnnormalize.cu
+// @brief Normalization block MEX wrapper
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 2014-15 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

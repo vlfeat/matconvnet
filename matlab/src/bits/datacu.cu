@@ -1,10 +1,14 @@
-//
-//  datacu.cu
-//  matconv
-//
-//  Created by Andrea Vedaldi on 09/02/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file datacu.cu
+// @brief Basic data structures (CUDA support)
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2015 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef ENABLE_GPU
 #error "datacu.cu cannot be compiled without GPU support"

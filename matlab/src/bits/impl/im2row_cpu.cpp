@@ -1,15 +1,14 @@
-/** @file im2row_cpu.cpp
- ** @brief CPU implementation
- ** @author Andrea Vedaldi
- **/
+// @file im2row_cpu.cpp
+// @brief Stack image patches as matrix rows (CPU)
+// @author Andrea Vedaldi
 
 /*
- Copyright (C) 2014 Andrea Vedaldi.
- All rights reserved.
+Copyright (C) 20114-15 Andrea Vedaldi.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "im2row.hpp"
 #include <string.h>

@@ -1,20 +1,22 @@
-//
-//  nnpooling_cudnn.cpp
-//  matconv
-//
-//  Created by Andrea Vedaldi on 13/02/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file nnpooling_blas.cu
+// @brief Pooling block CuDNN-based implementation.
+// @author Andrea Vedaldi
 
-#include "nnpooling_cudnn.hpp"
-#include <assert.h>
-#include <iostream.h>
+/*
+Copyright (C) 2015 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #if !defined(ENABLE_GPU) | !defined(ENABLE_CUDNN)
 #error "nnpooling_cudnn.hpp cannot be compiled without GPU and CUDNN support."
 #endif
 
+#include "nnpooling_cudnn.hpp"
 #include "../datacu.hpp"
+#include <assert.h>
 
 using namespace vl ;
 

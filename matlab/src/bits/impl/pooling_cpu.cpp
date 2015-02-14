@@ -1,16 +1,15 @@
-/** @file pooling.cpp
- ** @brief Spatial pooling
- ** @author Andrea Vedaldi
- ** @author Karel Lenc
- **/
+// @file pooling_cpu.cpp
+// @brief Pooling block implementation (GPU)
+// @author Andrea Vedaldi
+// @author Karel Lenc
 
 /*
- Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
- All rights reserved.
+Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "pooling.hpp"
 #include "../data.hpp"

@@ -1,11 +1,10 @@
-/** @file pooling_gpu.cu
- ** @brief Max pooling filters (GPU)
- ** @author Andrea Vedaldi
- ** @author Karel Lenc
- **/
+// @file pooling_gpu.cu
+// @brief Pooling block implementation (GPU)
+// @author Andrea Vedaldi
+// @author Karel Lenc
 
 /*
-Copyright (C) 2014 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

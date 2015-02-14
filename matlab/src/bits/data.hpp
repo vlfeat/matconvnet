@@ -1,13 +1,17 @@
-//
-//  data.hpp
-//  matconv
-//
-//  Created by Andrea Vedaldi on 30/01/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file data.hpp
+// @brief Basic data structures
+// @author Andrea Vedaldi
 
-#ifndef __matconvnet_data_hpp__
-#define __matconvnet_data_hpp__
+/*
+Copyright (C) 2015 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
+
+#ifndef __vl_data_hpp__
+#define __vl_data_hpp__
 
 #include <cstddef>
 #include <string>

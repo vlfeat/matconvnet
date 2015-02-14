@@ -1,10 +1,9 @@
-/** @file normalize.cpp
- ** @brief Normalization block
- ** @author Andrea Vedaldi
- **/
+// @file normalize_gpu.c
+// @brief Normalize block implementation (GPU)
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 2014-15 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

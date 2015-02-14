@@ -1,11 +1,10 @@
-/** @file vl_nnpool.cu
- ** @brief Pooling block
- ** @author Andrea Vedaldi
- ** @author Karel Lenc
- **/
+// @file vl_nnpool.cu
+// @brief Pooling block MEX wrapper
+// @author Andrea Vedaldi
+// @author Karel Lenc
 
 /*
-Copyright (C) 2014 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

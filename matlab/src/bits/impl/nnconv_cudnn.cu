@@ -1,19 +1,22 @@
-//
-//  recipies_cudnn.cu
-//  matconv
-//
-//  Created by Andrea Vedaldi on 30/01/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file nnconv_blas.cu
+// @brief Convolution block CuDNN-based implementation.
+// @author Andrea Vedaldi
 
-#include "nnconv_cudnn.hpp"
-#include <assert.h>
+/*
+Copyright (C) 2015 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #if !defined(ENABLE_GPU) | !defined(ENABLE_CUDNN)
 #error "nnconv_cudnn.hpp cannot be compiled without GPU and CUDNN support."
 #endif
 
+#include "nnconv_cudnn.hpp"
 #include "../datacu.hpp"
+#include <assert.h>
 
 using namespace vl ;
 

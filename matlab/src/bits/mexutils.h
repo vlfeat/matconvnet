@@ -4,7 +4,7 @@
  **/
 
 /*
-Copyright (C) 2007-12 Andrea Vedaldi and Brian Fulkerson.
+Copyright (C) 2007-15 Andrea Vedaldi and Brian Fulkerson.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

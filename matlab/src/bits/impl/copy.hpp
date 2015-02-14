@@ -1,10 +1,6 @@
-//
-//  copy.h
-//  matconv
-//
-//  Created by Andrea Vedaldi on 08/02/2015.
-//  Copyright (c) 2015 Andrea Vedaldi. All rights reserved.
-//
+// @file copy.hpp
+// @brief Copy data
+// @author Andrea Vedaldi
 
 #ifndef __vl__copy__
 #define __vl__copy__
