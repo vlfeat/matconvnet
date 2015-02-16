@@ -71,7 +71,7 @@ vl::nnconv_forward(Context& context,
       break ;
 #endif
   }
-#if ENABLE_GPU
+#if ENABLE_CUDNN
 done:
 #endif
   return status ;
@@ -136,7 +136,7 @@ vl::nnconv_backward(Context& context,
       break;
 #endif
   }
-#if ENABLE_GPU
+#if ENABLE_CUDNN
 done:
 #endif
   return status ;

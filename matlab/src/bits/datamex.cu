@@ -17,6 +17,37 @@ the terms of the BSD license (see the COPYING file).
 
 using namespace vl ;
 
+/* ---------------------------------------------------------------- */
+/*                                                       MexContext */
+/* ---------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------- */
+/*                                                        initGpu() */
+/* ---------------------------------------------------------------- */
+
+vl::MexContext::MexContext()
+  : Context()
+#if ENABLE_GPU
+  , gpuIsInitialized(false)
+#endif
+{ }
+
+#if ENABLE_GPU
+vl::Error
+vl::MexContext::initGpu()
+{
+  if (!gpuIsInitialized) {
+    mxInitGPU() ;
+    gpuIsInitialized = true ;
+  }
+  return vl::vlSuccess ;
+}
+#endif
+
+/* ---------------------------------------------------------------- */
+/*                                                        MexTensor */
+/* ---------------------------------------------------------------- */
+
 /*
  The MexTensor class helps handling MATLAB CPU and GPU arrays.
 
@@ -44,6 +75,267 @@ using namespace vl ;
 
  */
 
+/* ---------------------------------------------------------------- */
+/* Constructing, clearing, destroying                               */
+/* ---------------------------------------------------------------- */
+
+vl::MexTensor::MexTensor(MexContext & context)
+  : context(context),
+    Tensor(),
+    array(NULL),
+    isArrayOwner(false)
+#if ENABLE_GPU
+  , gpuArray(NULL)
+#endif
+{ }
+
+mxArray *
+vl::MexTensor::relinquish()
+{
+  isArrayOwner = false ;
+  return (mxArray*) array ;
+}
+
+void
+vl::MexTensor::clear()
+{
+#if ENABLE_GPU
+  if (gpuArray) {
+    mxGPUDestroyGPUArray(gpuArray) ;
+    gpuArray = NULL ;
+  }
+#endif
+  if (isArrayOwner) {
+    if (array) {
+      mxDestroyArray((mxArray*)array) ;
+      array = NULL ;
+    }
+    isArrayOwner = false ;
+  }
+  memory = NULL ;
+  memorySize = 0 ;
+  memoryType = vl::CPU ;
+  width = 0 ;
+  height = 0 ;
+  depth = 0 ;
+  size = 0 ;
+}
+
+vl::MexTensor::~MexTensor()
+{
+  clear() ;
+}
+
+/* ---------------------------------------------------------------- */
+/* init without filling                                             */
+/* ---------------------------------------------------------------- */
+
+vl::Error
+vl::MexTensor::init(Device dev, TensorGeometry const & geom)
+{
+  mwSize dimensions [4] = {geom.getHeight(),
+                           geom.getWidth(),
+                           geom.getDepth(),
+                           geom.getSize()} ;
+  mwSize newMemorySize = geom.getNumElements() * sizeof(float) ;
+  float * newMemory = NULL ;
+  mxArray * newArray = NULL ;
+#if ENABLE_GPU
+  mxGPUArray* newGpuArray = NULL ;
+#endif
+
+  if (dev == vl::CPU) {
+    mwSize dimensions_ [4] = {0} ;
+    newMemory = (float*)mxMalloc(newMemorySize) ;
+    newArray = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
+    mxSetData(newArray, newMemory) ;
+    mxSetDimensions(newArray, dimensions, 4) ;
+  }
+
+#ifdef ENABLE_GPU
+  else {
+    newGpuArray = mxGPUCreateGPUArray(4, dimensions,
+                                      mxSINGLE_CLASS, mxREAL,
+                                      MX_GPU_DO_NOT_INITIALIZE) ;
+    newArray = mxGPUCreateMxArrayOnGPU(newGpuArray) ;
+    newMemory = (float*) mxGPUGetData(newGpuArray) ;
+  }
+#else
+  else {
+    abort() ;
+  }
+#endif
+
+  //mexMakeArrayPersistent(newArray) ; // avoid double free with MATALB garbage collector upon error
+  TensorGeometry::operator=(geom) ;
+  memoryType = dev ;
+  memory = newMemory ;
+  memorySize = newMemorySize ;
+  array = newArray ;
+  isArrayOwner = true ;
+#if ENABLE_GPU
+  gpuArray = newGpuArray ;
+#endif
+  return vl::vlSuccess ;
+}
+
+/* ---------------------------------------------------------------- */
+/* init filling with zeros                                          */
+/* ---------------------------------------------------------------- */
+
+vl::Error
+vl::MexTensor::initWithZeros(vl::Device dev, TensorGeometry const & geom)
+{
+
+  clear() ;
+
+  mwSize dimensions [4] = {geom.getHeight(),
+                           geom.getWidth(),
+                           geom.getDepth(),
+                           geom.getSize()} ;
+  mwSize newMemorySize = geom.getNumElements() * sizeof(float) ;
+  float * newMemory = NULL ;
+  mxArray * newArray = NULL ;
+#if ENABLE_GPU
+  mxGPUArray* newGpuArray = NULL ;
+#endif
+
+  if (dev == vl::CPU) {
+    newArray = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
+    newMemory = (float*) mxGetData(newArray) ;
+  }
+
+#ifdef ENABLE_GPU
+  else {
+    context.initGpu() ;
+    newGpuArray = mxGPUCreateGPUArray(4, dimensions, mxSINGLE_CLASS,
+                                      mxREAL, MX_GPU_INITIALIZE_VALUES) ;
+    newArray = mxGPUCreateMxArrayOnGPU(newGpuArray) ;
+    newMemory = (float*) mxGPUGetData((mxGPUArray*)newGpuArray) ;
+  }
+#else
+  else {
+    abort() ;
+  }
+#endif
+
+  //mexMakeArrayPersistent(newArray) ; // avoid double free with MATALB garbage collector upon error
+  TensorGeometry::operator=(geom) ;
+  memoryType = dev ;
+  memory = newMemory ;
+  memorySize = newMemorySize ;
+  array = newArray ;
+  isArrayOwner = true ;
+#if ENABLE_GPU
+  gpuArray = newGpuArray ;
+#endif
+  return vl::vlSuccess ;
+}
+
+/* ---------------------------------------------------------------- */
+/* init with any fill                                               */
+/* ---------------------------------------------------------------- */
+
+#if ENABLE_GPU
+template<typename type> __global__ void
+fill (type * data, type value, int size)
+{
+  int index = threadIdx.x + blockIdx.x * blockDim.x ;
+  if (index < size) data[index] = value ;
+}
+#endif
+
+vl::Error
+vl::MexTensor::init(vl::Device dev, vl::TensorGeometry const & geom, float value)
+{
+  if (value == 0) {
+    initWithZeros(dev, geom) ;
+  } else {
+    init(dev, geom) ;
+    if (memoryType == vl::CPU) {
+      int const n = getNumElements() ;
+      for (int i = 0 ; i < n ; ++i) { memory[i] = value ; }
+    }
+#ifdef ENABLE_GPU
+    else {
+      fill<float>
+      <<<divideUpwards(getNumElements(), VL_CUDA_NUM_THREADS),
+        VL_CUDA_NUM_THREADS>>>
+        ((float*)getMemory(), getNumElements(), value) ;
+      cudaError_t error = cudaGetLastError() ;
+      if (error != cudaSuccess) {
+        clear() ;
+        mexErrMsgTxt((std::string("MexTensor: fill: CUDA error: ")
+                      + cudaGetErrorString(error)).c_str()) ;
+      }
+    }
+#endif
+  }
+  return vl::vlSuccess ;
+}
+
+/* ---------------------------------------------------------------- */
+/* init with array                                                  */
+/* ---------------------------------------------------------------- */
+
+vl::Error
+vl::MexTensor::init(mxArray const * array_)
+{
+  clear() ;
+  if (array_ == NULL) { return vl::vlSuccess ; } // empty
+
+  vl::Device dev ;
+  float * newMemory = NULL ;
+  mxArray * newArray = (mxArray*)array_ ;
+#if ENABLE_GPU
+  mxGPUArray* newGpuArray = NULL ;
+#endif
+
+  mwSize const * dimensions ;
+  mwSize numDimensions ;
+  mxClassID classID ;
+
+#ifdef ENABLE_GPU
+  context.initGpu() ;
+  if (mxIsGPUArray(array_)) {
+    dev = GPU ;
+    newGpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(newArray) ;
+    newMemory = (float*) mxGPUGetDataReadOnly(newGpuArray) ;
+    classID = mxGPUGetClassID(newGpuArray) ;
+    dimensions = mxGPUGetDimensions(newGpuArray) ;
+    numDimensions = mxGPUGetNumberOfDimensions(newGpuArray) ;
+  } else
+#endif
+
+  {
+    if (!mxIsNumeric(newArray)) {
+      mexErrMsgTxt("An input is not a numeric array (or GPU support not compiled).") ;
+    }
+    dev = CPU ;
+    newMemory = (float*) mxGetData(newArray) ;
+    classID = mxGetClassID(newArray) ;
+    dimensions = mxGetDimensions(newArray) ;
+    numDimensions = mxGetNumberOfDimensions(newArray) ;
+  }
+
+  height = (numDimensions >= 1) ? dimensions[0] : 1 ;
+  width  = (numDimensions >= 2) ? dimensions[1] : 1 ;
+  depth  = (numDimensions >= 3) ? dimensions[2] : 1 ;
+  size   = (numDimensions >= 4) ? dimensions[3] : 1 ;
+  memoryType = dev ;
+  memory = newMemory ;
+  memorySize = getNumElements() * sizeof(float) ;
+  array = newArray ;
+  isArrayOwner = false ;
+#if ENABLE_GPU
+  gpuArray = newGpuArray ;
+#endif
+
+  if (classID != mxSINGLE_CLASS && ! isEmpty()) {
+    mexErrMsgTxt("An input is not a SINGLE array nor it is empty.") ;
+  }
+  return vl::vlSuccess ;
+}
 
 void vl::print(char const * str, vl::Tensor const & tensor)
 {
@@ -78,258 +370,3 @@ void vl::print(char const * str, vl::Tensor const & tensor)
             units,
             dev);
 }
-
-
-/* transfer ownership (a bit like auto_ptr) */
-MexTensor &
-vl::MexTensor::operator= (MexTensor & tensor)
-{
-  if (&tensor == this) return *this;
-  clear() ;
-  width = tensor.width ;
-  height = tensor.height ;
-  depth = tensor.depth ;
-  size = tensor.size ;
-  memory = tensor.memory ;
-  memoryType = tensor.memoryType;
-  memorySize = tensor.memorySize ;
-  array = tensor.array ;
-  isArrayOwner = tensor.isArrayOwner ;
-#if ENABLE_GPU
-  gpuArray = tensor.gpuArray ;
-#endif
-  tensor.width = 0 ;
-  tensor.height = 0 ;
-  tensor.depth = 0 ;
-  tensor.size = 0 ;
-  tensor.memory = 0 ;
-  tensor.memorySize = 0 ;
-  tensor.array = NULL ;
-  tensor.isArrayOwner = false ;
-#if ENABLE_GPU
-  tensor.gpuArray = NULL ;
-#endif
-  return *this ;
-}
-
-/* ---------------------------------------------------------------- */
-/* MexTensor()                                                      */
-/* ---------------------------------------------------------------- */
-
-vl::MexTensor::MexTensor()
-: Tensor(), array(NULL), isArrayOwner(false)
-#if ENABLE_GPU
-, gpuArray(NULL)
-#endif
-{ }
-
-/* ---------------------------------------------------------------- */
-/* MexTensor(array)                                                 */
-/* ---------------------------------------------------------------- */
-
-vl::MexTensor::MexTensor(mxArray const * array_)
-: array(array_), isArrayOwner(false)
-#if ENABLE_GPU
-, gpuArray(NULL)
-#endif
-{
-  mwSize const * dimensions ;
-  mwSize numDimensions ;
-  mxClassID classID ;
-
-  if (array_ == NULL) { return ; } // empty
-
-#ifdef ENABLE_GPU
-  if (mxIsGPUArray(array)) {
-    memoryType = GPU ;
-    gpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(array) ;
-    memory = (float*) mxGPUGetDataReadOnly(gpuArray) ;
-    classID = mxGPUGetClassID(gpuArray) ;
-    dimensions = mxGPUGetDimensions(gpuArray) ;
-    numDimensions = mxGPUGetNumberOfDimensions(gpuArray) ;
-  } else
-#endif
-  {
-    if (!mxIsNumeric(array)) {
-      mexErrMsgTxt("An input is not a numeric array (or GPU support not compiled).") ;
-    }
-    memoryType = CPU ;
-    memory = (float*) mxGetData(array) ;
-    classID = mxGetClassID(array) ;
-    dimensions = mxGetDimensions(array) ;
-    numDimensions = mxGetNumberOfDimensions(array) ;
-  }
-
-  height = (numDimensions >= 1) ? dimensions[0] : 1 ;
-  width  = (numDimensions >= 2) ? dimensions[1] : 1 ;
-  depth  = (numDimensions >= 3) ? dimensions[2] : 1 ;
-  size   = (numDimensions >= 4) ? dimensions[3] : 1 ;
-
-  memorySize = getNumElements() * sizeof(float) ;
-
-  if (classID != mxSINGLE_CLASS && !isEmpty()) {
-    mexErrMsgTxt("An input is not a SINGLE array nor it is empty.") ;
-  }
-}
-
-/* ---------------------------------------------------------------- */
-/* MexTensor(nofill)                                                */
-/* ---------------------------------------------------------------- */
-
-vl::MexTensor::MexTensor(vl::Device type, vl::TensorGeometry const & geom)
-: Tensor(NULL, 0, type, geom),
-array(NULL),
-isArrayOwner(false)
-#if ENABLE_GPU
-, gpuArray(NULL)
-#endif
-{
-  allocUninitialized() ;
-}
-
-/* ---------------------------------------------------------------- */
-/* MexTensor(fill)                                                  */
-/* ---------------------------------------------------------------- */
-
-
-#if ENABLE_GPU
-template<typename type> __global__ void
-fill (type * data, type value, int size)
-{
-  int index = threadIdx.x + blockIdx.x * blockDim.x ;
-  if (index < size) data[index] = value ;
-}
-#endif
-
-vl::MexTensor::MexTensor(vl::Device type, vl::TensorGeometry const & geom, float value)
-: Tensor(NULL, 0, type, geom),
-array(NULL),
-isArrayOwner(false)
-#if ENABLE_GPU
-, gpuArray(NULL)
-#endif
-{
-  if (value == 0) {
-    allocInitialized() ;
-  } else {
-    allocUninitialized() ;
-    if (memoryType == vl::CPU) {
-      for (int i = 0 ; i < getNumElements() ; ++i) { memory[i] = value ; }
-    }
-#ifdef ENABLE_GPU
-    else {
-      fill<float>
-      <<<divideUpwards(getNumElements(), VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-      ((float*)memory, getNumElements(), value) ;
-      cudaError_t error = cudaGetLastError() ;
-      if (error != cudaSuccess) {
-        clear() ;
-        mexErrMsgTxt((std::string("MexTensor: fill: CUDA error: ") + cudaGetErrorString(error)).c_str()) ;
-      }
-    }
-#endif
-  }
-}
-
-/* ---------------------------------------------------------------- */
-/* relinquish()                                                     */
-/* ---------------------------------------------------------------- */
-
-mxArray * vl::MexTensor::relinquish()
-{
-  isArrayOwner = false ;
-  return (mxArray*) array ;
-}
-
-/* ---------------------------------------------------------------- */
-/* clear()                                                          */
-/* ---------------------------------------------------------------- */
-
-void vl::MexTensor::clear()
-{
-#if ENABLE_GPU
-  if (gpuArray) {
-    mxGPUDestroyGPUArray(gpuArray) ;
-    gpuArray = NULL ;
-  }
-#endif
-  if (isArrayOwner) {
-    if (array) {
-      mxDestroyArray((mxArray*)array) ;
-      array = NULL ;
-    }
-    isArrayOwner = false ;
-  }
-  memory = NULL ;
-  memorySize = 0 ;
-  width = 0 ;
-  height = 0 ;
-  depth = 0 ;
-  size = 0 ;
-}
-
-/* ---------------------------------------------------------------- */
-/* ~MexTensor()                                                     */
-/* ---------------------------------------------------------------- */
-
-vl::MexTensor::~MexTensor()
-{
-  clear() ;
-}
-
-/* ---------------------------------------------------------------- */
-/* allocUninitialized                                               */
-/* ---------------------------------------------------------------- */
-
-void vl::MexTensor::allocUninitialized()
-{
-  mwSize dimensions [4] = {height, width, depth, size} ;
-  memorySize = getNumElements() * sizeof(float) ;
-  mxArray * newArray ;
-  if (memoryType == vl::CPU) {
-    mwSize dimensions_ [4] = {0} ;
-    memory = (float*)mxMalloc(memorySize) ;
-    newArray = mxCreateNumericArray(4, dimensions_, mxSINGLE_CLASS, mxREAL) ;
-    mxSetData(newArray, memory) ;
-    mxSetDimensions(newArray, dimensions, 4) ;
-  }
-#ifdef ENABLE_GPU
-  else {
-    gpuArray = mxGPUCreateGPUArray(4, dimensions, mxSINGLE_CLASS, mxREAL, MX_GPU_DO_NOT_INITIALIZE) ;
-    newArray = mxGPUCreateMxArrayOnGPU(gpuArray) ;
-    memory = (float*) mxGPUGetData((mxGPUArray*)gpuArray) ;
-  }
-#endif
-  //mexMakeArrayPersistent(newArray) ; // avoid double free with MATALB garbage collector upon error
-  array = newArray ;
-  isArrayOwner = true ;
-}
-
-/* ---------------------------------------------------------------- */
-/* allocInitialized                                                 */
-/* ---------------------------------------------------------------- */
-
-void vl::MexTensor::allocInitialized()
-{
-  mwSize dimensions [4] = {height, width, depth, size} ;
-  memorySize = getNumElements() * sizeof(float) ;
-  mxArray * newArray ;
-  if (memoryType == vl::CPU) {
-    newArray = mxCreateNumericArray(4, dimensions, mxSINGLE_CLASS, mxREAL) ;
-    memory = (float*) mxGetData(newArray) ;
-  }
-#ifdef ENABLE_GPU
-  else {
-    gpuArray = mxGPUCreateGPUArray(4, dimensions, mxSINGLE_CLASS, mxREAL, MX_GPU_INITIALIZE_VALUES) ;
-    newArray = mxGPUCreateMxArrayOnGPU(gpuArray) ;
-    memory = (float*) mxGPUGetData((mxGPUArray*)gpuArray) ;
-  }
-#endif
-  //mexMakeArrayPersistent(newArray) ; // avoid double free with MATALB garbage collector upon error
-  array = newArray ;
-  isArrayOwner = true ;
-}
-
-
-
-

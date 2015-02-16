@@ -53,7 +53,7 @@ vlmxOption  options [] = {
 /*                                                          Context */
 /* ---------------------------------------------------------------- */
 
-vl::Context context ;
+vl::MexContext context ;
 
 /*
  Resetting the context here resolves a crash when MATLAB quits and
@@ -191,10 +191,15 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  vl::MexTensor data(in[IN_DATA]) ;
-  vl::MexTensor filters(in[IN_FILTERS]) ;
-  vl::MexTensor biases(in[IN_BIASES]) ;
-  vl::MexTensor derOutput(backMode ? in[IN_DEROUTPUT] : NULL) ;
+  vl::MexTensor data(context) ;
+  vl::MexTensor filters(context) ;
+  vl::MexTensor biases(context) ;
+  vl::MexTensor derOutput(context) ;
+
+  data.init(in[IN_DATA]) ;
+  filters.init(in[IN_FILTERS]) ;
+  biases.init(in[IN_BIASES]) ;
+  if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
 
   hasFilters = !filters.isEmpty() ;
   hasBiases = !biases.isEmpty() ;
@@ -284,22 +289,22 @@ void mexFunction(int nout, mxArray *out[],
 
   /* create output buffers */
   vl::Device type = data.getMemoryType() ;
-  vl::MexTensor output ;
-  vl::MexTensor derData ;
-  vl::MexTensor derFilters ;
-  vl::MexTensor derBiases ;
+  vl::MexTensor output(context) ;
+  vl::MexTensor derData(context) ;
+  vl::MexTensor derFilters(context) ;
+  vl::MexTensor derBiases(context) ;
 
   if (!backMode) {
-    output =  vl::MexTensor(type, outputGeom) ;
+    output.init(type, outputGeom) ;
   } else {
     if (computeDerData) {
-      derData = vl::MexTensor(type, data.getGeometry()) ;
+      derData.init(type, data.getGeometry()) ;
     }
     if (computeDerFilters && hasFilters) {
-      derFilters = vl::MexTensor(type, filters.getGeometry()) ;
+      derFilters.init(type, filters.getGeometry()) ;
     }
     if (computeDerBiases && hasBiases) {
-      derBiases = vl::MexTensor(type, biases.getGeometry()) ;
+      derBiases.init(type, biases.getGeometry()) ;
     }
   }
 

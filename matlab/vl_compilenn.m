@@ -275,7 +275,7 @@ if opts.enableGpu
   switch arch
     case {'maci64', 'glnxa64'}
       flags.link{end+1} = '-lmwgpu' ;
-    case 'pcwin64'
+    case 'win64'
       flags.link{end+1} = '-lgpu' ;
   end
   if opts.enableCudnn
@@ -310,7 +310,7 @@ if opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
   switch arch
     case {'maci64', 'glnxa64'}
       flags.nvcc{end+1} = '-fPIC' ;
-    case 'pcwin64'
+    case 'win64'
       flags.nvcc{end+1} = '/MD' ;
       check_clpath(); % check whether cl.exe in path
   end
@@ -399,9 +399,9 @@ function ext = objext()
 % --------------------------------------------------------------------
 % Get the extension for an 'object' file for the current computer
 % architecture
-switch computer
-  case 'PCWIN64', ext = 'obj';
-  case {'MACI64', 'GLNXA64'}, ext = 'o' ;
+switch computer('arch')
+  case 'win64', ext = 'obj';
+  case {'maci64', 'glnxa64'}, ext = 'o' ;
   otherwise, error('Unsupported architecture %s.', computer) ;
 end
 
@@ -473,8 +473,14 @@ opts.verbose && fprintf(['%s:\tCUDA: seraching for the CUDA Devkit' ...
 paths = {getenv('MW_NVCC_PATH')} ;
 paths = [paths, which_nvcc(opts)] ;
 for v = {'5.5', '6.0', '6.5', '7.0'}
-  paths{end+1} = sprintf('/Developer/NVIDIA/CUDA-%s/bin/nvcc', char(v)) ;
-  paths{end+1} = sprintf('C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v%s', char(v)) ;
+  switch computer('arch')
+    case 'glnxa64'
+      paths{end+1} = sprintf('/usr/local/cuda-%s/bin/nvcc', char(v)) ;
+    case 'maci64'
+      paths{end+1} = sprintf('/Developer/NVIDIA/CUDA-%s/bin/nvcc', char(v)) ;
+    case 'win64'
+      paths{end+1} = sprintf('C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v%s', char(v)) ;
+  end
 end
 paths{end+1} = sprintf('/usr/local/cuda/bin/nvcc') ;
 

@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2015 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -11,7 +11,8 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "data.hpp"
-#include <assert.h>
+#include <cassert>
+#include <cstdlib>
 
 #ifndef NDEBUG
 #include <iostream>
@@ -22,7 +23,6 @@ the terms of the BSD license (see the COPYING file).
 #endif
 
 using namespace vl ;
-
 
 /* -------------------------------------------------------------------
  * Helpers
@@ -58,7 +58,7 @@ cpuWorkspace(0), cpuWorkspaceSize(0),
 gpuWorkspace(0), gpuWorkspaceSize(0),
 cudaHelper(NULL)
 { }
-    
+
 vl::CudaHelper &
 vl::Context::getCudaHelper()
 {

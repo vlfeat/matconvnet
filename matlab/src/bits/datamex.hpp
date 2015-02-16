@@ -15,7 +15,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "mex.h"
 
-#ifdef ENABLE_GPU
+#if ENABLE_GPU
 #include "gpu/mxGPUArray.h"
 #endif
 
@@ -23,42 +23,46 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
+  class MexTensor ;
+
+  class MexContext : public Context
+  {
+  public:
+    MexContext() ;
+
+  protected:
+#if ENABLE_GPU
+    vl::Error initGpu() ;
+    bool gpuIsInitialized ;
+#endif
+
+    friend class MexTensor ;
+  } ;
+
   class MexTensor : public Tensor
   {
   public:
-    MexTensor() ;
-    MexTensor(Device type, TensorGeometry const & geom) ;
-    MexTensor(Device type, TensorGeometry const & geom, float value) ;
-    MexTensor(mxArray const * array) ;
-    ~MexTensor() ;
+    MexTensor(MexContext & context) ;
+    vl::Error init(Device dev, TensorGeometry const & geom) ;
+    vl::Error init(Device dev, TensorGeometry const & geom, float value) ;
+    vl::Error initWithZeros(Device dev, TensorGeometry const & geom) ;
+    vl::Error init(mxArray const * array) ;
+
     mxArray * relinquish() ;
     void clear() ;
-    MexTensor & operator= (MexTensor & tensor) ;
-
-    // Allow copying an rvalue MexTensor (similar to auto_ptr)
-    struct MexTensorRef {
-      inline explicit MexTensorRef(MexTensor& tensor_) : tensor(tensor_) { }
-      MexTensor & tensor ;
-    } ;
-    inline operator MexTensorRef() {
-      return MexTensorRef(*this) ;
-    }
-    inline MexTensor & operator= (MexTensorRef ref) {
-      *this = ref.tensor ;
-      return *this ;
-    }
+    ~MexTensor() ;
 
   protected:
+    MexContext & context ;
     mxArray const * array ;
 #ifdef ENABLE_GPU
     mxGPUArray const * gpuArray ;
 #endif
     bool isArrayOwner ;
-    void allocInitialized() ;
-    void allocUninitialized() ;
 
   private: // prevention
     MexTensor(MexTensor const &) ;
+    MexTensor & operator= (MexTensor & tensor) ;
   } ;
 
   void print(char const * str, Tensor const & tensor) ;

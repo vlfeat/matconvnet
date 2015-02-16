@@ -46,7 +46,7 @@ vlmxOption  options [] = {
 /*                                                          Context */
 /* ---------------------------------------------------------------- */
 
-vl::Context context ;
+vl::MexContext context ;
 
 /*
  Resetting the context here resolves a crash when MATLAB quits and
@@ -181,8 +181,11 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  vl::MexTensor data(in[IN_DATA]) ;
-  vl::MexTensor derOutput(backMode ? in[IN_DEROUTPUT] : NULL) ;
+  vl::MexTensor data(context) ;
+  vl::MexTensor derOutput(context) ;
+
+  data.init(in[IN_DATA]) ;
+  if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
 
   if (backMode && ! vl::areCompatible(data, derOutput)) {
     mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
@@ -240,15 +243,15 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Create output buffers */
   vl::Device type = data.getMemoryType() ;
-  vl::MexTensor output ;
-  vl::MexTensor derData ;
-  vl::MexTensor derFilters ;
-  vl::MexTensor derBiases ;
+  vl::MexTensor output(context) ;
+  vl::MexTensor derData(context) ;
+  vl::MexTensor derFilters(context) ;
+  vl::MexTensor derBiases(context) ;
 
   if (!backMode) {
-    output = vl::MexTensor(type, outputGeom, 0) ;
+    output.init(type, outputGeom, 0) ;
   } else {
-    derData = vl::MexTensor(type, data.getGeometry(), 0) ;
+    derData.init(type, data.getGeometry(), 0) ;
   }
 
   if (verbosity > 0) {
