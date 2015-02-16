@@ -61,7 +61,8 @@ NVCCFLAGS = \
 -DENABLE_GPU \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),) \
 -I"$(MATLABROOT)/extern/include" \
--I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include"
+-I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
+-Xcompiler -fPIC
 MEXFLAGS_NVCC = $(MEXFLAGS) -cxx -lmwgpu
 
 ifneq ($(DEBUG),)
