@@ -389,6 +389,8 @@ void mexFunction(int nout, mxArray *out[],
   bool tempIsValid = true;
 #else
   bool const gpuMode = false ;
+  bool const allOnesIsValid = true;
+  bool const tempIsValid = true;
 #endif
   bool backMode = false ;
   bool hasFilters = false ;
