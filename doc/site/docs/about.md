@@ -37,12 +37,13 @@ here.
 
 # Copyright
 
-This package was created and is currently maintained by
-[Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi) and Karel
-Lenc. It is distributed under the permissive BSD license (see the file
-`COPYING`).
+This package was originally created by
+[Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi) and Karel Lenc
+and it is currently develped by a small community of contributors. It
+is distributed under the permissive BSD license (see also the file
+`COPYING`):
 
-    Copyright (c) 2014 Andrea Vedaldi and Karel Lenc.
+    Copyright (c) 2014-15 The MatConvNet team.
     All rights reserved.
 
     Redistribution and use in source and binary forms are permitted
@@ -60,7 +61,7 @@ Lenc. It is distributed under the permissive BSD license (see the file
 # Acknowledgments
 
 The implementation of the computational blocks in this library, and in
-particular of the convolution operator, is inspired by
+particular of the convolution operators, is inspired by
 [Caffe](http://caffe.berkeleyvision.org).
 
 We gratefully acknowledge the support of NVIDIA Corporation with the
