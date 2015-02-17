@@ -40,7 +40,7 @@ namespace vl { namespace impl {
                         int padLeft, int padRight,
                         int padTop, int padBottom) ;
 
-  /* specialisations */
+  /* specializations */
 
   template<> vl::Error
   nnconv_forward_cudnn<float>(Context& context,

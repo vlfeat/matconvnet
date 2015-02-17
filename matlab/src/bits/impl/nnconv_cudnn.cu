@@ -66,6 +66,13 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
   if (padLeft != padRight) return vl::vlErrorUnsupported ;
   if (padTop != padBottom) return vl::vlErrorUnsupported ;
 
+#if __linux
+  if (filters.getHeight() == 1 || filters.getWidth() == 1) {
+    // catch CuDNN RC2 bug (does not seem to affect Mac OS X; Windows?
+    return vl::vlErrorUnsupported ;
+  }
+#endif
+
   cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
   vl::Error error = vl::vlSuccess ;
   cudnnHandle_t handle ;
@@ -252,6 +259,13 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
   if (padLeft != padRight) return vl::vlErrorUnsupported ;
   if (padTop != padBottom) return vl::vlErrorUnsupported ;
 
+#if __linux
+  if (filters.getHeight() == 1 || filters.getWidth() == 1) {
+    // catch CuDNN RC2 bug (does not seem to affect Mac OS X; Windows?
+    return vl::vlErrorUnsupported ;
+  }
+#endif
+
   cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
   vl::Error error = vl::vlSuccess ;
   cudnnHandle_t handle ;
@@ -289,33 +303,33 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
     CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
     derOutputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
-                                 CUDNN_DATA_FLOAT,
-                                 derOutput.getSize(), // sizes
-                                 numFiltersPerGroup,
-                                 derOutput.getWidth(),
-                                 derOutput.getHeight(),
-                                 derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth(), //strides
-                                 derOutput.getHeight()*derOutput.getWidth(),
-                                 derOutput.getHeight(),
-                                 1)) ;
+                                       CUDNN_DATA_FLOAT,
+                                       derOutput.getSize(), // sizes
+                                       numFiltersPerGroup,
+                                       derOutput.getWidth(),
+                                       derOutput.getHeight(),
+                                       derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth(), //strides
+                                       derOutput.getHeight()*derOutput.getWidth(),
+                                       derOutput.getHeight(),
+                                       1)) ;
   }
 
   CHECK(cudnnCreateFilterDescriptor(&filtersDesc)) ;
   filtersDescInitialized = true ;
   CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
-                             CUDNN_DATA_FLOAT,
-                             numFiltersPerGroup,
-                             filters.getDepth(),
-                             filters.getWidth(),
-                             filters.getHeight())) ;
+                                   CUDNN_DATA_FLOAT,
+                                   numFiltersPerGroup,
+                                   filters.getDepth(),
+                                   filters.getWidth(),
+                                   filters.getHeight())) ;
 
   CHECK(cudnnCreateConvolutionDescriptor(&convDesc)) ;
   convDescInitialized = true ;
   CHECK(cudnnSetConvolution2dDescriptor(convDesc,
-                                  padLeft, padTop,
-                                  strideX, strideY,
-                                  1,1, // upscale
-                                  CUDNN_CROSS_CORRELATION)) ;
+                                        padLeft, padTop,
+                                        strideX, strideY,
+                                        1,1, // upscale
+                                        CUDNN_CROSS_CORRELATION)) ;
 
   // Perform backward convolution for each filter group
   for (int g = 0  ; g < numGroups ; ++g) {
