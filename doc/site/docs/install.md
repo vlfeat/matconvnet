@@ -1,54 +1,50 @@
 # Installing and compiling the library
 
-This library comprises several MEX files that need to be compiled
-before MATLAB can use it. Start by downloading and unpacking the code;
-then follow at the [compilation](#compiling) instructions to compile
-the MEX file. Once the MEX files are properly compiled, MATLAB setup
-is easy. Simply start MATLAB and type
+In order to install the library, follows these steps:
 
-    > run <path to MatConvNet>/matlab/vl_setupnn
+1.  Download and unpack the library source code into a directory of
+    your choice. Call the path to this directory `<MatConvNet>`.
+2.  [Compile](#compiling) the library.
+3.  Start MATLAB and type:
 
-At this point the library should be ready to use. To test it, try
-issuing the command:
+        > run <MatConvNet>/matlab/vl_setupnn
+
+    in order to add MatConvNet to MATLAB's search path.
+
+At this point the library is ready to use. You can test it by using
+the command:
 
     > vl_test_nnlayers
 
-To test the GPU version of the library (provided that you have a GPU
-and have compiled the corresponding support), use
+To test GPU support (if you have [compiled it](#gpu)) use instead:
 
-    > vl_test_nnlayers(true)
+> vl_test_nnlayers(true)
 
-Note that this is actually slower than the CPU version; this is
-expected and an artefact of the test code.
+Note that the second tests runs slower than the CPU version; do not
+worry, this is an artefact of the test procedure.
 
-## Compiling
 <a name='compiling'></a>
+## Compiling
 
 MatConvNet compiles under Linux, Mac, and Windows (with the exception
 of the `vl_imreadjpeg` tool which is not yet supported under
 Windows). This page discusses compiling MatConvNet using the MATLAB
 function `vl_compilenn`. While this is the easiest method,
-[alternative compilation methods](install-alt.md) are possible and may
-be more conveniente for a library developer.
+[the command line or an IDE can be used as well](install-alt.md).
 
-### Compiling MatConvNet
+<a name='cpu'></a>
+### Compiling for CPU
 
 If this is the first time you compile MatConvNet, consider trying
-first to compile the CPU only version. Compiling the library is
-obtained by using the [`vl_compilenn`](mfiles/vl_compilenn)
-command. Follow these steps:
+first the CPU version. In order to do this, use the
+[`vl_compilenn`](mfiles/vl_compilenn) command supplied with the
+library:
 
 1.  Make sure that MATLAB is
     [configured to use your compiler](http://www.mathworks.com/help/matlab/matlab_external/changing-default-compiler.html).
-2.  Unpack MatConvNet in a location of your choice. Call this
-    location `<MatConvNet>`.
-3.  Open MATLAB and change the current directory to the copy of
-    MatConvNet just created. From MATLAB's prompt:
+2.  Open MATLAB and issue the commands:
 
         > cd <MatConvNet>
-
-4.  At MALATB's prompt, issue the commands:
-
         > addpath matlab
         > vl_compilenn
 
@@ -60,12 +56,13 @@ problem by running the complation script again in verbose mode:
 
 Increase the verbosity level to 2 to get even more information.
 
+<a name='gpu'></a>
 ### Compiling the GPU support
 
-To use the GPU code, you will also need a NVIDA GPU card with compute
-capability 2.0 or greater and a copy of the NVIDIA CUDA toolkit
-**corresponding to your MATLAB version** (see the next section for an
-alternative):
+To use the the GPU-accelerated version of the library, you will need a
+NVIDA GPU card with compute capability 2.0 or greater and a copy of
+the NVIDIA CUDA toolkit. The version of the CUDA toolkit should
+ideally **match your MATLAB version**:
 
 | MATLAB    | CUDA toolkit      |
 |-----------|-------------------|
@@ -74,27 +71,32 @@ alternative):
 | R2014b    | 6.5               |
 
 You can also use the `gpuDevice` MATLAB command to find out the
-correct version of the CUDA toolkit. Assuming that there is only a
-single copy of the CUDA toolkit installed in your system and that it
-matches MATLAB's version, simply use:
+correct version of the CUDA toolkit. It is also possible (and
+sometimes necessary) to use a more recent version of CUDA of the one
+officially supported; this is [explained later](#nvcc).
+
+Assuming that there is only a single copy of the CUDA toolkit
+installed in your system and that it matches MATLAB's version, compile
+the library with:
 
     > vl_compilenn('enableGpu', true)
 
 If you have multiple versions of the CUDA toolkit, or if the script
-cannot find the toolkit for any reason, specify the latter
-directly. For example, on a Mac this may look like:
+cannot find the toolkit for any reason, specify the path to the CUDA
+toolkit explicitly. For example, on a Mac this may look like:
 
     > vl_compilenn('enableGpu', true, 'cudaRoot', '/Developer/NVIDIA/CUDA-6.0')
 
 Once more, you can use the `verbose` option to obtain more information
 if needed.
 
+<a name='nvcc'></a>
 ### Using an unsupported CUDA toolkit version
 
-MatConvNet can be compiled to use a more recent version fo the CUDA
-toolkit than the one officially supported. While this may cause
-unforseen issues (although none is known so far), it is necessary to
-use recent libraries such as [CuDNN]().
+MatConvNet can be compiled to use a more recent version of the CUDA
+toolkit than the one officially supported by MATLAB. While this may
+cause unforeseen issues (although none is known so far), it is
+necessary to use [recent libraries such as CuDNN](#cudnn).
 
 Compiling with a newer version of CUDA requires using the
 `cudaMethod,nvcc` option. For example, on a Mac this may look like:
@@ -104,30 +106,44 @@ Compiling with a newer version of CUDA requires using the
                    'cudaMethod', 'nvcc')
 
 Note that at this point MatConvNet MEX files are linked *against the
-system CUDA libraries* instead of the one distributed with
+specified CUDA libraries* instead of the one distributed with
 MATLAB. Hence, in order to use MatConvNet it is now necessary to allow
-MATLAB accessing the corresponding libraries. On Linux and Mac, one
-way to do so is to start MATLAB from the command line (terminal)
-specifying the `LD_LIBRARY_PATH` option. For instance, on a Mac this
-may look like:
+MATLAB accessing these libraries. On Linux and Mac, one way to do so
+is to start MATLAB from the command line (terminal) specifying the
+`LD_LIBRARY_PATH` option. For instance, on a Mac this may look like:
 
     $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-6.5/lib /Applications/MATLAB_R2014b.app/bin/matlab
 
+<a name='cudnn'></a>
 ### Compiling the CuDNN support
 
-MatConvNet supports the NVIDIA CuDNN library for deep learning (and in
-particular their fast convolution code). In order to use it, obtain
-the
+MatConvNet supports the NVIDIA <a
+href='https://developer.nvidia.com/cuDNN'>CuDNN library</a> for deep
+learning (and in particular their fast convolution code). In order to
+use it, obtain the
 [CuDNN Candidate Release 2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library). Note
 that only Candidate Release 2 has been tested so far (Candidate
 Release 1 will *not* work). Make sure that the CUDA toolkit matches
 the one in CuDNN (e.g. 6.5). This often means that the CUDA toolkit
-will *not* match the one used internally by MATLAB.
+will *not* match the one used internally by MATLAB, such that the
+[compilation method](#nvcc) discussed above must be used.
 
 Unpack the CuDNN library binaries and header files in a place of you
 choice. In the rest of the instructions, it will be assumed that this
 is a new directory called `local/` in the `<MatConvNet>` root
-directory.
+directory. For example, the directory structure on a Mac could look
+like:
+
+     COPYING
+     Makefile
+     Makefile.mex
+     ...
+     examples/
+     local/
+       cudnn.h
+       libcudnn.6.5.dylib
+       libcudnn.dylib
+       ...
 
 Use `vl_compilenn` with the `cudnnEnable,true` option to compile the
 library; do not forget to use `cudaMethod,nvcc` as, at it is likely,
@@ -176,17 +192,21 @@ files as part of the `ImreadJpegFlags` option:
 If LibJPEG is installed elsewhere, you would have to replace the paths
 `/opt/local/include` and `/opt/local/lib` accordingly.
 
-### Further examples
+## Further examples
 
 To compile all the features in MatConvNet on a Mac and MATLAB 2014b,
 CUDA toolkit 6.5 and CuDNN Release Candidate 2, use:
 
-    > vl_compilenn('enableGpu', true, ...
-                   'enableCudnn', true, ...
-                   'cudaMethod', 'nvcc', ...
-                   'cudnnRoot', 'local/', ...
+    > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
                    'cudaRoot', '/Developer/NVIDIA/CUDA-6.5', ...
+                   'enableCudnn', true, 'cudnnRoot', 'local/', ...
                    'enableImreadJpeg', true,  ...
                    'imreadJpegCompileFlags', {'-I/opt/local/include'}, ...
                    'imreadJpegLinkFlags', {'-L/opt/local/lib','-ljpeg'}) ;
 
+The equivalent command on Ubuntu Linux would look like:
+
+    > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
+                   'cudaRoot', '/opt/local/cuda-6.5', ...
+                   'enableCudnn', true, 'cudnnRoot', 'local/', ...
+                   'enableImreadJpeg', true) ;

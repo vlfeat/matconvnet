@@ -10,43 +10,41 @@ function vl_compilenn( varargin )
 %       Set to true in order to enable GPU support.
 %
 %    `Verbose`:: 0
-%       Set the verbosity level, 0, 1 or 2.
+%       Set the verbosity level (0, 1 or 2).
 %
 %    `Debug`:: `false`
 %       Set to true to compile the binaries with debugging
 %       information.
 %
-%    `CudaMethod`:: Linux & Mac OSX: `mex`; Windows: `nvcc`
-%       Choose the method used to compile CUDA code. There are two
+%    `CudaMethod`:: Linux & Mac OS X: `mex`; Windows: `nvcc`
+%       Choose the method used to compile the CUDA code. There are two
 %       methods:
 %
 %       * The **`mex`** method uses the MATLAB MEX command with the
 %         configuration file
-%         `<matconvnet_root>/matlab/src/config/mex_CUDA_<arch>.[sh/xml]`
+%         `<MatConvNet>/matlab/src/config/mex_CUDA_<arch>.[sh/xml]`
 %         This configuration file is in XML format since MATLAB 8.3
-%         (R2014a) and is a Shell script for earlier version. This is,
-%         principle, the preferred method as it uses MATLAB only.
+%         (R2014a) and is a Shell script for earlier versions. This
+%         is, principle, the preferred method as it uses the
+%         MATLAB-sanctioned compiler options.
 %
 %       * The **`nvcc`** method calls the NVIDIA CUDA compiler `nvcc`
 %         directly to compile CUDA source code into object files.
 %
-%         In some cases this method allows to use a CUDA toolkit
-%         version that is not the one that officially supported by a
-%         particular MATALB version (see below). It is also the
-%         default method for compilation under Windows and with CuDNN.
-%
-%         With the `nvcc` method, you can specify different CUDA root
-%         directory (e.g. for compiling with different CUDA version)
-%         with the `CudaRoot` option.
+%         This method allows to use a CUDA toolkit version that is not
+%         the one that officially supported by a particular MATALB
+%         version (see below). It is also the default method for
+%         compilation under Windows and with CuDNN.
 %
 %    `CudaRoot`:: guessed automatically
-%       This option specifies the path to the CUDA Devkit to use
-%       for compilation.
+%       This option specifies the path to the CUDA toolkit to use for
+%       compilation.
 %
 %    `EnableImreadJpeg`:: `false`
-%       Set to `true` to compile `vl_imreadjpeg()`. In order to
-%       successfully compile, libjpeg must be in the compiler and linker
-%       search paths, or the options `ImreadJpegCompileFlags` and
+%       Set this option to `true` to compile `vl_imreadjpeg`. This
+%       requires libjpeg to be in the compiler and linker search
+%       paths; unless this is the default in your system (e.g. in
+%       Linux), the options `ImreadJpegCompileFlags` and
 %       'ImreadJpegLinkFlags` must be adjusted appropriately.
 %
 %    `ImreadJpegCompileFlags`:: `{}`
@@ -58,10 +56,10 @@ function vl_compilenn( varargin )
 %       `vl_imreadjpeg`.
 %
 %    `EnableCudnn`:: `false`
-%       Set to `true` to compile CuDNN support into the library.
+%       Set to `true` to compile CuDNN support.
 %
-%    `CudnnRoot`:: `local/`
-%       Directory contained the unpacked binaries and header files of
+%    `CudnnRoot`:: `'local/'`
+%       Directory containing the unpacked binaries and header files of
 %       the CuDNN library.
 %
 %    ## Compiling the CPU code
@@ -115,16 +113,17 @@ function vl_compilenn( varargin )
 %    * GNU/Linux, MATALB R2014a, gcc, CUDA Toolkit 5.5.
 %
 %    Furthermore your GPU card must have ComputeCapability >= 2.0 (see
-%    output of `gpudevice()`) in order to be able to run the GPU code.
+%    output of `gpuDevice()`) in order to be able to run the GPU code.
 %    To change the compute capabilities, for `mex` `CudaMethod` edit
 %    the particular config file.  For the 'nvcc' method, compute
 %    capability is guessed based on the GPUDEVICE output. You can
 %    override it by setting the 'CudaArch' parameter (e.g. in case of
 %    multiple GPUs with various architectures).
 %
-%    See also: `vl_setup()`, `vl_imreadjpeg()`, [Compiling MEX files
-%    containing CUDA
-%    code](http://mathworks.com/help/distcomp/run-mex-functions-containing-cuda-code.html)
+%    See also: [Compliling MatConvNet](../install.md#compiling),
+%    [Compiling MEX files containing CUDA
+%    code](http://mathworks.com/help/distcomp/run-mex-functions-containing-cuda-code.html),
+%    `vl_setup()`, `vl_imreadjpeg()`.
 
 % Copyright (C) 2014 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
