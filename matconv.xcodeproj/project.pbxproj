@@ -84,7 +84,7 @@
 		2D528B9B1A8284C6006EC40A /* data.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = data.cu; path = matlab/src/bits/data.cu; sourceTree = "<group>"; };
 		2D528B9C1A8284C6006EC40A /* data.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = data.hpp; path = matlab/src/bits/data.hpp; sourceTree = "<group>"; };
 		2D528B9D1A8284C6006EC40A /* datamex.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datamex.cpp; path = matlab/src/bits/datamex.cpp; sourceTree = "<group>"; };
-		2D528B9E1A8284C6006EC40A /* datamex.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datamex.cu; path = matlab/src/bits/datamex.cu; sourceTree = "<group>"; };
+		2D528B9E1A8284C6006EC40A /* datamex.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datamex.cu; path = matlab/src/bits/datamex.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D528B9F1A8284C6006EC40A /* datamex.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = datamex.hpp; path = matlab/src/bits/datamex.hpp; sourceTree = "<group>"; };
 		2D528BA41A8284C6006EC40A /* mexutils.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = mexutils.h; path = matlab/src/bits/mexutils.h; sourceTree = "<group>"; };
 		2D528BA91A8284C6006EC40A /* pooling_cpu.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = pooling_cpu.cpp; path = matlab/src/bits/impl/pooling_cpu.cpp; sourceTree = "<group>"; };

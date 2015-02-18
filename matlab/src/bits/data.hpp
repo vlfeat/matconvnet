@@ -22,8 +22,9 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
   typedef int index_t ;
-  enum Device { CPU, GPU }  ;
+  enum Device { CPU = 0, GPU }  ;
   enum Type {
+    vlTypeChar,
     vlTypeFloat,
     vlTypeDouble
   } ;
@@ -51,6 +52,24 @@ namespace vl {
     return (a + b - 1) / b ;
   }
 
+  class Buffer
+  {
+  public:
+    Buffer() ;
+    vl::Error init(Device deviceType, Type dataType, size_t size) ;
+    void clear() ;
+    void * getMemory() ;
+    int getNumReallocations() const ;
+  protected:
+    Device deviceType ;
+    int gpuDeviceId ;
+    Type dataType ;
+    size_t size ;
+    void * memory ;
+    int numReallocations ;
+  } ;
+
+
   /* -----------------------------------------------------------------
    * Context
    * -------------------------------------------------------------- */
@@ -75,19 +94,8 @@ namespace vl {
     std::string const& getLastErrorMessage() const ;
 
   private:
-    void * cpuWorkspace ;
-    size_t cpuWorkspaceSize ;
-
-    void * cpuAllOnes ;
-    size_t cpuAllOnesSize ;
-    Type cpuAllOnesType ;
-
-    void * gpuWorkspace ;
-    size_t gpuWorkspaceSize ;
-
-    void * gpuAllOnes ;
-    size_t gpuAllOnesSize ;
-    Type gpuAllOnesType ;
+    Buffer workspace[2] ;
+    Buffer allOnes[2] ;
 
     Error lastError ;
     std::string lastErrorMessage ;

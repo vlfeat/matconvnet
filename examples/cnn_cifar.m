@@ -1,4 +1,4 @@
-function cnn_cifar(varargin)
+function [net, info] = cnn_cifar(varargin)
 % CNN_CIFAR   Demonstrates MatConvNet on CIFAR
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
@@ -112,12 +112,11 @@ net.layers{end+1} = struct('type', 'softmaxloss') ;
 % --------------------------------------------------------------------
 
 % Take the mean out and make GPU if needed
-imdb.images.data = bsxfun(@minus, imdb.images.data, mean(imdb.images.data,4)) ;
 if opts.train.useGpu
   imdb.images.data = gpuArray(imdb.images.data) ;
 end
 
-[net,info] = cnn_train(net, imdb, @getBatch, ...
+[net, info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
     'val', find(imdb.images.set == 3)) ;
 
@@ -130,6 +129,7 @@ labels = imdb.images.labels(1,batch) ;
 % --------------------------------------------------------------------
 function imdb = getCifarImdb(opts)
 % --------------------------------------------------------------------
+% Preapre the imdb structure, returns image data with mean image subtracted
 unpackPath = fullfile(opts.dataDir, 'cifar-10-batches-mat');
 files = [arrayfun(@(n) sprintf('data_batch_%d.mat', n), 1:5, 'UniformOutput', false) ...
   {'test_batch.mat'}];
@@ -152,8 +152,9 @@ for fi = 1:numel(files)
   sets{fi} = repmat(file_set(fi), size(labels{fi}));
 end
 
+set = cat(2, sets{:});
 data = single(cat(4, data{:}));
-dataMean = mean(data, 4);
+dataMean = mean(data(:,:,:,set == 1), 4);
 data = bsxfun(@minus, data, dataMean);
 
 clNames = load(fullfile(unpackPath, 'batches.meta.mat'));
@@ -161,6 +162,6 @@ clNames = load(fullfile(unpackPath, 'batches.meta.mat'));
 imdb.images.data = data ;
 imdb.images.data_mean = dataMean;
 imdb.images.labels = single(cat(2, labels{:})) ;
-imdb.images.set = cat(2, sets{:});
+imdb.images.set = set;
 imdb.meta.sets = {'train', 'val', 'test'} ;
 imdb.meta.classes = clNames.label_names;

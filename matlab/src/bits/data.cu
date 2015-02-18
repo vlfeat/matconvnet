@@ -3,12 +3,12 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
-All rights reserved.
+ Copyright (C) 2015 Andrea Vedaldi.
+ All rights reserved.
 
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
-*/
+ This file is part of the VLFeat library and is made available under
+ the terms of the BSD license (see the COPYING file).
+ */
 
 #include "data.hpp"
 #include <cassert>
@@ -47,16 +47,136 @@ vl::getErrorMessage(Error error)
   return messages[error] ;
 }
 
+static int
+getTypeSize(Type dataType)
+{
+  switch (dataType) {
+    case vlTypeChar : return sizeof(char) ;
+    case vlTypeFloat : return sizeof(float) ;
+    case vlTypeDouble : return sizeof(double) ;
+    default: abort() ;
+  }
+  return 0 ;
+}
+
+
+/* -------------------------------------------------------------------
+ * Buffer
+ * ---------------------------------------------------------------- */
+
+vl::Buffer::Buffer()
+:
+deviceType(vl::CPU), gpuDeviceId(-1), dataType(vlTypeChar),
+size(0), memory(NULL), numReallocations(0)
+{ }
+
+void*
+vl::Buffer::getMemory()
+{
+  return memory ;
+}
+
+int
+vl::Buffer::getNumReallocations() const
+{
+  return numReallocations ;
+}
+
+vl::Error
+vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
+{
+  bool ok =
+  (deviceType == deviceType_) &
+  (dataType == dataType_) &
+  (size >= size_) ;
+  int gpuDeviceId_ = -1 ;
+#if ENABLE_GPU
+  if (deviceType_ == vl::GPU) {
+    cudaGetDevice(&gpuDeviceId_) ;
+    ok &= (gpuDeviceId == gpuDeviceId_) ;
+#ifndef NDEBUG
+    if (gpuDeviceId != gpuDeviceId_) {
+      std::cout<<"Buffer::device change detected "<<
+      gpuDeviceId<<" --> "<<gpuDeviceId_ <<std::endl ;
+    }
+#endif
+  }
+#endif
+  if (ok) {
+    return vl::vlSuccess ;
+  }
+  clear() ;
+  void * memory_ = NULL ;
+  size_t sizeInBytes = getTypeSize(dataType_) * size_ ;
+  switch (deviceType_) {
+    case vl::CPU:
+      memory_ = malloc(sizeInBytes) ;
+      if (memory_ == NULL) { return vl::vlErrorOutOfMemory ; }
+      break ;
+    case vl::GPU:
+#if ENABLE_GPU
+      cudaError_t error = cudaMalloc(&memory_, sizeInBytes) ;
+      if (error != cudaSuccess) { return vl::vlErrorOutOfMemory ; }
+      break ;
+#else
+      abort() ;
+#endif
+  }
+  deviceType = deviceType_ ;
+  gpuDeviceId = gpuDeviceId_ ;
+  dataType = dataType_ ;
+  size = size_ ;
+  memory = memory_ ;
+  numReallocations ++ ;
+  return vl::vlSuccess ;
+}
+
+void
+vl::Buffer::clear()
+{
+  if (memory == NULL) return  ;
+  switch (deviceType) {
+    case vl::CPU:
+      free(memory) ;
+      break ;
+    case vl::GPU:
+#if ENABLE_GPU
+      int gpuDeviceId_ ;
+      cudaGetDevice(&gpuDeviceId_) ;
+      if (gpuDeviceId != gpuDeviceId_) {
+#ifndef NDEBUG
+        std::cout
+        <<"Buffer::switching to device "<<gpuDeviceId<<" to free buffer."<<std::endl ;
+#endif
+        cudaSetDevice(gpuDeviceId) ;
+      }
+      cudaFree(memory) ;
+      if (gpuDeviceId != gpuDeviceId_) {
+#ifndef NDEBUG
+        std::cout
+        <<"Buffer::switching back to device "<<gpuDeviceId<<std::endl ;
+#endif
+        cudaSetDevice(gpuDeviceId_) ;
+      }
+      break ;
+#else
+      abort() ;
+#endif
+  }
+  deviceType = vl::CPU ;
+  gpuDeviceId = -1 ;
+  dataType= vlTypeChar ;
+  size = 0 ;
+  memory = NULL ;
+}
+
 /* -------------------------------------------------------------------
  * Context
  * ---------------------------------------------------------------- */
 
 vl::Context::Context()
 :
-lastError(vl::vlSuccess), lastErrorMessage(),
-cpuWorkspace(0), cpuWorkspaceSize(0),
-gpuWorkspace(0), gpuWorkspaceSize(0),
-cudaHelper(NULL)
+lastError(vl::vlSuccess), lastErrorMessage(), cudaHelper(NULL)
 { }
 
 vl::CudaHelper &
@@ -99,7 +219,7 @@ vl::Context::~Context()
 }
 
 /* -------------------------------------------------------------------
- * Errors
+ * Context errors
  * ---------------------------------------------------------------- */
 
 void
@@ -169,78 +289,28 @@ vl::Context::getLastErrorMessage() const
 }
 
 /* -------------------------------------------------------------------
- * getWorkspace
+ * Context workspace
  * ---------------------------------------------------------------- */
 
 void *
-vl::Context::getWorkspace(Device device, size_t size)
+vl::Context::getWorkspace(Device deviceType, size_t size)
 {
-  switch (device) {
-    case CPU:
-      if (cpuWorkspaceSize < size) {
-        clearWorkspace(CPU) ;
-        cpuWorkspace = malloc(size) ;
-        if (cpuWorkspace == NULL) {
-          setError(vl::vlErrorOutOfMemory, "getWorkspace") ;
-          return NULL ;
-        }
-        cpuWorkspaceSize = size ;
-      }
-      return cpuWorkspace ;
-
-    case GPU:
-#if ENABLE_GPU
-      if (gpuWorkspaceSize < size) {
-        clearWorkspace(GPU) ;
-        cudaError_t status = cudaMalloc(&gpuWorkspace, size) ;
-        if (status != cudaSuccess) {
-          setError(getCudaHelper().catchCudaError(), "getWorkspace") ;
-          return NULL ;
-        }
-        gpuWorkspaceSize = size ;
-      }
-      return gpuWorkspace ;
-#else
-      assert(false) ;
-      return NULL ;
-#endif
-    default:
-      assert(false) ;
-      return NULL ;
+  vl::Error error = workspace[deviceType].init(deviceType, vlTypeChar, size) ;
+  if (error != vlSuccess) {
+    setError(error, "getWorkspace: ") ;
+    return NULL ;
   }
+  return workspace[deviceType].getMemory() ;
 }
-
-/* -------------------------------------------------------------------
- * clearWorkspace
- * ---------------------------------------------------------------- */
 
 void
-vl::Context::clearWorkspace(Device device)
+vl::Context::clearWorkspace(Device deviceType)
 {
-  switch (device) {
-    case CPU:
-      if (cpuWorkspaceSize > 0) {
-        free(cpuWorkspace) ;
-        cpuWorkspace = NULL ;
-        cpuWorkspaceSize = 0 ;
-      }
-      break ;
-    case GPU:
-#if ENABLE_GPU
-      if (gpuWorkspaceSize > 0) {
-        cudaFree(gpuWorkspace) ;
-        gpuWorkspace = NULL ;
-        gpuWorkspaceSize = 0 ;
-      }
-      break ;
-#else
-      assert(false) ;
-#endif
-  }
+  workspace[deviceType].clear() ;
 }
 
 /* -------------------------------------------------------------------
- * getAllOnes
+ * Context allOnes
  * ---------------------------------------------------------------- */
 
 #if ENABLE_GPU
@@ -253,99 +323,60 @@ setToOnes (type * data, int size)
 #endif
 
 void *
-vl::Context::getAllOnes(Device device, Type type, size_t size)
+vl::Context::getAllOnes(Device deviceType, Type dataType, size_t size)
 {
-  int typeSize = (type == vlTypeFloat) ? sizeof(float) : sizeof(double) ;
+  int n = allOnes[deviceType].getNumReallocations() ;
+  void * data = NULL ;
 
-  switch (device) {
-    default:
-      assert(false) ;
-      lastError = vl::vlErrorUnknown ;
-      return NULL ;
+  // make sure that there is enough space for the buffer
+  vl::Error error = allOnes[deviceType].init(deviceType, vlTypeChar, size) ;
+  if (error != vlSuccess) { goto done ; }
+  data = allOnes[deviceType].getMemory() ;
 
-    case CPU:
-      if (cpuAllOnesSize < size || cpuAllOnesType != type) {
-        clearAllOnes(CPU) ;
-        cpuAllOnes = malloc(size * typeSize) ;
-        if (cpuAllOnes == NULL) {
-          setError(vlErrorOutOfMemory, "getAllOnes") ;
-          return NULL ;
-        }
-        cpuAllOnesType = type ;
-        cpuAllOnesSize = size ;
+  // detect if a new buffer has been allocated and if so initialise it
+  if (n < allOnes[deviceType].getNumReallocations()) {
+    switch (deviceType) {
+      case vl::CPU:
         for (int i = 0 ; i < size ; ++i) {
-          if (type == vlTypeFloat) {
-            ((float*)cpuAllOnes)[i] = 1.0f ;
+          if (dataType == vlTypeFloat) {
+            ((float*)data)[i] = 1.0f ;
           } else {
-            ((double*)cpuAllOnes)[i] = 1.0 ;
+            ((double*)data)[i] = 1.0 ;
           }
         }
-      }
-      return cpuAllOnes ;
+        break ;
 
-    case GPU:
+      case GPU:
 #if ENABLE_GPU
-      if (gpuAllOnesSize < size || gpuAllOnesType != type) {
-        cudaError_t status ;
-        clearAllOnes(GPU) ;
-        status = cudaMalloc(&gpuAllOnes, size * typeSize) ;
-        if (status != cudaSuccess) {
-          setError(getCudaHelper().catchCudaError(), "getAllOnes") ;
-          return NULL ;
-        }
-        gpuAllOnesType = type ;
-        gpuAllOnesSize = size ;
-        if (type == vlTypeFloat) {
+        if (dataType == vlTypeFloat) {
           setToOnes<float>
           <<<divideUpwards(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-          ((float*)gpuAllOnes, size) ;
+          ((float*)data, size) ;
         } else {
           setToOnes<double>
           <<<divideUpwards(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-          ((double*)gpuAllOnes, size) ;
+          ((double*)data, size) ;
         }
-        setError(getCudaHelper().catchCudaError(), "getAllOnes") ;
-        return NULL ;
-      }
-      return gpuAllOnes ;
+        error = getCudaHelper().catchCudaError() ;
+        break ;
 #else
-      assert(false) ;
-      lastError = vl::vlErrorUnknown ;
-      return NULL ;
+        abort() ;
+        return NULL ;
 #endif
+    }
+  }
+done:
+  if (setError(error, "getAllOnes: ") == vl::vlSuccess) {
+    return data ;
+  } else {
+    return NULL ;
   }
 }
 
-/* -------------------------------------------------------------------
- * clearAllOnes
- * ---------------------------------------------------------------- */
-
 void
-vl::Context::clearAllOnes(Device device)
+vl::Context::clearAllOnes(Device deviceType)
 {
-  switch (device) {
-    case CPU:
-      if (cpuAllOnesSize > 0) {
-        free(cpuAllOnes) ;
-        cpuAllOnes = NULL ;
-        cpuAllOnesSize = 0 ;
-      }
-      break ;
-    case GPU:
-#if ENABLE_GPU
-      if (gpuAllOnesSize > 0) {
-        cudaFree(gpuAllOnes) ;
-        gpuAllOnes = NULL ;
-        gpuAllOnesSize = 0 ;
-      }
-      break ;
-#else
-      assert(false) ;
-#endif
-    default:
-      assert(false) ;
-      return ;
-  }
+  allOnes[deviceType].clear() ;
 }
 
 /* -------------------------------------------------------------------
