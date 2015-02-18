@@ -62,6 +62,8 @@ namespace vl {
   protected:
     CudaHelper() ;
     ~CudaHelper() ;
+    void clear() ;
+    void invalidateGpu() ;
     friend class Context ;
 
   private:
@@ -73,7 +75,6 @@ namespace vl {
     bool isCublasInitialized ;
     cublasStatus_t lastCublasError ;
     std::string lastCublasErrorMessage ;
-    int cublasDeviceId ;
 
 #if ENABLE_CUDNN
     // CuDNN
@@ -82,7 +83,6 @@ namespace vl {
     cudnnHandle_t cudnnHandle ;
     bool isCudnnInitialized ;
     bool cudnnEnabled ;
-    int cudnnDeviceId ;
 #endif
   } ;
 }

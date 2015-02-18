@@ -15,29 +15,79 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
+#ifndef NDEBUG
+#include<iostream>
+#endif
+
 using namespace vl ;
 
 /* ---------------------------------------------------------------- */
 /*                                                       MexContext */
 /* ---------------------------------------------------------------- */
 
-/* ---------------------------------------------------------------- */
-/*                                                        initGpu() */
-/* ---------------------------------------------------------------- */
-
 vl::MexContext::MexContext()
   : Context()
 #if ENABLE_GPU
   , gpuIsInitialized(false)
+  , canary(NULL)
 #endif
 { }
 
+vl::MexContext::~MexContext()
+{
 #if ENABLE_GPU
+  // so that ~Context does not crash if MATLAB reset the GPU in the mean time
+  validateGpu() ;
+#endif
+}
+
+/* ---------------------------------------------------------------- */
+/*                                                   GPU management */
+/* ---------------------------------------------------------------- */
+
+#if ENABLE_GPU
+
+// Do noting if the GPU is not initialized, otherwise invalidate it
+// if needed
+vl::Error
+MexContext::validateGpu()
+{
+  if (!gpuIsInitialized) { return vl::vlSuccess ; }
+  gpuIsInitialized = mxGPUIsValidGPUData(canary) ;
+  std::cout<<"MexContext:: validating GPU "<<gpuIsInitialized<<std::endl ;
+  if (!gpuIsInitialized) {
+#ifndef NDEBUG
+    std::cout<<"MexContext:: GPU reset detected; invalidating the GPU state"<<std::endl ;
+#endif
+    mxDestroyArray(canary) ;
+    canary = NULL ;
+    Context::invalidateGpu() ;
+  }
+  return vl::vlSuccess ;
+}
+
+// Initialize GPU; also make sure that it was not reset by MATLAB
 vl::Error
 vl::MexContext::initGpu()
 {
+  std::cout<<"MexContext:: initGpu()"<<std::endl ;
+  if (gpuIsInitialized) {
+    // validate
+    gpuIsInitialized = mxGPUIsValidGPUData(canary) ;
+    std::cout<<"MexContext:: canary alive"<<std::endl ;
+    if (!gpuIsInitialized) {
+      invalidateGpu() ;
+    }
+  }
   if (!gpuIsInitialized) {
+    mwSize dims = 1 ;
     mxInitGPU() ;
+    // todo: can mxGPUCreateGPUArray return NULL ?
+    mxGPUArray * gpuArray =
+    mxGPUCreateGPUArray(1,&dims,mxINT8_CLASS,mxREAL,MX_GPU_DO_NOT_INITIALIZE) ;
+    canary = mxGPUCreateMxArrayOnGPU(gpuArray) ;
+    mexMakeArrayPersistent(canary) ;
+    mxGPUDestroyGPUArray(gpuArray) ;
     gpuIsInitialized = true ;
   }
   return vl::vlSuccess ;

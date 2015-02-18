@@ -29,10 +29,13 @@ namespace vl {
   {
   public:
     MexContext() ;
+    ~MexContext() ;
 
   protected:
 #if ENABLE_GPU
     vl::Error initGpu() ;
+    vl::Error validateGpu() ;
+    mxArray * canary ; // if it breathes, the GPU state is valid
     bool gpuIsInitialized ;
 #endif
 

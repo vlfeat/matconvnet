@@ -33,9 +33,24 @@ vl::CudaHelper::CudaHelper()
 
 vl::CudaHelper::~CudaHelper()
 {
+  clear() ;
+}
+
+void
+vl::CudaHelper::clear()
+{
   clearCublas() ;
 #ifdef ENABLE_CUDNN
   clearCudnn() ;
+#endif
+}
+
+void
+vl::CudaHelper::invalidateGpu()
+{
+  isCublasInitialized = false ;
+#ifdef ENABLE_CUDNN
+  isCudnnInitialized = false ;
 #endif
 }
 
@@ -45,45 +60,25 @@ vl::CudaHelper::~CudaHelper()
 
 #include <iostream>
 
-cublasStatus_t vl::CudaHelper::getCublasHandle(cublasHandle_t* handle)
+cublasStatus_t
+vl::CudaHelper::getCublasHandle(cublasHandle_t* handle)
 {
-  bool ok = isCublasInitialized ;
-  if (ok) {
-    int gpu ;
-    cudaGetDevice(&gpu) ;
-    ok &= (gpu == cublasDeviceId) ;
-    std::cout<<"CudaHelper:: new CUBLAS device detected "<<gpu<<std::endl ;
-  }
-  if (!ok) {
+  if (!isCublasInitialized) {
     clearCublas() ;
     cublasStatus_t stat = cublasCreate(&cublasHandle) ;
     if (stat != CUBLAS_STATUS_SUCCESS) { return stat ; }
     isCublasInitialized = true ;
-    cudaGetDevice(&cublasDeviceId) ;
   }
   *handle = cublasHandle ;
   return CUBLAS_STATUS_SUCCESS ;
 }
 
-void vl::CudaHelper::clearCublas()
+void
+vl::CudaHelper::clearCublas()
 {
   if (!isCublasInitialized) { return ; }
-  int gpu ;
-  cudaGetDevice(&gpu) ;
-  bool needSwitch = (gpu != cublasDeviceId) ;
-  if (needSwitch) {
-    std::cout<<"CudaHelper:: switch to "<<cublasDeviceId<<std::endl ;
-    cudaError_t status = cudaSetDevice(cublasDeviceId) ;
-    std::cout<<"CudaHelper:: switched to "<<cublasDeviceId<<" "<<status<<std::endl ;
-  }
-  std::cout<<"CudaHelper:: destroying "<<std::endl ;
-  cublasDestroy(cublasHandle) ;  std::cout<<"CudaHelper:: destroyed "<<std::endl ;
+  cublasDestroy(cublasHandle) ;
   isCublasInitialized = false ;
-  cublasDeviceId = -1 ;
-  if (needSwitch) {
-    std::cout<<"CudaHelper: switch back to "<<gpu<<std::endl ;
-    cudaSetDevice(gpu) ;
-  }
 }
 
 /* -------------------------------------------------------------------
@@ -94,18 +89,11 @@ void vl::CudaHelper::clearCublas()
 cudnnStatus_t
 vl::CudaHelper::getCudnnHandle(cudnnHandle_t* handle)
 {
-  bool ok = isCudnnInitialized ;
-  if (ok) {
-    int gpu ;
-    cudaGetDevice(&gpu) ;
-    ok &= (gpu == cudnnDeviceId) ;
-  }
-  if (!ok) {
+  if (!isCudnnInitialized) {
     clearCudnn() ;
     cudnnStatus_t stat = cudnnCreate(&cudnnHandle) ;
     if (stat != CUDNN_STATUS_SUCCESS) { return stat ; }
     isCudnnInitialized = true ;
-    cudaGetDevice(&cudnnDeviceId) ;
   }
   *handle = cudnnHandle ;
   return CUDNN_STATUS_SUCCESS ;
@@ -115,14 +103,8 @@ void
 vl::CudaHelper::clearCudnn()
 {
   if (!isCudnnInitialized) { return ; }
-  int gpu ;
-  cudaGetDevice(&gpu) ;
-  bool needSwitch = (gpu != cudnnDeviceId) ;
-  if (needSwitch) { cudaSetDevice(cudnnDeviceId) ; }
   cudnnDestroy(cudnnHandle) ;
   isCudnnInitialized = false ;
-  cudnnDeviceId = -1 ;
-  if (needSwitch) { cudaSetDevice(gpu) ; }
 }
 
 bool

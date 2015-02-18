@@ -43,7 +43,7 @@ vl::MexContext context ;
  */
 void atExit()
 {
-  context.reset() ;
+  context.clear() ;
 }
 
 /* ---------------------------------------------------------------- */

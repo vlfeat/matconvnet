@@ -52,23 +52,24 @@ namespace vl {
     return (a + b - 1) / b ;
   }
 
-  class Buffer
-  {
-  public:
-    Buffer() ;
-    vl::Error init(Device deviceType, Type dataType, size_t size) ;
-    void clear() ;
-    void * getMemory() ;
-    int getNumReallocations() const ;
-  protected:
-    Device deviceType ;
-    int gpuDeviceId ;
-    Type dataType ;
-    size_t size ;
-    void * memory ;
-    int numReallocations ;
-  } ;
-
+  namespace impl {
+    class Buffer
+    {
+    public:
+      Buffer() ;
+      vl::Error init(Device deviceType, Type dataType, size_t size) ;
+      void * getMemory() ;
+      int getNumReallocations() const ;
+      void clear() ;
+      void invalidateGpu() ;
+    protected:
+      Device deviceType ;
+      Type dataType ;
+      size_t size ;
+      void * memory ;
+      int numReallocations ;
+    } ;
+  }
 
   /* -----------------------------------------------------------------
    * Context
@@ -80,12 +81,14 @@ namespace vl {
     Context() ;
     ~Context() ;
 
-    void reset() ;
     void * getWorkspace(Device device, size_t size) ;
     void clearWorkspace(Device device) ;
     void * getAllOnes(Device device, Type type, size_t size) ;
     void clearAllOnes(Device device) ;
     CudaHelper& getCudaHelper() ;
+
+    void clear() ; // do a reset
+    void invalidateGpu() ; // drop CUDA memory and handles
 
     vl::Error passError(vl::Error error, char const * message = NULL) ;
     vl::Error setError(vl::Error error, char const * message = NULL) ;
@@ -94,8 +97,8 @@ namespace vl {
     std::string const& getLastErrorMessage() const ;
 
   private:
-    Buffer workspace[2] ;
-    Buffer allOnes[2] ;
+    impl::Buffer workspace[2] ;
+    impl::Buffer allOnes[2] ;
 
     Error lastError ;
     std::string lastErrorMessage ;

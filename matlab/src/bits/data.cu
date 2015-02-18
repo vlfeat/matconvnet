@@ -65,28 +65,28 @@ getTypeSize(Type dataType)
  * Buffer
  * ---------------------------------------------------------------- */
 
-vl::Buffer::Buffer()
+vl::impl::Buffer::Buffer()
 :
-deviceType(vl::CPU), gpuDeviceId(-1), dataType(vlTypeChar),
+deviceType(vl::CPU), dataType(vlTypeChar),
 size(0), memory(NULL), numReallocations(0)
-{ 
+{
   mexPrintf("Buffer()\n") ;
 }
 
 void*
-vl::Buffer::getMemory()
+vl::impl::Buffer::getMemory()
 {
   return memory ;
 }
 
 int
-vl::Buffer::getNumReallocations() const
+vl::impl::Buffer::getNumReallocations() const
 {
   return numReallocations ;
 }
 
 vl::Error
-vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
+vl::impl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
 {
   mexPrintf("Buffer init on %d %d %d\n",deviceType_, dataType_, size_) ;
   std::cerr<<"Buffer::init on "<<deviceType_<<" "<<dataType_<<" " <<size_<<std::endl<<std::flush ;
@@ -94,23 +94,7 @@ vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
   (deviceType == deviceType_) &
   (dataType == dataType_) &
   (size >= size_) ;
-  int gpuDeviceId_ = -1 ;
-#if ENABLE_GPU
-  if (deviceType_ == vl::GPU) {
-    cudaGetDevice(&gpuDeviceId_) ;
-    std::cout<<"Buffer::device "<<gpuDeviceId_<<std::endl ;
-    ok &= (gpuDeviceId == gpuDeviceId_) ;
-#ifndef NDEBUG
-    if (gpuDeviceId != gpuDeviceId_) {
-      std::cout<<"Buffer::device change detected "<<
-      gpuDeviceId<<" --> "<<gpuDeviceId_ <<std::endl ;
-    }
-#endif
-  }
-#endif
-  if (ok) {
-    return vl::vlSuccess ;
-  }
+  if (ok) { return vl::vlSuccess ; }
   clear() ;
   void * memory_ = NULL ;
   size_t sizeInBytes = getTypeSize(dataType_) * size_ ;
@@ -129,7 +113,6 @@ vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
 #endif
   }
   deviceType = deviceType_ ;
-  gpuDeviceId = gpuDeviceId_ ;
   dataType = dataType_ ;
   size = size_ ;
   memory = memory_ ;
@@ -138,42 +121,35 @@ vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
 }
 
 void
-vl::Buffer::clear()
+vl::impl::Buffer::clear()
 {
-  if (memory == NULL) return  ;
-  switch (deviceType) {
-    case vl::CPU:
-      free(memory) ;
-      break ;
-    case vl::GPU:
+  if (memory != NULL) {
+    switch (deviceType) {
+      case vl::CPU:
+        free(memory) ;
+        break ;
+      case vl::GPU:
 #if ENABLE_GPU
-      int gpuDeviceId_ ;
-      cudaGetDevice(&gpuDeviceId_) ;
-      if (gpuDeviceId != gpuDeviceId_) {
-#ifndef NDEBUG
-        std::cout
-        <<"Buffer::switching to device "<<gpuDeviceId<<" to free buffer."<<std::endl ;
-#endif
-        cudaSetDevice(gpuDeviceId) ;
-      }
-      cudaFree(memory) ;
-      if (gpuDeviceId != gpuDeviceId_) {
-#ifndef NDEBUG
-        std::cout
-        <<"Buffer::switching back to device "<<gpuDeviceId<<std::endl ;
-#endif
-        cudaSetDevice(gpuDeviceId_) ;
-      }
-      break ;
+        cudaFree(memory) ;
+        break ;
 #else
-      abort() ;
+        abort() ;
 #endif
+    }
   }
   deviceType = vl::CPU ;
-  gpuDeviceId = -1 ;
   dataType= vlTypeChar ;
   size = 0 ;
   memory = NULL ;
+}
+
+void
+vl::impl::Buffer::invalidateGpu()
+{
+  if (deviceType == vl::GPU) {
+    memory = NULL ;
+    clear() ;
+  }
 }
 
 /* -------------------------------------------------------------------
@@ -184,9 +160,10 @@ vl::Context::Context()
 :
 lastError(vl::vlSuccess), lastErrorMessage(), cudaHelper(NULL)
 {
-  mexPrintf("Context()\n") ;
-  std::cout<<"Context()"<<std::endl<<std::flush ;
- }
+#if NDEBUG
+  std::cout<<"Context()"<<std::endl ;
+#endif
+}
 
 vl::CudaHelper &
 vl::Context::getCudaHelper()
@@ -201,7 +178,7 @@ vl::Context::getCudaHelper()
 #endif
 }
 
-void vl::Context::reset()
+void vl::Context::clear()
 {
   resetLastError() ;
   clearWorkspace(CPU) ;
@@ -211,7 +188,7 @@ void vl::Context::reset()
   clearAllOnes(GPU) ;
   if (cudaHelper) {
     delete cudaHelper ;
-    cudaHelper = 0 ;
+    cudaHelper = NULL ;
   }
 #endif
 #ifndef NDEBUG
@@ -219,9 +196,17 @@ void vl::Context::reset()
 #endif
 }
 
+void
+vl::Context::invalidateGpu()
+{
+  workspace[vl::GPU].invalidateGpu() ;
+  allOnes[vl::GPU].invalidateGpu() ;
+  getCudaHelper().invalidateGpu() ;
+}
+
 vl::Context::~Context()
 {
-  reset() ;
+  clear() ;
 #ifndef NDEBUG
   std::cout<<"Context::~Context()"<<std::endl ;
 #endif
