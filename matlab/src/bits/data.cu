@@ -59,6 +59,7 @@ getTypeSize(Type dataType)
   return 0 ;
 }
 
+#include <mex.h>
 
 /* -------------------------------------------------------------------
  * Buffer
@@ -68,7 +69,9 @@ vl::Buffer::Buffer()
 :
 deviceType(vl::CPU), gpuDeviceId(-1), dataType(vlTypeChar),
 size(0), memory(NULL), numReallocations(0)
-{ }
+{ 
+  mexPrintf("Buffer()\n") ;
+}
 
 void*
 vl::Buffer::getMemory()
@@ -85,6 +88,8 @@ vl::Buffer::getNumReallocations() const
 vl::Error
 vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
 {
+  mexPrintf("Buffer init on %d %d %d\n",deviceType_, dataType_, size_) ;
+  std::cerr<<"Buffer::init on "<<deviceType_<<" "<<dataType_<<" " <<size_<<std::endl<<std::flush ;
   bool ok =
   (deviceType == deviceType_) &
   (dataType == dataType_) &
@@ -93,6 +98,7 @@ vl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
 #if ENABLE_GPU
   if (deviceType_ == vl::GPU) {
     cudaGetDevice(&gpuDeviceId_) ;
+    std::cout<<"Buffer::device "<<gpuDeviceId_<<std::endl ;
     ok &= (gpuDeviceId == gpuDeviceId_) ;
 #ifndef NDEBUG
     if (gpuDeviceId != gpuDeviceId_) {
@@ -177,7 +183,10 @@ vl::Buffer::clear()
 vl::Context::Context()
 :
 lastError(vl::vlSuccess), lastErrorMessage(), cudaHelper(NULL)
-{ }
+{
+  mexPrintf("Context()\n") ;
+  std::cout<<"Context()"<<std::endl<<std::flush ;
+ }
 
 vl::CudaHelper &
 vl::Context::getCudaHelper()

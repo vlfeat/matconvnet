@@ -41,6 +41,7 @@ namespace vl {
 
     // CuBLAS support
     cublasStatus_t getCublasHandle(cublasHandle_t* handle) ;
+    void clearCublas() ;
     cublasStatus_t getLastCublasError() const ;
     std::string const& getLastCublasErrorMessage() const ;
     vl::Error catchCublasError(cublasStatus_t status,
@@ -49,6 +50,7 @@ namespace vl {
 #if ENABLE_CUDNN
     // CuDNN support
     cudnnStatus_t getCudnnHandle(cudnnHandle_t* handle) ;
+    void clearCudnn() ;
     bool getCudnnEnabled() const ;
     void setCudnnEnabled(bool active) ;
     cudnnStatus_t getLastCudnnError() const ;
@@ -71,6 +73,7 @@ namespace vl {
     bool isCublasInitialized ;
     cublasStatus_t lastCublasError ;
     std::string lastCublasErrorMessage ;
+    int cublasDeviceId ;
 
 #if ENABLE_CUDNN
     // CuDNN
@@ -79,9 +82,8 @@ namespace vl {
     cudnnHandle_t cudnnHandle ;
     bool isCudnnInitialized ;
     bool cudnnEnabled ;
+    int cudnnDeviceId ;
 #endif
-
-
   } ;
 }
 #endif /* defined(__vl__datacu__) */
