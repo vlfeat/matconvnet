@@ -54,7 +54,6 @@ MexContext::validateGpu()
 {
   if (!gpuIsInitialized) { return vl::vlSuccess ; }
   gpuIsInitialized = mxGPUIsValidGPUData(canary) ;
-  std::cout<<"MexContext:: validating GPU "<<gpuIsInitialized<<std::endl ;
   if (!gpuIsInitialized) {
 #ifndef NDEBUG
     std::cout<<"MexContext:: GPU reset detected; invalidating the GPU state"<<std::endl ;
@@ -70,15 +69,7 @@ MexContext::validateGpu()
 vl::Error
 vl::MexContext::initGpu()
 {
-  std::cout<<"MexContext:: initGpu()"<<std::endl ;
-  if (gpuIsInitialized) {
-    // validate
-    gpuIsInitialized = mxGPUIsValidGPUData(canary) ;
-    std::cout<<"MexContext:: canary alive"<<std::endl ;
-    if (!gpuIsInitialized) {
-      invalidateGpu() ;
-    }
-  }
+  validateGpu() ;
   if (!gpuIsInitialized) {
     mwSize dims = 1 ;
     mxInitGPU() ;

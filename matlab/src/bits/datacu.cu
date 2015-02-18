@@ -18,6 +18,10 @@ the terms of the BSD license (see the COPYING file).
 #include "impl/blashelper.hpp"
 #include <cublas_v2.h>
 
+#ifndef NDEBUG
+#include <iostream>
+#endif
+
 using namespace vl ;
 
 /* -------------------------------------------------------------------
@@ -48,6 +52,9 @@ vl::CudaHelper::clear()
 void
 vl::CudaHelper::invalidateGpu()
 {
+#ifndef NDEBUG
+  std::cout<<"CudaHelper::invalidateGpu()"<<std::endl ;
+#endif
   isCublasInitialized = false ;
 #ifdef ENABLE_CUDNN
   isCudnnInitialized = false ;
@@ -57,8 +64,6 @@ vl::CudaHelper::invalidateGpu()
 /* -------------------------------------------------------------------
  * getCublasHandle
  * ---------------------------------------------------------------- */
-
-#include <iostream>
 
 cublasStatus_t
 vl::CudaHelper::getCublasHandle(cublasHandle_t* handle)
