@@ -5,7 +5,7 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
-> **New:** We have added CuDNN support in beta9.
+> **New:** We have added [CuDNN](install.md#cudnn) support in 1.0-beta9.
 >
 > **New:** There is a new introductory <a
 > href='http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html'>VGG
@@ -14,13 +14,17 @@ example CNNs are included to classify and encode images.
 *   **Obtaining MatConvNet**
     - Tarball for [version 1.0-beta9](download/matconvnet-1.0-beta9.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
-    - [PDF manual](matconvnet-manual.pdf) (see also MATLAB inline help).
+
+*   **Documentation**
+    - [PDF manual](matconvnet-manual.pdf)
+    - [MATLAB functions](functions.md)
 
 *   **Getting started**
     - [Installation instructions](install)
     - [Using pre-trained models](pretrained)
     - [Training your own models](training)
     - [Working with GPU accelerated code](gpu)
+    - [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html)
 
 *   **Other information**
     - [Changes](about/#changes)
