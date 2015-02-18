@@ -42,7 +42,7 @@ else
   assert(isequal(sz_, [sz(1) sz(2) 1 sz(4)])) ;
 end
 
-% convert to indeces
+% convert to indices
 c_ = 0:numel(c)-1 ;
 c_ = 1 + ...
   mod(c_, sz(1)*sz(2)) + ...

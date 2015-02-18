@@ -1,4 +1,4 @@
-% VL_NNPOOL  CNN poolinng
+% VL_NNPOOL  CNN pooling
 %    Y = VL_NNPOOL(X, POOL) applies the pooling operator to all
 %    channels of the data X using a square filter of size POOL. X is a
 %    SINGLE array of dimension H x W x D x N where (H,W) are the
@@ -9,7 +9,7 @@
 %    height POOLY and width POOLX.
 %
 %    DZDX = VL_NNPOOL(X, POOL, DZDY) computes the derivatives of
-%    the nework output Z w.r.t. the data X given the derivative DZDY
+%    the network output Z w.r.t. the data X given the derivative DZDY
 %    w.r.t the max-pooling output Y.
 %
 %    VL_NNCONV(..., 'option', value, ...) takes the following options:
@@ -37,7 +37,7 @@
 %      1 <= POOLX <= WIDTH + (PADLEFT + PADRIGHT).
 %
 %    The output a is a SINGLE array of dimension YH x YW x K x N of N
-%    images with K challens and size:
+%    images with K channels and size:
 %
 %      YH = floor((H + (PADTOP+PADBOTTOM) - POOLY)/STRIDEY) + 1,
 %      YW = floor((W + (PADLEFT+PADRIGHT) - POOLX)/STRIDEX) + 1.

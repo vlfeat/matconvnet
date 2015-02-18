@@ -6,10 +6,10 @@
 %    biases as well as performing downsampling and padding as explained
 %    below.
 %
-%    [DXDY, DXDF, DXDB] = VL_NNCONV(X, F, B, DZDY) computes the
-%    derivatives of the nework output Z w.r.t. the data X and
+%    [DZDX, DZDF, DZDB] = VL_NNCONV(X, F, B, DZDY) computes the
+%    derivatives of the network output Z w.r.t. the data X and
 %    parameters F, B given the derivative w.r.t the output Y. If B is
-%    the empty matrix, then DXDB is also empty.
+%    the empty matrix, then DZDB is also empty.
 %
 %    X is a SINGLE array of dimension H x W x D x N where (H,W) are
 %    the height and width of the map stack, D is the image depth
@@ -44,14 +44,15 @@
 %      1 <= FW <= W + 2*(PADLEFT+PADRIGHT).
 %
 %    The output a is a SINGLE array of dimension YH x YW x K x N of
-%    N images with K challens and size:
+%    N images with K channels and size:
 %
 %      YH = floor((H + (PADTOP+PADBOTTOM) - FH)/STRIDEY) + 1,
 %      YW = floor((W + (PADLEFT+PADRIGHT) - FW)/STRIDEX) + 1.
 %
 %    The derivative DZDY has the same dimension of the output Y,
-%    the derivative DZDX has the same dimension as the input X, and
-%    the derivative DZDF has the the same dimenson as F.
+%    the derivative DZDX has the same dimension as the input X,
+%    the derivative DZDF has the the same dimenson as F, and
+%    the derivative DZDB has the the same dimenson as B.
 
 % Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
 % All rights reserved.

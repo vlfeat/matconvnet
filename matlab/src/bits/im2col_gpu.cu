@@ -232,9 +232,9 @@ __global__ void col2im_gpu_kernel(T* data,
      u(x) = x_data - (x * strideX - padLeft)
      v(y) = y_data - (y * strideY - padRight)
      
-     Now we can comptute the indeces of the elements of stacked[] to accumulate:
+     Now we can compute the indices of the elements of stacked[] to accumulate:
      
-     stackedIndex(x,y) = 
+     stackedIndex(x,y) =
          (y * numPatchesX + x) +                 // column offset
          ((z * windowHeight + v(y)) * windowWidth + u(x)) *  // within patch offset
             (numPatchesX*numPatchesY)
