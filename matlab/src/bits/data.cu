@@ -329,7 +329,7 @@ vl::Context::getAllOnes(Device deviceType, Type dataType, size_t size)
   void * data = NULL ;
 
   // make sure that there is enough space for the buffer
-  vl::Error error = allOnes[deviceType].init(deviceType, vlTypeChar, size) ;
+  vl::Error error = allOnes[deviceType].init(deviceType, dataType, size) ;
   if (error != vlSuccess) { goto done ; }
   data = allOnes[deviceType].getMemory() ;
 
