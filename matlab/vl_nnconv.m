@@ -52,8 +52,17 @@
 %    The derivative DZDY has the same dimension of the output Y,
 %    the derivative DZDX has the same dimension as the input X, and
 %    the derivative DZDF has the the same dimenson as F.
+%
+%    ## CUDNN SUPPORT
+%
+%    If compiled in, the function will use cuDNN convolution routines
+%    (with the exception of asymmetric left-right or top-bottom
+%    padding and a few corner cases such as 1x1 filters in Linux that
+%    trigger current bugs in cuDNN). You can use the 'NoCuDNN' option
+%    to disable cuDNN or 'cuDNN' to activate it back again (the choice
+%    sticks until MATLAB purges the MEX files for any reason).
 
-% Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
+% Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

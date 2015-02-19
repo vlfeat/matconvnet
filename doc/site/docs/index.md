@@ -5,7 +5,9 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
-> **New:** We have added [CuDNN](install.md#cudnn) support in 1.0-beta9.
+> **New:** We have added [cuDNN](install.md#cudnn) support in
+> 1.0-beta9. This may have significant benefit in speed and memory
+> consupmtion.
 >
 > **New:** There is a new introductory <a
 > href='http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html'>VGG
@@ -24,7 +26,8 @@ example CNNs are included to classify and encode images.
     - [Using pre-trained models](pretrained)
     - [Training your own models](training)
     - [Working with GPU accelerated code](gpu)
-    - [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html)
+    - [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html),
+      [slides](http://www.robots.ox.ac.uk/~vedaldi/assets/teach/2015/vedaldi15aims-bigdata-lecture-4-deep-learning-handout.pdf)
 
 *   **Other information**
     - [Changes](about/#changes)

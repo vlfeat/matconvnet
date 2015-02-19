@@ -96,7 +96,7 @@ if needed.
 MatConvNet can be compiled to use a more recent version of the CUDA
 toolkit than the one officially supported by MATLAB. While this may
 cause unforeseen issues (although none is known so far), it is
-necessary to use [recent libraries such as CuDNN](#cudnn).
+necessary to use [recent libraries such as cuDNN](#cudnn).
 
 Compiling with a newer version of CUDA requires using the
 `cudaMethod,nvcc` option. For example, on a Mac this may look like:
@@ -114,25 +114,29 @@ is to start MATLAB from the command line (terminal) specifying the
 
     $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-6.5/lib /Applications/MATLAB_R2014b.app/bin/matlab
 
+On Windows, chances are that the CUDA libraries are already visible to
+MATLAB so that nothing else needs to be done.
+
 <a name='cudnn'></a>
-### Compiling the CuDNN support
+### Compiling the cuDNN support
 
 MatConvNet supports the NVIDIA <a
-href='https://developer.nvidia.com/cuDNN'>CuDNN library</a> for deep
+href='https://developer.nvidia.com/cuDNN'>cuDNN library</a> for deep
 learning (and in particular their fast convolution code). In order to
 use it, obtain the
-[CuDNN Candidate Release 2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library). Note
+[cuDNN Candidate Release 2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library). Note
 that only Candidate Release 2 has been tested so far (Candidate
 Release 1 will *not* work). Make sure that the CUDA toolkit matches
-the one in CuDNN (e.g. 6.5). This often means that the CUDA toolkit
+the one in cuDNN (e.g. 6.5). This often means that the CUDA toolkit
 will *not* match the one used internally by MATLAB, such that the
 [compilation method](#nvcc) discussed above must be used.
 
-Unpack the CuDNN library binaries and header files in a place of you
-choice. In the rest of the instructions, it will be assumed that this
-is a new directory called `local/` in the `<MatConvNet>` root
-directory. For example, the directory structure on a Mac could look
-like:
+Unpack the cuDNN library binaries and header files in a place
+`<Cudnn>` of you choice. In the rest of the instructions, it will be
+assumed that this is a new directory called `local/` in the
+`<MatConvNet>` root directory,
+(i.e. `<Cudnn>`=`<MatConvNet>/local`). For example, the directory
+structure on a Mac could look like:
 
      COPYING
      Makefile
@@ -156,13 +160,16 @@ example, on Mac this may look like:
                    'enableCudnn', 'true', ...
                    'cudnnRoot', 'local/') ;
 
-MatConvNet is now compiled with CuDNN support. When starting MATLAB,
-however, do not forget to point it to the paths of both the CUDA
-libraries as well as the CuDNN ones. On a Mac terminal, this may look
-like:
+MatConvNet is now compiled with cuDNN support. When starting MATLAB,
+however, do not forget to point it to the paths of both the CUDA and
+cuDNN libraries. On a Mac terminal, this may look like:
 
     $ cd <MatConvNet>
     $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-6.5/lib:local /Applications/MATLAB_R2014b.app/bin/matlab
+
+On Windows, copy the CUDNN DLL file `<Cudnn>/cudnn*dll` (or from
+wherever you unpacked cuDNN) into the `<MatConvNet>/matlab/mex`
+directroy.
 
 ### Compiling `vl_imreadjpeg`
 <a name='jpeg'></a>
@@ -195,7 +202,7 @@ If LibJPEG is installed elsewhere, you would have to replace the paths
 ## Further examples
 
 To compile all the features in MatConvNet on a Mac and MATLAB 2014b,
-CUDA toolkit 6.5 and CuDNN Release Candidate 2, use:
+CUDA toolkit 6.5 and cuDNN Release Candidate 2, use:
 
     > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
                    'cudaRoot', '/Developer/NVIDIA/CUDA-6.5', ...
