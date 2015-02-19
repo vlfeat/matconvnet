@@ -188,9 +188,11 @@ void vl::Context::clear()
 void
 vl::Context::invalidateGpu()
 {
+#if ENABLE_GPU
   workspace[vl::GPU].invalidateGpu() ;
   allOnes[vl::GPU].invalidateGpu() ;
   getCudaHelper().invalidateGpu() ;
+#endif
 }
 
 vl::Context::~Context()
