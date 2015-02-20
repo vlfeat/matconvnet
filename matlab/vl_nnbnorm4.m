@@ -1,4 +1,4 @@
-function [y,dzdg,dzdb] = vl_nnbnorm3(x,g,b,varargin)
+function [y,dzdg,dzdb] = vl_nnbnorm4(x,g,b,varargin)
 % VL_NNBNORM  CNN batch normalisation
 
 % Copyright (C) 2015 Karel Lenc
@@ -19,10 +19,8 @@ else
   opts = vl_argparse(opts, varargin) ;
 end
 
+one = ones(1,1,'like',x);
 eps = opts.epsilon;
-if isa(x, 'gpuArray')
-  eps = gpuArray(opts.eps);
-end
 
 x_sz = size(x);
 % Create an array of size #channels x #samples
@@ -33,7 +31,7 @@ x = reshape(x, x_sz(3), []);
 u = mean(x, 2);
 v = var(x, 0, 2);
 
-v_nf = sqrt(v + eps); % variance normalisation factor
+v_nf = sqrt(v + one*eps); % variance normalisation factor
 x_mu = bsxfun(@minus, x, u);
 x_n = bsxfun(@times, x_mu, 1./v_nf);
 
@@ -41,30 +39,17 @@ if ~backMode
   y = bsxfun(@times, x_n, g);
   y = bsxfun(@plus, y, b);
 else
-  
   dzdy = permute(dzdy, [3 1 2 4]);
   dzdy = reshape(dzdy, x_sz(3), []);
   
-  m = size(x, 2);
-  delta = eye(m, m, 'like', x);
-  dudx = 1./m;
-  dvdx = 2./(m - 1) .* x_mu * (delta - dudx);
+  m = one * size(x, 2);
+  dvdx = 2./(m - one) .* bsxfun(@minus, x_mu, one ./ m * sum(x_mu,2));
   
-  dzdx = zeros(size(x), 'like', x);
-  delta = (eye(m, m, 'like', x) - dudx) ;
+  v_nf_d = -0.5 * (v + one*eps) .^ (-3/2);
   
-  for ch = 1:size(x,1)
-    v_nf_d = -0.5 * (v(ch) + eps) .^ (-3/2);
-    
-    %x_mu_j = x_mu(ch, :);
-    %dvdx_i = dvdx(ch, :);
-    %dy_jdx_i = delta ./ v_nf(ch) + v_nf_d * x_mu_j' * dvdx_i;
-    %dzdx(ch, :) = dzdy(ch,:) * dy_jdx_i;
-    
-    dzdx(ch, :) = dzdy(ch,:) * delta ./ v_nf(ch) + v_nf_d * (dzdy(ch,:) * x_mu(ch, :)') * dvdx(ch, :);    
-  end
-
-  y = dzdx;
+  dzdx = bsxfun(@times, bsxfun(@minus, dzdy, one ./ m * sum(dzdy,2)), 1./v_nf(:));
+  dzdx = dzdx + bsxfun(@times, bsxfun(@times, dvdx, sum(dzdy .* x_mu, 2)), v_nf_d);
+  y = bsxfun(@times, dzdx, g);
 
   dzdg = sum(dzdy .* x_n, 2);
   dzdb = sum(dzdy, 2);

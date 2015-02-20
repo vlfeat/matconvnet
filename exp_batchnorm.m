@@ -2,37 +2,46 @@
 
 run ./matlab/vl_setupnn.m
 addpath('examples');
-
+%%
 %net_chain = load('data/models/imagenet-caffe-alex.mat');
 
 imdb = load('../dunravel/data/imdb_imagenet.mat');
 
 %%
+
 nd = 512;
 ns = 256;
-r = 20;
-c = 20;
+r = 30;
+c = 30;
+
 dtype = 'single'; range = 10;
 %dtype = 'double'; range = 1;
+grandn = @(q, varargin) gpuArray.randn(varargin{:});
+
 
 q = RandStream('mt19937ar','Seed',1);
-x = randn(q, r, c, nd, 10, dtype) ;
-g = ones(nd, 1);
-b = zeros(nd, 1);
+x = grandn(q, r, c, nd, ns, dtype) ;
+g = grandn(q, nd, 1);
+b = grandn(q, nd, 1);
 
+fprintf('\n');
 tic
-[y] = vl_nnbnorm3(x,g,b) ;
+[y] = vl_nnbnorm4(x,g,b) ;
+toc
+
+dzdy = grandn(q, size(y), dtype) ;
+tic
+[dzdx,dzdg,dzdb] = vl_nnbnorm4(x,g,b,dzdy) ;
 toc
 %
+%tic
+%[dzdx2,dzdg,dzdb] = vl_nnbnorm3(x,g,b,dzdy) ;
+%toc
 
-dzdy = randn(q, size(y), dtype) ;
-tic
-[dzdx,dzdg,dzdb] = vl_nnbnorm3(x,g,b,dzdy) ;
-toc
 %%
-vl_testder(@(x) vl_nnbnorm3(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
-vl_testder(@(g) vl_nnbnorm3(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
-vl_testder(@(b) vl_nnbnorm3(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
+vl_testder(@(x) vl_nnbnorm4(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
+vl_testder(@(g) vl_nnbnorm4(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
+vl_testder(@(b) vl_nnbnorm4(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
 
 %%
 nd = 100;
