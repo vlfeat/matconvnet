@@ -19,7 +19,7 @@ switch destination
 end
 for l=1:numel(net.layers)
   switch net.layers{l}.type
-    case 'conv'
+    case {'conv', 'bnorm'}
       for f = {'filters', 'biases', 'filtersMomentum', 'biasesMomentum'}
         f = char(f) ;
         if isfield(net.layers{l}, f)

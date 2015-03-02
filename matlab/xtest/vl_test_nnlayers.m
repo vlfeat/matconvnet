@@ -27,7 +27,7 @@ end
 rng(1) ;
 
 if nargin < 2
-  tests = 1:9 ;
+  tests = 1:10 ;
 end
 
 for l = tests
@@ -408,5 +408,36 @@ for l = tests
       dzdy = grandn(size(y),'single') ;
       dzdx = vl_nndropout(x,dzdy,'mask',mask) ;
       vl_testder(@(x) vl_nndropout(x,'mask',mask), x, dzdy, dzdx, 1e-3*range) ;
+      
+    case 10
+      disp('testing sigmoid') ;
+      x = randn(5,5,1,1,'single') ;
+      x(:) = randperm(numel(x))' - round(numel(x)/2) ;
+      x(x==0)=1 ;
+      if gpu, x = gpuArray(x) ; end
+      y = vl_nnsigmoid(x) ;
+      dzdy = grandn(size(y),'single') ;
+      dzdx = vl_nnsigmoid(x,dzdy) ;
+      vl_testder(@(x) vl_nnsigmoid(x), x, dzdy, dzdx) ;
+      
+    case 11
+      disp('testing bnorm');
+      nd = 512; ns = 256; r = 30; c = 30;
+      
+      dtype = 'single'; range = 10;
+      %dtype = 'double'; range = 1;
+
+      x = grandn(q, r, c, nd, ns, dtype) ;
+      g = grandn(q, nd, 1);
+      b = grandn(q, nd, 1);
+      
+      [y] = vl_nnbnorm(x,g,b) ;
+      
+      dzdy = grandn(q, size(y), dtype) ;
+      [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy) ;
+      
+      vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
+      vl_testder(@(g) vl_nnbnorm(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
+      vl_testder(@(b) vl_nnbnorm(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
   end
 end

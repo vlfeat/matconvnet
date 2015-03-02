@@ -18,6 +18,9 @@ dtype = 'single'; range = 10;
 %dtype = 'double'; range = 1;
 grandn = @(q, varargin) gpuArray.randn(varargin{:});
 
+grandn = @(q, varargin) randn(varargin{:});
+
+
 
 q = RandStream('mt19937ar','Seed',1);
 x = grandn(q, r, c, nd, ns, dtype) ;

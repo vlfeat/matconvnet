@@ -163,6 +163,8 @@ for i=1:n
       res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
     case 'relu'
       res(i+1).x = vl_nnrelu(res(i).x) ;
+    case 'sigmoid'
+      res(i+1).x = vl_nnsigmoid(res(i).x) ;
     case 'noffset'
       res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
     case 'dropout'
@@ -173,6 +175,8 @@ for i=1:n
       else
         [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
       end
+    case 'bnorm'
+      res(i+1).x = vl_nnbnorm(res(i).x, l.filters, l.biases) ;
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
     otherwise
@@ -215,6 +219,8 @@ if doder
         res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'relu'
         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
+      case 'sigmoid'
+        res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
         res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
       case 'dropout'
@@ -223,6 +229,10 @@ if doder
         else
           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
         end
+      case 'bnorm'
+        [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+            vl_nnbnorm(res(i).x, l.filters, l.biases, ...
+                      res(i+1).dzdx) ;
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
     end
