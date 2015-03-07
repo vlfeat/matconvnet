@@ -43,7 +43,9 @@ fi
 
 if true
 then
-    base="$data/tmp/googlenet/"
+    cd $SCRIPTPATH
+    patch -Np0 < googlenet_prototxt_patch.diff
+    base="$data/tmp/googlenet"
     in=(imagenet_googlenet)
     out=(googlenet)
     synset=(caffe)
@@ -51,7 +53,7 @@ then
     for ((i=0;i<${#in[@]};++i)); do
         out="$data/models/imagenet-${out[i]}.mat"
         if test ! -e "$out" ; then
-            echo $converter \
+            $converter \
                 --caffe-variant=caffe_0115 \
                 --preproc=caffe \
 		--no-remove-dropout \

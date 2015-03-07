@@ -569,4 +569,4 @@ mnet = {
   'normalization': mkn,
   'classes': classes}
 
-scipy.io.savemat(args.output, mnet)
+scipy.io.savemat(args.output, mnet, oned_as='column')
