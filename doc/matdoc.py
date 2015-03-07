@@ -132,7 +132,7 @@ def render_DIVL(tree, context):
         context.before = ""
 
 def render(func, brief, tree):
-    print "## `%s` -- %s" % (func.upper(), brief)
+    print "## `%s` - %s" % (func.upper(), brief)
     render_DIVL(tree, Context())
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0500"
+   LastUpgradeVersion = "0610"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2D95CDAA18EEB2630076E3A2"
-               BuildableName = "matconv no gpu"
-               BlueprintName = "matconv no gpu"
+               BlueprintIdentifier = "2D1880FA1A7BBD73007C7586"
+               BuildableName = "matconv cuDNN"
+               BlueprintName = "matconv cuDNN"
                ReferencedContainer = "container:matconv.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -29,6 +29,15 @@
       buildConfiguration = "Debug">
       <Testables>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "2D375DB518A7F064008A97EE"
+            BuildableName = "matconv GPU"
+            BlueprintName = "matconv GPU"
+            ReferencedContainer = "container:matconv.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -39,6 +48,15 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "2D1880FA1A7BBD73007C7586"
+            BuildableName = "matconv cuDNN"
+            BlueprintName = "matconv cuDNN"
+            ReferencedContainer = "container:matconv.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>

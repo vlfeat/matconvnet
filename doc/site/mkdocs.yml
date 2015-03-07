@@ -36,4 +36,5 @@ pages:
 - ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_simplenn_display']
 - ['mfiles/vl_simplenn_move.md', 'Functions', 'vl_simplenn_move']
 
-- ['developers.md', 'Developers']
+- ['developers.md', 'Developers', 'Developer notes']
+- ['install-alt.md', 'Developers', 'Compiling from the command line']

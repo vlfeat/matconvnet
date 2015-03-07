@@ -1,7 +1,8 @@
 function vl_test_nnlayers(gpu,tests)
 % VL_TEST_NNLAYERS Test the layers with numeric differentiation
-%    VL_TEST_NNLAYERS Test the CPU implementation.
-%    VL_TEST_NNLAYERS(true) Test the GPU implementation.
+%    VL_TEST_NNLAYERS(0) Test the CPU implementation.
+%    VL_TEST_NNLAYERS(1) Test the GPU implementation.
+%    VL_TEST_NNLAYERS(2) Test the cuDNN implementation.
 
 range = 100 ;
 
@@ -12,6 +13,15 @@ if gpu
 else
   grandn = @(varargin) range * randn(varargin{:}) ;
   grand = @(varargin) range * rand(varargin{:}) ;
+end
+
+switch gpu
+  case 0,
+    fprintf('testing the CPU code\n') ;
+  case 1
+    fprintf('testing the GPU code\n') ;
+  case 2
+    fprintf('testing the cuDNN code\n') ;
 end
 
 rng(1) ;
@@ -107,6 +117,7 @@ for l = tests
       end
 
     case 4
+
       disp('testing vl_nnconv with fully connected identity filters') ;
       x = grandn(1,1,10,4,'single') ;
       b = grandn(1,size(x,3),'single') ;
@@ -194,7 +205,7 @@ for l = tests
           end
         end
       end
-
+  
       disp('testing vl_nnconv pad and stride combo') ;
       x = grandn(16,15,4,2,'single') ;
       for emptyw = [true false]
@@ -266,15 +277,10 @@ for l = tests
         for pool=1:3
           for pad=0:min(3,pool-1)
             for stride=1:4
-              args = {'verbose','stride',stride,'pad',pad,'method',methods{mi}};
-              y = vl_nnpool(x,pool,args{:}) ;
-              %y__ = vl_nnpool(gather(x),pool,args{:}) ;
-              %vl_testsim(y,y__,1e-4) ;
-
+              args = {'stride',stride,'pad',pad,'method',methods{mi}};
+              y = vl_nnpool(x,pool,args{:},'verbose') ;
               dzdy = grandn(size(y),'single') ;
-              %dzdy = gpuArray(ones(size(y),'single')) ;
-              dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
-              %dzdx__ = vl_nnpool(gather(x),pool,gather(dzdy),args{:}) ;
+              dzdx = vl_nnpool(x,pool,dzdy,args{:},'verbose') ;
               vl_testder(@(x) vl_nnpool(x,pool,args{:}), ...
                 x, dzdy, dzdx, range * 1e-2) ;
             end
@@ -336,7 +342,7 @@ for l = tests
           end
         end
       end
-
+        
     case 6
       disp('testing vl_nnnormalize') ;
 

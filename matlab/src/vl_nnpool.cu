@@ -1,11 +1,10 @@
-/** @file vl_nnpool.cu
- ** @brief Pooling block
- ** @author Andrea Vedaldi
- ** @author Karel Lenc
- **/
+// @file vl_nnpool.cu
+// @brief Pooling block MEX wrapper
+// @author Andrea Vedaldi
+// @author Karel Lenc
 
 /*
-Copyright (C) 2014 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -13,8 +12,12 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "bits/mexutils.h"
-#include "bits/nnhelper.h"
-#include "bits/pooling.hpp"
+#include "bits/datamex.hpp"
+#include "bits/nnpooling.hpp"
+
+#if ENABLE_GPU
+#include "bits/datacu.hpp"
+#endif
 
 #include <assert.h>
 
@@ -23,7 +26,9 @@ enum {
   opt_stride = 0,
   opt_pad,
   opt_method,
-  opt_verbose
+  opt_verbose,
+  opt_cudnn,
+  opt_no_cudnn,
 } ;
 
 /* options */
@@ -32,14 +37,29 @@ vlmxOption  options [] = {
   {"Pad",              1,   opt_pad               },
   {"Method",           1,   opt_method            },
   {"Verbose",          0,   opt_verbose           },
+  {"CUDNN",            0,   opt_cudnn             },
+  {"NoCUDNN",          0,   opt_no_cudnn          },
   {0,                  0,   0                     }
 } ;
 
-VlEnumerator nnPoolMethodTypes [NN_POOL_METHODS_NUM] =
+/* ---------------------------------------------------------------- */
+/*                                                          Context */
+/* ---------------------------------------------------------------- */
+
+vl::MexContext context ;
+
+/*
+ Resetting the context here resolves a crash when MATLAB quits and
+ the ~Context function is implicitly called on unloading the MEX file.
+ */
+void atExit()
 {
-  {"Max",     (vl_index)NN_POOL_MAX     },
-  {"Avg",     (vl_index)NN_POOL_AVG     }
-} ;
+  context.clear() ;
+}
+
+/* ---------------------------------------------------------------- */
+/*                                                       MEX driver */
+/* ---------------------------------------------------------------- */
 
 enum {
   IN_DATA = 0, IN_SIZE, IN_DEROUTPUT, IN_END
@@ -52,16 +72,6 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  /* inputs */
-  PackedData data ;
-  PackedData derOutput ;
-
-  /* outputs */
-  PackedData output ;
-  PackedData derData  ;
-  PackedDataGeometry outputGeom ;
-  PackedDataGeometry derDataGeom  ;
-
   int poolWidth ;
   int poolHeight ;
   int strideX = 1 ;
@@ -70,31 +80,20 @@ void mexFunction(int nout, mxArray *out[],
   int padRight = 0 ;
   int padTop = 0 ;
   int padBottom = 0 ;
-  PoolMethod method = NN_POOL_MAX;
-
-#ifdef ENABLE_GPU
-  bool gpuMode = false ;
-#else
-  bool const gpuMode = false ;
-#endif
+  vl::PoolingMethod method = vl::vlPoolingMax ;
   bool backMode = false ;
 
   int verbosity = 0 ;
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
-  VlEnumerator *pair ;
-
-  packed_data_init_empty(&data) ;
-  packed_data_init_empty(&derOutput) ;
-  packed_data_init_empty(&output) ;
-  packed_data_init_empty(&derData) ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
   /* -------------------------------------------------------------- */
 
-  /* Throw an error if the input is not a GPU array. */
+  mexAtExit(atExit) ;
+
   if (nin < 2) {
     mexErrMsgTxt("The arguments are less than two.") ;
   }
@@ -153,35 +152,43 @@ void mexFunction(int nout, mxArray *out[],
         break;
 
       case opt_method :
-        pair = vlmxDecodeEnumeration(optarg, nnPoolMethodTypes, VL_TRUE) ;
-        if (pair == NULL) {
+        if (!vlmxIsString(optarg,-1)) {
+           vlmxError(vlmxErrInvalidArgument, "METHOD is not a string.") ;
+        }
+        if (vlmxIsEqualToStringI(optarg, "max")) {
+          method = vl::vlPoolingMax ;
+        } else if (vlmxIsEqualToStringI(optarg, "avg")) {
+          method = vl::vlPoolingAverage ;
+        } else {
           vlmxError(vlmxErrInvalidArgument, "METHOD is not a supported method.") ;
         }
-        method = (PoolMethod)pair->value ;
         break;
-      default: break ;
+
+      case opt_no_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(false) ;
+#endif
+        break ;
+
+      case opt_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(true) ;
+#endif
+        break ;
+
+      default:
+        break ;
     }
   }
 
-  packed_data_init_with_array(&data, in[IN_DATA]) ;
-  if (backMode) { packed_data_init_with_array(&derOutput, in[IN_DEROUTPUT]) ; }
+  vl::MexTensor data(context) ;
+  vl::MexTensor derOutput(context) ;
 
-#if ENABLE_GPU
-  gpuMode = (data.mode == matlabGpuArrayWrapper) ;
-  if (gpuMode) {
-    mxInitGPU() ;
-  }
-#endif
+  data.init(in[IN_DATA]) ;
+  if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
 
-  /* check GPU/data class consistency */
-  if (gpuMode && (derOutput.mode != matlabGpuArrayWrapper && backMode)) {
-    mexErrMsgTxt("DATA is a GPU array but DEROUTPUT is not.") ;
-  }
-  if (data.geom.classID != mxSINGLE_CLASS) {
-    mexErrMsgTxt("DATA is not of class SINGLE.");
-  }
-  if (backMode && (derOutput.geom.classID != mxSINGLE_CLASS)) {
-    mexErrMsgTxt("DEROUTPUT is not of class SINGLE.");
+  if (backMode && ! vl::areCompatible(data, derOutput)) {
+    mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
   }
 
   if (!vlmxIsPlainMatrix(in[IN_SIZE],-1,-1)) {
@@ -200,65 +207,23 @@ void mexFunction(int nout, mxArray *out[],
       mexErrMsgTxt("SIZE has neither one nor two elements.") ;
   }
 
+  /* Basic compatibility of geometry */
   if (strideX < 1 || strideY < 1) {
     mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
   }
-
-  packed_data_geom_init(&outputGeom,
-                        mxSINGLE_CLASS,
-                        (data.geom.height + (padTop+padBottom) - poolHeight)/strideY + 1,
-                        (data.geom.width + (padLeft+padRight) - poolWidth)/strideX + 1,
-                        data.geom.depth,
-                        data.geom.size) ;
-
-  derDataGeom = data.geom ;
-
-  if (verbosity > 0) {
-    mexPrintf("vl_nnpool: mode %s; %s\n", gpuMode?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnpool: stride: [%d %d], pad: [%d %d %d %d]\n",
-              strideY, strideX,
-              padTop, padBottom, padLeft, padRight) ;
-    packed_data_geom_display(&data.geom, "vl_nnpool: data") ;
-    mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
-    mexPrintf("vl_nnpool: method: %s\n",
-              vl_enumeration_get_by_value(nnPoolMethodTypes, method)->name);
-    if (backMode) {
-      packed_data_geom_display(&derOutput.geom, "vl_nnpool: derOutput") ;
-      packed_data_geom_display(&derDataGeom, "vl_nnpool: derData") ;
-    } else {
-      packed_data_geom_display(&outputGeom, "vl_nnpool: output") ;
-    }
-  }
-
-  if (backMode) {
-    if (derOutput.geom.height != outputGeom.height ||
-        derOutput.geom.width != outputGeom.width ||
-        derOutput.geom.depth != outputGeom.depth ||
-        derOutput.geom.size != outputGeom.size)
-    {
-      mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;
-    }
-  }
-
-  if (data.geom.height < poolHeight || data.geom.width < poolWidth) {
-    mexErrMsgTxt("Pooling SIZE is larger than the DATA.") ;
-  }
-
   if (poolHeight == 0 || poolWidth == 0) {
     mexErrMsgTxt("A dimension of the pooling SIZE is void.") ;
   }
-
-  if (strideX == 0 || strideY == 0) {
-    mexErrMsgTxt("An element of STRIDE is zero.") ;
+  if (data.getHeight() + (padTop+padBottom) < poolHeight ||
+      data.getWidth() + (padLeft+padRight) < poolWidth) {
+    mexErrMsgTxt("The pooling window is larger than the DATA (including padding).") ;
   }
-
   if (padLeft < 0 ||
       padRight < 0 ||
       padTop < 0 ||
       padBottom < 0) {
     mexErrMsgTxt("An element of PAD is negative.") ;
   }
-
   if (padLeft >= poolWidth ||
       padRight >= poolWidth ||
       padTop >= poolHeight  ||
@@ -266,103 +231,85 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("A padding value is larger or equal than the size of the pooling window.") ;
   }
 
+  /* Get the output geometry */
+  vl::TensorGeometry outputGeom((data.getHeight() + (padTop+padBottom) - poolHeight)/strideY + 1,
+                                (data.getWidth()  + (padLeft+padRight) - poolWidth)/strideX + 1,
+                                data.getDepth(),
+                                data.getSize()) ;
+
+  if (backMode && (derOutput != outputGeom)) {
+    mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;
+  }
+
+  /* Create output buffers */
+  vl::Device type = data.getMemoryType() ;
+  vl::MexTensor output(context) ;
+  vl::MexTensor derData(context) ;
+  vl::MexTensor derFilters(context) ;
+  vl::MexTensor derBiases(context) ;
+
+  if (!backMode) {
+    output.init(type, outputGeom, 0) ;
+  } else {
+    derData.init(type, data.getGeometry(), 0) ;
+  }
+
+  if (verbosity > 0) {
+    mexPrintf("vl_nnpool: %s; %s", backMode?"backward":"forward", (data.getMemoryType()==vl::GPU) ? "GPU" : "CPU") ;
+    if (data.getMemoryType() == vl::GPU) {
+#if ENABLE_CUDNN
+      mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "MatConvNet") ;
+#else
+      mexPrintf("; MatConvNet\n") ;
+#endif
+    } else {
+      mexPrintf("; MatConvNet\n") ;
+    }
+    mexPrintf("vl_nnpool: stride: [%d %d], pad: [%d %d %d %d]\n",
+              strideY, strideX,
+              padTop, padBottom, padLeft, padRight) ;
+    vl::print("vl_nnpool: data: ", data) ;
+    mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
+    mexPrintf("vl_nnpool: method: %s\n", (method == vl::vlPoolingMax) ? "max" : "avg") ;
+    if (backMode) {
+      vl::print("vl_nnpool: derOutput: ", derOutput) ;
+      vl::print("vl_nnpool: derData: ", derData) ;
+    } else {
+      vl::print("vl_nnpool: output: ", output) ;
+    }
+  }
+
   /* -------------------------------------------------------------- */
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
+  vl::Error error ;
   if (!backMode) {
-    packed_data_init_with_geom(&output, gpuMode, outputGeom, false, true, 0) ;
+    error = vl::nnpooling_forward(context,
+                                  output, data,
+                                  method,
+                                  poolHeight, poolWidth,
+                                  strideY, strideX,
+                                  padTop, padBottom, padLeft, padRight) ;
   } else {
-    packed_data_init_with_geom(&derData, gpuMode, derDataGeom, false, true, 0) ;
-  }
-
-  if (backMode) {
-    /* ---------------------------------------------------------- */
-    /*                                              Backward mode */
-    /* ---------------------------------------------------------- */
-    if (gpuMode) {
-#ifdef ENABLE_GPU
-      poolingBackward_gpu<float>(derData.memory,
-                                 data.memory,
-                                 derOutput.memory,
-                                 method,
-                                 data.geom.height, data.geom.width,
-                                 data.geom.depth * data.geom.size,
-                                 poolHeight,
-                                 poolWidth,
-                                 strideY,
-                                 strideX,
-                                 padTop,
-                                 padBottom,
-                                 padLeft,
-                                 padRight) ;
-#else
-      assert(false) ;
-#endif
-    } else {
-      poolingBackward_cpu<float>(derData.memory,
-                                 data.memory,
-                                 derOutput.memory,
-                                 method,
-                                 data.geom.height, data.geom.width,
-                                 data.geom.depth * data.geom.size,
-                                 poolHeight,
-                                 poolWidth,
-                                 strideY,
-                                 strideX,
-                                 padTop,
-                                 padBottom,
-                                 padLeft,
-                                 padRight) ;
-    }
-  } else {
-    /* ---------------------------------------------------------- */
-    /*                                               Forward mode */
-    /* ---------------------------------------------------------- */
-    if (gpuMode) {
-#ifdef ENABLE_GPU
-      pooling_gpu<float>(output.memory,
-                         data.memory,
-                         method,
-                         data.geom.height, data.geom.width,
-                         data.geom.depth * data.geom.size,
-                         poolHeight,
-                         poolWidth,
-                         strideY,
-                         strideX,
-                         padTop,
-                         padBottom,
-                         padLeft,
-                         padRight) ;
-#else
-      assert(false) ;
-#endif
-    } else {
-      pooling_cpu<float>(output.memory,
-                         data.memory,
-                         method,
-                         data.geom.height, data.geom.width,
-                         data.geom.depth * data.geom.size,
-                         poolHeight,
-                         poolWidth,
-                         strideY,
-                         strideX,
-                         padTop,
-                         padBottom,
-                         padLeft,
-                         padRight) ;
-    }
+    error = vl::nnpooling_backward(context,
+                                   derData, data, derOutput,
+                                   method,
+                                   poolHeight, poolWidth,
+                                   strideY, strideX,
+                                   padTop, padBottom, padLeft, padRight) ;
   }
 
   /* -------------------------------------------------------------- */
-  /*                                                        Cleanup */
+  /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
-  packed_data_deinit(&data) ;
+  if (error != vl::vlSuccess) {
+    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
+  }
   if (backMode) {
-    packed_data_deinit(&derOutput) ;
-    out[OUT_RESULT] = packed_data_deinit_extracting_array(&derData) ;
+    out[OUT_RESULT] = derData.relinquish() ;
   } else {
-    out[OUT_RESULT] = packed_data_deinit_extracting_array(&output) ;
+    out[OUT_RESULT] = output.relinquish() ;
   }
 }

@@ -1,18 +1,24 @@
-/** @file im2col.cpp
- ** @brief Image to columns and back (CPU)
- ** @author Andrea Vedaldi
- **/
+// @file im2row_cpu.cpp
+// @brief Stack image patches as matrix rows (CPU)
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 20114-15 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "im2col.hpp"
+#include "im2row.hpp"
 #include <string.h>
+
+using namespace vl ;
+using namespace vl::impl ;
+
+/* ---------------------------------------------------------------- */
+/*                                                  Heper functions */
+/* ---------------------------------------------------------------- */
 
 static inline int floor_divide(int a, int b) {
   if (a >= 0) return a/b;
@@ -33,39 +39,41 @@ static inline int static_min(int a, int b) {
 }
 
 /* ---------------------------------------------------------------- */
-/*                                                     im2col (CPU) */
+/*                                                           im2row */
 /* ---------------------------------------------------------------- */
 
-template <typename T>
-void im2col_cpu(T* stacked,
-                T const* data,
-                size_t width,
-                size_t height,
-                size_t depth,
-                size_t windowWidth,
-                size_t windowHeight,
-                size_t strideX,
-                size_t strideY,
-                size_t padLeft,
-                size_t padRight,
-                size_t padTop,
-                size_t padBottom)
+/* TODO: must transpose */
+
+template <typename T> static inline void
+im2row_cpu(T* stacked,
+           T const* data,
+           size_t width,
+           size_t height,
+           size_t depth,
+           size_t windowWidth,
+           size_t windowHeight,
+           size_t strideX,
+           size_t strideY,
+           size_t padLeft,
+           size_t padRight,
+           size_t padTop,
+           size_t padBottom)
 {
   int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
   int numRows = windowWidth * windowHeight * depth ;
 
-  /* 
+  /*
    Fill a row of the stacked image at a time. Since patches are stored
    along the columns, scanning a row menas visiting all patche once.
    Each row corresponds to a particular offset within each patch.
-   
+
    In this manner, as we fill a row
    we tend to access spatially adiacent elements
    in the input image, particulary for small strides.
    */
   for (int row = 0; row < numRows ; ++row) {
-    /* 
+    /*
      Get the patch offset corresponding to this row of the stacked
      image.
      */
@@ -80,21 +88,21 @@ void im2col_cpu(T* stacked,
      image that appear at a given offset in the outut patches. Accounting
      for the subsampling of the output patches and input padding,
      these pixels are given by
-     
+
      x_data(x) = x * strideX + u - padLeft,  0 <= x < numPatchesX
      y_data(y) = y * strideY + v - padTop,   0 <= y < numPatchesY
      z_data(z) = z.
-     
+
      Here (x,y) are the spatial indexes of the output patches. Depedning
      on the padding, some of these values will read pixels outised
      the input image, which should default to 0. In particular this happens
      if
-     
-     x_data(x) < 0 <=> x < (padLeft - u) / stride 
-                   <=> x < ceil((padLeft - u) / stride)
+
+     x_data(x) < 0 <=> x < (padLeft - u) / stride
+     <=> x < ceil((padLeft - u) / stride)
      x_data(x) >= width <=> x >= (width + padLeft - u) / stride
-                        <=> x >= ceil((width + padLeft - u) / stride)
-     
+     <=> x >= ceil((width + padLeft - u) / stride)
+
      and the same for y.
      */
 
@@ -132,52 +140,43 @@ void im2col_cpu(T* stacked,
   }
 }
 
-template void im2col_cpu<float>(float* stacked,
-                                float const* data,
-                                size_t width,
-                                size_t height,
-                                size_t depth,
-                                size_t windowWidth,
-                                size_t windowHeight,
-                                size_t strideX,
-                                size_t strideY,
-                                size_t padLeft,
-                                size_t padRight,
-                                size_t padTop,
-                                size_t padBottom);
-
-template void im2col_cpu<double>(double* stacked,
-                                 double const* data,
-                                 size_t width,
-                                 size_t height,
-                                 size_t depth,
-                                 size_t windowWidth,
-                                 size_t windowHeight,
-                                 size_t strideX,
-                                 size_t strideY,
-                                 size_t padLeft,
-                                 size_t padRight,
-                                 size_t padTop,
-                                 size_t padBottom);
+template <> vl::Error
+vl::impl::im2row<vl::CPU, float>(vl::Context& context,
+                                 float* stacked,
+                                 float const* data,
+                                 size_t height, size_t width, size_t depth,
+                                 size_t windowHeight, size_t windowWidth,
+                                 size_t strideY, size_t strideX,
+                                 size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+{
+  im2row_cpu<float>(stacked, data,
+                    height, width, depth,
+                    windowHeight, windowWidth,
+                    strideY, strideX,
+                    padTop, padBottom, padLeft, padRight) ;
+  return vlSuccess ;
+}
 
 /* ---------------------------------------------------------------- */
-/*                                                     col2im (CPU) */
+/*                                                           row2im */
 /* ---------------------------------------------------------------- */
 
-template <typename T>
-void col2im_cpu(T* data,
-                T const* stacked,
-                size_t width,
-                size_t height,
-                size_t depth,
-                size_t windowWidth,
-                size_t windowHeight,
-                size_t strideX,
-                size_t strideY,
-                size_t padLeft,
-                size_t padRight,
-                size_t padTop,
-                size_t padBottom)
+/* TODO: must transpose */
+
+template <typename T> static inline void
+row2im_cpu(T* data,
+           T const* stacked,
+           size_t width,
+           size_t height,
+           size_t depth,
+           size_t windowWidth,
+           size_t windowHeight,
+           size_t strideX,
+           size_t strideY,
+           size_t padLeft,
+           size_t padRight,
+           size_t padTop,
+           size_t padBottom)
 {
   int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
   int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
@@ -217,32 +216,19 @@ void col2im_cpu(T* data,
   }
 }
 
-template void col2im_cpu<float>(float* data,
-                                float const* stacked,
-                                size_t width,
-                                size_t height,
-                                size_t depth,
-                                size_t windowWidth,
-                                size_t windowHeight,
-                                size_t strideX,
-                                size_t strideY,
-                                size_t padLeft,
-                                size_t padRight,
-                                size_t padTop,
-                                size_t padBottom);
-
-template void col2im_cpu<double>(double* data,
-                                 double const* stacked,
-                                 size_t width,
-                                 size_t height,
-                                 size_t depth,
-                                 size_t windowWidth,
-                                 size_t windowHeight,
-                                 size_t strideX,
-                                 size_t strideY,
-                                 size_t padLeft,
-                                 size_t padRight,
-                                 size_t padTop,
-                                 size_t padBottom);
-
-
+template <> vl::Error
+vl::impl::row2im<vl::CPU, float>(vl::Context& context,
+                                 float* data,
+                                 float const* stacked,
+                                 size_t height, size_t width, size_t depth,
+                                 size_t windowHeight, size_t windowWidth,
+                                 size_t strideY, size_t strideX,
+                                 size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+{
+  row2im_cpu<float>(data, stacked,
+                    height, width, depth,
+                    windowHeight, windowWidth,
+                    strideY, strideX,
+                    padTop, padBottom, padLeft, padRight) ;
+  return vlSuccess ;
+}

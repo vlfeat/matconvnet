@@ -1,10 +1,9 @@
-/** @file normalize.cpp
- ** @brief Normalization block
- ** @author Andrea Vedaldi
- **/
+// @file normalize_cpu.cpp
+// @brief Normalize block implementation (CPU)
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014 Andrea Vedaldi.
+Copyright (C) 2014-15 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -12,13 +11,12 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "normalize.hpp"
-#include <algorithm>
-#include <cmath>
-#include <blas.h>
-#include <string.h>
+#include "../data.hpp"
+#include <math.h>
+#include <memory.h>
 
 /* ---------------------------------------------------------------- */
-/*                                                  normalize (CPU) */
+/*                             Fast approximated numerical routines */
 /* ---------------------------------------------------------------- */
 
 #ifndef _MSC_VER
@@ -130,15 +128,19 @@ inline float fast_pow(float a, float b)
 #endif
 #endif
 
-template<typename T>
-void normalize_cpu(T* normalized,
-                   T const* data,
-                   size_t width,
-                   size_t height,
-                   size_t depth,
-                   size_t num,
-                   size_t normDepth,
-                   T kappa, T alpha, T beta)
+/* ---------------------------------------------------------------- */
+/*                                                normalize_forward */
+/* ---------------------------------------------------------------- */
+
+template<typename T> static inline void
+normalize_forward_cpu(T* normalized,
+                      T const* data,
+                      size_t width,
+                      size_t height,
+                      size_t depth,
+                      size_t num,
+                      size_t normDepth,
+                      T kappa, T alpha, T beta)
 {
   int t ;
   int m1 = ((signed)normDepth-1)/2 ;
@@ -208,43 +210,34 @@ void normalize_cpu(T* normalized,
 #endif
 }
 
-template
-void normalize_cpu<float>(float* normalized,
-                          float const* data,
-                          size_t width,
-                          size_t height,
-                          size_t depth,
-                          size_t num,
-                          size_t normDetph,
-                          float kappa, float alpha, float beta) ;
-
-#if 0
-template
-void normalize_cpu<double>(double* normalized,
-                           double const* data,
-                           size_t width,
-                           size_t height,
-                           size_t depth,
-                           size_t num,
-                           size_t normDetph,
-                           double kappa, double alpha, double beta) ;
-#endif
-
+template<> vl::Error
+vl::impl::normalize_forward<vl::CPU, float>
+(float* normalized,
+ float const* data,
+ size_t height, size_t width, size_t depth, size_t size,
+ size_t normDepth,
+ double kappa, double alpha, double beta)
+{
+  normalize_forward_cpu<float>(normalized,data,
+                               height,width,depth,size,
+                               normDepth,kappa,alpha,beta) ;
+  return vlSuccess ;
+}
 
 /* ---------------------------------------------------------------- */
-/*                                         normalize-backward (CPU) */
+/*                                               normalize_backward */
 /* ---------------------------------------------------------------- */
 
-template<typename T>
-void normalizeBackward_cpu(T* normalized,
-                           T const* data,
-                           T const* dzdy,
-                           size_t width,
-                           size_t height,
-                           size_t depth,
-                           size_t num,
-                           size_t normDepth,
-                           T kappa, T alpha, T beta)
+template<typename T> static inline void
+normalize_backward_cpu(T* normalized,
+                       T const* data,
+                       T const* dzdy,
+                       size_t width,
+                       size_t height,
+                       size_t depth,
+                       size_t num,
+                       size_t normDepth,
+                       T kappa, T alpha, T beta)
 {
   int m1 = ((signed)normDepth-1)/2 ;
   int m2 = (int)normDepth - m1 - 1 ;
@@ -295,9 +288,9 @@ void normalizeBackward_cpu(T* normalized,
     memset(acc, 0, sizeof(T) * width*height) ;
     for (t = -m2 ; t < (signed)depth ; ++t) {
       /*
-        Compue the square of the input data x.^2 summed in the normalization window. This is done
-        incrementally, by updating the previous normalization window sum.
-      */
+       Compue the square of the input data x.^2 summed in the normalization window. This is done
+       incrementally, by updating the previous normalization window sum.
+       */
       {
         int const tm = t - m1 - 1 ;
         int const tp = t + m2 ;
@@ -325,9 +318,9 @@ void normalizeBackward_cpu(T* normalized,
       }
 
       /*
-        Compute the arguments of the summation in the derivative
-        expression, storing them into acc2.
-      */
+       Compute the arguments of the summation in the derivative
+       expression, storing them into acc2.
+       */
       if (0 <= t && t < depth) {
         T const* restrict data_ = data + offset * t ;
         T const* restrict dzdy_ = dzdy + offset * t ;
@@ -347,9 +340,9 @@ void normalizeBackward_cpu(T* normalized,
     }
 
     /*
-      Integrate along feature channels in acc2, summing plane t-1 to
-      plane t.
-    */
+     Integrate along feature channels in acc2, summing plane t-1 to
+     plane t.
+     */
     for (t = 1 ; t < (signed)depth ; ++t) {
       T * restrict acc2_ = acc2 + t * offset ;
       T const* restrict src_ = acc2_ - offset ;
@@ -360,9 +353,9 @@ void normalizeBackward_cpu(T* normalized,
     }
 
     /*
-      Compute summation in the derivative expression from the integral
-      just obtained.
-    */
+     Compute summation in the derivative expression from the integral
+     just obtained.
+     */
     for (t = 0 ; t < (signed)depth ; ++t) {
       int q1 = t - m2 - 1 ;
       int q2 = ((t + m1) <= (depth - 1)) ? t + m1 : depth - 1 ;
@@ -390,26 +383,17 @@ void normalizeBackward_cpu(T* normalized,
 #endif
 }
 
-template
-void normalizeBackward_cpu<float>(float* normalized,
-                                  float const* data,
-                                  float const* dzdy,
-                                  size_t width,
-                                  size_t height,
-                                  size_t depth,
-                                  size_t num,
-                                  size_t normDetph,
-                                  float kappa, float alpha, float beta) ;
-
-#if 0
-template
-void normalizeBackward_cpu<double>(double* normalized,
-                                   double const* data,
-                                   double const* dzdy,
-                                   size_t width,
-                                   size_t height,
-                                   size_t depth,
-                                   size_t num,
-                                   size_t normDetph,
-                                   double kappa, double alpha, double beta) ;
-#endif
+template<> vl::Error
+vl::impl::normalize_backward<vl::CPU, float>
+(float* derData,
+ float const* data,
+ float const* derNormalized,
+ size_t height, size_t width, size_t depth, size_t size,
+ size_t normDepth,
+ double kappa, double alpha, double beta)
+{
+  normalize_backward_cpu<float>(derData,data,derNormalized,
+                                height,width,depth,size,
+                                normDepth,kappa,alpha,beta) ;
+  return vlSuccess ;
+}
