@@ -3,8 +3,7 @@ function [ y ] = vl_nnconcat( inputs, dim, dzdy )
 if nargin < 2, dim = 3; end;
 if nargin < 3, dzdy = []; end;
 
-doder = ~isempty(dzdy);
-if ~doder
+if isempty(dzdy)
   y = cat(dim, inputs{:});
 else
   numdiv = numel(inputs);

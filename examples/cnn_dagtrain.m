@@ -148,7 +148,7 @@ for epoch=1:opts.numEpochs
 
     % gradient step
     for l=1:numel(net.layers)
-      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
+      if isempty(dzdw{l}), continue ; end
 
       net.layers{l}.filtersMomentum = ...
         opts.momentum * net.layers{l}.filtersMomentum ...

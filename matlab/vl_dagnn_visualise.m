@@ -1,4 +1,7 @@
 function [ outfile ] = vl_dagnn_visualise( net, res, outfile, outfmt )
+% VL_DAGNN_VISUALISE Visualise a DAG neural network using dot
+%   So far a temporary and non-finished function for DAG NN visualisation,
+%   needs a graphviz to be installed.
 
 % TODO avoid passing res as argument, would it be possible to compute
 % automatically (needs to write something which would guess the number of
@@ -56,8 +59,11 @@ out('}\n');
 
 fclose(tf);
 fprintf('Running dot... ');
-system(sprintf('dot -T%s %s -o %s', outfmt, tmpfile, outfile));
+[status, message] = system(sprintf('dot -T%s %s -o %s', outfmt, tmpfile, outfile));
 delete(tmpfile);
+if status ~= 0
+  error('Dot failed: %s', message);
+end
 fprintf('Network visualised in %s\n', outfile);
 end
 

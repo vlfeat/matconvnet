@@ -1,51 +1,52 @@
-function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
+function [res, dzdws, arcs] = vl_dagnn(net, inputs, dzdy, res, varargin)
 % VL_DAGNN  Evaluates a DAG CNN
-%   RES = VL_DAGNN(NET, X) evaluates the convnet NET on inputs X.
-%   RES = VL_DAGNN(NET, X, DZDY) evaluates the convnent NET and its
-%   derivative on data X and output derivative DZDY.
+%   RES = VL_DAGNN(NET, INPUTS) evaluates the convnet NET on INPUTS.
+%   [RES, DZDW] = VL_DAGNN(NET, INPUTS, DZDY) evaluates the convnent NET 
+%   and its derivative on INPUTS and output derivative DZDY.
 %
-%   The network has a simple (linear) topology, i.e. the computational
-%   blocks are arranged in a sequence of layers. Please note that
-%   there is no need to use this wrapper, which is provided for
-%   convenience. Instead, the individual CNN computational blocks can
-%   be evaluated directly, making it possible to create significantly
-%   more complex topologies, and in general allowing greater
-%   flexibility.
+%   The network has a direct acyclic topology, i.e. each computational 
+%   block can have multiple inputs. Please note that there is no need 
+%   to use this wrapper, which is provided for convenience.
 %
-%   The NET structure contains two fields:
+%   The NET structure must contains a field:
 %
-%   - net.layers: the CNN layers.
-%   - net.normalization: information on how to normalize input data.
-%
-%   The network expects the data X to be already normalized. This
-%   usually involves rescaling the input image(s) and subtracting a
-%   mean.
+%   - net.layers: the CNN layers where each layer is a structure with
+%       at least 'type', 'name' and 'inputs' fields.
 %
 %   RES is a structure array with one element per network layer plus
-%   one representing the input. So RES(1) refers to the zeroth-layer
-%   (input), RES(2) refers to the first layer, etc. Each entry has
-%   fields:
+%   several representing the inputs. So RES(1..numel(INPUTS)) contains the
+%   inputs and RES(numel(INPUTS)+1..numel(INPUTS)+numel(NET.layers))
+%   contains the layer outputs.
 %
-%   - res(i+1).x: the output of layer i. Hence res(1).x is the network
-%     input.
+%   - res(i+numel(inputs)).x: the output of layer i.
 %
-%   - res(i+1).aux: auxiliary output data of layer i. For example,
-%     dropout uses this field to store the dropout mask.
+%   - res(i+numel(inputs)).aux: auxiliary output data of layer i. 
+%     For example, dropout uses this field to store the dropout mask.
 %
-%   - res(i+1).dzdx: the derivative of the network output relative to
-%     variable res(i+1).x, i.e. the output of layer i. In particular
-%     res(1).dzdx is the derivative of the network output with respect
-%     to the network input.
+%   - res(i+numel(inputs)).dzdx: the derivative of the network output 
+%     relative to variable res(i+numel(inputs)).x, i.e. the output of 
+%     layer i. In particular res(1).dzdx is the derivative of the network 
+%     output with respect to the first network input.
 %
-%   - res(i+1).dzdw: the derivative of the network output relative to
-%     the parameters of layer i. It can be a cell array for multiple
-%     parameters.
+%   In case of BP step, the output DZDW is a cell array of size 
+%   [1, numel(NET.layers)] with derivatives of layer parameters (if any).
 %
-%   net.layers is a cell array of network layers. The following
-%   layers, encapsulating corresponding functions in the toolbox, are
-%   supported:
+%   INPUTS is a structure array with two fields:
 %
-%   Convolutional layer::
+%     - inputs(j).name: The name of the input (string)
+%     - inputs(j).x: The input values.
+%
+%   NET.layers is a cell array of network layers. Each layer must have a 
+%   two fields specified:
+%
+%     - layer.name: layer name (string)
+%     - layer.inputs: a cell array of strings which refer either to 
+%         another layer name or to some input.
+%
+%   The following layers, encapsulating corresponding functions in 
+%   the toolbox, are supported:
+%
+%   Convolutional layer (single input)::
 %     The convolutional layer wraps VL_NNCONV(). It has fields:
 %
 %     - layer.type = 'conv'
@@ -54,7 +55,7 @@ function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
 %     - layer.stride: the sampling stride (usually 1).
 %     - layer.padding: the padding (usually 0).
 %
-%   Max pooling layer::
+%   Max pooling layer (single input)::
 %     The max pooling layer wraps VL_NNPOOL(). It has fields:
 %
 %     - layer.type = 'pool'
@@ -63,40 +64,49 @@ function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
 %     - layer.stride: the sampling stride (usually 1).
 %     - layer.padding: the padding (usually 0).
 %
-%   Normalization layer::
+%   Normalization layer (single input)::
 %     The normalization layer wraps VL_NNNORMALIZE(). It has fields
 %
 %     - layer.type = 'normalize'
 %     - layer.param: the normalization parameters.
 %
-%   ReLU layer::
+%   ReLU layer (single input)::
 %     The ReLU layer wraps VL_NNRELU(). It has fields:
 %
 %     - layer.type = 'relu'
 %
-%   Dropout layer::
+%   Dropout layer (single input)::
 %     The dropout layer wraps VL_NNDROPOUT(). It has fields:
 %
 %     - layer.type = 'dropout'
 %     - layer.rate: the dropout rate.
 %
-%   Softmax layer::
+%   Softmax layer (single input)::
 %     The softmax layer wraps VL_NNSOFTMAX(). It has fields
 %
 %     - layer.type = 'softmax'
 %
-%   Log-loss layer::
+%   Log-loss layer (2 inputs)::
 %     The log-loss layer wraps VL_NNLOSS(). It has fields:
 %
 %     - layer.type = 'loss'
-%     - layer.class: the ground-truth class.
 %
-%   Softmax-log-loss layer::
+%     First input are the activations and second input are the ground-truth
+%     classes.
+%
+%   Softmax-log-loss layer (2 input)::
 %     The softmax-log-loss layer wraps VL_NNSOFTMAXLOSS(). It has
 %     fields:
 %
 %     - layer.type = 'softmaxloss'
-%     - layer.class: the ground-truth class.
+%
+%     First input are the activations and second input are the ground-truth
+%     classes.
+%
+%   Concatenation layer (multiple inputs)::
+%      Concatenate multiple inputs along selected dimension. It has fields:
+%     - layer.type = 'concat'
+%     - layer.dim: the dimension along which to concatenate (see help cat)
 %
 %   Custom layer::
 %     This can be used to specify custom layers.
@@ -118,8 +128,6 @@ function [res, dzdws] = vl_dagnn(net, x, dzdy, res, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 % TODO add support for conserve memory
-% TODO solve precomputing the arcs and the schedules (unique takes quite a
-% bit of time).
 
 opts.res = [] ;
 opts.sync = false ;
@@ -134,16 +142,16 @@ else
   doder = true ;
 end
 
-numInputs = numel(x);
-inputs = {x.x};
+numInputs = numel(inputs);
+inputs_x = {inputs.x};
 
-gpuMode = all(cellfun(@(a) isa(a, 'gpuArray'), inputs)) ;
+gpuMode = all(cellfun(@(a) isa(a, 'gpuArray'), inputs_x)) ;
 
-[arcs, bufferNames] = vl_dagnn_getarcs(net, x);
+[arcs, bufferNames] = vl_dagnn_getarcs(net, inputs);
 
 if nargin <= 3 || isempty(res)
   res = struct(...
-    'x', [inputs cell(1,n)], ...
+    'x', [inputs_x cell(1,n)], ...
     'name', bufferNames, ...
     'dzdx', cell(1,n+numInputs), ...
     'aux', cell(1,n+numInputs), ...
@@ -151,15 +159,15 @@ if nargin <= 3 || isempty(res)
     'backwardTime', num2cell(zeros(1,n+numInputs))) ;
 else
   for ni = 1:numel(inputs)
-    res(ni).x = inputs{ni};
+    res(ni).x = inputs_x{ni};
   end
 end
 
 for li=1:n
   l = net.layers{li} ;
-  inbi = arcs(2, arcs(1,:) == li); % indices of input buffers
-  outbi = unique(arcs(3, arcs(1,:) == li)); % indices of output buffers
-  assert(numel(outbi) == 1);
+  arcs_sel = arcs(1,:) == li;
+  inbi = arcs(2, arcs_sel); % indices of input buffers
+  outbi = arcs(3, find(arcs_sel, 1)); % indices of an output buffer
   res(outbi).time = tic ;
   switch l.type
     case 'conv'
@@ -228,52 +236,55 @@ if doder
   
   for li=n:-1:1
     l = net.layers{li} ;
-    inbi = arcs(2, arcs(1,:) == li); % indices of input buffers
-    outbi = unique(arcs(3, arcs(1,:) == li)); % indices of output buffers
-    assert(numel(outbi) == 1);
+    arcs_sel = arcs(1,:) == li;
+    inbi = arcs(2, arcs_sel); % indices of input buffers
+    outbi = arcs(3, find(arcs_sel, 1)); % indices of an output buffer
     dzdy = res(outbi).dzdx;
     res(outbi).backwardTime = tic ;
-    for ini = inbi
-      dzdx = [];
-      switch l.type
-        case 'conv'
-          [dzdx, dzdw_f, dzdw_b] = ...
-            vl_nnconv(res(inbi).x, l.filters, l.biases, dzdy, 'pad', ...
-            l.pad, 'stride', l.stride) ;
-          if isempty(dzdws{li})
-            dzdws{li} = {dzdw_f, dzdw_b};
-          else
-            dzdws{li} = {dzdws{li}{1} + dzdw_f, dzdws{li}{2} + dzdw_b};
-          end
-        case 'pool'
-          dzdx = vl_nnpool(res(inbi).x, l.pool, dzdy, ...
-            'pad', l.pad, 'stride', l.stride, 'method', l.method);
-        case 'normalize'
-          dzdx = vl_nnnormalize(res(inbi).x, l.param, dzdy) ;
-        case 'softmax'
-          dzdx = vl_nnsoftmax(res(inbi).x, dzdy);
-        case 'loss'
-          dzdx = vl_nnloss(res(inbi).x, l.class, dzdy);
-        case 'softmaxloss'
-          dzdx = vl_nnsoftmaxloss(res(inbi).x, l.class, dzdy);
-        case 'relu'
-          dzdx = vl_nnrelu(res(inbi).x, dzdy);
-        case 'noffset'
-          dzdx = vl_nnnoffset(res(inbi).x, l.param, dzdy);
-        case 'concat'
-          dzdx = vl_concat({res(inbi).x}, l.dim, dzdy);
-        case 'dropout'
-          if opts.disableDropout
-            dzdx = dzdy;
-          else
-            dzdx = vl_nndropout(res(inbi).x, dzdy, 'mask', res(outbi).aux) ;
-          end
-        case 'custom'
-          res(inbi) = l.backward(l, res(inbi), res(outbi)) ;
+    switch l.type
+      case 'conv'
+        [dzdx, dzdw_f, dzdw_b] = ...
+          vl_nnconv(res(inbi).x, l.filters, l.biases, dzdy, 'pad', ...
+          l.pad, 'stride', l.stride) ;
+        if isempty(dzdws{li})
+          dzdws{li} = {dzdw_f, dzdw_b};
+        else
+          dzdws{li} = {dzdws{li}{1} + dzdw_f, dzdws{li}{2} + dzdw_b};
+        end
+      case 'pool'
+        dzdx = vl_nnpool(res(inbi).x, l.pool, dzdy, ...
+          'pad', l.pad, 'stride', l.stride, 'method', l.method);
+      case 'normalize'
+        dzdx = vl_nnnormalize(res(inbi).x, l.param, dzdy) ;
+      case 'softmax'
+        dzdx = vl_nnsoftmax(res(inbi).x, dzdy);
+      case 'loss'
+        dzdx = vl_nnloss(res(inbi).x, l.class, dzdy);
+      case 'softmaxloss'
+        dzdx = vl_nnsoftmaxloss(res(inbi).x, l.class, dzdy);
+      case 'relu'
+        dzdx = vl_nnrelu(res(inbi).x, dzdy);
+      case 'noffset'
+        dzdx = vl_nnnoffset(res(inbi).x, l.param, dzdy);
+      case 'concat'
+        dzdx = vl_nnconcat({res(inbi).x}, l.dim, dzdy);
+      case 'dropout'
+        if opts.disableDropout
+          dzdx = dzdy;
+        else
+          dzdx = vl_nndropout(res(inbi).x, dzdy, 'mask', res(outbi).aux) ;
+        end
+      case 'custom'
+        res(inbi) = l.backward(l, res(inbi), res(outbi)) ;
+    end
+    % Accummulate the derivatives
+    if numel(inbi) > 1
+      assert(iscell(dzdx));
+      for ini = 1:numel(inbi)
+        res(inbi(ini)).dzdx = res(inbi(ini)).dzdx + dzdx{ini};
       end
-      if ~isempty(dzdx)
-        res(inbi).dzdx = res(inbi).dzdx + dzdx;
-      end
+    else
+      res(inbi).dzdx = res(inbi).dzdx + dzdx;
     end
     if gpuMode && opts.sync
       wait(gpuDevice) ;
