@@ -74,10 +74,8 @@ if opts.train.useGpu
   imdb.images.data = gpuArray(imdb.images.data) ;
 end
 
-args = helpers.struct2argscell(opts.train);
-[net, info] = cnn_train(net, imdb, @getBatch, ...
-    args{:}, ...
-    'val', find(imdb.images.set == 3)) ;
+[net, info] = cnn_train(net, imdb, @getBatch, opts.train, ...
+  'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
 function layer = add_bnorm(prev_layer)
