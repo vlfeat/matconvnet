@@ -484,6 +484,51 @@ where
 \]
 
 % ------------------------------------------------------------------
+\subsection{Batch normalization}\label{s:bnorm}
+\verb!vl_nnbnorm! implements batch normalisation \cite{ioffe2015}. \verb|y = vl_nnbnorm(x, w, b)| normalises each input channel of $\mathbf{x}$ by its batch mean and variance and applies multiplicative and additive constant $\mathbf{w}$ and $\mathbf{b}$ respectively where:
+\[
+\mathbf{x},~\mathbf{y} \in \mathbb{R}^{D \times K},~~~\mathbf{w} \in \mathbb{R}^{K}, ~~~\mathbf{b} \in \mathbb{R}^{K}
+\]
+
+Each input channel $d$ is normalised by its mean and variance from the input batch:
+
+\[
+y_{d,k} = w_d \frac{x_{d,k} - \mu_{d}}{\sqrt{\sigma^2 + \epsilon}} + b_d
+\]
+
+where 
+\[
+\mu_{d} = \frac{1}{K}\sum_{k=1}^{K} x_{d,k}
+\]
+
+and 
+\[
+\sigma^2_{d} = \frac{1}{K}\sum_{k=1}^{K} (x_{d,k} - \mu_{d})
+\].
+
+In case of input tensor $\mathbf{x} \in \mathbb{R}^{W \times H \times D \times K}$ it is reshaped to  $\mathbf{x}' \in \mathbb{R}^{D \times K H W}$ (i.e. each spatial locations is taken as a separate sample).
+
+\paragraph{Implementation details.} The derivative of the input with respect to the network output is computed as following, where for a simplicity we avoid the input channel index $d$ (the input chan:
+\[
+\frac{dz}{x_{i}} = \sum_{j=1}^{K} \frac{dz}{d y_j} \frac{d y_j}{d x_i}
+\]
+
+where
+\[
+\frac{d y_j}{d x_i} = \left( \delta_{i = j} - \frac{d \mu}{d x_i} \right) \frac{1}{\sqrt{\sigma^2 + \epsilon}} + \left(x_j - \mu \right) \left[-0.5 \left(\sigma^2 + \epsilon \right)^{3/2} \right] \frac{d \sigma^2}{d x_i}
+\]
+
+and the derivatives with respect to the mean and variance are computed as follows:
+\[
+\frac{d \mu}{d x_i} = \frac{1}{K} ~~~~~~~~
+\frac{d \sigma^2}{d x_i} = \frac{1}{K} \sum_{j = 1}^{K} 2 \left(x_j - \mu \right) \left(\delta_{i = j} - \frac{1}{K} \right)
+\]
+
+and $\delta_{\mathrm{PRED}}$ is an indicator function of a predicate $\mathrm{PRED}$.
+
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
 \subsection{Softmax}\label{s:softmax}
 % ------------------------------------------------------------------
 
