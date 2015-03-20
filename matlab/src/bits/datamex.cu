@@ -302,7 +302,7 @@ vl::MexTensor::init(vl::Device dev, vl::TensorGeometry const & geom, float value
       fill<float>
       <<<divideUpwards(getNumElements(), VL_CUDA_NUM_THREADS),
         VL_CUDA_NUM_THREADS>>>
-        ((float*)getMemory(), getNumElements(), value) ;
+        ((float*)getMemory(), value, getNumElements()) ;
       cudaError_t error = cudaGetLastError() ;
       if (error != cudaSuccess) {
         clear() ;
