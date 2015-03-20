@@ -105,7 +105,7 @@ vl::MexContext::initGpu()
  can happen using mexErrMsgTxt() or, implicitly, when an array
  creation function cannot complete, for example due to a memory error).
 
- Therefore the constructors make the allocated memory persistent. C++ 
+ Therefore the constructors make the allocated memory persistent. C++
  guarantees that the arrays are freeed upon error in the destructors.
 
  Note that, upon cerating an array, errors such as running out of

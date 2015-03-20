@@ -205,7 +205,7 @@ for l = tests
           end
         end
       end
-  
+
       disp('testing vl_nnconv pad and stride combo') ;
       x = grandn(16,15,4,2,'single') ;
       for emptyw = [true false]
@@ -342,7 +342,7 @@ for l = tests
           end
         end
       end
-        
+
     case 6
       disp('testing vl_nnnormalize') ;
 

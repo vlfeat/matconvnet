@@ -169,7 +169,7 @@ vl::nnpooling_backward(Context& context,
     case vl::GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
-        /* 
+        /*
          Unfortunately CuDNN requires both the input and the output pooling arrays
          to be available for computing derivatives, whereas MatConvNet only requires the input one.
          */

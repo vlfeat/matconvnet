@@ -81,7 +81,7 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   image.memory = NULL ;
   image.error = 0 ;
 
-  Status status ; 
+  Status status ;
   Rect rect ;
   bool grayscale = false ;
 
@@ -119,7 +119,7 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
 
   // copy RGB to MATLAB format
   switch (image.depth) {
-	case 3:	
+	case 3:
 	  vl::impl::imageFromPixels<impl::pixelFormatBGRA>(image, (char unsigned const *)data.Scan0, data.Stride) ;
       break ;
 	case 1:
@@ -155,7 +155,7 @@ vl::ImageReader::Impl::readDimensions(char const * filename)
   }
 
   getImagePropertiesHelper(image, bitmap) ;
-  
+
 done:
   return image ;
 }
