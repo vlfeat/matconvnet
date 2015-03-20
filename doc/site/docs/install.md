@@ -26,10 +26,9 @@ worry, this is an artefact of the test procedure.
 <a name='compiling'></a>
 ## Compiling
 
-MatConvNet compiles under Linux, Mac, and Windows (with the exception
-of the `vl_imreadjpeg` tool which is not yet supported under
-Windows). This page discusses compiling MatConvNet using the MATLAB
-function `vl_compilenn`. While this is the easiest method,
+MatConvNet compiles under Linux, Mac, and Windows. This page discusses
+compiling MatConvNet using the MATLAB function `vl_compilenn`. While
+this is the easiest method,
 [the command line or an IDE can be used as well](install-alt.md).
 
 <a name='cpu'></a>
@@ -55,6 +54,17 @@ problem by running the complation script again in verbose mode:
     > vl_compilenn('verbose', 1)
 
 Increase the verbosity level to 2 to get even more information.
+
+> **Remark:** The 'vl_imreadjpeg' tool uses an external image library
+> to load images. In Mac OS X and Windows, the default is to use the
+> system libraries (Quartz and GDI+ respectively), so this dependency
+> is immaterial. In Linux, this tool requires the LibJPEG
+> library and the corresponding development files to be installed in
+> the system. If needed, the `ImageLibraryCompileFlags` and
+> `ImageLibraryLinkFlags` options can be used to adjust the
+> compiler and linker flags to match a specific library installation.
+> It is also possible to use the `EnableImreadJpeg` option of `vl_compilenn` to
+> turn off this feature.
 
 <a name='gpu'></a>
 ### Compiling the GPU support
@@ -169,35 +179,7 @@ cuDNN libraries. On a Mac terminal, this may look like:
 
 On Windows, copy the CUDNN DLL file `<Cudnn>/cudnn*dll` (or from
 wherever you unpacked cuDNN) into the `<MatConvNet>/matlab/mex`
-directroy.
-
-### Compiling `vl_imreadjpeg`
-<a name='jpeg'></a>
-
-The `vl_imreadjpeg` function in the MatConvNet toolbox accelerates
-reading large batches of JPEG images. In order to compile it, a copy
-of LibJPEG and of the corresponding header files must be available to
-the MEX compiler used by MATLAB.
-
-On *Linux*, it usually suffices to install the LibJPEG developer
-package (for example `libjpeg-dev` on Ubuntu Linux). Then both
-`vl_compilenn()` and the Makefile should work out of the box.
-
-On *Mac OS X*, LibJPEG can be obtained for example by using
-[MacPorts](http://www.macports.org):
-
-    > sudo port install jpeg
-
-This makes the library available as `/opt/local/lib/libjpeg.dylib` and
-the header file as `/opt/local/include/jpeglib.h`. If you compile the
-library us using `vl_compilenn()`, you can pass the location of these
-files as part of the `ImreadJpegFlags` option:
-
-    > vl_compilenn('enableImreadJpeg', true, 'imreadJpegFlags', ...
-        {'-I/opt/local/include','-L/opt/local/lib','-ljpeg'});
-
-If LibJPEG is installed elsewhere, you would have to replace the paths
-`/opt/local/include` and `/opt/local/lib` accordingly.
+directory.
 
 ## Further examples
 
@@ -206,14 +188,10 @@ CUDA toolkit 6.5 and cuDNN Release Candidate 2, use:
 
     > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
                    'cudaRoot', '/Developer/NVIDIA/CUDA-6.5', ...
-                   'enableCudnn', true, 'cudnnRoot', 'local/', ...
-                   'enableImreadJpeg', true,  ...
-                   'imreadJpegCompileFlags', {'-I/opt/local/include'}, ...
-                   'imreadJpegLinkFlags', {'-L/opt/local/lib','-ljpeg'}) ;
+                   'enableCudnn', true, 'cudnnRoot', 'local/') ;
 
 The equivalent command on Ubuntu Linux would look like:
 
     > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
                    'cudaRoot', '/opt/local/cuda-6.5', ...
-                   'enableCudnn', true, 'cudnnRoot', 'local/', ...
-                   'enableImreadJpeg', true) ;
+                   'enableCudnn', true, 'cudnnRoot', 'local/') ;

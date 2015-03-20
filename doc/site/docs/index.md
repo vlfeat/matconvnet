@@ -5,6 +5,9 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+> **New:** 1.0-beta10 establishes feature parity between platforms,
+> removes some dependencies on third-party image libraries.
+>
 > **New:** We have added [cuDNN](install.md#cudnn) support in
 > 1.0-beta9. This may have significant benefit in speed and memory
 > consupmtion.
@@ -14,7 +17,7 @@ example CNNs are included to classify and encode images.
 > practical</a> on CNNs.
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta9](download/matconvnet-1.0-beta9.tar.gz)
+    - Tarball for [version 1.0-beta10](download/matconvnet-1.0-beta10.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**

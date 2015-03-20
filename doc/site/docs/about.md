@@ -24,6 +24,7 @@ here.
 
 <a name='changes'></a>
 
+- 1.0-beta10 (March 2015) vl_imreadjpeg works under Windows as well.
 - 1.0-beta9 (February 2015) CuDNN support. Major rewrite of the C/CUDA core.
 - 1.0-beta8 (December 2014) New website. Experimental Windows support.
 - 1.0-beta7 (September 2014) Adds VGG verydeep models.

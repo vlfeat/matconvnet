@@ -1,31 +1,36 @@
-%VL_IMREADJPEG Asynchronous multi-threaded jpeg file loading
-%   VL_IMREADJPEG reads jpeg files with multiple threads and allows to
-%   perform this operation asynchronously. In synchronous mode, 
-%   ('Prefetch', false) this function creates pool of workers where each 
-%   processes images from the queue and waits until all images are loaded.
-%   In asynchronous mode ('Prefetch', true); images are added to the queue
-%   but the function is not blocking and does not return any value.
-%   Afterwards, images can be loaded with subsequent call without prefetch.
+%  VL_IMREADJPEG (A)synchronous multithreaded JPEG image loader
+%    IMAGES = VL_IMREADJPEG(FILES) reads the specified cell array
+%    FILES of JPEG files into the cell array of images IMAGES.
 %
-%   Synchrnous read:
-%   IMGS = VL_IMREADJPEG(IMG_PATHS, 'NumThreads', NUM_THREADS) Read jpeg 
-%   images from IMG_PATHS with NUM_THREADS separate threads. Each thread 
-%   creates the image buffer and returns it in IMGS cell array. This
-%   performs synchronous read (exit when all images read).
+%    IMAGES = VL_IMREADJPEG(FILES, 'NumThreads', T) uses T parallel
+%    threads to accelerate the operation. Note that this is
+%    independent of the number of computational threads used by
+%    MATLAB.
 %
-%   Asynchronous read:
-%   VL_IMREADJPEG(IMG_PATHS, 'NumThreads', NUM_THREADS_P, 'Prefetch' true)
-%   prefetch the jpeg images with NUM_THREADS worker threads. This command
-%   exist directly when the jobs are queued. Prefetched images can be
-%   loaded to Matlab by subsequent call of VL_IMREADJPEG(IMG_PATHS, 
-%   'NumThreads', NUM_THREADS_L) which loads the prefetched images and waits
-%   until the rest of the images are loaded. The number of prefetch threads
-%   NUM_THREADS_P must be equal to number of loader threads NUM_THREADS_L
-%   in order to keep the existing worker thread pool (with a different
-%   values the workers pool is recreated which involves waiting until all
-%   threads finish, this can lead to decreased performance).
+%    VL_IMREADJPEG(FILES, 'Prefetch') starts reading the specified
+%    images but returns immediately to MATLAB. Reading happens
+%    concurrently with MATLAB in one or more separated threads.  A
+%    subsequent call IMAGES=VL_IMREADJPEG(FILES) *specifying exactly
+%    the same files in the same order* will then return the loaded
+%    images. This can be sued to quickly load a batch of JPEG images
+%    as MATLAB is busy doing something else.
 %
-% Copyright (C) 2014 Andrea Vedaldi.
+%    The function takes the following options:
+%
+%    Prefetch:: [not specified]
+%      If specified, run without blocking (see above).
+%
+%    Verbose:: [not specified]
+%      Increase the verbosity level.
+%
+%    NumThreads:: [1]
+%      Specify the number of threads used to read images. This number
+%      must be at least 1. Note that it does not make sense to specify
+%      a number larger than the number of available CPU cores, and
+%      often fewer threads are sufficient as reading images is memory
+%      access bound rather than CPU bound.
+
+% Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

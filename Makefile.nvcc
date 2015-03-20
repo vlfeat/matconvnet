@@ -11,10 +11,10 @@ matlab/mex/.build/%.o : matlab/src/bits/%.cu matlab/mex/.build/.stamp
 	$(NVCC) $(NVCCFLAGS) \
 	"$(<)" -c -o "$(@)" $(nvcc_filter)
 
-matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu $(cpp_tgt)
+matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu $(cpp_tgt) $(cu_tgt)
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fPIC \
 	"$(<)" -c -o "matlab/mex/.build/$(*).o" $(nvcc_filter)
-	$(MEX) $(MEXFLAGS_NVCC) "matlab/mex/.build/$(*).o" -output "$(@)" $(cpp_tgt)
+	$(MEX) $(MEXFLAGS_NVCC) "matlab/mex/.build/$(*).o" -output "$(@)" $(cpp_tgt) $(cu_tgt)
 
 endif
 
@@ -24,8 +24,3 @@ matlab/mex/.build/%.o : matlab/src/bits/%.cpp matlab/mex/.build/.stamp
 
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp $(cpp_tgt)
 	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
-
-# This MEX file does not require GPU code, but requires libjpeg
-matlab/mex/vl_imreadjpeg.mex$(MEXARCH): MEXFLAGS+=-I$(LIBJPEG_INCLUDE) -L$(LIBJPEG_LIB) -ljpeg
-matlab/mex/vl_imreadjpeg.mex$(MEXARCH): matlab/src/vl_imreadjpeg.c
-	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)"
