@@ -65,17 +65,25 @@ namespace vl { namespace impl {
         assert(false) ;
     }
 
-    for (int x = 0 ; x < image.width ; x += blockSizeX) {
-      float * __restrict imageMemoryX = image.memory + x * image.height ;
-      int bsx = (std::min)(image.width - x, blockSizeX) ;
+    // we pull out these values as otherwise the compiler
+    // will assume that the reference &image can be aliased
+    // and recompute silly multiplications in the inner loop
 
-      for (int y = 0 ; y < image.height ; y += blockSizeY) {
-        int bsy = (std::min)(image.height - y, blockSizeY) ;
+    float * const  __restrict imageMemory = image.memory ;
+    int const imageHeight = image.height ;
+    int const imageWidth = image.width ;
+
+    for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
+      float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
+      int bsx = (std::min)(imageWidth - x, blockSizeX) ;
+
+      for (int y = 0 ; y < imageHeight ; y += blockSizeY) {
+        int bsy = (std::min)(imageHeight - y, blockSizeY) ;
         float * __restrict r ;
         float * rend ;
         for (int dx = 0 ; dx < bsx ; ++dx) {
           char unsigned const * __restrict pixel = rgb + y * rowStride + (x + dx) * pixelStride ;
-          r = imageMemoryX + y + dx * image.height ;
+          r = imageMemoryX + y + dx * imageHeight ;
           rend = r + bsy ;
           while (r != rend) {
             switch (pixelFormat) {
@@ -188,16 +196,21 @@ namespace vl { namespace impl {
                                   0xff, 0xff, 0xff, 0) ;
         break ;
     }
-    float * __restrict imageMemory = image.memory ;
-    int imageHeight = image.height ;
 
-    for (int x = 0 ; x < image.width ; x += blockSizeX) {
+    // we pull out these values as otherwise the compiler
+    // will assume that the reference &image can be aliased
+    // and recompute silly multiplications in the inner loop
+    float *  const __restrict imageMemory = image.memory ;
+    int const imageHeight = image.height ;
+    int const imageWidth = image.width ;
+
+    for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
       int y = 0 ;
-      float * __restrict imageMemoryX = imageMemory + x * image.height ;
-      int bsx = (std::min)(image.width - x, blockSizeX) ;
+      float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
+      int bsx = (std::min)(imageWidth - x, blockSizeX) ;
       if (bsx < blockSizeX) goto boundary ;
 
-      for ( ; y < image.height - blockSizeY + 1 ; y += blockSizeY) {
+      for ( ; y < imageHeight - blockSizeY + 1 ; y += blockSizeY) {
         char unsigned const * __restrict pixel = rgb + y * rowStride + x * pixelStride ;
         float * __restrict r = imageMemoryX + y ;
         __m128i p0, p1, p2, p3, T0, T1, T2, T3 ;
@@ -226,33 +239,33 @@ namespace vl { namespace impl {
             p3 = _mm_unpackhi_epi64(T2, T3);
 
             // store r
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p0, mask))) ; r += image.height ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p1, mask))) ; r += image.height ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += image.height ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p0, mask))) ; r += imageHeight ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p1, mask))) ; r += imageHeight ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += imageHeight ;
             _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p3, mask))) ;
 
 			if (pixelFormat == pixelFormatBGRAasL) break ;
 
             // store g
-            r += (image.width - 3) * image.height ;
+            r += (imageWidth - 3) * imageHeight ;
             p0 = _mm_srli_epi32 (p0, 8) ;
             p1 = _mm_srli_epi32 (p1, 8) ;
             p2 = _mm_srli_epi32 (p2, 8) ;
             p3 = _mm_srli_epi32 (p3, 8) ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p0, mask))) ; r += image.height ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p1, mask))) ; r += image.height ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += image.height ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p0, mask))) ; r += imageHeight ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p1, mask))) ; r += imageHeight ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += imageHeight ;
             _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p3, mask))) ;
 
             // store b
-            r += (image.width - 3) * image.height ;
+            r += (imageWidth - 3) * imageHeight ;
             p0 = _mm_srli_epi32 (p0, 8) ;
             p1 = _mm_srli_epi32 (p1, 8) ;
             p2 = _mm_srli_epi32 (p2, 8) ;
             p3 = _mm_srli_epi32 (p3, 8) ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p0, mask))) ; r += image.height ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p1, mask))) ; r += image.height ;
-            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += image.height ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p0, mask))) ; r += imageHeight ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p1, mask))) ; r += imageHeight ;
+            _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += imageHeight ;
             _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p3, mask))) ;
             break ;
 
@@ -325,10 +338,10 @@ namespace vl { namespace impl {
 
             // store four 4x4 subblock
             for (int i = 0 ; i < 4 ; ++i) {
-              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p0, shuffleL))) ; r += image.height ;
-              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p1, shuffleL))) ; r += image.height ;
-              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p2, shuffleL))) ; r += image.height ;
-              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p3, shuffleL))) ; r += image.height ;
+              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p0, shuffleL))) ; r += imageHeight ;
+              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p1, shuffleL))) ; r += imageHeight ;
+              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p2, shuffleL))) ; r += imageHeight ;
+              _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p3, shuffleL))) ; r += imageHeight ;
               p0 = _mm_srli_si128 (p0, 4) ;
               p1 = _mm_srli_si128 (p1, 4) ;
               p2 = _mm_srli_si128 (p2, 4) ;
@@ -340,13 +353,13 @@ namespace vl { namespace impl {
 
     boundary:
       /* special case if there is not a full 4x4 block to process */
-      for ( ; y < image.height ; y += blockSizeY) {
-        int bsy = (std::min)(image.height - y, blockSizeY) ;
+      for ( ; y < imageHeight ; y += blockSizeY) {
+        int bsy = (std::min)(imageHeight - y, blockSizeY) ;
         float * __restrict r ;
         float * rend ;
         for (int dx = 0 ; dx < bsx ; ++dx) {
           char unsigned const * __restrict pixel = rgb + y * rowStride + (x + dx) * pixelStride ;
-          r = imageMemoryX + y + dx * image.height ;
+          r = imageMemoryX + y + dx * imageHeight ;
           rend = r + bsy ;
           while (r != rend) {
             switch (pixelFormat) {
