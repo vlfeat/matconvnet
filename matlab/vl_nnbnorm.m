@@ -22,7 +22,7 @@ end
 one = ones(1,1,'like',x);
 eps = opts.epsilon;
 
-x_sz = size(x);
+x_sz = [size(x,1), size(x,2), size(x,3), size(x,4)];
 % Create an array of size #channels x #samples
 x = permute(x, [3 1 2 4]);
 x = reshape(x, x_sz(3), []);
