@@ -252,6 +252,9 @@ flags.cc = {} ;
 if opts.verbose > 1, flags.cc{end+1} = '-v' ; end
 if opts.debug
   flags.cc{end+1} = '-g' ;
+  if strcmp(opts.cudaMethod,'nvcc')
+    flags.cc{end} = '-g -G' ; % nvcc: -g for host code, -G for device code
+  end
 else
   flags.cc{end+1} = '-DNDEBUG' ;
 end
@@ -260,7 +263,11 @@ if opts.enableCudnn,
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
   flags.cc{end+1} = ['-I' opts.cudnnRoot] ;
 end
+
 flags.link = {'-lmwblas'} ;
+if opts.debug
+  flags.link{end+1} = '-g' ; % cannot trace when -g is missing
+end
 
 if opts.enableImreadJpeg
   flags.cc = horzcat(flags.cc, opts.imreadJpegCompileFlags) ;
@@ -428,17 +435,17 @@ function check_clpath()
 % Checks whether the cl.exe is in the path (needed for the nvcc). If
 % not, tries to guess the location out of mex configuration.
 status = system('cl.exe -help');
-if status == 1
+if (status ~= 0)
   warning('CL.EXE not found in PATH. Trying to guess out of mex setup.');
   cc = mex.getCompilerConfigurations('c++');
   if isempty(cc)
     error('Mex is not configured. Run "mex -setup".');
   end
   prev_path = getenv('PATH');
-  cl_path = fullfile(cc.Location, 'VC','bin','x86_amd64');
+  cl_path = fullfile(cc.Location, 'VC','bin', cc.Details.CommandLineShellArg);
   setenv('PATH', [prev_path ';' cl_path]);
   status = system('cl.exe');
-  if status == 1
+  if (status ~= 0)
     setenv('PATH', prev_path);
     error('Unable to find cl.exe');
   else
