@@ -54,37 +54,34 @@ end
 %                                                                    Do job
 % -------------------------------------------------------------------------
 
-one = ones(1,1,'like',x);
-eps = opts.epsilon;
-
-x_sz = [size(x,1), size(x,2), size(x,3), size(x,4)];
-% Create an array of size #channels x #samples
-%x = permute(x, [3 1 2 4]);
-%x = reshape(x, x_sz(3), []);
-
-% do the job
-mass = prod(x_sz([1 2 4])) ;
+x_size = [size(x,1), size(x,2), size(x,3), size(x,4)];
 g_size = size(g) ;
 b_size = size(b) ;
-g = reshape(g, [1 1 x_sz(3) 1]) ;
-b = reshape(b, [1 1 x_sz(3) 1]) ;
+g = reshape(g, [1 1 x_size(3) 1]) ;
+b = reshape(b, [1 1 x_size(3) 1]) ;
   
+mass = prod(x_size([1 2 4])) ;
 mu = sum(sum(sum(x,1),2),4) / mass;
-x_mu = bsxfun(@minus, x, mu);
-sigma = sqrt(sum(sum(sum(x_mu .* x_mu,1),2),4) / mass + opts.epsilon) ;
-x_n = bsxfun(@rdivide, x_mu, sigma);
+y = bsxfun(@minus, x, mu); % y <- x_mu
+sigma2 = sum(sum(sum(y .* y,1),2),4) / mass + opts.epsilon ;
+sigma = sqrt(sigma2) ;
 
 if ~backMode
-  y = bsxfun(@plus, bsxfun(@times, x_n, g), b) ;
-else  
-  dzdg = reshape(sum(sum(sum(dzdy .* x_n,1),2),4), g_size) ;
+  y = bsxfun(@plus, bsxfun(@times, ...
+    bsxfun(@rdivide, y, sigma), ...
+    g), b) ;
+else
+  % remember: y = x_mu
+  dzdg = reshape(sum(sum(sum(dzdy .* ...
+    bsxfun(@rdivide, y, sigma), ...
+    1),2),4), g_size) ;
   dzdb = reshape(sum(sum(sum(dzdy,1),2),4), b_size) ;
 
   muz = sum(sum(sum(dzdy,1),2),4) / mass;
-  tmp1 = sum(sum(sum(dzdy .* x_mu,1),2),4) / mass ;
+  tmp1 = sum(sum(sum(dzdy .* y,1),2),4) / mass ;
   y = ...
     bsxfun(@times, g ./ sigma, bsxfun(@minus, dzdy, muz)) - ...  
-    bsxfun(@times, g .* tmp1 ./ (sigma .* sigma .* sigma), x_mu) ;
+    bsxfun(@times, g .* tmp1 ./ (sigma2 .* sigma), y) ;
 end
 
 end

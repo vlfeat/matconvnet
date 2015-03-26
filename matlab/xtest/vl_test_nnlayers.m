@@ -436,10 +436,10 @@ for l = tests
       
       y = vl_nnbnorm(x,g,b) ;      
       dzdy = grandn(size(y), dtype) ;
-      [dzdx,dzdg,dzdb] = vl_nnbnorm2(x,g,b,dzdy) ;
+      [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy) ;
       
-      vl_testder(@(x) vl_nnbnorm2(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
-      vl_testder(@(g) vl_nnbnorm2(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
-      vl_testder(@(b) vl_nnbnorm2(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
+      vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
+      vl_testder(@(g) vl_nnbnorm(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
+      vl_testder(@(b) vl_nnbnorm(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
   end
 end
