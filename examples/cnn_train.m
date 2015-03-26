@@ -7,7 +7,7 @@ function [net, info] = cnn_train(net, imdb, getBatch, varargin)
 
 opts.train = [] ;
 opts.val = [] ;
-opts.numEpochs = 300 ;
+opts.numEpochs = 30 ;
 opts.batchSize = 256 ;
 opts.useGpu = false ;
 opts.learningRate = 0.001 ;

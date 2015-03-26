@@ -289,7 +289,7 @@ b_k
 \sum_{i'=1}^{H'}
 \sum_{j'=1}^{W'}
 \sum_{d=1}^D
-f_{i'j'd} \times x_{i''+i',j''+j',d,k}.
+f_{i'j'd} \times x_{i''+i'-1,j''+j'-1,d,k}.
 \]
 The call \verb!vl_nnconv(x,f,[])! does not use the biases. Note that the function works with arbitrarily sized inputs and filters (as opposed to, for example, square images).
 
@@ -485,48 +485,101 @@ where
 
 % ------------------------------------------------------------------
 \subsection{Batch normalization}\label{s:bnorm}
-\verb!vl_nnbnorm! implements batch normalisation \cite{ioffe2015}. \verb|y = vl_nnbnorm(x, w, b)| normalises each input channel of $\mathbf{x}$ by its batch mean and variance and applies multiplicative and additive constant $\mathbf{w}$ and $\mathbf{b}$ respectively where:
+
+\verb!vl_nnbnorm! implements batch normalisation~\cite{ioffe2015}. Batch normalisation is somewhat different from other neural network blocks in that it performs computation across images/feature maps in a batch (whereas most blocks process different images/feature maps individually). \verb!y = vl_nnbnorm(x, w, b)! normalises each channel of the feature map $\mathbf{x}$ averaging over spatial locations and batch instances. Let $T$ the batch size; then
 \[
-\mathbf{x},~\mathbf{y} \in \mathbb{R}^{D \times K},~~~\mathbf{w} \in \mathbb{R}^{K}, ~~~\mathbf{b} \in \mathbb{R}^{K}
+\mathbf{x}, \mathbf{y} \in \mathbb{R}^{H \times W \times K \times T},
+\qquad\mathbf{w} \in \mathbb{R}^{K},
+\qquad\mathbf{b} \in \mathbb{R}^{K}.
+\]
+Note that in this case the input and output arrays are explicitly treated as 4D tensors in order to work with a batch of feature maps. The tensors  $\mathbf{w}$ and $\mathbf{b}$ define component-wise multiplicative and additive constants. The output feature map is given by
+\[
+y_{ijkt} = w_k \frac{x_{ijkt} - \mu_{k}}{\sqrt{\sigma_k^2 + \epsilon}} + b_k,
+\quad
+\mu_{k} = \frac{1}{HWT}\sum_{i=1}^H \sum_{j=1}^W \sum_{t=1}^{T} x_{ijkt},
+\quad
+\sigma^2_{k} = \frac{1}{HWT}\sum_{i=1}^H \sum_{j=1}^W \sum_{t=1}^{T} (x_{ijkt} - \mu_{k})^2.
 \]
 
-Each input channel $d$ is normalised by its mean and variance from the input batch:
-
+\paragraph{Implementation details.} The derivative of the input with respect to the network output is computed as follows:
 \[
-y_{d,k} = w_d \frac{x_{d,k} - \mu_{d}}{\sqrt{\sigma^2 + \epsilon}} + b_d
+\frac{dz}{dx_{ijkt}} = \sum_{i''j''k''t''}
+\frac{dz}{d y_{i''j''k''t''}} 
+\frac{d y_{i''j''k''t''}}{d x_{ijkt}}.
 \]
-
-where 
+Since feature channels are processed independently, all terms with $k''\not=k$ are null. Hence
 \[
-\mu_{d} = \frac{1}{K}\sum_{k=1}^{K} x_{d,k}
+\frac{dz}{dx_{ijkt}} = \sum_{i''j''t''}
+\frac{dz}{d y_{i''j''kt''}} 
+\frac{d y_{i''j''kt''}}{d x_{ijkt}},
 \]
-
-and 
-\[
-\sigma^2_{d} = \frac{1}{K}\sum_{k=1}^{K} (x_{d,k} - \mu_{d})
-\].
-
-In case of input tensor $\mathbf{x} \in \mathbb{R}^{W \times H \times D \times K}$ it is reshaped to  $\mathbf{x}' \in \mathbb{R}^{D \times K H W}$ (i.e. each spatial locations is taken as a separate sample).
-
-\paragraph{Implementation details.} The derivative of the input with respect to the network output is computed as following, where for a simplicity we avoid the input channel index $d$ (the input chan:
-\[
-\frac{dz}{x_{i}} = \sum_{j=1}^{K} \frac{dz}{d y_j} \frac{d y_j}{d x_i}
-\]
-
 where
 \[
-\frac{d y_j}{d x_i} = \left( \delta_{i = j} - \frac{d \mu}{d x_i} \right) \frac{1}{\sqrt{\sigma^2 + \epsilon}} + \left(x_j - \mu \right) \left[-0.5 \left(\sigma^2 + \epsilon \right)^{3/2} \right] \frac{d \sigma^2}{d x_i}
+\frac{d y_{i''j''kt''}}{d x_{ijkt}} 
+=
+w_k
+\left(\delta_{i=i'',j=j'',t=t''} - \frac{d \mu_k}{d x_{ijkt}}\right)
+\frac{1}{\sqrt{\sigma^2_k + \epsilon}}
+-
+\frac{w_k}{2}
+\left(x_{i''j''kt''} - \mu_k\right)
+\left(\sigma_k^2 + \epsilon \right)^{-\frac{3}{2}}
+\frac{d \sigma_k^2}{d x_{ijkt}},
 \]
-
-and the derivatives with respect to the mean and variance are computed as follows:
-\[
-\frac{d \mu}{d x_i} = \frac{1}{K} ~~~~~~~~
-\frac{d \sigma^2}{d x_i} = \frac{1}{K} \sum_{j = 1}^{K} 2 \left(x_j - \mu \right) \left(\delta_{i = j} - \frac{1}{K} \right)
-\]
-
-and $\delta_{\mathrm{PRED}}$ is an indicator function of a predicate $\mathrm{PRED}$.
-
-% ------------------------------------------------------------------
+the derivatives with respect to the mean and variance are computed as follows:
+\begin{align*}
+\frac{d \mu_k}{d x_{ijkt}} &= \frac{1}{HWT},
+\\
+\frac{d \sigma_k^2}{d x_{i'j'kt'}}
+&=
+\frac{2}{HWT}
+\sum_{ijt}
+\left(x_{ijkt} - \mu_k \right)
+\left(\delta_{i=i',j=j',t=t'} - \frac{1}{HWT} \right)
+=
+\frac{2}{HWT} \left(x_{i'j'kt'} - \mu_k \right),
+\end{align*}
+and $\delta_E$ is the indicator function of the event $E$. Hence
+\begin{align*}
+\frac{dz}{dx_{ijkt}}
+&=
+\frac{w_k}{\sqrt{\sigma^2_k + \epsilon}}
+\left(
+\frac{dz}{d y_{ijkt}} 
+-
+\frac{1}{HWT}\sum_{i''j''kt''}
+\frac{dz}{d y_{i''j''kt''}} 
+\right)
+\\
+&-
+\frac{w_k}{2(\sigma^2_k + \epsilon)^{\frac{3}{2}}}
+\sum_{i''j''kt''}
+\frac{dz}{d y_{i''j''kt''}} 
+\left(x_{i''j''kt''} - \mu_k\right)
+\frac{2}{HWT} \left(x_{ijkt} - \mu_k \right)
+\end{align*}
+i.e.
+\begin{align*}
+\frac{dz}{dx_{ijkt}}
+&=
+\frac{w_k}{\sqrt{\sigma^2_k + \epsilon}}
+\left(
+\frac{dz}{d y_{ijkt}} 
+-
+\frac{1}{HWT}\sum_{i''j''kt''}
+\frac{dz}{d y_{i''j''kt''}} 
+\right)
+\\
+&-
+\frac{w_k}{\sigma^2_k + \epsilon}
+\,
+\frac{x_{ijkt} - \mu_k}{\sqrt{\sigma^2_k + \epsilon}}
+\,
+\frac{1}{HWT}
+\sum_{i''j''kt''}
+\frac{dz}{d y_{i''j''kt''}} 
+\left(x_{i''j''kt''} - \mu_k\right).
+\end{align*}
 
 % ------------------------------------------------------------------
 \subsection{Softmax}\label{s:softmax}

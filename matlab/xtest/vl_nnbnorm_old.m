@@ -29,7 +29,7 @@ function [y,dzdg,dzdb] = vl_nnbnorm(x,g,b,varargin)
 %
 %   See also: VL_NNNORMALIZE().
 
-% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2015 Karel Lenc.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -59,32 +59,38 @@ eps = opts.epsilon;
 
 x_sz = [size(x,1), size(x,2), size(x,3), size(x,4)];
 % Create an array of size #channels x #samples
-%x = permute(x, [3 1 2 4]);
-%x = reshape(x, x_sz(3), []);
+x = permute(x, [3 1 2 4]);
+x = reshape(x, x_sz(3), []);
 
 % do the job
-mass = prod(x_sz([1 2 4])) ;
-g_size = size(g) ;
-b_size = size(b) ;
-g = reshape(g, [1 1 x_sz(3) 1]) ;
-b = reshape(b, [1 1 x_sz(3) 1]) ;
-  
-mu = sum(sum(sum(x,1),2),4) / mass;
-x_mu = bsxfun(@minus, x, mu);
-sigma = sqrt(sum(sum(sum(x_mu .* x_mu,1),2),4) / mass + opts.epsilon) ;
-x_n = bsxfun(@rdivide, x_mu, sigma);
+u = mean(x, 2);
+v = var(x, 1, 2);
+
+v_nf = sqrt(v + opts.epsilon) ;
+x_mu = bsxfun(@minus, x, u);
+x_n = bsxfun(@times, x_mu, 1./v_nf);
 
 if ~backMode
-  y = bsxfun(@plus, bsxfun(@times, x_n, g), b) ;
-else  
-  dzdg = reshape(sum(sum(sum(dzdy .* x_n,1),2),4), g_size) ;
-  dzdb = reshape(sum(sum(sum(dzdy,1),2),4), b_size) ;
+  y = bsxfun(@times, x_n, g);
+  y = bsxfun(@plus, y, b);
+else
+  dzdy = permute(dzdy, [3 1 2 4]);
+  dzdy = reshape(dzdy, x_sz(3), []);
 
-  muz = sum(sum(sum(dzdy,1),2),4) / mass;
-  tmp1 = sum(sum(sum(dzdy .* x_mu,1),2),4) / mass ;
-  y = ...
-    bsxfun(@times, g ./ sigma, bsxfun(@minus, dzdy, muz)) - ...  
-    bsxfun(@times, g .* tmp1 ./ (sigma .* sigma .* sigma), x_mu) ;
+  m = one * size(x, 2);
+  dvdx = 2./(m - 0*one) .* bsxfun(@minus, x_mu, one ./ m * sum(x_mu,2));
+
+  v_nf_d = -0.5 * (v + one*eps) .^ (-3/2);
+
+  dzdx = bsxfun(@times, bsxfun(@minus, dzdy, one ./ m * sum(dzdy,2)), 1./v_nf(:));
+  dzdx = dzdx + bsxfun(@times, bsxfun(@times, dvdx, sum(dzdy .* x_mu, 2)), v_nf_d);
+  %dzdx = dzdy;
+  y = bsxfun(@times, dzdx, g);
+  dzdg = sum(dzdy .* x_n, 2);
+  dzdb = sum(dzdy, 2);
 end
+
+y = reshape(y, x_sz(3), x_sz(1), x_sz(2), x_sz(4));
+y = permute(y, [2 3 1 4]);
 
 end
