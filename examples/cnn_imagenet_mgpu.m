@@ -1,4 +1,4 @@
-function cnn_imagenet2(varargin)
+function cnn_imagenet_mgpu(varargin)
 % CNN_IMAGENET   Demonstrates training a CNN on ImageNet
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
@@ -70,7 +70,7 @@ clear averageImage im temp ;
 
 fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
 
-[net,info] = cnn_train2(net, imdb, fn, opts.train, 'conserveMemory', true) ;
+[net,info] = cnn_train_mgpu(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(opts, numThreads)

@@ -1,4 +1,4 @@
-function [net, info] = cnn_train2(net, imdb, getBatch, varargin)
+function [net, info] = cnn_train_mgpu(net, imdb, getBatch, varargin)
 % CNN_TRAIN   Demonstrates training a CNN
 %    CNN_TRAIN() is an example learner implementing stochastic gradient
 %    descent with momentum to train a CNN for image classification.
