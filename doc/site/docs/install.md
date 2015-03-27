@@ -77,8 +77,9 @@ ideally **match your MATLAB version**:
 | MATLAB    | CUDA toolkit      |
 |-----------|-------------------|
 | R2013b    | 5.5               |
-| R2014a    | 6.0               |
-| R2014b    | 6.5               |
+| R2014a    | 5.5               |
+| R2014b    | 6.0               |
+| R2015a    | 6.5               |
 
 You can also use the `gpuDevice` MATLAB command to find out the
 correct version of the CUDA toolkit. It is also possible (and
@@ -134,12 +135,12 @@ MatConvNet supports the NVIDIA <a
 href='https://developer.nvidia.com/cuDNN'>cuDNN library</a> for deep
 learning (and in particular their fast convolution code). In order to
 use it, obtain the
-[cuDNN Candidate Release 2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library). Note
-that only Candidate Release 2 has been tested so far (Candidate
-Release 1 will *not* work). Make sure that the CUDA toolkit matches
-the one in cuDNN (e.g. 6.5). This often means that the CUDA toolkit
-will *not* match the one used internally by MATLAB, such that the
-[compilation method](#nvcc) discussed above must be used.
+[cuDNN V2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library)
+library from NVIDIA (the older V2 RC2 version should also work, but
+other releases such as V1 will *not* work). Make sure that the CUDA
+toolkit matches the one in cuDNN (e.g. 6.5). This often means that the
+CUDA toolkit will *not* match the one used internally by MATLAB, such
+that the [compilation method](#nvcc) discussed above must be used.
 
 Unpack the cuDNN library binaries and header files in a place
 `<Cudnn>` of you choice. In the rest of the instructions, it will be
