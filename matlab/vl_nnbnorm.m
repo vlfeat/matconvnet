@@ -57,31 +57,32 @@ end
 x_size = [size(x,1), size(x,2), size(x,3), size(x,4)];
 g_size = size(g) ;
 b_size = size(b) ;
-g = reshape(g, [1 1 x_size(3) 1]) ;
-b = reshape(b, [1 1 x_size(3) 1]) ;
-  
+g = reshape(g, [1 x_size(3) 1]) ;
+b = reshape(b, [1 x_size(3) 1]) ;
+x = reshape(x, [x_size(1)*x_size(2) x_size(3) x_size(4)]) ;
+
 mass = prod(x_size([1 2 4])) ;
-mu = sum(sum(sum(x,1),2),4) / mass;
+mu = sum(sum(x,1),3) / mass  ;
 y = bsxfun(@minus, x, mu); % y <- x_mu
-sigma2 = sum(sum(sum(y .* y,1),2),4) / mass + opts.epsilon ;
+sigma2 = sum(sum(y .* y,1),3) / mass + opts.epsilon ;
 sigma = sqrt(sigma2) ;
 
 if ~backMode
-  y = bsxfun(@plus, bsxfun(@times, ...
-    bsxfun(@rdivide, y, sigma), ...
-    g), b) ;
+  y = bsxfun(@plus, bsxfun(@times, g ./ sigma, y), b) ;
 else
-  % remember: y = x_mu
-  dzdg = reshape(sum(sum(sum(dzdy .* ...
-    bsxfun(@rdivide, y, sigma), ...
-    1),2),4), g_size) ;
-  dzdb = reshape(sum(sum(sum(dzdy,1),2),4), b_size) ;
+  % remember: y contains x_mu
+  dzdy = reshape(dzdy, size(x)) ;
+  dzdg = sum(sum(dzdy .* y,1),3) ./ sigma ;
+  dzdb = sum(sum(dzdy,1),3) ;
 
-  muz = sum(sum(sum(dzdy,1),2),4) / mass;
-  tmp1 = sum(sum(sum(dzdy .* y,1),2),4) / mass ;
+  muz = dzdb / mass;
   y = ...
-    bsxfun(@times, g ./ sigma, bsxfun(@minus, dzdy, muz)) - ...  
-    bsxfun(@times, g .* tmp1 ./ (sigma2 .* sigma), y) ;
+    bsxfun(@times, g ./ sigma, bsxfun(@minus, dzdy, muz)) - ...
+    bsxfun(@times, g .* dzdg ./ (sigma2 * mass), y) ;
+
+  dzdg = reshape(dzdg, g_size) ;
+  dzdb = reshape(dzdb, b_size) ;
 end
 
+y = reshape(y, x_size) ;
 end
