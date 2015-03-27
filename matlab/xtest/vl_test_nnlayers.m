@@ -408,9 +408,9 @@ for l = tests
       dzdy = grandn(size(y),'single') ;
       dzdx = vl_nndropout(x,dzdy,'mask',mask) ;
       vl_testder(@(x) vl_nndropout(x,'mask',mask), x, dzdy, dzdx, 1e-3*range) ;
-      
+
     case 10
-      disp('testing sigmoid') ;
+      disp('testing vl_nnsigmoid') ;
       x = randn(5,5,1,1,'single') ;
       x(:) = randperm(numel(x))' - round(numel(x)/2) ;
       x(x==0)=1 ;
@@ -419,13 +419,13 @@ for l = tests
       dzdy = grandn(size(y),'single') ;
       dzdx = vl_nnsigmoid(x,dzdy) ;
       vl_testder(@(x) vl_nnsigmoid(x), x, dzdy, dzdx) ;
-      
+
     case 11
-      disp('testing bnorm');
+      disp('testing vl_nnbnorm');
       r = 13 ; c = 17 ;
       nd = 4 ;
       bs = 5 ;
-      
+
       dtype = 'single' ;
 
       x = grandn(r, c, nd, bs, dtype) ;
@@ -433,11 +433,11 @@ for l = tests
       b = grandn(1, 1, nd, 1);
       g = grandn(nd, 1);
       b = grandn(nd, 1);
-      
-      y = vl_nnbnorm(x,g,b) ;      
+
+      y = vl_nnbnorm(x,g,b) ;
       dzdy = grandn(size(y), dtype) ;
       [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy) ;
-      
+
       vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
       vl_testder(@(g) vl_nnbnorm(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
       vl_testder(@(b) vl_nnbnorm(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
