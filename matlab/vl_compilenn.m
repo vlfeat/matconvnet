@@ -285,6 +285,7 @@ flags.link{end+1} = '-lmwblas' ;
 switch arch
   case {'maci64', 'glnxa64'}
   case {'win64'}
+    % VisualC does not pass this even if available in the CPU architecture
     flags.cc{end+1} = '-D__SSSE3__' ;
 end
 
@@ -310,14 +311,25 @@ if opts.enableGpu
 end
 
 % For the MEX command
+flags.link{end+1} = '-largeArrayDims' ;
 flags.mexcc = flags.cc ;
+flags.mexcc{end+1} = '-largeArrayDims' ;
 flags.mexcc{end+1} = '-cxx' ;
 if strcmp(arch, 'maci64')
+  % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
+  % Clang libc++. This should go away in the future.
   flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
   flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
+  if  ~verLessThan('matlab', '8.5.0')
+    % Complicating matters, MATLAB 8.5.0 links to Clang c++ by default
+    % when linking MEX files overriding the option above. More force
+    % is needed:
+    flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+  end
 end
 if opts.enableGpu
   flags.mexcu = flags.cc ;
+  flags.mexcu{end+1} = '-largeArrayDims' ;
   flags.mexcu{end+1} = '-cxx' ;
   flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
   flags.mexcu{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;
@@ -407,7 +419,7 @@ objs = strrep(objs,'.c',['.' objext]) ;
 function objs = mex_compile(opts, src, tgt, mex_opts)
 % --------------------------------------------------------------------
 mopts = {'-outdir', fileparts(tgt), src, '-c', mex_opts{:}} ;
-opts.verbose && fprintf('%s: MEX: %s\n', mfilename, strjoin(mopts)) ;
+opts.verbose && fprintf('%s: MEX CC: %s\n', mfilename, strjoin(mopts)) ;
 mex(mopts{:}) ;
 
 % --------------------------------------------------------------------
@@ -417,7 +429,7 @@ nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
 nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', ...
                    nvcc_path, src, ...
                    strjoin(nvcc_opts), tgt);
-opts.verbose && fprintf('%s: CUDA: %s\n', mfilename, nvcc_cmd) ;
+opts.verbose && fprintf('%s: NVCC CC: %s\n', mfilename, nvcc_cmd) ;
 status = system(nvcc_cmd);
 if status, error('Command %s failed.', nvcc_cmd); end;
 
@@ -425,7 +437,7 @@ if status, error('Command %s failed.', nvcc_cmd); end;
 function mex_link(opts, objs, mex_dir, mex_flags)
 % --------------------------------------------------------------------
 mopts = {'-outdir', mex_dir, mex_flags{:}, objs{:}} ;
-opts.verbose && fprintf('%s: MEX linking: %s\n', mfilename, strjoin(mopts)) ;
+opts.verbose && fprintf('%s: MEX LINK: %s\n', mfilename, strjoin(mopts)) ;
 mex(mopts{:}) ;
 
 % --------------------------------------------------------------------
