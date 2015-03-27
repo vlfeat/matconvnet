@@ -56,7 +56,7 @@ MEX = $(MATLABROOT)/bin/mex
 MEXEXT = $(MATLABROOT)/bin/mexext
 MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
 MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
-MEXFLAGS = -largeArrayDims -lmwblas \
+MEXFLAGS = -cxx -largeArrayDims -lmwblas \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
@@ -71,7 +71,7 @@ $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 -Xcompiler -fPIC
-MEXFLAGS_NVCC = $(MEXFLAGS) -cxx -lmwgpu
+MEXFLAGS_NVCC = $(MEXFLAGS) -lmwgpu
 
 ifneq ($(DEBUG),)
 MEXFLAGS += -g
