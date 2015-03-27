@@ -66,13 +66,6 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
   if (padLeft != padRight) return vl::vlErrorUnsupported ;
   if (padTop != padBottom) return vl::vlErrorUnsupported ;
 
-#if __linux
-  if (filters.getHeight() == 1 || filters.getWidth() == 1) {
-    // catch CuDNN RC2 bug (does not seem to affect Mac OS X; Windows?
-    return vl::vlErrorUnsupported ;
-  }
-#endif
-
   cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
   vl::Error error = vl::vlSuccess ;
   cudnnHandle_t handle ;
@@ -258,13 +251,6 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
 
   if (padLeft != padRight) return vl::vlErrorUnsupported ;
   if (padTop != padBottom) return vl::vlErrorUnsupported ;
-
-#if __linux
-  if (filters.getHeight() == 1 || filters.getWidth() == 1) {
-    // catch CuDNN RC2 bug (does not seem to affect Mac OS X; Windows?
-    return vl::vlErrorUnsupported ;
-  }
-#endif
 
   cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
   vl::Error error = vl::vlSuccess ;
