@@ -1,5 +1,5 @@
 function out = vl_nnsigmoid(x,dzdy)
-% VL_NNSIGMOID  Sigmoid nonlinearity
+% VL_NNSIGMOID  CNN sigmoid nonlinearity
 %   Y = VL_NNSIGMOID(X) computes the sigmoid of the data X. X can
 %   have an arbitrary size. The sigmoid is defined as follows:
 %

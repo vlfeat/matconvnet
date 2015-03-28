@@ -27,8 +27,9 @@ worry, this is an artefact of the test procedure.
 ## Compiling
 
 MatConvNet compiles under Linux, Mac, and Windows. This page discusses
-compiling MatConvNet using the MATLAB function `vl_compilenn`. While
-this is the easiest method,
+compiling MatConvNet using the MATLAB function
+[`vl_compilenn`](mfiles/vl_compilenn). While this is the easiest
+method,
 [the command line or an IDE can be used as well](install-alt.md).
 
 <a name='cpu'></a>

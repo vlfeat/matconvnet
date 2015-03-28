@@ -17,9 +17,9 @@ pages:
 - ['about.md', 'Getting Started', 'About']
 
 - ['functions.md', 'Functions', 'Overview']
-- ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
 - ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
 - ['mfiles/vl_compilenn.md', 'Functions', 'vl_compilenn']
+- ['mfiles/vl_nnbnorm.md', 'Functions', 'vl_nnbnorm']
 - ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
 - ['mfiles/vl_nndropout.md', 'Functions', 'vl_nndropout']
 - ['mfiles/vl_nnloss.md', 'Functions', 'vl_nnloss']
@@ -27,6 +27,7 @@ pages:
 - ['mfiles/vl_nnnormalize.md', 'Functions', 'vl_nnnormalize']
 - ['mfiles/vl_nnpool.md', 'Functions', 'vl_nnpool']
 - ['mfiles/vl_nnrelu.md', 'Functions', 'vl_nnrelu']
+- ['mfiles/vl_nnsigmoid.md', 'Functions', 'vl_nnsigmoid']
 - ['mfiles/vl_nnsoftmax.md', 'Functions', 'vl_nnsoftmax']
 - ['mfiles/vl_nnsoftmaxloss.md', 'Functions', 'vl_nnsoftmaxloss']
 - ['mfiles/vl_rootnn.md', 'Functions', 'vl_rootnn']

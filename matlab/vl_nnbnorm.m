@@ -1,7 +1,7 @@
 function [y,dzdg,dzdb] = vl_nnbnorm(x,g,b,varargin)
 % VL_NNBNORM  CNN batch normalisation
-%    Y = VL_NNBNORM(X,G,B) computes the batch normalization of the
-%    input X. This is defined as
+%   Y = VL_NNBNORM(X,G,B) computes the batch normalization of the
+%   input X. This is defined as:
 %
 %      Y(i,j,k,t) = G(k) * (X(i,j,k,t) - mu(k)) / sigma(k) + B(k)
 %
@@ -24,7 +24,7 @@ function [y,dzdg,dzdb] = vl_nnbnorm(x,g,b,varargin)
 %
 %   VL_NNBNROM(..., 'Option', value) takes the following options:
 %
-%   Epsilon:: 1e-4
+%   `Epsilon`:: 1e-4
 %       Specify the EPSILON constant.
 %
 %   See also: VL_NNNORMALIZE().
