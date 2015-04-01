@@ -6,6 +6,14 @@ function y = vl_nnrelu(x,dzdy)
 %   DZDX = VL_NNRELU(X, DZDY) computes the network derivative DZDX
 %   with respect to the input X given the derivative DZDY with respect
 %   to the output Y. DZDX has the same dimension as X.
+%
+%   ADVANCED USAGE
+%
+%   As a further optimization, in the backward computation it is
+%   possible to replace X with Y, namely, if Y = VL_NNRELU(X), then
+%   VL_NNRELU(X,DZDY) gives the same result as VL_NNRELU(Y,DZDY).
+%   This is useful because it means that the buffer X does not need to
+%   be remembered in the backward pass.
 
 % Copyright (C) 2014 Andrea Vedaldi.
 % All rights reserved.
