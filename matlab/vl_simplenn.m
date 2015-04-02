@@ -182,9 +182,11 @@ for i=1:n
     otherwise
       error('Unknown layer type %s', l.type) ;
   end
-  if opts.conserveMemory & ~doder & i < numel(net.layers) - 1
-    % TODO: forget unnecesary intermediate computations even when
-    % derivatives are required
+  % optionally forget intermediate results
+  forget = opts.conserveMemory ;
+  forget = forget & (~doder || strcmp(l.type, 'relu')) ;
+  forget = forget & ~(strcmp(l.type, 'loss') || strcmp(l.type, 'softmaxloss')) ;
+  if forget
     res(i).x = [] ;
   end
   if gpuMode & opts.sync
@@ -218,7 +220,13 @@ if doder
       case 'softmaxloss'
         res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'relu'
-        res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
+        if ~isempty(res(i).x)
+          res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
+        else
+          % if res(i).x is empty, it has been optimized away, so we use this
+          % hack (which works only for ReLU):
+          res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx) ;
+        end
       case 'sigmoid'
         res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
