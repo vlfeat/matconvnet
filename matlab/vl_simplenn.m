@@ -122,6 +122,8 @@ opts.conserveMemory = false ;
 opts.sync = false ;
 opts.disableDropout = false ;
 opts.freezeDropout = false ;
+opts.accumulate = false;
+
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -204,10 +206,21 @@ if doder
     res(i).backwardTime = tic ;
     switch l.type
       case 'conv'
+        if ~opts.accumulate
         [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
             vl_nnconv(res(i).x, l.filters, l.biases, ...
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
+        else
+            dzdw = cell(1,2); 
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+            vl_nnconv(res(i).x, l.filters, l.biases, ...
+                      res(i+1).dzdx, ...
+                      'pad', l.pad, 'stride', l.stride) ;
+            res(i).dzdw{1} =  res(i).dzdw{1}+dzdw{1};
+            res(i).dzdw{2} =  res(i).dzdw{1}+dzdw{2};
+            dzdw = {};
+        end
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
@@ -238,9 +251,19 @@ if doder
           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
         end
       case 'bnorm'
-        [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
-            vl_nnbnorm(res(i).x, l.filters, l.biases, ...
-                      res(i+1).dzdx) ;
+        if ~opts.accumulate
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnbnorm(res(i).x, l.filters, l.biases, ...
+                          res(i+1).dzdx) ;
+        else
+            dzdw = cell(1,2); 
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnbnorm(res(i).x, l.filters, l.biases, ...
+                          res(i+1).dzdx) ;
+            res(i).dzdw{1} =  res(i).dzdw{1}+dzdw{1};
+            res(i).dzdw{2} =  res(i).dzdw{1}+dzdw{2};
+            dzdw = {};
+        end
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
     end
