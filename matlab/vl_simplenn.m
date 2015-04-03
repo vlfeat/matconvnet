@@ -218,7 +218,7 @@ if doder
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
             res(i).dzdw{1} =  res(i).dzdw{1}+dzdw{1};
-            res(i).dzdw{2} =  res(i).dzdw{1}+dzdw{2};
+            res(i).dzdw{2} =  res(i).dzdw{2}+dzdw{2};
             dzdw = {};
         end
       case 'pool'
@@ -261,7 +261,7 @@ if doder
                 vl_nnbnorm(res(i).x, l.filters, l.biases, ...
                           res(i+1).dzdx) ;
             res(i).dzdw{1} =  res(i).dzdw{1}+dzdw{1};
-            res(i).dzdw{2} =  res(i).dzdw{1}+dzdw{2};
+            res(i).dzdw{2} =  res(i).dzdw{2}+dzdw{2};
             dzdw = {};
         end
       case 'custom'
