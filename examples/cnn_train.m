@@ -32,7 +32,7 @@ if isnan(opts.train), opts.train = [] ; end
 % -------------------------------------------------------------------------
 
 for i=1:numel(net.layers)
-  if ~strcmp(net.layers{i}.type,'conv'), continue; end
+  if ~ismember(net.layers{i}.type, {'conv', 'bnorm'}), continue; end
   net.layers{i}.filtersMomentum = zeros(size(net.layers{i}.filters), ...
     class(net.layers{i}.filters)) ;
   net.layers{i}.biasesMomentum = zeros(size(net.layers{i}.biases), ...
@@ -54,7 +54,7 @@ end
 if opts.useGpu
   net = vl_simplenn_move(net, 'gpu') ;
   for i=1:numel(net.layers)
-    if ~strcmp(net.layers{i}.type,'conv'), continue; end
+    if ~ismember(net.layers{i}.type, {'conv', 'bnorm'}), continue; end
     net.layers{i}.filtersMomentum = gpuArray(net.layers{i}.filtersMomentum) ;
     net.layers{i}.biasesMomentum = gpuArray(net.layers{i}.biasesMomentum) ;
   end
@@ -119,9 +119,10 @@ for epoch=1:opts.numEpochs
   if prevLr ~= lr
     fprintf('learning rate changed (%f --> %f): resetting momentum\n', prevLr, lr) ;
     for l=1:numel(net.layers)
-      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
-      net.layers{l}.filtersMomentum = 0 * net.layers{l}.filtersMomentum ;
-      net.layers{l}.biasesMomentum = 0 * net.layers{l}.biasesMomentum ;
+      ly = net.layers{l};
+      if ~ismember(ly.type, {'conv', 'bnorm'}), continue ; end
+      net.layers{l}.filtersMomentum = 0 * ly.filtersMomentum ;
+      net.layers{l}.biasesMomentum = 0 * ly.biasesMomentum ;
     end
   end
 
@@ -148,19 +149,23 @@ for epoch=1:opts.numEpochs
 
     % gradient step
     for l=1:numel(net.layers)
-      if ~strcmp(net.layers{l}.type, 'conv'), continue ; end
+      ly = net.layers{l} ;
+      if ~ismember(ly.type, {'conv', 'bnorm'}), continue ; end
+      if ly.filtersLearningRate == 0 && ly.biasesLearningRate == 0
+        continue;
+      end;
 
       net.layers{l}.filtersMomentum = ...
-        opts.momentum * net.layers{l}.filtersMomentum ...
-          - (lr * net.layers{l}.filtersLearningRate) * ...
-          (opts.weightDecay * net.layers{l}.filtersWeightDecay) * net.layers{l}.filters ...
-          - (lr * net.layers{l}.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
+        opts.momentum * ly.filtersMomentum ...
+          - (lr * ly.filtersLearningRate) * ...
+          (opts.weightDecay * ly.filtersWeightDecay) * ly.filters ...
+          - (lr * ly.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
 
       net.layers{l}.biasesMomentum = ...
-        opts.momentum * net.layers{l}.biasesMomentum ...
-          - (lr * net.layers{l}.biasesLearningRate) * ....
-          (opts.weightDecay * net.layers{l}.biasesWeightDecay) * net.layers{l}.biases ...
-          - (lr * net.layers{l}.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
+        opts.momentum * ly.biasesMomentum ...
+          - (lr * ly.biasesLearningRate) * ....
+          (opts.weightDecay * ly.biasesWeightDecay) * ly.biases ...
+          - (lr * ly.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
 
       net.layers{l}.filters = net.layers{l}.filters + net.layers{l}.filtersMomentum ;
       net.layers{l}.biases = net.layers{l}.biases + net.layers{l}.biasesMomentum ;
