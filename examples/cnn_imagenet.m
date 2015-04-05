@@ -6,19 +6,24 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 
 opts.dataDir = fullfile('data','imagenet12') ;
 opts.expDir = fullfile('data','imagenet12-baseline') ;
+opts.modelType = 'dropout' ;
+opts.numFetchThreads = 12 ;
+opts.train.batchSize = 256 ;
+opts.train.continue = true ;
+opts.train.useGpu = true ;
+opts.train.prefetch = false ;
+opts.lite = false ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.lite = false ;
-opts.numFetchThreads = 0 ;
-opts.train.batchSize = 256 ;
-opts.modelType = 'bnorm' ;
-opts.train.numEpochs = 65 ;
-opts.train.continue = true ;
-opts.train.useGpu = false ;
-opts.train.prefetch = false ;
-opts.train.learningRate = [0.01*ones(1, 25) 0.001*ones(1, 25) 0.0001*ones(1,15)] ;
 opts.train.expDir = opts.expDir ;
+switch opts.modelType
+  case 'dropout'
+    opts.train.learningRate = [0.01*ones(1,25) 0.001*ones(1,25) 0.0001*ones(1,15)] ;
+  case 'bnorm'
+    opts.train.learningRate = [0.01*ones(1,5) 0.005*ones(1,5) 0.001*ones(1,5) 0.0001*ones(1,5)] ;
+end
+opts.train.numEpochs = numel(opts.train.learningRate) ;
 opts = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
