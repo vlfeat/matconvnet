@@ -611,7 +611,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MATLABROOT = /Applications/MATLAB_R2014b.app;
+				MATLABROOT = /Applications/MATLAB_R2015a.app;
 				MEX = "$(MATLABROOT)/bin/mex";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				ONLY_ACTIVE_ARCH = YES;
@@ -651,7 +651,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MATLABROOT = /Applications/MATLAB_R2014b.app;
+				MATLABROOT = /Applications/MATLAB_R2015a.app;
 				MEX = "$(MATLABROOT)/bin/mex";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				SDKROOT = macosx;

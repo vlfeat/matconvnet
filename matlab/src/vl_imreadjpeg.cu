@@ -293,7 +293,10 @@ void mexFunction(int nout, mxArray *out[],
     tasksMutex.unlock() ;
 
     if (!image.error) {
-      mwSize dimensions [3] = {image.height, image.width, image.depth} ;
+      mwSize dimensions [3] = {
+        (mwSize)image.height,
+        (mwSize)image.width,
+        (mwSize)image.depth} ;
       mwSize dimensions_ [3] = {0} ;
       mxArray * image_array = mxCreateNumericArray(3, dimensions_, mxSINGLE_CLASS, mxREAL) ;
       mxSetDimensions(image_array, dimensions, 3) ;
