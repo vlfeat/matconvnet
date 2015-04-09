@@ -88,7 +88,7 @@ clear averageImage im temp ;
 
 fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
 
-[net,info] = cnn_train_mgpu(net, imdb, fn, opts.train, 'conserveMemory', true) ;
+[net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(opts, numThreads)

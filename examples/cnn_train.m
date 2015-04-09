@@ -1,15 +1,30 @@
-function [net, info] = cnn_train(net, imdb, getBatch, varargin)
+function [net, info] = cnn_train_mgpu(net, imdb, getBatch, varargin)
 % CNN_TRAIN   Demonstrates training a CNN
-%    CNN_TRAIN() is an example learner implementing stochastic gradient
-%    descent with momentum to train a CNN for image classification.
-%    It can be used with different datasets by providing a suitable
+%    CNN_TRAIN() is an example learner implementing stochastic
+%    gradient descent with momentum to train a CNN. It can be used
+%    with different datasets and tasks by providing a suitable
 %    getBatch function.
+%
+%    The function automatically restarts after each training epoch by
+%    checkpointing.
+%
+%    The function supports training on CPU or on one or more GPUs
+%    (specify the list of GPU IDs in the `gpus` option). Multi-GPU
+%    support is relatively primitive but sufficient to obtain a
+%    noticable speedup.
 
+% Copyright (C) 2014-15 Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
+opts.batchSize = 256 ;
+opts.numSubBatches = 1 ;
 opts.train = [] ;
 opts.val = [] ;
-opts.numEpochs = 30 ;
-opts.batchSize = 256 ;
-opts.useGpu = false ;
+opts.numEpochs = 300 ;
+opts.gpus = [] ; % which GPU devices to use (none, one, or more)
 opts.learningRate = 0.001 ;
 opts.continue = false ;
 opts.expDir = fullfile('data','exp') ;
@@ -20,6 +35,7 @@ opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
 opts.errorType = 'multiclass' ;
 opts.plotDiagnostics = false ;
+opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -31,63 +47,41 @@ if isnan(opts.train), opts.train = [] ; end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-for i=1:numel(net.layers)
-  if ~ismember(net.layers{i}.type, {'conv', 'bnorm'}), continue; end
-  net.layers{i}.filtersMomentum = zeros(size(net.layers{i}.filters), ...
-    class(net.layers{i}.filters)) ;
-  net.layers{i}.biasesMomentum = zeros(size(net.layers{i}.biases), ...
-    class(net.layers{i}.biases)) ; %#ok<*ZEROLIKE>
-  if ~isfield(net.layers{i}, 'filtersLearningRate')
-    net.layers{i}.filtersLearningRate = 1 ;
-  end
-  if ~isfield(net.layers{i}, 'biasesLearningRate')
-    net.layers{i}.biasesLearningRate = 1 ;
-  end
-  if ~isfield(net.layers{i}, 'filtersWeightDecay')
-    net.layers{i}.filtersWeightDecay = 1 ;
-  end
-  if ~isfield(net.layers{i}, 'biasesWeightDecay')
-    net.layers{i}.biasesWeightDecay = 1 ;
+if ~isempty(opts.train)
+  for i=1:numel(net.layers)
+    if isfield(net.layers{i}, 'weights')
+      J = numel(net.layers{i}.weights) ;
+      for j=1:J
+        net.layers{i}.momentum{j} = zeros(size(net.layers{i}.weights{j}), 'single') ;
+      end
+      if ~isfield(net.layers{i}, 'learningRate')
+        net.layers{i}.learningRate = ones(1, J, 'single') ;
+      end
+      if ~isfield(net.layers{i}, 'weightDecay')
+        net.layers{i}.weightDecay = ones(1, J, 'single') ;
+      end
+    end
   end
 end
 
-if opts.useGpu
-  net = vl_simplenn_move(net, 'gpu') ;
-  for i=1:numel(net.layers)
-    if ~ismember(net.layers{i}.type, {'conv', 'bnorm'}), continue; end
-    net.layers{i}.filtersMomentum = gpuArray(net.layers{i}.filtersMomentum) ;
-    net.layers{i}.biasesMomentum = gpuArray(net.layers{i}.biasesMomentum) ;
+% setup GPUs
+numGpus = numel(opts.gpus) ;
+if numGpus > 1
+  if isempty(gcp('nocreate')),
+    parpool('local',numGpus) ;
+    spmd, gpuDevice(opts.gpus(labindex)) ; end
   end
 end
+if exist(opts.memoryMapFile), delete(opts.memoryMapFile) ; end
 
 % -------------------------------------------------------------------------
 %                                                        Train and validate
 % -------------------------------------------------------------------------
 
-rng(0) ;
-
-if opts.useGpu
-  one = gpuArray(single(1)) ;
-else
-  one = single(1) ;
-end
-
-info.train.objective = [] ;
-info.train.error = [] ;
-info.train.topFiveError = [] ;
-info.train.speed = [] ;
-info.val.objective = [] ;
-info.val.error = [] ;
-info.val.topFiveError = [] ;
-info.val.speed = [] ;
-
-lr = 0 ;
-res = [] ;
 for epoch=1:opts.numEpochs
-  prevLr = lr ;
-  lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
+  learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
 
-  % fast-forward to where we stopped
+  % fast-forward to last checkpoint
   modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
   if opts.continue
@@ -103,133 +97,47 @@ for epoch=1:opts.numEpochs
     end
   end
 
-  train = opts.train(randperm(numel(opts.train))) ;
-  val = opts.val ;
-
-  info.train.objective(end+1) = 0 ;
-  info.train.error(end+1) = 0 ;
-  info.train.topFiveError(end+1) = 0 ;
-  info.train.speed(end+1) = 0 ;
-  info.val.objective(end+1) = 0 ;
-  info.val.error(end+1) = 0 ;
-  info.val.topFiveError(end+1) = 0 ;
-  info.val.speed(end+1) = 0 ;
-
-  % reset momentum if needed
-  if prevLr ~= lr
-    fprintf('learning rate changed (%f --> %f): resetting momentum\n', prevLr, lr) ;
-    for l=1:numel(net.layers)
-      ly = net.layers{l};
-      if ~ismember(ly.type, {'conv', 'bnorm'}), continue ; end
-      net.layers{l}.filtersMomentum = 0 * ly.filtersMomentum ;
-      net.layers{l}.biasesMomentum = 0 * ly.biasesMomentum ;
+  % move CNN to GPU as needed
+  if numGpus == 1
+    net = vl_simplenn_move(net, 'gpu') ;
+  elseif numGpus > 1
+    spmd(numGpus)
+      net_ = vl_simplenn_move(net, 'gpu') ;
     end
   end
 
-  for t=1:opts.batchSize:numel(train)
-    % get next image batch and labels
-    batch = train(t:min(t+opts.batchSize-1, numel(train))) ;
-    batch_time = tic ;
-    fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
-            fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
-    [im, labels] = getBatch(imdb, batch) ;
-    if opts.prefetch
-      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
-      getBatch(imdb, nextBatch) ;
+  % train one epch and validate
+  train = opts.train(randperm(numel(opts.train))) ; % shuffle
+  val = opts.val ;
+  if numGpus <= 1
+    [net,stats.train] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
+    [~,stats.val] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net) ;
+  else
+    spmd(numGpus)
+      [net_, stats_train_] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net_) ;
+      [~, stats_val_] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net_) ;
     end
-    if opts.useGpu
-      im = gpuArray(im) ;
-    end
-
-    % backprop
-    net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, one, res, ...
-      'conserveMemory', opts.conserveMemory, ...
-      'sync', opts.sync) ;
-
-    % gradient step
-    for l=1:numel(net.layers)
-      ly = net.layers{l} ;
-      if ~ismember(ly.type, {'conv', 'bnorm'}), continue ; end
-      if ly.filtersLearningRate == 0 && ly.biasesLearningRate == 0
-        continue;
-      end;
-
-      net.layers{l}.filtersMomentum = ...
-        opts.momentum * ly.filtersMomentum ...
-          - (lr * ly.filtersLearningRate) * ...
-          (opts.weightDecay * ly.filtersWeightDecay) * ly.filters ...
-          - (lr * ly.filtersLearningRate) / numel(batch) * res(l).dzdw{1} ;
-
-      net.layers{l}.biasesMomentum = ...
-        opts.momentum * ly.biasesMomentum ...
-          - (lr * ly.biasesLearningRate) * ....
-          (opts.weightDecay * ly.biasesWeightDecay) * ly.biases ...
-          - (lr * ly.biasesLearningRate) / numel(batch) * res(l).dzdw{2} ;
-
-      net.layers{l}.filters = net.layers{l}.filters + net.layers{l}.filtersMomentum ;
-      net.layers{l}.biases = net.layers{l}.biases + net.layers{l}.biasesMomentum ;
-    end
-
-    % print information
-    batch_time = toc(batch_time) ;
-    speed = numel(batch)/batch_time ;
-    info.train = updateError(opts, info.train, net, res, batch_time) ;
-
-    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
-    n = t + numel(batch) - 1 ;
-    fprintf(' err %.1f err5 %.1f', ...
-      info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
-    fprintf('\n') ;
-
-    % debug info
-    if opts.plotDiagnostics
-      figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
-    end
-  end % next batch
-
-  % evaluation on validation set
-  for t=1:opts.batchSize:numel(val)
-    batch_time = tic ;
-    batch = val(t:min(t+opts.batchSize-1, numel(val))) ;
-    fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
-            fix(t/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;
-    [im, labels] = getBatch(imdb, batch) ;
-    if opts.prefetch
-      nextBatch = val(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(val))) ;
-      getBatch(imdb, nextBatch) ;
-    end
-    if opts.useGpu
-      im = gpuArray(im) ;
-    end
-
-    net.layers{end}.class = labels ;
-    res = vl_simplenn(net, im, [], res, ...
-      'disableDropout', true, ...
-      'conserveMemory', opts.conserveMemory, ...
-      'sync', opts.sync) ;
-
-    % print information
-    batch_time = toc(batch_time) ;
-    speed = numel(batch)/batch_time ;
-    info.val = updateError(opts, info.val, net, res, batch_time) ;
-
-    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
-    n = t + numel(batch) - 1 ;
-    fprintf(' err %.1f err5 %.1f', ...
-      info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
-    fprintf('\n') ;
+    stats.train = sum([stats_train_{:}],2) ;
+    stats.val = sum([stats_val_{:}],2) ;
   end
 
   % save
-  info.train.objective(end) = info.train.objective(end) / numel(train) ;
-  info.train.error(end) = info.train.error(end) / numel(train)  ;
-  info.train.topFiveError(end) = info.train.topFiveError(end) / numel(train) ;
-  info.train.speed(end) = numel(train) / info.train.speed(end) ;
-  info.val.objective(end) = info.val.objective(end) / numel(val) ;
-  info.val.error(end) = info.val.error(end) / numel(val) ;
-  info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
-  info.val.speed(end) = numel(val) / info.val.speed(end) ;
+  for f = {'train', 'val'}
+    f = char(f) ;
+    n = numel(eval(f)) ;
+    info.(f).objective(epoch) = stats.(f)(1) / n ;
+    info.(f).error(epoch) = stats.(f)(2) / n ;
+    info.(f).topFiveError(epoch) = stats.(f)(3) / n ;
+    info.(f).speed(epoch) = n / stats.(f)(4) ;
+  end
+  if numGpus > 1
+    spmd(numGpus)
+      net_ = vl_simplenn_move(net_, 'cpu') ;
+    end
+    net = net_{1} ;
+  else
+    net = vl_simplenn_move(net, 'cpu') ;
+  end
   save(modelPath(epoch), 'net', 'info') ;
 
   figure(1) ; clf ;
@@ -263,27 +171,183 @@ for epoch=1:opts.numEpochs
 end
 
 % -------------------------------------------------------------------------
-function info = updateError(opts, info, net, res, speed)
+function [err, err5] = compute_error(opts, labels, predictions)
 % -------------------------------------------------------------------------
-predictions = gather(res(end-1).x) ;
-sz = size(predictions) ;
-n = prod(sz(1:2)) ;
-
-labels = net.layers{end}.class ;
-info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
-info.speed(end) = info.speed(end) + speed ;
 switch opts.errorType
   case 'multiclass'
     [~,predictions] = sort(predictions, 3, 'descend') ;
     error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
-    info.error(end) = info.error(end) +....
-      sum(sum(sum(error(:,:,1,:))))/n ;
-    info.topFiveError(end) = info.topFiveError(end) + ...
-      sum(sum(sum(min(error(:,:,1:5,:),[],3))))/n ;
+    err = sum(sum(sum(error(:,:,1,:)))) ;
+    err5 = sum(sum(sum(min(error(:,:,1:5,:),[],3)))) ;
   case 'binary'
     error = bsxfun(@times, predictions, labels) < 0 ;
-    info.error(end) = info.error(end) + sum(error(:))/n ;
+    err = sum(error(:)) ;
+    err5 = 0 ;
 end
 
+% -------------------------------------------------------------------------
+function  [net,stats,prof] = process_epoch(opts, getBatch, epoch, subset, learningRate, imdb, net)
+% -------------------------------------------------------------------------
 
+% validation mode if learning rate is zero
+training = learningRate > 0 ;
+if training, mode = 'training' ; else, mode = 'validation' ; end
+if nargout > 2, mpiprofile on ; end
 
+numGpus = numel(opts.gpus) ;
+if numGpus >= 1
+  one = gpuArray(single(1)) ;
+else
+  one = single(1) ;
+end
+res = [] ;
+mmap = [] ;
+stats = zeros(4,1) ;
+
+for t=1:opts.batchSize:numel(subset)
+  fprintf('%s: epoch %02d: processing batch %3d of %3d ...', mode, epoch, ...
+          fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
+  batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
+  error = [0;0;0] ;
+
+  batchTime = tic ;
+  numDone = 0 ;
+  for s=1:opts.numSubBatches
+    % get this image batch and prefetch the next
+    batchStart = t + (labindex-1) + (s-1) * numlabs ;
+    batchEnd = min(t+opts.batchSize-1, numel(subset)) ;
+    batch = subset(batchStart : opts.numSubBatches * numlabs : batchEnd) ;
+    [im, labels] = getBatch(imdb, batch) ;
+
+    if opts.prefetch
+      if s==opts.numSubBatches
+        batchStart = t + (labindex-1) + opts.batchSize ;
+        batchEnd = min(t+2*opts.batchSize-1, numel(subset)) ;
+      else
+        batchStart = batchStart + numlabs ;
+      end
+      nextBatch = subset(batchStart : opts.numSubBatches * numlabs : batchEnd) ;
+      getBatch(imdb, nextBatch) ;
+    end
+
+    if numGpus >= 1
+      im = gpuArray(im) ;
+    end
+
+    % evaluate CNN
+    net.layers{end}.class = labels ;
+    if training, dzdy = one; else, dzdy = [] ; end
+    res = vl_simplenn(net, im, dzdy, res, ...
+                      'accumulate', s ~= 1, ...
+                      'disableDropout', ~training, ...
+                      'conserveMemory', opts.conserveMemory, ...
+                      'sync', opts.sync) ;
+
+    % accumulate training errors
+    obj = sum(double(gather(res(end).x))) ;
+    [err,err5] = compute_error(opts, labels, gather(res(end-1).x)) ;
+    error = error + [obj;err;err5] ;
+    numDone = numDone + numel(batch) ;
+  end
+
+  % gather and accumulate gradients across labs
+  if training
+    if numGpus <= 1
+      net = accumulate_gradients(opts, learningRate, batchSize, net, res) ;
+    else
+      if isempty(mmap)
+        mmap = map_grads(opts.memoryMapFile, net, res, numGpus) ;
+      end
+      write_grads(mmap, net, res) ;
+      labBarrier() ;
+      [net,res] = accumulate_gradients(opts, learningRate, batchSize, net, res, mmap) ;
+    end
+  end
+
+  % print learning statistics
+  batchTime = toc(batchTime) ;
+  stats = stats + [error ; batchTime] ;
+  speed = batchSize/batchTime ;
+
+  fprintf(' %.2f s (%.1f images/s)', batchTime, speed) ;
+  n = (t + batchSize - 1) / max(1,numlabs) ;
+  fprintf(' err %.1f err5 %.1f', stats(2)/n*100, stats(3)/n*100) ;
+  fprintf(' [done %d of %d]', numDone, batchSize);
+  fprintf('\n') ;
+
+  % debug info
+  if opts.plotDiagnostics && numGpus <= 1
+    figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
+  end
+end
+
+if nargout > 2
+  prof = mpiprofile('info');
+  mpiprofile off ;
+end
+
+% -------------------------------------------------------------------------
+function [net,res] = accumulate_gradients(opts, lr, batchSize, net, res, mmap)
+% -------------------------------------------------------------------------
+for l=1:numel(net.layers)
+  for j=1:numel(res(l).dzdw)
+    thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
+    thisLR = lr * net.layers{l}.learningRate(j) ;
+
+    % accumualte from multiple labs (GPUs) if needed
+    if nargin >= 6
+      tag = sprintf('l%d_%d',l,j) ;
+      tmp = zeros(size(mmap.Data(labindex).(tag)), 'single') ;
+      for g = setdiff(1:numel(mmap.Data), labindex)
+        tmp = tmp + mmap.Data(g).(tag) ;
+      end
+      res(l).dzdw{j} = res(l).dzdw{j} + tmp ;
+    end
+
+    net.layers{l}.momentum{j} = ...
+        opts.momentum * net.layers{l}.momentum{j} ...
+        - thisDecay * net.layers{l}.weights{j} ...
+        - (1 / batchSize) * res(l).dzdw{j} ;
+
+    if isfield(net.layers{l}, 'weights')
+      net.layers{l}.weights{j} = net.layers{l}.weights{j} + thisLR * net.layers{l}.momentum{j} ;
+    else
+      if j == 1
+        net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;
+      else
+        net.layers{l}.biases = net.layers{l}.biases + thisLR * net.layers{l}.momentum{j} ;
+      end
+    end
+  end
+end
+
+% -------------------------------------------------------------------------
+function mmap = map_grads(fname, net, res, numGpus)
+% -------------------------------------------------------------------------
+format = {} ;
+for i=1:numel(net.layers)
+  for j=1:numel(res(i).dzdw)
+    format(end+1,1:3) = {'single', size(res(i).dzdw{j}), sprintf('l%d_%d',i,j)} ;
+  end
+end
+format(end+1,1:3) = {'double', [3 1], 'errors'} ;
+if ~exist(fname) && (labindex == 1)
+  f = fopen(fname,'wb') ;
+  for g=1:numGpus
+    for i=1:size(format,1)
+      fwrite(f,zeros(format{i,2},format{i,1}),format{i,1}) ;
+    end
+  end
+  fclose(f) ;
+end
+labBarrier() ;
+mmap = memmapfile(fname, 'Format', format, 'Repeat', numGpus, 'Writable', true) ;
+
+% -------------------------------------------------------------------------
+function write_grads(mmap, net, res)
+% -------------------------------------------------------------------------
+for i=1:numel(net.layers)
+  for j=1:numel(res(i).dzdw)
+    mmap.Data(labindex).(sprintf('l%d_%d',i,j)) = gather(res(i).dzdw{j}) ;
+  end
+end
