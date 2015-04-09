@@ -4,21 +4,33 @@ function cnn_imagenet(varargin)
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.dataDir = fullfile('data','imagenet12') ;
-opts.expDir = fullfile('data','imagenet12-baseline') ;
+opts.dataDir = fullfile('data','ILSVRC2012') ;
+opts.modelType = 'dropout' ; % bnorm or dropout
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
+opts.expDir = fullfile('data', sprintf('imagenet12-%s', opts.modelType)) ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.numFetchThreads = 12 ;
 opts.lite = false ;
-opts.numFetchThreads = 0 ;
+opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train.batchSize = 256 ;
-opts.modelType = 'bnorm' ;
-opts.train.numEpochs = 65 ;
+opts.train.numSubBatches = 1 ;
 opts.train.continue = true ;
-opts.train.useGpu = false ;
+opts.train.gpus = [] ;
 opts.train.prefetch = false ;
-opts.train.learningRate = [0.01*ones(1, 25) 0.001*ones(1, 25) 0.0001*ones(1,15)] ;
 opts.train.expDir = opts.expDir ;
+switch opts.modelType
+  case 'dropout'
+    opts.train.learningRate = [0.01*ones(1,25) 0.001*ones(1,25) 0.0001*ones(1,15)] ;
+    opts.train.learningRate = logspace(-2, -4, 75) ;
+  case 'bnorm'
+    opts.train.learningRate = [0.01*ones(1,5) 0.005*ones(1,5) 0.001*ones(1,5) 0.0001*ones(1,5)] ;
+    opts.train.learningRate = logspace(-2, -4, 15) ;
+end
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.train.numEpochs = numel(opts.train.learningRate) ;
 opts = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
@@ -38,10 +50,12 @@ end
 % -------------------------------------------------------------------------
 
 switch opts.modelType
-  case 'baseline'
-    net = cnn_imagenet_init(opts);
+  case 'dropout'
+    net = cnn_imagenet_init() ;
   case 'bnorm'
-    net = cnn_imagenet_init_bnorm(opts) ;
+    net = cnn_imagenet_init_bnorm() ;
+  otherwise
+    error('Unknown model type %s', opts.modelType) ;
 end
 
 % compute the average image
@@ -74,7 +88,7 @@ clear averageImage im temp ;
 
 fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
 
-[net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
+[net,info] = cnn_train_mgpu(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(opts, numThreads)

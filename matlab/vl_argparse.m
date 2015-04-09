@@ -45,8 +45,12 @@ while ai <= length(args)
   paramName = args{ai} ;
   if isstruct(paramName)
     moreArgs = cat(2, fieldnames(args{ai}), struct2cell(args{ai}))' ;
-    [conf,r] = vl_argparse(conf, moreArgs(:)) ;
-    remainingArgs = cat(2, remainingArgs, r) ;
+    if nargout < 2
+      conf = vl_argparse(conf, moreArgs(:)) ;
+    else
+      [conf,r] = vl_argparse(conf, moreArgs(:)) ;
+      remainingArgs = horzcat(remainingArgs, struct(r{:})) ;
+    end
     ai = ai +1 ;
     continue ;
   end
@@ -67,7 +71,12 @@ while ai <= length(args)
   else
     paramName = names{i} ;
     if isstruct(conf.(paramName))
-      [conf.(paramName),r] = vl_argparse(conf.(paramName), {value}) ;
+      if nargout < 2
+        conf.(paramName) = vl_argparse(conf.(paramName), {value}) ;
+      else
+        [conf.(paramName),r] = vl_argparse(conf.(paramName), {value}) ;
+        remainingArgs = horzcat(remainingArgs, struct(paramName, r)) ;
+      end
     else
       conf.(paramName) = value ;
     end

@@ -110,7 +110,6 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     called as res(i) = backward(layer, res(i), res(i+1)). Note that the
 %     `layer` structure can contain additional fields if needed.
 
-
 % Copyright (C) 2014 Andrea Vedaldi.
 % All rights reserved.
 %
@@ -122,6 +121,8 @@ opts.conserveMemory = false ;
 opts.sync = false ;
 opts.disableDropout = false ;
 opts.freezeDropout = false ;
+opts.accumulate = false;
+
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -150,7 +151,11 @@ for i=1:n
   res(i).time = tic ;
   switch l.type
     case 'conv'
-      res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, 'pad', l.pad, 'stride', l.stride) ;
+      if isfield(l, 'weights')
+        res(i+1).x = vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, 'pad', l.pad, 'stride', l.stride) ;
+      else
+        res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, 'pad', l.pad, 'stride', l.stride) ;
+      end
     case 'pool'
       res(i+1).x = vl_nnpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
     case 'normalize'
@@ -176,7 +181,11 @@ for i=1:n
         [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
       end
     case 'bnorm'
-      res(i+1).x = vl_nnbnorm(res(i).x, l.filters, l.biases) ;
+      if isfield(l, 'weights')
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}) ;
+      else
+        res(i+1).x = vl_nnbnorm(res(i).x, l.filters, l.biases) ;
+      end
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
     otherwise
@@ -204,10 +213,37 @@ if doder
     res(i).backwardTime = tic ;
     switch l.type
       case 'conv'
-        [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
-            vl_nnconv(res(i).x, l.filters, l.biases, ...
-                      res(i+1).dzdx, ...
-                      'pad', l.pad, 'stride', l.stride) ;
+        if ~opts.accumulate
+          if isfield(l, 'weights')
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
+                          res(i+1).dzdx, ...
+                          'pad', l.pad, 'stride', l.stride) ;
+          else
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnconv(res(i).x, l.filters, l.biases, ...
+                          res(i+1).dzdx, ...
+                          'pad', l.pad, 'stride', l.stride) ;
+          end
+        else
+          dzdw = cell(1,2) ;
+          if isfield(l, 'weights')
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
+                          res(i+1).dzdx, ...
+                          'pad', l.pad, 'stride', l.stride) ;
+          else
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnconv(res(i).x, l.filters, l.biases, ...
+                          res(i+1).dzdx, ...
+                          'pad', l.pad, 'stride', l.stride) ;
+          end
+          for j=1:2
+            res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
+          end
+          clear dzdw ;
+        end
+
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
@@ -238,9 +274,32 @@ if doder
           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
         end
       case 'bnorm'
-        [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
-            vl_nnbnorm(res(i).x, l.filters, l.biases, ...
-                      res(i+1).dzdx) ;
+        if ~opts.accumulate
+          if isfield(l, 'weights')
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                           res(i+1).dzdx) ;
+          else
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnbnorm(res(i).x, l.filters, l.biases, ...
+                           res(i+1).dzdx) ;
+          end
+        else
+          dzdw = cell(1,2) ;
+          if isfield(l, 'weights')
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                           res(i+1).dzdx) ;
+          else
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnbnorm(res(i).x, l.filters, l.biases, ...
+                           res(i+1).dzdx) ;
+          end
+          for j=1:2
+            res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
+          end
+          clear dzdw ;
+        end
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
     end
