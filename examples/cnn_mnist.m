@@ -13,7 +13,7 @@ opts.useBnorm = false ;
 opts.train.batchSize = 100 ;
 opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
-opts.train.useGpu = false ;
+opts.train.gpus = [] ;
 opts.train.learningRate = 0.001 ;
 opts.train.expDir = opts.expDir ;
 opts = vl_argparse(opts, varargin) ;
@@ -37,11 +37,11 @@ net = cnn_mnist_init('useBnorm', opts.useBnorm) ;
 % --------------------------------------------------------------------
 
 % Take the mean out and make GPU if needed
-if opts.train.useGpu
+if numel(opts.train.gpus) == 1
   imdb.images.data = gpuArray(imdb.images.data) ;
 end
 
-[net, info] = cnn_train(net, imdb, @getBatch, ...
+[net, info] = cnn_train_mgpu(net, imdb, @getBatch, ...
     opts.train, ...
     'val', find(imdb.images.set == 3)) ;
 

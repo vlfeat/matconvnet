@@ -13,19 +13,20 @@ models = {...
   'vgg-verydeep-16'} ;
 
 for i = 1:numel(models)
-  opts.dataDir = fullfile('data','imagenet12') ;
+  opts.dataDir = fullfile('data', 'ram', 'ILSVRC2012') ;
   opts.expDir = fullfile('data','models-eval', models{i}) ;
   opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
   opts.modelPath = fullfile('data', 'models', ...
     sprintf('imagenet-%s.mat', models{i})) ;
   opts.lite = false ;
   opts.numFetchThreads = 12 ;
-  opts.train.batchSize = 64 ;
+  opts.train.batchSize = 128 ;
   opts.train.numEpochs = 1 ;
-  opts.train.useGpu = true ;
+  opts.train.gpus = [1] ;
   opts.train.prefetch = true ;
   opts.train.expDir = opts.expDir ;
   opts.train.conserveMemory = true ;
+  opts.train.sync = false ;
 
   resultPath = fullfile(opts.expDir, 'results.mat') ;
   if ~exist(resultPath)
