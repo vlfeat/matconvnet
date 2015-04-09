@@ -6,7 +6,9 @@ efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
 > **New:** 1.0-beta11 adds batch normalization (see
-> [`vl_nnbnorm`](mfiles/vl_nnbnorm)).
+> [`vl_nnbnorm`](mfiles/vl_nnbnorm)) and extends the example trainig
+> code to support multiple GPUs. See also [Changes](about/#changes)
+> for compatibility considerations.
 >
 > **New:** 1.0-beta10 establishes feature parity between platforms,
 > removes some dependencies on third-party image libraries.

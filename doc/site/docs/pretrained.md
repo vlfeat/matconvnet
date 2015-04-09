@@ -63,19 +63,27 @@ used in MatConvNet.
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
+
 |               model|top-1 err.|top-5 err.|  images/s|
 |--------------------|----------|----------|----------|
-|           caffe-ref|      42.4|      19.6|     132.9|
-|          caffe-alex|      42.6|      19.6|     131.4|
-|               vgg-s|      36.7|      15.5|     120.0|
-|               vgg-m|      37.8|      16.1|     127.6|
-|               vgg-f|      41.9|      19.3|     147.0|
-|     vgg-verydeep-19|      30.5|      11.3|      40.3|
-|     vgg-verydeep-16|      30.9|      11.2|      46.2|
+|           caffe-ref|      42.7|      19.8|     205.4|
+|          caffe-alex|      42.9|      19.8|     274.8|
+|               vgg-s|      36.9|      15.4|     312.2|
+|               vgg-m|      37.5|      16.1|     382.8|
+|               vgg-f|      41.5|      19.1|     638.0|
+|     vgg-verydeep-19|      29.0|      10.1|      57.1|
+|     vgg-verydeep-16|      28.8|      10.1|      68.3|
 
 Note that these error rates are computed on a single centre-crop and
 are therefore higher than what reported in some publications, where
 multiple evaluations per image are combined.
+
+The evaluation speed was measured on a 12-cores machine using a single
+NVIDIA Titan Black GPU and MATLAB R2015a; performance varies hugely
+depending on the network but also on how the data was preprocessed;
+for example, `caffe-ref` and `caffe-alex` should be as fast as
+`vgg-f`, but they are not since images were pre-processed in such a
+way that MATLAB had to call `imresize` for each input image.
 
 ## Using the pretrained models
 
@@ -109,4 +117,4 @@ In order to run, say, `imagenet-vgg-s` on a test image, use:
 that implements a CNN with a simple linear structure (a chain of
 layers). It is not needed to use the toolbox, but it simplifies common
 examples such as the ones discussed here. See also
-`examples/cnn_imagenet_minimal.m` for further examples.
+
