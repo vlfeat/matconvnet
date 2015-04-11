@@ -441,5 +441,21 @@ for l = tests
       vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
       vl_testder(@(g) vl_nnbnorm(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
       vl_testder(@(b) vl_nnbnorm(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
+      
+    case 12
+      disp('testinb vl_nnspnorm');
+      
+      h = 13 ;
+      w = 17 ;
+      d = 4 ;
+      n = 5 ;
+
+      param = [3, 3, 0.1, 0.75] ;
+      x = grandn(h,w,d,n,'single') ;
+      y = vl_nnspnorm(x, param) ;
+      
+      dzdy = grand(h, w, d, n) ;
+      dzdx = vl_nnspnorm(x, param, dzdy) ;
+      vl_testder(@(x) vl_nnspnorm(x,param), x, dzdy, dzdx, range * 1e-3) ;        
   end
 end

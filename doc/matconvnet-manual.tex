@@ -402,12 +402,12 @@ where $X\in\real^{(H'W')\times D}$ is the matrix obtained by reshaping $\bx$. No
 
 \verb!vl_nnpool! implements max and sum pooling. The \emph{max pooling} operator computes the maximum response of each feature channel in a $H' \times W'$ patch
 \[
-y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i',j''+j',d}.
+y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i-1',j''+j'-1,d}.
 \]
-resulting in an output of size $\by\in\real^{H''\times W'' \times D}$, similar to the convolution operator of Sectino~\ref{s:convolution}. Sum-pooling computes the average of the values instead:
+resulting in an output of size $\by\in\real^{H''\times W'' \times D}$, similar to the convolution operator of Section~\ref{s:convolution}. Sum-pooling computes the average of the values instead:
 \[
 y_{i''j''d} = \frac{1}{W'H'}
-\sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i',j''+j',d}.
+\sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i'-1,j''+j'-1,d}.
 \]
 
 \paragraph{Padding and stride.} Similar to the convolution operator of Sect.~\ref{s:convolution}, \verb!vl_nnpool! supports padding the input; however, the effect is different from padding in the convolutional block as pooling regions straddling the image boundaries are cropped. For max pooling, this is equivalent to extending the input data with $-\infty$; for sum pooling, this is similar to padding with zeros, but the normalization factor at the boundaries is smaller to account for the smaller integration area.
@@ -485,6 +485,7 @@ where
 
 % ------------------------------------------------------------------
 \subsection{Batch normalization}\label{s:bnorm}
+% ------------------------------------------------------------------
 
 \verb!vl_nnbnorm! implements batch normalisation~\cite{ioffe2015}. Batch normalisation is somewhat different from other neural network blocks in that it performs computation across images/feature maps in a batch (whereas most blocks process different images/feature maps individually). \verb!y = vl_nnbnorm(x, w, b)! normalises each channel of the feature map $\mathbf{x}$ averaging over spatial locations and batch instances. Let $T$ the batch size; then
 \[
@@ -580,6 +581,56 @@ i.e.
 \frac{dz}{d y_{i''j''kt''}} 
 \left(x_{i''j''kt''} - \mu_k\right).
 \end{align*}
+
+% ------------------------------------------------------------------
+\subsection{Spatial normalization}\label{s:spnorm}
+% ------------------------------------------------------------------
+
+\verb!vl_nnspnorm! implements spatial normalisation. This normalisation operator operates on different feature channels independently and rescales each input feature by a statistics pooled in a local spatial neighbour as follows. First, the energy of the features is evaluated in a neighbourhood $W'\times H'$
+\[
+n_{i''j''d}^2 = \frac{1}{W'H'}
+\sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x^2_{
+i''+i'-1-\lfloor \frac{H}{2}\rfloor,
+j''+j'-1-\lfloor \frac{W}{2}\rfloor,
+d}.
+\]
+In practice, the factor $1/W'H'$ is adjusted at the boundaries to account for the fact that neighbours must be cropped. Then this is used to normalise the input:
+\[
+y_{i''j''d} = \frac{1}{(1 + \alpha n_{i''j''d}^2)^\beta} x_{i''j''d}.
+\]
+
+\paragraph{Implementation details.}
+\begin{align*}
+\frac{dz}{dx_{ijd}} 
+&= \sum_{i''j''d}
+\frac{dz}{d y_{i''j''d}} 
+\frac{d y_{i''j''d}}{d x_{ijd}}
+\\
+&=
+\sum_{i''j''d}
+\frac{dz}{d y_{i''j''d}} 
+(1 + \alpha n_{i''j''d}^2)^{-\beta}
+\frac{dx_{i''j''d}}{d x_{ijd}} 
+-\alpha\beta
+\frac{dz}{d y_{i''j''d}} 
+(1 + \alpha n_{i''j''d}^2)^{-\beta-1}
+x_{i''j''d}
+\frac{dn_{i''j''d}^2}{d (x^2_{ijd})} 
+\frac{dx^2_{ijd}}{d x_{ijd}}
+\\
+&=
+\frac{dz}{d y_{ijd}} 
+(1 + \alpha n_{ijd}^2)^{-\beta}
+-2\alpha\beta x_{ijd}
+\left[
+\sum_{i''j''d}
+\frac{dz}{d y_{i''j''d}} 
+(1 + \alpha n_{i''j''d}^2)^{-\beta-1}
+x_{i''j''d}
+\frac{dn_{i''j''d}^2}{d (x_{ijd}^2)}
+\right]
+\end{align*}
+
 
 % ------------------------------------------------------------------
 \subsection{Softmax}\label{s:softmax}
