@@ -181,45 +181,45 @@ mex_src = {} ;
 % Files that are compiled as CPP or CU depending on whether GPU support
 % is enabled.
 if opts.enableGpu, ext = 'cu' ; else, ext='cpp' ; end
-lib_src{end+1} = fullfile('matlab','src','bits',['data.' ext]) ;
-lib_src{end+1} = fullfile('matlab','src','bits',['datamex.' ext]) ;
-lib_src{end+1} = fullfile('matlab','src','bits',['nnconv.' ext]) ;
-lib_src{end+1} = fullfile('matlab','src','bits',['nnfullyconnected.' ext]) ;
-lib_src{end+1} = fullfile('matlab','src','bits',['nnsubsample.' ext]) ;
-lib_src{end+1} = fullfile('matlab','src','bits',['nnpooling.' ext]) ;
-lib_src{end+1} = fullfile('matlab','src','bits',['nnnormalize.' ext]) ;
-mex_src{end+1} = fullfile('matlab','src',['vl_nnconv.' ext]) ;
-mex_src{end+1} = fullfile('matlab','src',['vl_nnpool.' ext]) ;
-mex_src{end+1} = fullfile('matlab','src',['vl_nnnormalize.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['data.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['datamex.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnconv.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnfullyconnected.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnsubsample.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnpooling.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnnormalize.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconv.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
 
 % CPU-specific files
-lib_src{end+1} = fullfile('matlab','src','bits','impl','im2row_cpu.cpp') ;
-lib_src{end+1} = fullfile('matlab','src','bits','impl','subsample_cpu.cpp') ;
-lib_src{end+1} = fullfile('matlab','src','bits','impl','copy_cpu.cpp') ;
-lib_src{end+1} = fullfile('matlab','src','bits','impl','pooling_cpu.cpp') ;
-lib_src{end+1} = fullfile('matlab','src','bits','impl','normalize_cpu.cpp') ;
-lib_src{end+1} = fullfile('matlab','src','bits','impl','tinythread.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','subsample_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','copy_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','pooling_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','tinythread.cpp') ;
 
 % GPU-specific files
 if opts.enableGpu
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','im2row_gpu.cu') ;
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','subsample_gpu.cu') ;
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','copy_gpu.cu') ;
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','pooling_gpu.cu') ;
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','normalize_gpu.cu') ;
-  lib_src{end+1} = fullfile('matlab','src','bits','datacu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','subsample_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','copy_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','pooling_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','datacu.cu') ;
 end
 
 % cuDNN-specific files
 if opts.enableCudnn
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','nnconv_cudnn.cu') ;
-  lib_src{end+1} = fullfile('matlab','src','bits','impl','nnpooling_cudnn.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnconv_cudnn.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnpooling_cudnn.cu') ;
 end
 
 % Other files
 if opts.enableImreadJpeg
-  mex_src{end+1} = fullfile('matlab','src', ['vl_imreadjpeg.' ext]) ;
-  lib_src{end+1} = fullfile('matlab','src', 'bits', 'impl', ['imread_' opts.imageLibrary '.cpp']) ;
+  mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg.' ext]) ;
+  lib_src{end+1} = fullfile(root,'matlab','src', 'bits', 'impl', ['imread_' opts.imageLibrary '.cpp']) ;
 end
 
 % --------------------------------------------------------------------
