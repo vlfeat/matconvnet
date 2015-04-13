@@ -1,4 +1,4 @@
-function [net, info] = cnn_train_mgpu(net, imdb, getBatch, varargin)
+function [net, info] = cnn_train(net, imdb, getBatch, varargin)
 % CNN_TRAIN   Demonstrates training a CNN
 %    CNN_TRAIN() is an example learner implementing stochastic
 %    gradient descent with momentum to train a CNN. It can be used
@@ -29,6 +29,7 @@ opts.learningRate = 0.001 ;
 opts.continue = false ;
 opts.expDir = fullfile('data','exp') ;
 opts.conserveMemory = false ;
+opts.backPropDepth = +inf ;
 opts.sync = true ;
 opts.prefetch = false ;
 opts.weightDecay = 0.0005 ;
@@ -184,7 +185,7 @@ for epoch=1:opts.numEpochs
     h=legend(horzcat(...
       strcat('train ', opts.errorLabels), ...
       strcat('val ', opts.errorLabels))) ;
-    set(h,'color','none') ; 
+    set(h,'color','none') ;
     grid on ;
     xlabel('training epoch') ; ylabel('error') ;
     title('error') ;
@@ -201,7 +202,7 @@ predictions = gather(res(end-1).x) ;
 error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
 err(1,1) = sum(sum(sum(error(:,:,1,:)))) ;
 err(2,1) = sum(sum(sum(min(error(:,:,1:5,:),[],3)))) ;
-    
+
 % -------------------------------------------------------------------------
 function err = error_binaryclass(opts, labels, res)
 % -------------------------------------------------------------------------
@@ -211,7 +212,7 @@ err = sum(error(:)) ;
 
 % -------------------------------------------------------------------------
 function err = error_none(opts, labels, res)
-% -------------------------------------------------------------------------        
+% -------------------------------------------------------------------------
 err = zeros(0,1) ;
 
 % -------------------------------------------------------------------------
@@ -268,6 +269,7 @@ for t=1:opts.batchSize:numel(subset)
                       'accumulate', s ~= 1, ...
                       'disableDropout', ~training, ...
                       'conserveMemory', opts.conserveMemory, ...
+                      'backPropDepth', opts.backPropDepth, ...
                       'sync', opts.sync) ;
 
     % accumulate training errors
@@ -298,8 +300,10 @@ for t=1:opts.batchSize:numel(subset)
 
   fprintf(' %.2f s (%.1f data/s)', batchTime, speed) ;
   n = (t + batchSize - 1) / max(1,numlabs) ;
-  fprintf(' obj:%.1g', stats(2)/n) ;
-  for i=1:numel(opts.errorLabels), fprintf(' %s:%.2g', opts.errorLabels{i}, stats(i+2)/n) ; end
+  fprintf(' obj:%.2g', stats(2)/n) ;
+  for i=1:numel(opts.errorLabels)
+    fprintf(' %s:%.2g', opts.errorLabels{i}, stats(i+2)/n) ;
+  end
   fprintf(' [%d/%d]', numDone, batchSize);
   fprintf('\n') ;
 
@@ -345,7 +349,7 @@ for l=1:numel(net.layers)
           opts.momentum * net.layers{l}.momentum{j} ...
           - thisDecay * net.layers{l}.filters ...
           - (1 / batchSize) * res(l).dzdw{j} ;
-        net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;        
+        net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;
       else
         net.layers{l}.momentum{j} = ...
           opts.momentum * net.layers{l}.momentum{j} ...
