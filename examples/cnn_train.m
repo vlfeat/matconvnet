@@ -62,6 +62,17 @@ if ~isempty(opts.train)
         net.layers{i}.weightDecay = ones(1, J, 'single') ;
       end
     end
+    % Legacy code: will be removed
+    if isfield(net.layers{i}, 'filters')
+      net.layers{i}.momentum{1} = zeros(size(net.layers{i}.filters), 'single') ;
+      net.layers{i}.momentum{2} = zeros(size(net.layers{i}.biases), 'single') ;
+      if ~isfield(net.layers{i}, 'learningRate')
+        net.layers{i}.learningRate = ones(1, 2, 'single') ;
+      end
+      if ~isfield(net.layers{i}, 'weightDecay')
+        net.layers{i}.weightDecay = ones(1, 2, 'single') ;
+      end
+    end
   end
 end
 
@@ -86,7 +97,8 @@ if isstr(opts.errorFunction)
     case 'binary'
       opts.errorFunction = @error_binary ;
       if isempty(opts.errorLabels), opts.errorLabels = {'bine'} ; end
-    otherwise, error('Uknown error function ''%s''', opts.errorFunction) ;
+    otherwise
+      error('Uknown error function ''%s''', opts.errorFunction) ;
   end
 end
 
@@ -320,18 +332,25 @@ for l=1:numel(net.layers)
       res(l).dzdw{j} = res(l).dzdw{j} + tmp ;
     end
 
-    net.layers{l}.momentum{j} = ...
+    if isfield(net.layers{l}, 'weights')
+      net.layers{l}.momentum{j} = ...
         opts.momentum * net.layers{l}.momentum{j} ...
         - thisDecay * net.layers{l}.weights{j} ...
         - (1 / batchSize) * res(l).dzdw{j} ;
-
-    if isfield(net.layers{l}, 'weights')
       net.layers{l}.weights{j} = net.layers{l}.weights{j} + thisLR * net.layers{l}.momentum{j} ;
     else
       % Legacy code: to be removed
       if j == 1
-        net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;
+        net.layers{l}.momentum{j} = ...
+          opts.momentum * net.layers{l}.momentum{j} ...
+          - thisDecay * net.layers{l}.filters ...
+          - (1 / batchSize) * res(l).dzdw{j} ;
+        net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;        
       else
+        net.layers{l}.momentum{j} = ...
+          opts.momentum * net.layers{l}.momentum{j} ...
+          - thisDecay * net.layers{l}.biases ...
+          - (1 / batchSize) * res(l).dzdw{j} ;
         net.layers{l}.biases = net.layers{l}.biases + thisLR * net.layers{l}.momentum{j} ;
       end
     end
