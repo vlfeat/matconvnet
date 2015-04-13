@@ -33,7 +33,8 @@ opts.sync = true ;
 opts.prefetch = false ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
-opts.errorType = 'multiclass' ;
+opts.errorFunction = 'multiclass' ;
+opts.errorLabels = {} ;
 opts.plotDiagnostics = false ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts = vl_argparse(opts, varargin) ;
@@ -74,6 +75,21 @@ if numGpus > 1
 end
 if exist(opts.memoryMapFile), delete(opts.memoryMapFile) ; end
 
+% setup error calculation function
+if isstr(opts.errorFunction)
+  switch opts.errorFunction
+    case 'none'
+      opts.errorFunction = @error_none ;
+    case 'multiclass'
+      opts.errorFunction = @error_multiclass ;
+      if isempty(opts.errorLabels), opts.errorLabels = {'top1e', 'top5e'} ; end
+    case 'binary'
+      opts.errorFunction = @error_binary ;
+      if isempty(opts.errorLabels), opts.errorLabels = {'bine'} ; end
+    otherwise, error('Uknown error function ''%s''', opts.errorFunction) ;
+  end
+end
+
 % -------------------------------------------------------------------------
 %                                                        Train and validate
 % -------------------------------------------------------------------------
@@ -106,7 +122,7 @@ for epoch=1:opts.numEpochs
     end
   end
 
-  % train one epch and validate
+  % train one epoch and validate
   train = opts.train(randperm(numel(opts.train))) ; % shuffle
   val = opts.val ;
   if numGpus <= 1
@@ -125,10 +141,9 @@ for epoch=1:opts.numEpochs
   for f = {'train', 'val'}
     f = char(f) ;
     n = numel(eval(f)) ;
-    info.(f).objective(epoch) = stats.(f)(1) / n ;
-    info.(f).error(epoch) = stats.(f)(2) / n ;
-    info.(f).topFiveError(epoch) = stats.(f)(3) / n ;
-    info.(f).speed(epoch) = n / stats.(f)(4) ;
+    info.(f).speed(epoch) = n / stats.(f)(1) ;
+    info.(f).objective(epoch) = stats.(f)(2) / n ;
+    info.(f).error(:,epoch) = stats.(f)(3:end) / n ;
   end
   if numGpus > 1
     spmd(numGpus)
@@ -141,49 +156,51 @@ for epoch=1:opts.numEpochs
   save(modelPath(epoch), 'net', 'info') ;
 
   figure(1) ; clf ;
-  subplot(1,2,1) ;
-  semilogy(1:epoch, info.train.objective, 'k') ; hold on ;
-  semilogy(1:epoch, info.val.objective, 'b') ;
+  hasError = size(info.train.error,1) > 0 ;
+  subplot(1,1+hasError,1) ;
+  semilogy(1:epoch, info.train.objective, 'linewidth', 2) ; hold on ;
+  semilogy(1:epoch, info.val.objective, '--') ;
   xlabel('training epoch') ; ylabel('energy') ;
   grid on ;
   h=legend('train', 'val') ;
   set(h,'color','none');
   title('objective') ;
-  subplot(1,2,2) ;
-  switch opts.errorType
-    case 'multiclass'
-      plot(1:epoch, info.train.error, 'k') ; hold on ;
-      plot(1:epoch, info.train.topFiveError, 'k--') ;
-      plot(1:epoch, info.val.error, 'b') ;
-      plot(1:epoch, info.val.topFiveError, 'b--') ;
-      h=legend('train','train-5','val','val-5') ;
-    case 'binary'
-      plot(1:epoch, info.train.error, 'k') ; hold on ;
-      plot(1:epoch, info.val.error, 'b') ;
-      h=legend('train','val') ;
+  if hasError
+    subplot(1,2,2) ;
+    plot(1:epoch, info.train.error', 'linewidth', 2) ; hold on ;
+    plot(1:epoch, info.val.error', '--') ;
+    h=legend(horzcat(...
+      strcat('train ', opts.errorLabels), ...
+      strcat('val ', opts.errorLabels))) ;
+    set(h,'color','none') ; 
+    grid on ;
+    xlabel('training epoch') ; ylabel('error') ;
+    title('error') ;
   end
-  grid on ;
-  xlabel('training epoch') ; ylabel('error') ;
-  set(h,'color','none') ;
-  title('error') ;
   drawnow ;
   print(1, modelFigPath, '-dpdf') ;
 end
 
 % -------------------------------------------------------------------------
-function [err, err5] = compute_error(opts, labels, predictions)
+function err = error_multiclass(opts, labels, res)
 % -------------------------------------------------------------------------
-switch opts.errorType
-  case 'multiclass'
-    [~,predictions] = sort(predictions, 3, 'descend') ;
-    error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
-    err = sum(sum(sum(error(:,:,1,:)))) ;
-    err5 = sum(sum(sum(min(error(:,:,1:5,:),[],3)))) ;
-  case 'binary'
-    error = bsxfun(@times, predictions, labels) < 0 ;
-    err = sum(error(:)) ;
-    err5 = 0 ;
-end
+predictions = gather(res(end-1).x) ;
+[~,predictions] = sort(predictions, 3, 'descend') ;
+error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
+err(1,1) = sum(sum(sum(error(:,:,1,:)))) ;
+err(2,1) = sum(sum(sum(min(error(:,:,1:5,:),[],3)))) ;
+    
+% -------------------------------------------------------------------------
+function err = error_binaryclass(opts, labels, res)
+% -------------------------------------------------------------------------
+predictions = gather(res(end-1).x) ;
+error = bsxfun(@times, predictions, labels) < 0 ;
+err = sum(error(:)) ;
+
+% -------------------------------------------------------------------------
+function err = error_none(opts, labels, res)
+% -------------------------------------------------------------------------        
+err = zeros(0,1) ;
 
 % -------------------------------------------------------------------------
 function  [net,stats,prof] = process_epoch(opts, getBatch, epoch, subset, learningRate, imdb, net)
@@ -202,14 +219,12 @@ else
 end
 res = [] ;
 mmap = [] ;
-stats = zeros(4,1) ;
+stats = [] ;
 
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: processing batch %3d of %3d ...', mode, epoch, ...
           fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
-  error = [0;0;0] ;
-
   batchTime = tic ;
   numDone = 0 ;
   for s=1:opts.numSubBatches
@@ -244,9 +259,9 @@ for t=1:opts.batchSize:numel(subset)
                       'sync', opts.sync) ;
 
     % accumulate training errors
-    obj = sum(double(gather(res(end).x))) ;
-    [err,err5] = compute_error(opts, labels, gather(res(end-1).x)) ;
-    error = error + [obj;err;err5] ;
+    error = [...
+      sum(double(gather(res(end).x))) ;
+      opts.errorFunction(opts, labels, res) ; ];
     numDone = numDone + numel(batch) ;
   end
 
@@ -256,9 +271,9 @@ for t=1:opts.batchSize:numel(subset)
       net = accumulate_gradients(opts, learningRate, batchSize, net, res) ;
     else
       if isempty(mmap)
-        mmap = map_grads(opts.memoryMapFile, net, res, numGpus) ;
+        mmap = map_gradients(opts.memoryMapFile, net, res, numGpus) ;
       end
-      write_grads(mmap, net, res) ;
+      write_gradients(mmap, net, res) ;
       labBarrier() ;
       [net,res] = accumulate_gradients(opts, learningRate, batchSize, net, res, mmap) ;
     end
@@ -266,13 +281,14 @@ for t=1:opts.batchSize:numel(subset)
 
   % print learning statistics
   batchTime = toc(batchTime) ;
-  stats = stats + [error ; batchTime] ;
+  stats = sum([stats,[batchTime ; error]],2); % works even when stats=[]
   speed = batchSize/batchTime ;
 
-  fprintf(' %.2f s (%.1f images/s)', batchTime, speed) ;
+  fprintf(' %.2f s (%.1f data/s)', batchTime, speed) ;
   n = (t + batchSize - 1) / max(1,numlabs) ;
-  fprintf(' err %.1f err5 %.1f', stats(2)/n*100, stats(3)/n*100) ;
-  fprintf(' [done %d of %d]', numDone, batchSize);
+  fprintf(' obj:%.1g', stats(2)/n) ;
+  for i=1:numel(opts.errorLabels), fprintf(' %s:%.2g', opts.errorLabels{i}, stats(i+2)/n) ; end
+  fprintf(' [%d/%d]', numDone, batchSize);
   fprintf('\n') ;
 
   % debug info
@@ -312,6 +328,7 @@ for l=1:numel(net.layers)
     if isfield(net.layers{l}, 'weights')
       net.layers{l}.weights{j} = net.layers{l}.weights{j} + thisLR * net.layers{l}.momentum{j} ;
     else
+      % Legacy code: to be removed
       if j == 1
         net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;
       else
@@ -322,7 +339,7 @@ for l=1:numel(net.layers)
 end
 
 % -------------------------------------------------------------------------
-function mmap = map_grads(fname, net, res, numGpus)
+function mmap = map_gradients(fname, net, res, numGpus)
 % -------------------------------------------------------------------------
 format = {} ;
 for i=1:numel(net.layers)
@@ -344,7 +361,7 @@ labBarrier() ;
 mmap = memmapfile(fname, 'Format', format, 'Repeat', numGpus, 'Writable', true) ;
 
 % -------------------------------------------------------------------------
-function write_grads(mmap, net, res)
+function write_gradients(mmap, net, res)
 % -------------------------------------------------------------------------
 for i=1:numel(net.layers)
   for j=1:numel(res(i).dzdw)
