@@ -73,7 +73,13 @@ else
   info.size.x(1:4,1) = [NaN NaN NaN opts.batchSize] ;
 end
 for l = 1:numel(net.layers)
-  ly = net.layers{l} ;
+    ly = net.layers{l} ;
+  if strcmp(ly.type, 'custom') && isfield(ly, 'getForwardSize')
+    sz = ly.getForwardSize(ly, info.size.x(:,l)) ;
+    info.size.x(:,l+1) = sz(:) ;
+    continue ;
+  end
+
   info.size.x(1, l+1) = floor((info.size.x(1,l) + ...
                                sum(info.pad(1:2,l)) - ...
                                info.support(1,l)) / info.stride(1,l)) + 1 ;
