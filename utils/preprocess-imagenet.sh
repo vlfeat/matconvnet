@@ -101,5 +101,5 @@ do
 done
 
 # copy any symlink
-find $data/images/ -type l -printf '%P\n' | \
-  rsync -lv --files-from=- $data/images/ $ram/images/
+find "$data/images/" -type l -printf '%P\n' | \
+  rsync -lv --files-from=- "$data/images/" "$ram/images/"
