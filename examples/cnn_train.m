@@ -300,9 +300,9 @@ for t=1:opts.batchSize:numel(subset)
 
   fprintf(' %.2f s (%.1f data/s)', batchTime, speed) ;
   n = (t + batchSize - 1) / max(1,numlabs) ;
-  fprintf(' obj:%.2g', stats(2)/n) ;
+  fprintf(' obj:%.3g', stats(2)/n) ;
   for i=1:numel(opts.errorLabels)
-    fprintf(' %s:%.2g', opts.errorLabels{i}, stats(i+2)/n) ;
+    fprintf(' %s:%.3g', opts.errorLabels{i}, stats(i+2)/n) ;
   end
   fprintf(' [%d/%d]', numDone, batchSize);
   fprintf('\n') ;
