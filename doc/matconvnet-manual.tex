@@ -9,6 +9,7 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{textcomp}
+\usepackage{fancyvrb}
 \usepackage[colorlinks]{hyperref}
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
@@ -20,6 +21,8 @@
 \newcommand{\by}{\mathbf{y}}
 \newcommand{\bz}{\mathbf{z}}
 \newcommand{\bff}{\mathbf{f}}
+\newcommand{\br}{\mathbf{r}}
+
 \newcommand{\bw}{\mathbf{w}}
 \newcommand{\bs}{\mathbf{s}}
 \newcommand{\bfe}{\mathbf{e}}
@@ -28,6 +31,8 @@
 
 \tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] \tikzstyle{data} = []
 \tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+
+\VerbatimFootnotes
 
 % Taken inspiration from http://www.tjansson.dk/2008/11/using-lstlisting-to-include-code-in-latex/
 \definecolor{listinggray}{gray}{0.9}
@@ -240,7 +245,7 @@ The derivative of $z \circ f$ with respect to $\bx$ and $\bw$ are given by:
 \]
 We note two facts. The first one is that, since $z$ is a scalar function, the derivatives have a number of elements equal to the number of parameters. So in particular $dz/d\vv \bx^\top$ can be reshaped into an array $dz/d\bx$ with the same shape of $\bx$, and the same applies to the derivatives $dz/d\by$ and $dz/d\bw$. Beyond the notational convenience, this means that storage for the derivatives is not larger than the storage required for the model parameters and forward evaluation.
 
-The second fact is that computing $dz/d\bx$ and $dz/d\bw$ require the derivative $dz/d\by$. The latter can be obtained by applying this calculation recursively to the next block in the chain.
+The second fact is that computing $dz/d\bx$ and $dz/d\bw$ requires the derivative $dz/d\by$. The latter can be obtained by applying this calculation recursively to the next block in the chain.
 
 % ------------------------------------------------------------------
 \subsection{CNN modularity}\label{s:modularity}
@@ -252,13 +257,44 @@ Sections~\ref{s:forward} and~\ref{s:backward} suggests a modular programming int
 \item {\bf Backward messages:} Evaluation of the CNN derivative $dz/d\bx$ and $dz/d\bw$ with respect to the block input data $\bx$ and parameters $\bw$ given the block input data $\bx$ and paramters $\bw$ as well as the CNN derivative $dx/d\by$ with respect to the block output data $\by$.
 \end{itemize}
 
+% ------------------------------------------------------------------
+\subsection{Working with DAGs}\label{s:dag}
+% ------------------------------------------------------------------
 
+CNN can also be obtained from more complex composition of functions forming a DAG. There are $n+1$ variables $\bx_i$ and $n$ functions $f_i$ with corresponding arguments $\br_{ik}$:
+\begin{align*}
+\bx_0 &\\
+\bx_1 &= f_1(\br_{1,1},\dots,\br_{1,m_1}),\\
+\bx_2 &= f_2(\br_{2,1},\dots,\br_{2,m_2}),\\
+&\vdots\\
+\bx_n &= f_n(\br_{n,1},\dots,\br_{n,m_n})
+\end{align*}
+Variables are connected to arguments by relations
+\[
+     \br_{ik} = \bx_{\pi_{ik}}
+\]
+where $\pi_{ik}$ denotes the variable $\bx_{\pi_{ik}}$  that feeds argument $\br_{ik}$. Together with the implicit fact that each argument $\br_{ik}$ feeds into the  variable $\bx_i$ through function $f_i$, this defines a bipartite DAG representing the dependencies  between variables and argument. The DAG is bipartite. This DAG must be acyclic, hence assuring that, given the value of the input $\bx_0$, all other variables can be evaluated iteratively. Due to this property, without loss of generality we will assume that variables $\bx_0,\bx_1,\dots,\bx_n$ are sorted such that $\bx_i$ depends only on variables that come before in the order (i.e. one always has $\pi_{ik} < i$).
+
+Now assume that $\bx_n = z$ is a scalar network output (usually the learning loss). As before, we are interested in computing derivatives of this function with respect to the network variables. In order to do so, write the output of the DAG $z(\bx_i)$ as a function of the variable $\bx_i$; this has the following interpretation: the DAG is modified by removing function $f_i$ and making $\bx_i$ an input, setting $\bx_i$ to the specified value, setting all the other inputs to the working point at which the derivative should be computed, and evaluating the resulting DAG. Likewise, one can define functions $z(\br_{ij})$ for the arguments. The derivative with respect to $\bx_j$ can then be expressed as
+\[
+   \frac{dz}{d(\vv \bx_j)^\top}
+   =
+  \sum_{(i,k): \pi_{ik}=j}
+  \frac{dz}{d(\vv \bx_i)^\top}
+  \frac{d\vv \bx_i}{d(\vv \br_{ik})^\top}
+  \frac{d\vv \br_{ik}}{d(\vv \bx_j)^\top}
+   =
+   \sum_{(i,k): \pi_{ik}=j}
+   \frac{dz}{d(\vv \bx_i)^\top}
+   \frac{d\vv f_i}{d(\vv \br_{ik})^\top}.
+\]
+Note that these quantities can be computer recursively, backward from the output $z$. In this case, each variable node $\bx_i$ (corresponding to $f_i$) stores the derivative  $dz/d \bx_i$. When node $\bx_i$ is processed, the derivatives $d\vv f_i /d(\vv \br_{ik})^\top$ are computed for the $m_i$ arguments of the corresponding function $f_i$ pre-multiplied by the factor $dz/d \bx_i$ (available at that node) and then accumulated to the corresponding parent variables $\bx_j$'s derivatives $dz/d \bx_j$.
 
 % ------------------------------------------------------------------
 \section{Computational blocks}\label{s:blocks}
 % ------------------------------------------------------------------
 
-This section describes the individual computational block supported by the \vlnn. The interface of a CNN computational block follows Section~\ref{s:modularity}. The block can be evaluated as a MATLAB function \verb!y = vl_nn<block>(x,w)! that takes as input arrays \verb!x! and \verb!w! representing the input data and parameters of the block and returns an array \verb!y! as output. \verb!x! and \verb!y! are 4D real arrays packing $N$ maps or images, as discussed above, whereas \verb!\bw! may have an arbitrary shape.
+This section describes the individual computational block supported by the \vlnn. The interface of a CNN computational block follows Section~\ref{s:modularity}. The block can be evaluated as a MATLAB function \verb!y = vl_nn<block>(x,w)! that takes as input arrays \verb!x! and \verb!w! representing the input data and parameters of the block and returns an array \verb!y! as output. \verb!x! and \verb!y! are 4D real arrays packing $N$ maps or images, as discussed above, whereas \verb!w! may have an arbitrary shape.
 
 In order to compute the block derivatives, the same function can take a third optional argument \verb!dzdy! representing the derivative of the output of the network with respect to $\by$ and returns the corresponding derivatives \verb![dzdx,dzdw] = vl_nn<block>(x,w,dzdy)!. \verb!dzdx!, \verb!dzdy! and \verb!dzdw! are array with the same dimension of \verb!x!, \verb!y! and \verb!w! respectively, as discussed in Section~\ref{s:backward}.
 
@@ -436,7 +472,11 @@ S(\bx)^\top
 \end{equation}
 
 % ------------------------------------------------------------------
-\subsection{ReLU}\label{s:relu}
+\subsection{Activation non-linearities}\label{s:activation}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\subsubsection{ReLU}\label{s:relu}
 % ------------------------------------------------------------------
 
 \verb!vl_nnrelu! computes the \emph{Rectified Linear Unit} (ReLU):
@@ -458,7 +498,41 @@ S(\bx)^\top
 where $\bs = [\vv \bx > 0] \in\{0,1\}^{HWD}$ is an indicator vector.
 
 % ------------------------------------------------------------------
+\subsubsection{Sigmoid}\label{s:sigmoid}
+% ------------------------------------------------------------------
+
+\verb!vl_nnsigmoid! computes the \emph{sigmoid}:
+\[
+ y_{ijd} = \sigma(x_{ijd}) = \frac{1}{1+e^{-x_{ijd}}}.
+\]
+
+\paragraph{Implementation details.} The derivative is given by
+\begin{align*}
+\frac{dz}{dx_{ijk}}
+&= 
+\frac{dz}{d y_{ijd}} 
+\frac{d y_{ijd}}{d x_{ijd}}
+=
+\frac{dz}{d y_{ijd}} 
+\frac{-1}{(1+e^{-x_{ijd}})^2} ( - e^{-x_{ijd}})
+\\
+&=
+\frac{dz}{d y_{ijd}} 
+y_{ijd} (1 - y_{ijd}).
+\end{align*}
+In matrix notation:
+\[
+\frac{dz}{d\bx} = \frac{dz}{d\by} \odot 
+\by \odot 
+(\mathbf{1}\mathbf{1}^\top - \by).
+\]
+
+% ------------------------------------------------------------------
 \subsection{Normalization}\label{s:normalization}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\subsubsection{Cross-channel normalization}\label{s:normalization}
 % ------------------------------------------------------------------
 
 \verb!vl_nnnormalize! implements a cross-channel normalization operator. Normalization applied independently at each spatial location and groups of channels to get:
@@ -484,10 +558,10 @@ where
 \]
 
 % ------------------------------------------------------------------
-\subsection{Batch normalization}\label{s:bnorm}
+\subsubsection{Batch normalization}\label{s:bnorm}
 % ------------------------------------------------------------------
 
-\verb!vl_nnbnorm! implements batch normalisation~\cite{ioffe2015}. Batch normalisation is somewhat different from other neural network blocks in that it performs computation across images/feature maps in a batch (whereas most blocks process different images/feature maps individually). \verb!y = vl_nnbnorm(x, w, b)! normalises each channel of the feature map $\mathbf{x}$ averaging over spatial locations and batch instances. Let $T$ the batch size; then
+\verb!vl_nnbnorm! implements batch normalization~\cite{ioffe2015}. Batch normalization is somewhat different from other neural network blocks in that it performs computation across images/feature maps in a batch (whereas most blocks process different images/feature maps individually). \verb!y = vl_nnbnorm(x, w, b)! normalizes each channel of the feature map $\mathbf{x}$ averaging over spatial locations and batch instances. Let $T$ the batch size; then
 \[
 \mathbf{x}, \mathbf{y} \in \mathbb{R}^{H \times W \times K \times T},
 \qquad\mathbf{w} \in \mathbb{R}^{K},
@@ -583,23 +657,25 @@ i.e.
 \end{align*}
 
 % ------------------------------------------------------------------
-\subsection{Spatial normalization}\label{s:spnorm}
+\subsubsection{Spatial normalization}\label{s:spnorm}
 % ------------------------------------------------------------------
 
-\verb!vl_nnspnorm! implements spatial normalisation. This normalisation operator operates on different feature channels independently and rescales each input feature by a statistics pooled in a local spatial neighbour as follows. First, the energy of the features is evaluated in a neighbourhood $W'\times H'$
+\verb!vl_nnspnorm! implements spatial normalization. Spatial normalization operator acts on different feature channels independently and rescales each input feature by the energy of the features in a local neighborhood . First, the energy of the features is evaluated in a neighbourhood $W'\times H'$
 \[
 n_{i''j''d}^2 = \frac{1}{W'H'}
 \sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x^2_{
-i''+i'-1-\lfloor \frac{H}{2}\rfloor,
-j''+j'-1-\lfloor \frac{W}{2}\rfloor,
+i''+i'-1-\lfloor \frac{H'-1}{2}\rfloor,
+j''+j'-1-\lfloor \frac{W'-1}{2}\rfloor,
 d}.
 \]
-In practice, the factor $1/W'H'$ is adjusted at the boundaries to account for the fact that neighbours must be cropped. Then this is used to normalise the input:
+In practice, the factor $1/W'H'$ is adjusted at the boundaries to account for the fact that neighbors must be cropped. Then this is used to normalize the input:
 \[
 y_{i''j''d} = \frac{1}{(1 + \alpha n_{i''j''d}^2)^\beta} x_{i''j''d}.
 \]
 
-\paragraph{Implementation details.}
+\paragraph{Implementation details.} The neighborhood norm$n^2_{i''j''d}$ can be computed by applying average pooling to $x_{ijd}^2$ using \verb!vl_nnpool! with a $W'\times H'$ pooling region, top padding $\lfloor \frac{H'-1}{2}\rfloor$, bottom padding $H'-\lfloor \frac{H-1}{2}\rfloor-1$, and similarly for the horizontal padding.
+
+The derivative of spatial normalization can be obtained as follows:
 \begin{align*}
 \frac{dz}{dx_{ijd}} 
 &= \sum_{i''j''d}
@@ -629,14 +705,30 @@ x_{i''j''d}
 x_{i''j''d}
 \frac{dn_{i''j''d}^2}{d (x_{ijd}^2)}
 \right]
+\\
+&=
+\frac{dz}{d y_{ijd}} 
+(1 + \alpha n_{ijd}^2)^{-\beta}
+-2\alpha\beta x_{ijd}
+\left[
+\sum_{i''j''d}
+\eta_{i''j''d}
+\frac{dn_{i''j''d}^2}{d (x_{ijd}^2)}
+\right],
+\quad
+\eta_{i''j''d}=
+\frac{dz}{d y_{i''j''d}} 
+(1 + \alpha n_{i''j''d}^2)^{-\beta-1}
+x_{i''j''d}
 \end{align*}
-
+Note that the summation can be computed as the derivative of the
+\verb!vl_nnpool! block.
 
 % ------------------------------------------------------------------
-\subsection{Softmax}\label{s:softmax}
+\subsubsection{Softmax}\label{s:softmax}
 % ------------------------------------------------------------------
 
-\verb!vl_softmax! computes the softmax operator:
+\verb!vl_nnsoftmax! computes the softmax operator:
 \[
  y_{ijk} = \frac{e^{x_{ijk}}}{\sum_{t=1}^D e^{x_{ijt}}}.
 \]
@@ -682,7 +774,11 @@ where $X,Y\in\real^{HW\times D}$ are the matrices obtained by reshaping the arra
 $\bx$ and $\by$. Note that the numerical implementation of this expression is straightforward once the output $Y$ has been computed with the caveats above.
 
 % ------------------------------------------------------------------
-\subsection{Log-loss}\label{s:loss}
+\subsection{Losses and comparisons}\label{s:losses}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\subsubsection{Log-loss}\label{s:loss}
 % ------------------------------------------------------------------
 
 \verb!vl_logloss! computes the \emph{logarithmic loss}
@@ -697,7 +793,7 @@ where $c \in \{1,2,\dots,D\}$ is the ground-truth class. Note that the operator 
 \]
 
 % ------------------------------------------------------------------
-\subsection{Softmax log-loss}\label{s:sfloss}
+\subsubsection{Softmax log-loss}\label{s:sfloss}
 % ------------------------------------------------------------------
 
 \verb!vl_softmaxloss! combines the softmax layer and the log-loss into one step for improved numerical stability. It computes
@@ -720,6 +816,89 @@ where $y_{ijc}$ is the output of the softmax layer. In matrix form:
 \]
 where $X,Y\in\real^{HW\times D}$ are the matrices obtained by reshaping the arrays
 $\bx$ and $\by$ and $\bfe_c$ is the indicator vector of class $c$.
+
+% ------------------------------------------------------------------
+\subsubsection{$p$-distance}\label{s:pdistance}
+% ------------------------------------------------------------------
+
+The \verb!vl_nnpdistp! function computes the $p$-th power $p$-distance between the vectors in the input data $\bx$ and a target $\bar\bx$:
+\[
+  y_{ij} = \sum_d |x_{ijd} - \bar x_{ijd}|^p, \qquad p > 0.
+\]
+Note that this operator is applied convolutionally, i.e. at each spatial location $ij$ one extracts and compares vectors $x_{ij:}$. There is also a variant \verb!vl_nnpdist!  computing the distance itself (not raised to the $p$-th power:
+\[
+  y_{ij} = \left(\sum_d |x_{ijd} - \bar x_{ijd}|^p\right)^\frac{1}{p}
+\]
+
+\paragraph{Implementation details.} The derivative of the first operator is given by:
+\begin{align*}
+\frac{dz}{dx_{ijd}}
+&=
+\frac{dz}{dy_{ij}}
+p |x_{ijd} - \bar x_{ijd}|^{p-1} \operatorname{sign} (x_{ijd} - \bar x_{ijd})
+\\
+&=
+\frac{dz}{dy_{ij}}
+p |x_{ijd} - \bar x_{ijd}|^{p-2} (x_{ijd} - \bar x_{ijd}).
+\end{align*}
+The derivative of the second operator by:
+\begin{align*}
+\frac{dz}{dx_{ijd}}
+&=
+\frac{dz}{dy_{ij}}
+\frac{1}{p}
+\left(\sum_{d'} |x_{ijd'} - \bar x_{ijd'}|^p \right)^{\frac{1}{p}-1}
+p |x_{ijd} - \bar x_{ijd}|^{p-2} (x_{ijd} - \bar x_{ijd})
+\\
+&= 
+\frac{dz}{dy_{ij}}
+\frac{|x_{ijd} - \bar x_{ijd}|^{p-2} (x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}}.
+\end{align*}
+The formulas simplify a little for $p=1,2$ which are therefore implemented as special cases.
+
+%% ------------------------------------------------------------------
+%\subsection{Product}\label{s:product}
+%% ------------------------------------------------------------------
+%
+%\[
+% y_{ijd} = x^{(1)}_{ijd} x^{(2)}_{ijd}
+%\]
+%
+%\paragraph{Implementation details.}
+%\[
+% \frac{dz}{dx^{(1)}_{ijd}}
+%  =
+% \sum_{i''j''d''}
+%  \frac{dz}{dy_{i''j''d''}} 
+%  \frac{dy_{i''j''d''}}{dx^{(1)}_{ijd}}
+%  =
+%  \frac{dz}{dy_{ijd''}} 
+%  x^{(2)}_{ijd},
+%  \qquad
+%  \frac{dz}{dx^{(2)}_{ijd}}
+%   =
+%  \frac{dz}{dy_{ijd}} 
+%  x^{(1)}_{ijd}.
+%\]
+%
+%
+%% ------------------------------------------------------------------
+%\subsection{Split}\label{s:split}
+%% ------------------------------------------------------------------
+%
+%\[
+% y_{ijd}^{(1)} = x_{ijd}, \qquad y_{ijd}^{(2)} = x_{ijd}
+%\]
+%
+%\[
+% \frac{dz}{dx_{ijd}} =
+%\sum_{i''j''d''} 
+% \frac{dz}{dy_{i''j''d''}^{(1)}}
+%  \frac{dy_{i''j''d''}^{(1)}}{dx_{ijd}}
+% +
+%  \frac{dz}{dy_{i''j''d''}^{(2)}}
+%  \frac{dy_{i''j''d''}^{(2)}}{dx_{ijd}}
+%\]
 
 % ------------------------------------------------------------------
 \section{Network wrappers and examples}\label{s:wrappers}
@@ -786,7 +965,6 @@ For large scale experiments, such as learning a network for ImageNet, a NVIDIA G
 \item Consider preprocessing the data to convert all images to have an height 256 pixels. This can be done with the supplied \verb!utils/preprocess-imagenet.sh! script. In this manner, training will not have to resize the images every time. Do not forget to point the training code to the pre-processed data.
 \item Consider copying the dataset in to a RAM disk (provided that you have enough memory!) for faster access. Do not forget to point the training code to this copy.
 \item Compile \vlnn with GPU support. See the homepage for instructions.
-\item Compile also the \verb!vl_imreadjpeg! function. Currently, reading JPEG images from disk is a bottleneck and this function can partially alleviate this problem (in the future it should remove the bottleneck almost entirely). See the homepage for instructions.
 \end{itemize}
 
 Once your setup is ready, you should be able to run \verb!examples/cnn_imagenet! (edit the file and change any flag as needed to enable GPU support and image pre-fetching on multiple threads).
