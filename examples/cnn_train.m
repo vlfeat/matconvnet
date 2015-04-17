@@ -277,7 +277,7 @@ for t=1:opts.batchSize:numel(subset)
     % accumulate training errors
     error = [...
       sum(double(gather(res(end).x))) ;
-      opts.errorFunction(opts, labels, res) ; ];
+      reshape(opts.errorFunction(opts, labels, res),[],1) ; ] ;
     numDone = numDone + numel(batch) ;
   end
 
