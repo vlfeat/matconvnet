@@ -38,6 +38,10 @@ end
 % -------------------------------------------------------------------------
 
 net = load(opts.modelPath) ;
+if isfield(net, 'net') ;
+  net = net.net ;
+  net.classes = imdb.classes ;
+end
 net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
 net.normalization.border = [256 256] - net.normalization.imageSize(1:2) ;
 vl_simplenn_display(net, 'batchSize', opts.train.batchSize) ;
