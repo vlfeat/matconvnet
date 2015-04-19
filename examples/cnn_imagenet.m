@@ -19,6 +19,7 @@ opts.train.numSubBatches = 1 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
 opts.train.prefetch = false ;
+opts.train.sync = true ;
 opts.train.expDir = opts.expDir ;
 switch opts.modelType
   case 'dropout'
