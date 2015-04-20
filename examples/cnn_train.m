@@ -171,15 +171,14 @@ for epoch=1:opts.numEpochs
   else
     net = vl_simplenn_move(net, 'cpu') ;
   end
-  if ~evaluateMode
-    save(modelPath(epoch), 'net', 'info') ;
-  end
+  if ~evaluateMode, save(modelPath(epoch), 'net', 'info') ; end
 
   figure(1) ; clf ;
   hasError = isa(opts.errorFunction, 'function_handle') ;
   subplot(1,1+hasError,1) ;
   if ~evaluateMode
-    semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ; hold on ;
+    semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ;
+    hold on ;
   end
   semilogy(1:epoch, info.val.objective, '.--') ;
   xlabel('training epoch') ; ylabel('energy') ;
@@ -190,11 +189,12 @@ for epoch=1:opts.numEpochs
   if hasError
     subplot(1,2,2) ; leg = {} ;
     if ~evaluateMode
-      plot(1:epoch, info.train.error', '.-', 'linewidth', 2) ; hold on ;
-      leg{end+1} =strcat('train ', opts.errorLabels) ;
+      plot(1:epoch, info.train.error', '.-', 'linewidth', 2) ;
+      hold on ;
+      leg = horzcat(leg, strcat('train ', opts.errorLabels)) ;
     end
     plot(1:epoch, info.val.error', '.--') ;
-    leg{end+1} = strcat('val ', opts.errorLabels) ;
+    leg = horzcat(leg, strcat('val ', opts.errorLabels)) ;
     set(legend(leg{:}),'color','none') ;
     grid on ;
     xlabel('training epoch') ; ylabel('error') ;
