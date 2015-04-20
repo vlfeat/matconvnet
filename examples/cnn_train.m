@@ -49,7 +49,9 @@ if isnan(opts.train), opts.train = [] ; end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-if ~isempty(opts.train)
+evaluateMode = isempty(opts.train) ;
+
+if ~evaluateMode
   for i=1:numel(net.layers)
     if isfield(net.layers{i}, 'weights')
       J = numel(net.layers{i}.weights) ;
@@ -153,7 +155,8 @@ for epoch=1:opts.numEpochs
   end
 
   % save
-  for f = {'train', 'val'}
+  if evaluateMode, sets = {'val'} ; else sets = {'train', 'val'} ; end
+  for f = sets
     f = char(f) ;
     n = numel(eval(f)) ;
     info.(f).speed(epoch) = n / stats.(f)(1) ;
@@ -168,26 +171,31 @@ for epoch=1:opts.numEpochs
   else
     net = vl_simplenn_move(net, 'cpu') ;
   end
-  save(modelPath(epoch), 'net', 'info') ;
+  if ~evaluateMode
+    save(modelPath(epoch), 'net', 'info') ;
+  end
 
   figure(1) ; clf ;
-  hasError = size(info.train.error,1) > 0 ;
+  hasError = isa(opts.errorFunction, 'function_handle') ;
   subplot(1,1+hasError,1) ;
-  semilogy(1:epoch, info.train.objective, 'linewidth', 2) ; hold on ;
-  semilogy(1:epoch, info.val.objective, '--') ;
+  if ~evaluateMode
+    semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ; hold on ;
+  end
+  semilogy(1:epoch, info.val.objective, '.--') ;
   xlabel('training epoch') ; ylabel('energy') ;
   grid on ;
-  h=legend('train', 'val') ;
+  h=legend(sets) ;
   set(h,'color','none');
   title('objective') ;
   if hasError
-    subplot(1,2,2) ;
-    plot(1:epoch, info.train.error', 'linewidth', 2) ; hold on ;
-    plot(1:epoch, info.val.error', '--') ;
-    h=legend(horzcat(...
-      strcat('train ', opts.errorLabels), ...
-      strcat('val ', opts.errorLabels))) ;
-    set(h,'color','none') ;
+    subplot(1,2,2) ; leg = {} ;
+    if ~evaluateMode
+      plot(1:epoch, info.train.error', '.-', 'linewidth', 2) ; hold on ;
+      leg{end+1} =strcat('train ', opts.errorLabels) ;
+    end
+    plot(1:epoch, info.val.error', '.--') ;
+    leg{end+1} = strcat('val ', opts.errorLabels) ;
+    set(legend(leg{:}),'color','none') ;
     grid on ;
     xlabel('training epoch') ; ylabel('error') ;
     title('error') ;
