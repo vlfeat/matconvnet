@@ -30,8 +30,9 @@ opts.batchSize = 1 ;
 opts = vl_argparse(opts, varargin) ;
 
 fields={'layer', 'type', 'name', '-', ...
-        'support', 'filtd', 'nfilt', 'stride', 'pad', 'rfield', '-', ...
-        'osize', 'odepth', 'ocard', '-', ...
+        'support', 'filtd', 'nfilt', 'stride', 'pad', '-', ...
+        'rfsize', 'rfoffset', 'rfstride', '-', ...
+        'dsize', 'ddepth', 'dnum', '-', ...
         'xmem', 'wmem'};
 
 % get the support, stride, and padding of the operators
@@ -59,35 +60,42 @@ for l = 1:numel(net.layers)
   else
     info.pad(1:4,l) = 0 ;
   end
-  for i=1:2
-    info.receptiveField(i,l) = sum(cumprod([1 info.stride(i,1:l-1)]).*(info.support(i,1:l)-1))+1 ;
-  end
+
+  % operator applied to the input image
+  info.receptiveFieldSize(1:2,l) = 1 + ...
+      sum(cumprod([[1;1], info.stride(1:2,1:l-1)],2) .* ...
+          (info.support(1:2,1:l)-1),2) ;
+  info.receptiveFieldOffset(1:2,l) = 1 + ...
+      sum(cumprod([[1;1], info.stride(1:2,1:l-1)],2) .* ...
+          ((info.support(1:2,1:l)-1)/2 - info.pad([1 3],1:l)),2) ;
+  info.receptiveFieldStride = cumprod(info.stride,2) ;
 end
+
 
 % get the dimensions of the data
 if ~isempty(opts.inputSize) ;
-  info.size.x(1:4,1) = opts.inputSize(:) ;
+  info.dataSize(1:4,1) = opts.inputSize(:) ;
 elseif isfield(net, 'normalization') && isfield(net.normalization, 'imageSize')
-  info.size.x(1:4,1) = [net.normalization.imageSize(:) ; opts.batchSize] ;
+  info.dataSize(1:4,1) = [net.normalization.imageSize(:) ; opts.batchSize] ;
 else
-  info.size.x(1:4,1) = [NaN NaN NaN opts.batchSize] ;
+  info.dataSize(1:4,1) = [NaN NaN NaN opts.batchSize] ;
 end
 for l = 1:numel(net.layers)
-    ly = net.layers{l} ;
+  ly = net.layers{l} ;
   if strcmp(ly.type, 'custom') && isfield(ly, 'getForwardSize')
-    sz = ly.getForwardSize(ly, info.size.x(:,l)) ;
-    info.size.x(:,l+1) = sz(:) ;
+    sz = ly.getForwardSize(ly, info.dataSize(:,l)) ;
+    info.dataSize(:,l+1) = sz(:) ;
     continue ;
   end
 
-  info.size.x(1, l+1) = floor((info.size.x(1,l) + ...
-                               sum(info.pad(1:2,l)) - ...
-                               info.support(1,l)) / info.stride(1,l)) + 1 ;
-  info.size.x(2, l+1) = floor((info.size.x(2,l) + ...
-                               sum(info.pad(3:4,l)) - ...
-                               info.support(2,l)) / info.stride(2,l)) + 1 ;
-  info.size.x(3, l+1) = info.size.x(3,l) ;
-  info.size.x(4, l+1) = info.size.x(4,l) ;
+  info.dataSize(1, l+1) = floor((info.dataSize(1,l) + ...
+                                 sum(info.pad(1:2,l)) - ...
+                                 info.support(1,l)) / info.stride(1,l)) + 1 ;
+  info.dataSize(2, l+1) = floor((info.dataSize(2,l) + ...
+                                 sum(info.pad(3:4,l)) - ...
+                                 info.support(2,l)) / info.stride(2,l)) + 1 ;
+  info.dataSize(3, l+1) = info.dataSize(3,l) ;
+  info.dataSize(4, l+1) = info.dataSize(4,l) ;
   switch ly.type
     case 'conv'
       if isfield(ly, 'weights')
@@ -96,12 +104,12 @@ for l = 1:numel(net.layers)
         f = ly.filters ;
       end
       if size(f, 3) ~= 0
-        info.size.x(3, l+1) = size(f,4) ;
+        info.dataSize(3, l+1) = size(f,4) ;
       end
     case {'loss', 'softmaxloss'}
-      info.size.x(3:4, l+1) = 1 ;
+      info.dataSize(3:4, l+1) = 1 ;
     case 'custom'
-      info.size.x(3,l+1) = NaN ;
+      info.dataSize(3,l+1) = NaN ;
   end
 end
 
@@ -114,12 +122,13 @@ for w=fields
   switch char(w)
     case 'type', s = 'type' ;
     case 'stride', s = 'stride' ;
-    case 'padding', s = 'pad' ;
-    case 'rfield', s = 'rec field' ;
-    case 'odepth', s = 'out depth' ;
-    case 'osize', s = 'out size' ;
-    case 'ocard', s = 'out card' ;
-    case 'nfilt', s = 'num filt' ;
+    case 'rfsize', s = 'rf size' ;
+    case 'rfstride', s = 'rf stride' ;
+    case 'rfoffset', s = 'rf offset' ;
+    case 'dsize', s = 'data size' ;
+    case 'ddepth', s = 'data depth' ;
+    case 'dnum', s = 'data num' ;
+    case 'nfilt', s = 'num filts' ;
     case 'filtd', s = 'filt dim' ;
     case 'wmem', s = 'param mem' ;
     case 'xmem', s = 'data mem' ;
@@ -133,11 +142,11 @@ for w=fields
     switch char(w)
       case '-', s='-------' ;
       case 'layer', s=sprintf('%d', l) ;
-      case 'osize', s=sprintf('%dx%d', info.size.x(1:2,l+1)) ;
-      case 'odepth', s=sprintf('%d', info.size.x(3,l+1)) ;
-      case 'ocard', s=sprintf('%d', info.size.x(4,l+1)) ;
+      case 'dsize', s=pdims(info.dataSize(1:2,l+1)) ;
+      case 'ddepth', s=sprintf('%d', info.dataSize(3,l+1)) ;
+      case 'dnum', s=sprintf('%d', info.dataSize(4,l+1)) ;
       case 'xmem'
-        a = prod(info.size.x(:,l+1)) * 4 ;
+        a = prod(info.dataSize(:,l+1)) * 4 ;
         s = pmem(a) ;
         xmem = xmem + a ;
       otherwise
@@ -156,15 +165,12 @@ for w=fields
             case 'type'
               switch ly.type
                 case 'normalize', s='norm';
-                case 'pool', if strcmpi(ly.method,'avg'), s='apool'; else s='mpool'; end
+                case 'pool'
+                  if strcmpi(ly.method,'avg'), s='apool'; else s='mpool'; end
                 case 'softmax', s='softmx' ;
                 case 'softmaxloss', s='softmxl' ;
                 otherwise s=ly.type ;
               end
-
-            case 'support'
-              s=sprintf('%dx%d', info.support(1,l), info.support(2,l)) ;
-
             case 'nfilt'
               switch ly.type
                 case 'conv'
@@ -183,25 +189,19 @@ for w=fields
                 otherwise
                   s='n/a' ;
               end
-
+            case 'support'
+              s = pdims(info.support(:,l)) ;
             case 'stride'
-              if all(info.stride(:,l)==info.stride(1,l))
-                s=sprintf('%d', info.stride(1,l)) ;
-              else
-                s=sprintf('%dx%d', info.stride) ;
-              end
+              s = pdims(info.stride(:,l)) ;
             case 'pad'
-              if all(info.pad(:,l)==info.pad(1,l))
-                s=sprintf('%d', info.pad(1,l)) ;
-              else
-                s=sprintf('%d,%dx%d,%d', info.pad) ;
-              end
-            case 'rfield'
-              if all(info.receptiveField(:,l)==info.receptiveField(1,l))
-                s=sprintf('%d', info.receptiveField(1,l)) ;
-              else
-                s=sprintf('%dx%d', info.receptiveField) ;
-              end
+              s = pdims(info.pad(:,l)) ;
+            case 'rfsize'
+              s = pdims(info.receptiveFieldSize(:,l)) ;
+            case 'rfoffset'
+              s = pdims(info.receptiveFieldOffset(:,l)) ;
+            case 'rfstride'
+              s = pdims(info.receptiveFieldStride(:,l)) ;
+
             case 'wmem'
               a = 0 ;
               if isfield(ly, 'weights') ;
@@ -209,6 +209,7 @@ for w=fields
                   a = a + numel(ly.weights{j}) * 4 ;
                 end
               end
+              % Legacy code to be removed
               if isfield(ly, 'filters') ;
                 a = a + numel(ly.filters) * 4 ;
               end
@@ -226,16 +227,26 @@ for w=fields
 end
 
 fprintf('parameter memory: %s (%.2g parameters)\n', pmem(wmem), wmem/4) ;
-fprintf('data memory: %s (batch size %d)\n', pmem(xmem), info.size.x(4,1)) ;
+fprintf('data memory: %s (for batch size %d)\n', pmem(xmem), info.dataSize(4,1)) ;
 
 % -------------------------------------------------------------------------
-function s= pmem(x)
+function s = pmem(x)
 % -------------------------------------------------------------------------
 if isnan(x),       s = 'NaN' ;
 elseif x < 1024^1, s = sprintf('%.0fB', x) ;
 elseif x < 1024^2, s = sprintf('%.0fKB', x / 1024) ;
 elseif x < 1024^3, s = sprintf('%.0fMB', x / 1024^2) ;
 else               s = sprintf('%.0fGB', x / 1024^3) ;
+end
+
+% -------------------------------------------------------------------------
+function s = pdims(x)
+% -------------------------------------------------------------------------
+if all(x==x(1))
+  s = sprintf('%.4g', x(1)) ;
+else
+  s = sprintf('%.4gx', x(:)) ;
+  s(end) = [] ;
 end
 
 % -------------------------------------------------------------------------
@@ -268,3 +279,5 @@ elseif isnumeric(s)
     cpuMem = cpuMem + mult * numel(s) ;
   end
 end
+
+
