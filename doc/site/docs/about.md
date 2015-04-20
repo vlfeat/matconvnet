@@ -28,12 +28,12 @@ here.
     GPUs.
 
     This version changes slightly the structure of `simplenn`. In
-    particular, the `filters` and `biases` fields in the layers have
-    been replaced by a `weights` cell array containing both. This
-    change allowed to simplify a lot of code. All examples and
-    downloadable models have been updated to reflact this
-    change. Models using the old style structure should still work for
-    now, but will not train with the new example code.
+    particular, the `filters` and `biases` fields in certain layers
+    have been replaced by a `weights` cell array containing both
+    tensors, simiplifying a significant amount of code. All examples
+    and downloadable models have been updated to reflact this
+    change. Models using the old structure format still work but are
+    deprecated.
 
     The `cnn_train` training code example has been rewritten to
     support multiple GPUs.  The inteface is nearly the same, but the
