@@ -9,11 +9,11 @@ opts.expDir = fullfile('data', 'imagenet12-eval-vgg-f') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.modelPath = fullfile('data', 'models', 'imagenet-vgg-f.mat') ;
 opts.lite = false ;
-opts.numFetchThreads = 8 ;
+opts.numFetchThreads = 12 ;
 opts.train.batchSize = 128 ;
 opts.train.numEpochs = 1 ;
 opts.train.gpus = [] ;
-opts.train.prefetch = false ;
+opts.train.prefetch = true ;
 opts.train.expDir = opts.expDir ;
 opts.train.conserveMemory = true ;
 opts.train.sync = true ;
@@ -53,22 +53,23 @@ imdb = cnn_imagenet_sync_labels(imdb, net);
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
 
-fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
+bopts = net.normalization ;
+bopts.numThreads = opts.numFetchThreads ;
+fn = getBatchWrapper(bopts) ;
 
 [net,info] = cnn_train(net, imdb, fn, opts.train, ...
                             'train', NaN, ...
                             'val', find(imdb.images.set==2)) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchWrapper(opts, numThreads)
+function fn = getBatchWrapper(opts)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatch(imdb,batch,opts,numThreads) ;
+fn = @(imdb,batch) getBatch(imdb,batch,opts) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getBatch(imdb, batch, opts, numThreads)
+function [im,labels] = getBatch(imdb, batch, opts)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
-                            'numThreads', numThreads, ...
                             'prefetch', nargout == 0) ;
 labels = imdb.images.label(batch) ;

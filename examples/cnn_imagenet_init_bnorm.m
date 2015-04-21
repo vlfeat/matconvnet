@@ -61,7 +61,7 @@ net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 function net = add_block(net, opts, id, h, w, in, out, stride, pad)
 info = vl_simplenn_display(net) ;
-fc = (h == info.size.x(1,end) && w == info.size.x(2,end)) ;
+fc = (h == info.dataSize(1,end) && w == info.dataSize(2,end)) ;
 if fc
   name = 'fc' ;
 else
