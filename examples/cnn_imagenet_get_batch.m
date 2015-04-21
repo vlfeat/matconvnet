@@ -111,8 +111,8 @@ for i=1:numel(images)
         dy = floor((h - sz(1)) * tf(1)) + 1 ;
         flip = tf(3) ;
     end
-    sx = round(linspace(dx, sz(1)+dx-1, opts.imageSize(1))) ;
-    sy = round(linspace(dy, sz(2)+dy-1, opts.imageSize(2))) ;
+    sx = round(linspace(dx, sz(2)+dx-1, opts.imageSize(2))) ;
+    sy = round(linspace(dy, sz(1)+dy-1, opts.imageSize(1))) ;
     if flip, sx = fliplr(sx) ; end
 
     if ~isempty(opts.averageImage)
