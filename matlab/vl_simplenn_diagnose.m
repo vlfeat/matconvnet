@@ -56,17 +56,19 @@ for i=1:numel(net.layers)
       dxmi(i) = min(x(:)) ;
       dxmx(i) = max(x(:)) ;
     end
-    if strcmp(ly.type, 'conv') && numel(res(i).dzdw{1}) > 0
-      x = gather(res(i).dzdw{1}) ;
-      dfmu(i) = mean(x(:)) ;
-      dfmi(i) = min(x(:)) ;
-      dfmx(i) = max(x(:)) ;
-    end
-    if strcmp(ly.type, 'conv') && numel(res(i).dzdw{2}) > 0
-      x = gather(res(i).dzdw{2}) ;
-      dbmu(i) = mean(x(:)) ;
-      dbmi(i) = min(x(:)) ;
-      dbmx(i) = max(x(:)) ;
+    if ~isempty(res(i).dzdw)
+      if strcmp(ly.type, 'conv') && numel(res(i).dzdw{1}) > 0
+        x = gather(res(i).dzdw{1}) ;
+        dfmu(i) = mean(x(:)) ;
+        dfmi(i) = min(x(:)) ;
+        dfmx(i) = max(x(:)) ;
+      end
+      if strcmp(ly.type, 'conv') && numel(res(i).dzdw{2}) > 0
+        x = gather(res(i).dzdw{2}) ;
+        dbmu(i) = mean(x(:)) ;
+        dbmi(i) = min(x(:)) ;
+        dbmx(i) = max(x(:)) ;
+      end
     end
   end
 end
@@ -78,39 +80,39 @@ else
 end
 
 clf ; subplot(np,1,1) ;
-errorbar(1:n, fmu, fmi, fmx, 'bo') ;
+errorbar(1:n, fmu, -(fmi-fmu), fmx-fmu, 'bo') ;
 grid on ;
 xlabel('layer') ;
 ylabel('filters') ;
 title('coefficient ranges') ;
 
 subplot(np,1,2) ;
-errorbar(1:n, bmu, bmi, bmx, 'bo') ;
+errorbar(1:n, bmu, -(bmi-bmu), bmx-bmu, 'bo') ;
 grid on ;
 xlabel('layer') ;
 ylabel('biases') ;
 
 if nargin > 1
   subplot(np,1,3) ;
-  errorbar(1:n, xmu, xmi, xmx, 'bo') ;
+  errorbar(1:n, xmu, -(xmi-xmu), xmx-xmu, 'bo') ;
   grid on ;
   xlabel('layer') ;
   ylabel('x') ;
 
   subplot(np,1,4) ;
-  errorbar(1:n, dxmu, dxmi, dxmx, 'bo') ;
+  errorbar(1:n, dxmu, -(dxmi-dxmu), dxmx-dxmu, 'bo') ;
   grid on ;
   xlabel('layer') ;
   ylabel('dzdx') ;
 
   subplot(np,1,5) ;
-  errorbar(1:n, dfmu, dfmi, dfmx, 'bo') ;
+  errorbar(1:n, dfmu, -(dfmi-dfmu), dfmx-dfmu, 'bo') ;
   grid on ;
   xlabel('layer') ;
   ylabel('dfilters') ;
 
   subplot(np,1,6) ;
-  errorbar(1:n, dbmu, dbmi, dbmx, 'bo') ;
+  errorbar(1:n, dbmu, -(dbmi-dbmu), dbmx-dbmu, 'bo') ;
   grid on ;
   xlabel('layer') ;
   ylabel('dbiases') ;
