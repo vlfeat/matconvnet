@@ -4,10 +4,13 @@ function [net, info] = cnn_cifar(varargin)
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
+opts.expDir = fullfile('data','cifar-baseline') ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
 opts.dataDir = fullfile('data','cifar') ;
-opts.expDir = fullfile('data','cifar-baseline-2') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.whitenData = true ;
+opts.contrastNormalization = true ;
 opts.train.batchSize = 100 ;
 opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
@@ -31,15 +34,9 @@ end
 %net = cnn_cifar_init(opts) ;
 net = cnn_cifar_init_nin(opts) ;
 
-
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
-
-% Take the mean out and make GPU if needed
-if numel(opts.train.gpus) == 1
-  imdb.images.data = gpuArray(imdb.images.data) ;
-end
 
 [net, info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
@@ -50,6 +47,7 @@ function [im, labels] = getBatch(imdb, batch)
 % --------------------------------------------------------------------
 im = imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
+if rand > 0.5, im=fliplr(im) ; end
 
 % --------------------------------------------------------------------
 function imdb = getCifarImdb(opts)
@@ -79,6 +77,18 @@ end
 
 set = cat(2, sets{:});
 data = single(cat(4, data{:}));
+
+% normalize by image mean and std as suggested in `An Analysis of
+% Single-Layer Networks in Unsupervised Feature Learning` Adam
+% Coates, Honglak Lee, Andrew Y. Ng
+
+if opts.contrastNormalization
+  z = reshape(data,[],60000) ;
+  z = bsxfun(@minus, z, mean(z,1)) ;
+  z = bsxfun(@rdivide, z, std(z,0,1)) ;
+  data = reshape(32 * z, 32, 32, 3, []) ;
+end
+
 dataMean = mean(data(:,:,:,set == 1), 4);
 data = bsxfun(@minus, data, dataMean);
 
@@ -87,14 +97,13 @@ if opts.whitenData
   W = z(:,set == 1)*z(:,set == 1)'/60000 ;
   [V,D] = eig(W) ;
   d = sqrt(diag(D)) + 1 ;
-  z = V*diag(1./d)*V'*z ;
+  z = V*diag(256./d)*V'*z ;
   data = reshape(z, 32, 32, 3, []) ;
 end
-  
+
 clNames = load(fullfile(unpackPath, 'batches.meta.mat'));
 
 imdb.images.data = data ;
-imdb.images.dataMean = dataMean ;
 imdb.images.labels = single(cat(2, labels{:})) ;
 imdb.images.set = set;
 imdb.meta.sets = {'train', 'val', 'test'} ;
