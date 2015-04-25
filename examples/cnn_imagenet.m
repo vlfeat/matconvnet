@@ -23,7 +23,7 @@ opts.train.sync = false ;
 opts.train.expDir = opts.expDir ;
 switch opts.modelType
   case 'dropout', opts.train.learningRate = logspace(-2, -4, 75) ;
-  case 'bnorm',   opts.train.learningRate = logspace(-1, -3, 20) ;
+  case 'bnorm',   opts.train.learningRate = logspace(-1, -4, 20) ;
 end
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
