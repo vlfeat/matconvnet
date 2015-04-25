@@ -73,7 +73,7 @@ if ~evaluateMode
         net.layers{i}.learningRate = ones(1, 2, 'single') ;
       end
       if ~isfield(net.layers{i}, 'weightDecay')
-        net.layers{i}.weightDecay = ones(1, 2, 'single') ;
+        net.layers{i}.weightDecay = single([1 0]) ;
       end
     end
   end

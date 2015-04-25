@@ -4,7 +4,12 @@ function [net, info] = cnn_cifar(varargin)
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.expDir = fullfile('data','cifar-baseline') ;
+opts.modelType = 'lenet' ;
+opts.train.learningRate = [] ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.expDir = fullfile('data', sprintf('cifar-%s', opts.modelType)) ;
+opts.train.numEpochs = numel(opts.train.learningRate) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.dataDir = fullfile('data','cifar') ;
@@ -12,15 +17,14 @@ opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.whitenData = true ;
 opts.contrastNormalization = true ;
 opts.train.batchSize = 100 ;
-opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
-opts.train.learningRate = [0.001*ones(1, 12) 0.0001*ones(1,6) 0.00001] ;
 opts.train.expDir = opts.expDir ;
+opts.train.weightDecay = 0.0005 ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
-%                                                         Prepare data
+%                                               Prepare data and model
 % --------------------------------------------------------------------
 
 if exist(opts.imdbPath, 'file')
@@ -31,8 +35,20 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
-%net = cnn_cifar_init(opts) ;
-net = cnn_cifar_init_nin(opts) ;
+switch opts.modelType
+  case 'lenet'
+    net = cnn_cifar_init(opts) ;
+    if opts.train.numEpochs == 0
+      opts.train.learningRate = [0.001*ones(1, 15) 0.0001*ones(1,15) 0.00001*ones(1,5)] ;
+      opts.train.numEpochs = 35 ;
+    end
+  case 'nin'
+    net = cnn_cifar_init_nin(opts) ;
+    if opts.train.numEpochs == 0
+      opts.train.learningRate = 5*[0.01 * ones(1,60), 0.001*ones(1,20)] ;
+      opts.train.numEpochs = 80 ;
+    end
+end
 
 % --------------------------------------------------------------------
 %                                                                Train
@@ -45,7 +61,7 @@ net = cnn_cifar_init_nin(opts) ;
 % --------------------------------------------------------------------
 function [im, labels] = getBatch(imdb, batch)
 % --------------------------------------------------------------------
-im = imdb.images.data(:,:,:,batch) ;
+im = 0.1*imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
 if rand > 0.5, im=fliplr(im) ; end
 
@@ -85,7 +101,7 @@ data = single(cat(4, data{:}));
 if opts.contrastNormalization
   z = reshape(data,[],60000) ;
   z = bsxfun(@minus, z, mean(z,1)) ;
-  z = bsxfun(@rdivide, z, std(z,0,1)) ;
+  z = bsxfun(@rdivide, z, std(z,0,1) + 1) ;
   data = reshape(32 * z, 32, 32, 3, []) ;
 end
 
@@ -96,7 +112,7 @@ if opts.whitenData
   z = reshape(data,[],60000) ;
   W = z(:,set == 1)*z(:,set == 1)'/60000 ;
   [V,D] = eig(W) ;
-  d = sqrt(diag(D)) + 1 ;
+  d = sqrt(diag(D)) + 10 ;
   z = V*diag(256./d)*V'*z ;
   data = reshape(z, 32, 32, 3, []) ;
 end
