@@ -11,8 +11,8 @@ opts.modelType = 'lenet' ;
 
 switch opts.modelType
   case 'lenet'
-    opts.train.learningRate = [0.001*ones(1,15) 0.0001*ones(1,15) 0.00001*ones(1,5)] ;
-    opts.train.weightDecay = 0.0005 ;
+    opts.train.learningRate = 10*[0.001*ones(1,15) 0.0001*ones(1,15) 0.00001*ones(1,5)] ;
+    opts.train.weightDecay = 0.0001 ;
   case 'nin'
     opts.train.learningRate = [0.2*ones(1,60) 0.02*ones(1,10) 0.002*ones(1,10)] ;
     opts.train.weightDecay = 0.0001 ;
