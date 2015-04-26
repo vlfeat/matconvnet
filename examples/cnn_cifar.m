@@ -1,14 +1,27 @@
 function [net, info] = cnn_cifar(varargin)
-% CNN_CIFAR   Demonstrates MatConvNet on CIFAR
+% CNN_CIFAR   Demonstrates MatConvNet on CIFAR-10
+%    The demo includes two standard model: LeNet and Network in
+%    Network (NIN). Use the 'modelType' option to choose one.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.modelType = 'lenet' ;
-opts.train.learningRate = [] ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
+switch opts.modelType
+  case 'lenet'
+    opts.train.learningRate = [0.001*ones(1,15) 0.0001*ones(1,15) 0.00001*ones(1,5)] ;
+    opts.train.weightDecay = 0.0005 ;
+  case 'nin'
+    opts.train.learningRate = [0.2*ones(1,60) 0.02*ones(1,10) 0.002*ones(1,10)] ;
+    opts.train.weightDecay = 0.0001 ;
+  otherwise
+    error('Unknown model type %s', opts.modelType) ;
+end
 opts.expDir = fullfile('data', sprintf('cifar-%s', opts.modelType)) ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
 opts.train.numEpochs = numel(opts.train.learningRate) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
@@ -20,12 +33,16 @@ opts.train.batchSize = 100 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
 opts.train.expDir = opts.expDir ;
-opts.train.weightDecay = 0.0005 ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
 %                                               Prepare data and model
 % --------------------------------------------------------------------
+
+switch opts.modelType
+  case 'lenet', net = cnn_cifar_init(opts) ;
+  case 'nin',   net = cnn_cifar_init_nin(opts) ;
+end
 
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
@@ -33,21 +50,6 @@ else
   imdb = getCifarImdb(opts) ;
   mkdir(opts.expDir) ;
   save(opts.imdbPath, '-struct', 'imdb') ;
-end
-
-switch opts.modelType
-  case 'lenet'
-    net = cnn_cifar_init(opts) ;
-    if opts.train.numEpochs == 0
-      opts.train.learningRate = [0.001*ones(1, 15) 0.0001*ones(1,15) 0.00001*ones(1,5)] ;
-      opts.train.numEpochs = 35 ;
-    end
-  case 'nin'
-    net = cnn_cifar_init_nin(opts) ;
-    if opts.train.numEpochs == 0
-      opts.train.learningRate = 5*[0.01 * ones(1,60), 0.001*ones(1,20)] ;
-      opts.train.numEpochs = 80 ;
-    end
 end
 
 % --------------------------------------------------------------------
@@ -61,7 +63,7 @@ end
 % --------------------------------------------------------------------
 function [im, labels] = getBatch(imdb, batch)
 % --------------------------------------------------------------------
-im = 0.1*imdb.images.data(:,:,:,batch) ;
+im = imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
 if rand > 0.5, im=fliplr(im) ; end
 
@@ -94,6 +96,10 @@ end
 set = cat(2, sets{:});
 data = single(cat(4, data{:}));
 
+% remove mean in any case
+dataMean = mean(data(:,:,:,set == 1), 4);
+data = bsxfun(@minus, data, dataMean);
+
 % normalize by image mean and std as suggested in `An Analysis of
 % Single-Layer Networks in Unsupervised Feature Learning` Adam
 % Coates, Honglak Lee, Andrew Y. Ng
@@ -101,19 +107,19 @@ data = single(cat(4, data{:}));
 if opts.contrastNormalization
   z = reshape(data,[],60000) ;
   z = bsxfun(@minus, z, mean(z,1)) ;
-  z = bsxfun(@rdivide, z, std(z,0,1) + 1) ;
-  data = reshape(32 * z, 32, 32, 3, []) ;
+  n = std(z,0,1) ;
+  z = bsxfun(@times, z, mean(n) ./ max(n, 40)) ;
+  data = reshape(z, 32, 32, 3, []) ;
 end
-
-dataMean = mean(data(:,:,:,set == 1), 4);
-data = bsxfun(@minus, data, dataMean);
 
 if opts.whitenData
   z = reshape(data,[],60000) ;
   W = z(:,set == 1)*z(:,set == 1)'/60000 ;
   [V,D] = eig(W) ;
-  d = sqrt(diag(D)) + 10 ;
-  z = V*diag(256./d)*V'*z ;
+  % the scale is selected to approximately preserve the norm of W
+  d2 = diag(D) ;
+  en = sqrt(mean(d2)) ;
+  z = V*diag(en./max(sqrt(d2), 10))*V'*z ;
   data = reshape(z, 32, 32, 3, []) ;
 end
 
