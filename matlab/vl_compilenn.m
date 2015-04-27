@@ -351,6 +351,7 @@ if opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
       flags.nvcc{end+1} = '/MD' ;
       check_clpath(); % check whether cl.exe in path
   end
+  flags.nvcc{end+1} = opts.cudaArch;
 end
 
 if opts.verbose
