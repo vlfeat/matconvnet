@@ -49,8 +49,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     The convolutional layer wraps VL_NNCONV(). It has fields:
 %
 %     - layer.type = 'conv'
-%     - layer.filters: the filters.
-%     - layer.biases: the biases.
+%     - layer.weights = {filters, biases}
 %     - layer.stride: the sampling stride (usually 1).
 %     - layer.padding: the padding (usually 0).
 %
@@ -69,10 +68,25 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - layer.type = 'normalize'
 %     - layer.param: the normalization parameters.
 %
-%   ReLU layer::
+%   Spatial normalization layer:
+%     This is similar to the layer above, but wraps VL_NNSPNORM():
+%
+%     - layer.type = 'spnorm'
+%     - layer.param: the normalization parameters.
+%
+%   Batch normalization layer:
+%     This layer wraps VL_NNBNORM(). It has fields:
+%
+%     - layer.type = 'bnorm'
+%     - layer.weights = {multipliers, biases}.
+%
+%   ReLU and Sigmoid layers::
 %     The ReLU layer wraps VL_NNRELU(). It has fields:
 %
 %     - layer.type = 'relu'
+%
+%     The sigmoid layer is the same, but for the sigmoid function, with
+%     `relu` replaced by `sigmoid`.
 %
 %   Dropout layer::
 %     The dropout layer wraps VL_NNDROPOUT(). It has fields:
@@ -97,6 +111,14 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %
 %     - layer.type = 'softmaxloss'
 %     - layer.class: the ground-truth class.
+%
+%   P-dist layer:
+%     The pdist layer wraps VL_NNPDIST(). It has fields:
+%
+%     - layer.type = 'pdist'
+%     - layer.p = P parameter of the P-distance
+%     - layer.noRoot = whether to raise the distance to the P-th power
+%     - layer.epsilon = regularization parameter for the derivatives
 %
 %   Custom layer::
 %     This can be used to specify custom layers.
@@ -173,6 +195,8 @@ for i=1:n
       res(i+1).x = vl_nnsigmoid(res(i).x) ;
     case 'noffset'
       res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
+    case 'spnorm'
+      res(i+1).x = vl_nnspnorm(res(i).x, l.param) ;
     case 'dropout'
       if opts.disableDropout
         res(i+1).x = res(i).x ;
@@ -273,6 +297,8 @@ if doder
         res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
       case 'noffset'
         res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
+      case 'spnorm'
+        res(i).dzdx = vl_nnspnorm(res(i).x, l.param, res(i+1).dzdx) ;
       case 'dropout'
         if opts.disableDropout
           res(i).dzdx = res(i+1).dzdx ;
@@ -307,7 +333,8 @@ if doder
           clear dzdw ;
         end
       case 'pdist'
-        res(i).dzdx = vl_nnpdist(res(i).x, l.p, res(i+1).dzdx, 'noRoot', l.noRoot, 'epsilon', l.epsilon) ;
+        res(i).dzdx = vl_nnpdist(res(i).x, l.p, res(i+1).dzdx, ...
+                                 'noRoot', l.noRoot, 'epsilon', l.epsilon) ;
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
     end

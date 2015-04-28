@@ -20,6 +20,8 @@ pages:
 - ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
 - ['mfiles/vl_compilenn.md', 'Functions', 'vl_compilenn']
 - ['mfiles/vl_nnbnorm.md', 'Functions', 'vl_nnbnorm']
+- ['mfiles/vl_nnspnorm.md', 'Functions', 'vl_nnspnorm']
+- ['mfiles/vl_nnpdist.md', 'Functions', 'vl_nnpdist']
 - ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
 - ['mfiles/vl_nndropout.md', 'Functions', 'vl_nndropout']
 - ['mfiles/vl_nnloss.md', 'Functions', 'vl_nnloss']

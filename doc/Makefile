@@ -15,11 +15,13 @@ vl_nndropout.m \
 vl_nnloss.m \
 vl_nnnoffset.m \
 vl_nnnormalize.m \
+vl_nnpdist.m \
 vl_nnpool.m \
 vl_nnrelu.m \
 vl_nnsigmoid.m \
 vl_nnsoftmax.m \
 vl_nnsoftmaxloss.m \
+vl_nnspnorm.m \
 vl_rootnn.m \
 vl_setupnn.m \
 vl_simplenn.m \

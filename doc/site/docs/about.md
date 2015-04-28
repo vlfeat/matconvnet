@@ -23,9 +23,11 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta11 (April 2015) Added batch normalization. Added sigmoid
-    function. Extended the example training code to support multiple
-    GPUs.
+-   1.0-beta11 (April 2015) Added batch normalization, spatial
+    normalization, sigmoid, p-distance.  Extended the example training
+    code to support multiple GPUs. Significantly improved the tuning
+    of the ImageNet and CIFAR examples. Added the CIFAR Network in
+    Network model.
 
     This version changes slightly the structure of `simplenn`. In
     particular, the `filters` and `biases` fields in certain layers

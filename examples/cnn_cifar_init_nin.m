@@ -1,6 +1,8 @@
 function net = cnn_cifar_init_nin(opts)
 
-% Define network CIFAR10-quick
+% CIFAR-10 model from
+% M. Lin, Q. Chen, and S. Yan. Network in network. CoRR, abs/1312.4400, 2013.
+
 net.layers = {} ;
 b=0 ;
 

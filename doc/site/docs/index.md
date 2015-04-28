@@ -5,10 +5,17 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
-> **New:** 1.0-beta11 adds batch normalization (see
-> [`vl_nnbnorm`](mfiles/vl_nnbnorm)) and extends the example trainig
-> code to support multiple GPUs. See also [Changes](about/#changes)
-> for compatibility considerations.
+> **New:** 1.0-beta11 adds the following blocks: batch normalization
+> (see [`vl_nnbnorm`](mfiles/vl_nnbnorm)), spatial normalization
+> ([`vl_nnspnorm`](mfiles/vl_nnspnorm), p-distance
+> ([`vl_nnpdist`](mfiles/vl_nnpdist)), sigmoid
+> ([`vl_nnsigmoid`](mfiles/vl_nnsigmoid)). Extends the example trainig
+> code `cnn_train` to support multiple GPUs. Improves the ImageNet and
+> CIFAR examples, including batch normalization for ImageNet and the
+> Network in Network model for CIFAR. See also
+> [Changes](about/#changes) for compatibility considerations. A faster
+> and more memory efficient version of batch normalization will arrive
+> soon.
 >
 > **New:** 1.0-beta10 establishes feature parity between platforms,
 > removes some dependencies on third-party image libraries.
