@@ -459,34 +459,34 @@ for l = tests
       vl_testder(@(x) vl_nnspnorm(x,param), x, dzdy, dzdx, range * 1e-3) ;
 
     case 13
-      disp('testinb vl_nnpdist*');
+      disp('testing vl_nnpdist');
       h = 13 ;
       w = 17 ;
       d = 4 ;
       n = 5 ;
+      for oneToOne = [true, false]
+        for noRoot = [true, false]
+          for p = [.5 1:3]
+            x = grandn(h,w,d,n,'single') ;
+            if oneToOne
+              x0 = grandn(h,w,d,n,'single') ;
+            else
+              x0 = grandn(1,1,d,n) ;
+            end
+            y = vl_nnpdist(x, x0, p, 'noRoot',noRoot) ;
 
-      for ppower = [true, false]
-        if ppower
-          f = @vl_nnpdistp ;
-        else
-          f = @vl_nnpdist ;
-        end
-        for p = 1:3
-          x = grandn(h,w,d,n,'single') ;
-          x0 = grandn(h,w,d,n,'single') ;
-          y = f(x, x0, p) ;
+            % make sure they are not too close in anyd dimension as
+            % this may be a problem for the finite difference
+            % dereivatives as one could approach0 which is not
+            % differentiable for some p-norms
 
-          % make sure they are not too close in anyd dimension as
-          % this may be a problem for the finite difference
-          % dereivatives as one could approach0 which is not
-          % differentiable for some p-norms
+            s = abs(bsxfun(@minus, x, x0)) < 5*range*1e-3 ;
+            x(s) = x(s) + 5*range ;
 
-          s = abs(x-x0)<5*range*1e-3 ;
-          x(s) = x(s) + 5*range ;
-
-          dzdy = grand(h, w, 1, n) ;
-          dzdx = f(x,x0,p,dzdy) ;
-          vl_testder(@(x) f(x,x0,p), x, dzdy, dzdx, range * 1e-3) ;
+            dzdy = grand(h, w, 1, n) ;
+            dzdx = vl_nnpdist(x,x0,p,dzdy,'noRoot',noRoot) ;
+            vl_testder(@(x) vl_nnpdist(x,x0,p,'noRoot',noRoot), x, dzdy, dzdx, range * 1e-4) ;
+          end
         end
       end
   end
