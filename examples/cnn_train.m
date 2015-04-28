@@ -250,6 +250,7 @@ for t=1:opts.batchSize:numel(subset)
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
   batchTime = tic ;
   numDone = 0 ;
+  error = [] ;
   for s=1:opts.numSubBatches
     % get this image batch and prefetch the next
     batchStart = t + (labindex-1) + (s-1) * numlabs ;
@@ -283,9 +284,9 @@ for t=1:opts.batchSize:numel(subset)
                       'sync', opts.sync) ;
 
     % accumulate training errors
-    error = [...
+    error = sum([error, [...
       sum(double(gather(res(end).x))) ;
-      reshape(opts.errorFunction(opts, labels, res),[],1) ; ] ;
+      reshape(opts.errorFunction(opts, labels, res),[],1) ; ]],2) ;
     numDone = numDone + numel(batch) ;
   end
 
