@@ -27,6 +27,8 @@ function info = vl_simplenn_display(net, varargin)
 
 opts.inputSize = [] ;
 opts.batchSize = 1 ;
+opts.maxNumColumns = 18 ;
+opts.format = 'ascii' ;
 opts = vl_argparse(opts, varargin) ;
 
 fields={'layer', 'type', 'name', '-', ...
@@ -116,10 +118,12 @@ end
 if nargout > 0, return ; end
 
 % print table
+table = {} ;
 wmem = 0 ;
 xmem = 0 ;
-for w=fields
-  switch char(w)
+for wi=1:numel(fields)
+  w = fields{wi} ;
+  switch w
     case 'type', s = 'type' ;
     case 'stride', s = 'stride' ;
     case 'rfsize', s = 'rf size' ;
@@ -132,15 +136,14 @@ for w=fields
     case 'filtd', s = 'filt dim' ;
     case 'wmem', s = 'param mem' ;
     case 'xmem', s = 'data mem' ;
-    case '-', s = '----------' ;
     otherwise, s = char(w) ;
   end
-  fprintf('%10s',s) ;
+  table{wi,1} = s ;
 
   % do input pseudo-layer
   for l=0:numel(net.layers)
     switch char(w)
-      case '-', s='-------' ;
+      case '-', s='-' ;
       case 'layer', s=sprintf('%d', l) ;
       case 'dsize', s=pdims(info.dataSize(1:2,l+1)) ;
       case 'ddepth', s=sprintf('%d', info.dataSize(3,l+1)) ;
@@ -221,9 +224,16 @@ for w=fields
           end
         end
     end
-    fprintf('|%7s', s) ;
+    table{wi,l+2} = s ;
   end
-  fprintf('|\n') ;
+end
+
+for i=2:opts.maxNumColumns:size(table,2)
+  sel = i:min(i+opts.maxNumColumns-1,size(table,2)) ;
+  switch opts.format
+    case 'ascii', pascii(table(:,[1 sel])) ; fprintf('\n') ;
+    case 'latex', platex(table(:,[1 sel])) ;
+  end
 end
 
 fprintf('parameter memory: %s (%.2g parameters)\n', pmem(wmem), wmem/4) ;
@@ -248,6 +258,43 @@ else
   s = sprintf('%.4gx', x(:)) ;
   s(end) = [] ;
 end
+
+% -------------------------------------------------------------------------
+function pascii(table)
+% -------------------------------------------------------------------------
+sizes = max(cellfun(@(x) numel(x), table),[],1) ;
+for i=1:size(table,1)
+  for j=1:size(table,2)
+    s = table{i,j} ;
+    fmt = sprintf('%%%ds|', sizes(j)) ;
+    if isequal(s,'-'), s=repmat('-', 1, sizes(j)) ; end
+    fprintf(fmt, s) ;
+  end
+  fprintf('\n') ;
+end
+
+% -------------------------------------------------------------------------
+function platex(table)
+% -------------------------------------------------------------------------
+sizes = max(cellfun(@(x) numel(x), table),[],1) ;
+fprintf('\\begin{tabular}{%s}\n', repmat('c', 1, numel(sizes))) ;
+for i=1:size(table,1)
+  if isequal(table{i,1},'-'), fprintf('\\hline\n') ; continue ; end
+  for j=1:size(table,2)
+    s = table{i,j} ;
+    fmt = sprintf('%%%ds', sizes(j)) ;
+    fprintf(fmt, latexesc(s)) ;
+    if j<size(table,2), fprintf('&') ; end
+  end
+  fprintf('\\\\\n') ;
+end
+fprintf('\\end{tabular}\n') ;
+
+% -------------------------------------------------------------------------
+function s = latexesc(s)
+% -------------------------------------------------------------------------
+s = strrep(s,'\','\\') ;
+s = strrep(s,'_','\char`_') ;
 
 % -------------------------------------------------------------------------
 function [cpuMem,gpuMem] = xmem(s, cpuMem, gpuMem)
