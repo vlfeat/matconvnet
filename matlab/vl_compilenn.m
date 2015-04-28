@@ -411,7 +411,14 @@ vl_setupnn() ;
 % --------------------------------------------------------------------
 function objs = toobj(bld_dir,srcs)
 % --------------------------------------------------------------------
-objs = strrep(srcs,fullfile('matlab','src'),bld_dir) ;
+str = fullfile('matlab','src') ;
+multiple = iscell(srcs) ;
+if ~multiple, srcs = {srcs} ; end
+for t = 1:numel(srcs)
+  i = strfind(srcs{t},str);
+  objs{t} = fullfile(bld_dir, srcs{t}(i+numel(str):end)) ;
+end
+if ~multiple, objs = objs{1} ; end
 objs = strrep(objs,'.cpp',['.' objext]) ;
 objs = strrep(objs,'.cu',['.' objext]) ;
 objs = strrep(objs,'.c',['.' objext]) ;
