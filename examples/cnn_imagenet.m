@@ -1,5 +1,8 @@
 function cnn_imagenet(varargin)
 % CNN_IMAGENET   Demonstrates training a CNN on ImageNet
+%   The demo uses a model similar to AlexNet or the Caffe reference
+%   model. It can train it in the dropout and batch normalization
+%   variants using the 'modelType' option.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
@@ -22,8 +25,9 @@ opts.train.prefetch = true ;
 opts.train.sync = false ;
 opts.train.expDir = opts.expDir ;
 switch opts.modelType
-  case 'dropout', opts.train.learningRate = logspace(-2, -4, 75) ;
+  case 'dropout', opts.train.learningRate = logspace(-2, -4, 60) ;
   case 'bnorm',   opts.train.learningRate = logspace(-1, -4, 20) ;
+  otherwise, error('Unknown model type %s', opts.modelType) ;
 end
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
@@ -47,12 +51,8 @@ end
 % -------------------------------------------------------------------------
 
 switch opts.modelType
-  case 'dropout'
-    net = cnn_imagenet_init() ;
-  case 'bnorm'
-    net = cnn_imagenet_init_bnorm() ;
-  otherwise
-    error('Unknown model type %s', opts.modelType) ;
+  case 'dropout', net = cnn_imagenet_init() ;
+  case 'bnorm',   net = cnn_imagenet_init_bnorm() ;
 end
 
 bopts = net.normalization ;
