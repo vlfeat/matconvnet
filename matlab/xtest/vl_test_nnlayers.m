@@ -27,7 +27,7 @@ end
 rng(1) ;
 
 if nargin < 2
-  tests = 1:10 ;
+  tests = 1:13 ;
 end
 
 for l = tests
