@@ -36,11 +36,6 @@ net = cnn_mnist_init('useBnorm', opts.useBnorm) ;
 %                                                                Train
 % --------------------------------------------------------------------
 
-% Take the mean out and make GPU if needed
-if numel(opts.train.gpus) == 1
-  imdb.images.data = gpuArray(imdb.images.data) ;
-end
-
 [net, info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
     'val', find(imdb.images.set == 3)) ;
