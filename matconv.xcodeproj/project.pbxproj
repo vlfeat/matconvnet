@@ -153,6 +153,8 @@
 		2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnconv.cpp; path = matlab/src/vl_nnconv.cpp; sourceTree = "<group>"; };
 		2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnnormalize.cpp; path = matlab/src/vl_nnnormalize.cpp; sourceTree = "<group>"; };
 		2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnpool.cpp; path = matlab/src/vl_nnpool.cpp; sourceTree = "<group>"; };
+		2DA102451B025A8F000BB9FE /* vl_nnconvt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnconvt.cpp; path = matlab/src/vl_nnconvt.cpp; sourceTree = "<group>"; };
+		2DA102461B025A8F000BB9FE /* vl_nnconvt.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnconvt.cu; path = matlab/src/vl_nnconvt.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DA349B21A83FC2C0073185F /* nnfullyconnected.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnfullyconnected.cu; path = matlab/src/bits/nnfullyconnected.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DA349B31A83FC2C0073185F /* nnfullyconnected.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnfullyconnected.hpp; path = matlab/src/bits/nnfullyconnected.hpp; sourceTree = "<group>"; };
 		2DA349BA1A86C5210073185F /* nnsubsample.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnsubsample.cu; path = matlab/src/bits/nnsubsample.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -224,6 +226,8 @@
 				2DF61A991AB5925900ED9A1F /* vl_imreadjpeg.cu */,
 				2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */,
 				2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */,
+				2DA102451B025A8F000BB9FE /* vl_nnconvt.cpp */,
+				2DA102461B025A8F000BB9FE /* vl_nnconvt.cu */,
 				2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */,
 				2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */,
 				2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */,

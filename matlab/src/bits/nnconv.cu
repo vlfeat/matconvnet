@@ -24,6 +24,10 @@ using namespace vl ;
 /*                                                   nnconv_forward */
 /* ---------------------------------------------------------------- */
 
+/*
+ for output: must have data and optional filters or biases
+ */
+
 vl::Error
 vl::nnconv_forward(Context& context,
                    Tensor output,
@@ -80,6 +84,13 @@ done:
 /* ---------------------------------------------------------------- */
 /*                                                  nnconv_backward */
 /* ---------------------------------------------------------------- */
+
+
+/*
+ for derBiases:  must have derOuptut
+ for derData:    must have derData, derOutput and filters
+ for derFilters: must have derFilters, derOutput and data
+ */
 
 vl::Error
 vl::nnconv_backward(Context& context,
@@ -139,5 +150,94 @@ vl::nnconv_backward(Context& context,
 #if ENABLE_CUDNN
 done:
 #endif
+  return status ;
+}
+
+
+/* ---------------------------------------------------------------- */
+/*                                                  nnconvt_forward */
+/* ---------------------------------------------------------------- */
+
+vl::Error
+vl::nnconvt_forward(Context& context,
+                    Tensor output,
+                    Tensor data,
+                    Tensor filters,
+                    Tensor biases,
+                    int strideY, int strideX,
+                    int padTop, int padBottom,
+                    int padLeft, int padRight)
+{
+  vl::Error status = vlSuccess ;
+  status = vl::nnconv_backward(context,
+                               output, Tensor(), Tensor(),
+                               Tensor(), filters, data,
+                               strideY, strideX,
+                               padTop, padBottom,
+                               padLeft, padRight) ;
+  if (status != vlSuccess) { goto done ; }
+  if (biases) {
+/* 
+ status = vl::nnconv_forward(context,
+ output, output, Tensor(), biases,
+ strideY, strideX,
+ padTop, padBottom,
+ padLeft, padRight) ;
+*/
+  }
+done:
+  return status ;
+}
+
+/* ---------------------------------------------------------------- */
+/*                                                 nnconvt_backward */
+/* ---------------------------------------------------------------- */
+
+vl::Error
+vl::nnconvt_backward(Context& context,
+                    Tensor derData,
+                    Tensor derFilters,
+                    Tensor derBiases,
+                    Tensor data,
+                    Tensor filters,
+                    Tensor derOutput,
+                    int strideY, int strideX,
+                    int padTop, int padBottom,
+                    int padLeft, int padRight)
+{
+  vl::Error status = vl::vlSuccess ;
+
+  if (derData) {
+    status = vl::nnconv_forward(context,
+                                derData,
+                                derOutput, filters, Tensor(),
+                                strideY, strideX,
+                                padTop, padBottom,
+                                padLeft, padRight) ;
+    if (status != vlSuccess) { goto done ; }
+  }
+
+  if (derFilters) {
+    status = vl::nnconv_backward(context,
+                                 Tensor(), derFilters, Tensor(),
+                                 derOutput, Tensor(), data,
+                                 strideY, strideX,
+                                 padTop, padBottom,
+                                 padLeft, padRight) ; 
+    if (status != vlSuccess) { goto done ; }
+  }
+
+  if (derBiases) {
+#if 0
+    status = vl::nnconv_forward(context,
+                                derData,
+                                derOutput, filters, Tensor(),
+                                strideY, strideX,
+                                padTop, padBottom,
+                                padLeft, padRight) ;
+#endif
+  }
+
+ done:
   return status ;
 }

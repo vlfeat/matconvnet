@@ -72,7 +72,7 @@ An application of grouping is implementing the Krizhevsky and Hinton network~\ci
 \section{Convolution transpose (deconvolution)}\label{s:convt}
 % ------------------------------------------------------------------
 
-The \emph{convolution transpose} block (some authors call it improperly deconvolution) implements an operator this is the transpose of the convolution described in Sectio\ref{s:convolution}n~. Let
+The \emph{convolution transpose} block (some authors call it improperly deconvolution) implements an operator this is the transpose of the convolution described in Section~\ref{s:convolution}. This is  implemented by thefunction \verb!vl_nnconvt!. Let:
 \[
  \bx\in\real^{H \times W \times D}, \quad
  \bff\in\real^{H' \times W' \times D \times D''}, \quad
@@ -109,7 +109,7 @@ q(k,n) = \left\lfloor \frac{k-1}{S} \right\rfloor,
 \]
 $(S_h,S_w)$ are the vertical and horizontal \emph{upsampling factors},  $(P_h^-,P_h^+,P_h^-,P_h^+)$ the \emph{output crops}, and $\bx$ and $\bff$ are zero-padded as needed in the calculation. Furthermore, given the input and filter heights, the output height is given by
 \[
-  H'' = S_h H + H' -P^-_h - P^+_h.
+  H'' = S_h (H - 1) + H' -P^-_h - P^+_h.
 \]
 The same is true for the width.
 

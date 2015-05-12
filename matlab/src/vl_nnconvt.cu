@@ -1,15 +1,14 @@
-// @file nnconv.cu
-// @brief Convolution block MEX wrapper
+// @file nnconvt.cu
+// @brief Convolution transpose block MEX wrapper
 // @author Andrea Vedaldi
-// @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
-All rights reserved.
+ Copyright (C) 2015 Andrea Vedaldi and Max Jaderberg.
+ All rights reserved.
 
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
-*/
+ This file is part of the VLFeat library and is made available under
+ the terms of the BSD license (see the COPYING file).
+ */
 
 #include "bits/mexutils.h"
 #include "bits/datamex.hpp"
@@ -236,13 +235,20 @@ void mexFunction(int nout, mxArray *out[],
     }
     if (data.getHeight() + (padTop+padBottom) < filters.getHeight() ||
         data.getWidth() + (padLeft+padRight) < filters.getWidth()) {
-      mexErrMsgTxt("FILTERS are larger than the DATA (including padding).") ;
+      mexErrMsgTxt("FILTERS are larger than the outoput (including padding).") ;
     }
     /* grouped filters */
-    numFilterGroups = data.getDepth() / filters.getDepth() ;
-    if (numFilterGroups * filters.getDepth() != data.getDepth()) {
-      mexErrMsgTxt("The FILTERS depth does not divide the DATA depth.") ;
-    }
+    numFilterGroups = 1 ;
+
+    /*
+     todo: must allow for a different default
+
+     numFilterGroups = data.getDepth() / filters.getDepth() ;
+     if (numFilterGroups * filters.getDepth() != data.getDepth()) {
+     mexErrMsgTxt("The FILTERS depth does not divide the DATA depth.") ;
+     }
+     */
+
     if (filters.getSize() % numFilterGroups != 0) {
       mexErrMsgTxt("The number of filter groups does not divide the number of filters.") ;
     }
@@ -255,9 +261,9 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the output geometry */
-  vl::TensorGeometry outputGeom((data.getHeight() + (padTop+padBottom) - filtersGeom.getHeight())/strideY + 1,
-                                (data.getWidth()  + (padLeft+padRight) - filtersGeom.getWidth())/strideX + 1,
-                                equivalentNumFilters,
+  vl::TensorGeometry outputGeom((data.getHeight()-1)*strideY - (padTop+padBottom) + filtersGeom.getHeight(),
+                                (data.getWidth()-1)*strideX  - (padLeft+padRight) + filtersGeom.getWidth(),
+                                filtersGeom.getDepth(),
                                 data.getSize()) ;
 
   if (backMode && (derOutput != outputGeom)) {
@@ -266,8 +272,8 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Check the biases sizes */
   if (hasBiases) {
-    if (biases.getNumElements() != filtersGeom.getSize()) {
-      mexErrMsgTxt("The number of elements of BIASES is not the same as the number of filters.") ;
+    if (biases.getNumElements() != filtersGeom.getDepth()) {
+      mexErrMsgTxt("The number of elements of BIASES is not the same as the dimenison of the filters.") ;
     }
   }
 
@@ -310,7 +316,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnconv: %s; %s", backMode?"backward":"forward", (data.getMemoryType()==vl::GPU) ? "GPU" : "CPU") ;
+    mexPrintf("vl_nnconvt: %s; %s", backMode?"backward":"forward", (data.getMemoryType()==vl::GPU) ? "GPU" : "CPU") ;
     if (data.getMemoryType() == vl::GPU) {
 #if ENABLE_CUDNN
       mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "cuBLAS") ;
@@ -320,21 +326,21 @@ void mexFunction(int nout, mxArray *out[],
     } else {
       mexPrintf("; BLAS\n") ;
     }
-    mexPrintf("vl_nnconv: stride: [%d %d], pad: [%d %d %d %d]\n"
-              "vl_nnconv: num filter groups: %d, has bias: %d, has filters: %d, is fully connected: %d\n",
+    mexPrintf("vl_nnconvt: stride: [%d %d], pad: [%d %d %d %d]\n"
+              "vl_nnconvt: num filter groups: %d, has bias: %d, has filters: %d, is fully connected: %d\n",
               strideY, strideX,
               padTop, padBottom, padLeft, padRight,
               numFilterGroups, hasBiases, hasFilters, fullyConnectedMode) ;
-    vl::print("vl_nnconv: data: ", data) ;
-    if (hasFilters) { vl::print("vl_nnconv: filters: ", filters) ; }
-    if (hasBiases) { vl::print("vl_nnconv: biases: ", biases) ; }
+    vl::print("vl_nnconvt: data: ", data) ;
+    if (hasFilters) { vl::print("vl_nnconvt: filters: ", filters) ; }
+    if (hasBiases) { vl::print("vl_nnconvt: biases: ", biases) ; }
     if (backMode) {
-      vl::print("vl_nnconv: derOutput: ", derOutput) ;
-      vl::print("vl_nnconv: derData: ", derData) ;
-      if (hasFilters) { vl::print("vl_nnconv: derFilters: ", derFilters) ; }
-      if (hasBiases) { vl::print("vl_nnconv: derBiases: ", derBiases) ; }
+      vl::print("vl_nnconvt: derOutput: ", derOutput) ;
+      vl::print("vl_nnconvt: derData: ", derData) ;
+      if (hasFilters) { vl::print("vl_nnconvt: derFilters: ", derFilters) ; }
+      if (hasBiases) { vl::print("vl_nnconvt: derBiases: ", derBiases) ; }
     } else {
-      vl::print("vl_nnconv: output: ", output) ;
+      vl::print("vl_nnconvt: output: ", output) ;
     }
   }
 
@@ -344,6 +350,7 @@ void mexFunction(int nout, mxArray *out[],
 
   vl::Error error ;
 
+#if 0
   /*
    special case: fully connected
    (could be done as a regular case, but it is faster this way)
@@ -366,7 +373,9 @@ void mexFunction(int nout, mxArray *out[],
     }
     goto done ;
   }
+#endif
 
+#if 0
   /* special case: no filters = identity filter bank (subsample + bias) */
   if (!hasFilters) {
     if (!backMode) {
@@ -386,26 +395,27 @@ void mexFunction(int nout, mxArray *out[],
     }
     goto done ;
   }
+#endif
 
   /* regular case */
   if (!backMode) {
-    error = vl::nnconv_forward(context,
-                               output,
-                               data,
-                               filters,
-                               biases,
-                               strideY, strideX,
-                               padTop, padBottom, padLeft, padRight) ;
-  } else {
-    error = vl::nnconv_backward(context,
-                                derData,
-                                derFilters,
-                                derBiases,
+    error = vl::nnconvt_forward(context,
+                                output,
                                 data,
                                 filters,
-                                derOutput,
+                                biases,
                                 strideY, strideX,
                                 padTop, padBottom, padLeft, padRight) ;
+  } else {
+    error = vl::nnconvt_backward(context,
+                                 derData,
+                                 derFilters,
+                                 derBiases,
+                                 data,
+                                 filters,
+                                 derOutput,
+                                 strideY, strideX,
+                                 padTop, padBottom, padLeft, padRight) ;
   }
 
   /* -------------------------------------------------------------- */

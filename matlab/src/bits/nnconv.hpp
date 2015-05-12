@@ -39,6 +39,28 @@ namespace vl {
                   int strideY, int strideX,
                   int padTop, int padBottom,
                   int padLeft, int padRight) ;
+
+  vl::Error
+  nnconvt_forward(vl::Context& context,
+                  vl::Tensor output,
+                  vl::Tensor data,
+                  vl::Tensor filters,
+                  vl::Tensor biases,
+                  int strideY, int strideX,
+                  int padTop, int padBottom,
+                  int padLeft, int padRight) ;
+
+  vl::Error
+  nnconvt_backward(vl::Context& context,
+                   vl::Tensor derData,
+                   vl::Tensor derFilters,
+                   vl::Tensor derBiases,
+                   vl::Tensor data,
+                   vl::Tensor filters,
+                   vl::Tensor derOutput,
+                   int strideY, int strideX,
+                   int padTop, int padBottom,
+                   int padLeft, int padRight) ;
 }
 
 

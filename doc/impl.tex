@@ -130,14 +130,23 @@ y_{\left\lfloor \frac{k-1+ P_h^-}{S} \right\rfloor + 2 - q}
 f_{(k-1+ P_h^-)\bmod S +S(q - 1)+1}.
 \end{align*}
 Summation ranges have been extended to infinity by assuming that all signals are zero padded as needed. In order to recover such ranges, note that $k \in [1,H]$ (since this is the range of elements of $\bx$ involved in the original convolution). Furthermore, $q\geq 1$ is the minimum value of $q$ for which the filter $\bff$ is non zero; likewise, $q\leq \lfloor (H'-1)/2\rfloor +1$ is a fairly tight upper bound on the maximum value (although, depending on $k$, there could be an element less). Hence
-\[
+\begin{equation}\label{e:convt-step}
  x_k = 
  \sum_{q=1}^{1 + \lfloor \frac{H'-1}{S} \rfloor}
 y_{\left\lfloor \frac{k-1+ P_h^-}{S} \right\rfloor + 2 - q}\ %
 f_{(k-1+ P_h^-)\bmod S +S(q - 1)+1},
 \qquad k=1,\dots, H.
+\end{equation}
+Here $H$, $H'$ and $H''$ are related by:
+\[
+H'' = 1+ \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S} \right\rfloor.
 \]
-Note that the summation extrema can be refined slightly to account for the finite size of $\by$ and $\bw$:
+If $H''$ is now given as input, it is not possible to recover $H$ uniquely; instead, all the following values are possible
+\[
+   S_h (H''-1) +H' -  P_h^- - P_h^+ \leq H < S_h H'' +H' -  P_h^- - P_h^+.
+\]
+We use the tighter definition and set $H =  S_h (H''-1) +H' -  P_h^- - P_h^+$.
+Note that the summation extrema in \eqref{e:convt-step} can be refined slightly to account for the finite size of $\by$ and $\bw$:
 \begin{multline*}
 \max\left\{
 1, 
