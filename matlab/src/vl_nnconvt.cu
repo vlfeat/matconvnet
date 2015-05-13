@@ -248,7 +248,9 @@ void mexFunction(int nout, mxArray *out[],
      mexErrMsgTxt("The FILTERS depth does not divide the DATA depth.") ;
      }
      */
-
+    if (filters.getSize() != data.getDepth()) {
+      mexErrMsgTxt("The number of filters is not the same as the number of input dimensions.") ;
+    }
     if (filters.getSize() % numFilterGroups != 0) {
       mexErrMsgTxt("The number of filter groups does not divide the number of filters.") ;
     }
@@ -263,7 +265,7 @@ void mexFunction(int nout, mxArray *out[],
   /* Get the output geometry */
   vl::TensorGeometry outputGeom((data.getHeight()-1)*strideY - (padTop+padBottom) + filtersGeom.getHeight(),
                                 (data.getWidth()-1)*strideX  - (padLeft+padRight) + filtersGeom.getWidth(),
-                                filtersGeom.getDepth(),
+                                filtersGeom.getDepth() * numFilterGroups,
                                 data.getSize()) ;
 
   if (backMode && (derOutput != outputGeom)) {
@@ -272,7 +274,7 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Check the biases sizes */
   if (hasBiases) {
-    if (biases.getNumElements() != filtersGeom.getDepth()) {
+    if (biases.getNumElements() != outputGeom.getDepth()) {
       mexErrMsgTxt("The number of elements of BIASES is not the same as the dimenison of the filters.") ;
     }
   }

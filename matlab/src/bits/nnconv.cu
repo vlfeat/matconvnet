@@ -12,6 +12,7 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "nnconv.hpp"
+#include "nnbias.hpp"
 #include "impl/nnconv_blas.hpp"
 #if ENABLE_CUDNN
 #include "impl/nnconv_cudnn.hpp"
@@ -169,21 +170,33 @@ vl::nnconvt_forward(Context& context,
                     int padLeft, int padRight)
 {
   vl::Error status = vlSuccess ;
-  status = vl::nnconv_backward(context,
-                               output, Tensor(), Tensor(),
-                               Tensor(), filters, data,
-                               strideY, strideX,
-                               padTop, padBottom,
-                               padLeft, padRight) ;
-  if (status != vlSuccess) { goto done ; }
+  size_t dataOffset = data.getHeight()*data.getWidth()*data.getDepth() ;
+  size_t outputOffset = output.getHeight()*output.getWidth()*output.getDepth() ;
+
+  // we need to process this down per image as nnconv_backward would otherwise
+  // accumulate everything into a single feature field in output
+  for (int image = 0 ; image < data.getSize() ; ++image) {
+    Tensor dataSlice(data) ;
+    dataSlice.setMemory(data.getMemory() + dataOffset * image) ;
+    dataSlice.setSize(1) ;
+
+    Tensor outputSlice(output) ;
+    outputSlice.setMemory(output.getMemory() + outputOffset * image) ;
+    outputSlice.setSize(1) ;
+
+    status = vl::nnconv_backward(context,
+                                 outputSlice, Tensor(), Tensor(),
+                                 Tensor(), filters, dataSlice,
+                                 strideY, strideX,
+                                 padTop, padBottom,
+                                 padLeft, padRight) ;
+    if (status != vlSuccess) { goto done ; }
+  }
   if (biases) {
-/* 
- status = vl::nnconv_forward(context,
- output, output, Tensor(), biases,
- strideY, strideX,
- padTop, padBottom,
- padLeft, padRight) ;
-*/
+    status = vl::nnbias_forward(context,
+                                output, 1,
+                                Tensor(), 0,
+                                biases, 1) ;
   }
 done:
   return status ;
@@ -223,19 +236,15 @@ vl::nnconvt_backward(Context& context,
                                  derOutput, Tensor(), data,
                                  strideY, strideX,
                                  padTop, padBottom,
-                                 padLeft, padRight) ; 
+                                 padLeft, padRight) ;
     if (status != vlSuccess) { goto done ; }
   }
 
   if (derBiases) {
-#if 0
-    status = vl::nnconv_forward(context,
-                                derData,
-                                derOutput, filters, Tensor(),
-                                strideY, strideX,
-                                padTop, padBottom,
-                                padLeft, padRight) ;
-#endif
+    status = vl::nnbias_backward(context,
+                                 Tensor(), 0,
+                                 derBiases, 0,
+                                 derOutput, 1) ;
   }
 
  done:
