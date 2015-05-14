@@ -31,8 +31,8 @@ using namespace vl ;
 
 vl::Error
 vl::nnconv_forward(Context& context,
-                   Tensor output,
-                   Tensor data,
+                   Tensor output, double outputMult,
+                   Tensor data, double dataMult,
                    Tensor filters,
                    Tensor biases,
                    int strideY, int strideX,
@@ -48,7 +48,10 @@ vl::nnconv_forward(Context& context,
 
     case vl::CPU:
       status = vl::impl::nnconv_forward_blas<CPU,float>
-      (context, output, data, filters, biases,
+      (context,
+       output, outputMult,
+       data, dataMult,
+       filters, biases,
        strideY, strideX,
        padTop, padBottom,
        padLeft, padRight) ;
@@ -59,7 +62,10 @@ vl::nnconv_forward(Context& context,
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         status = vl::impl::nnconv_forward_cudnn<float>
-        (context, output, data, filters, biases,
+        (context,
+         output, outputMult,
+         data, dataMult,
+         filters, biases,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
@@ -69,7 +75,10 @@ vl::nnconv_forward(Context& context,
       }
 #endif
       status = vl::impl::nnconv_forward_blas<GPU,float>
-      (context, output, data, filters, biases,
+      (context,
+       output, outputMult,
+       data, dataMult,
+       filters, biases,
        strideY, strideX,
        padTop, padBottom,
        padLeft, padRight) ;
@@ -216,14 +225,15 @@ vl::nnconvt_backward(Context& context,
                     Tensor derOutput,
                     int strideY, int strideX,
                     int padTop, int padBottom,
-                    int padLeft, int padRight)
+                     int padLeft, int padRight)
 {
   vl::Error status = vl::vlSuccess ;
 
   if (derData) {
     status = vl::nnconv_forward(context,
-                                derData,
-                                derOutput, filters, Tensor(),
+                                derData, 0,
+                                derOutput, 1,
+                                filters, Tensor(),
                                 strideY, strideX,
                                 padTop, padBottom,
                                 padLeft, padRight) ;
@@ -247,6 +257,6 @@ vl::nnconvt_backward(Context& context,
                                  derOutput, 1) ;
   }
 
- done:
+done:
   return status ;
 }

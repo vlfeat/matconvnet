@@ -35,8 +35,8 @@ if (cudnnError != CUDNN_STATUS_SUCCESS) { \
 
 template<> vl::Error
 vl::impl::nnconv_forward_cudnn<float>(Context& context,
-                                      Tensor output,
-                                      Tensor data,
+                                      Tensor output, double outputMult,
+                                      Tensor data, double dataMult,
                                       Tensor filters,
                                       Tensor biases,
                                       int strideY, int strideX,
@@ -181,8 +181,8 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
     ptrdiff_t outputGrpOffset = (output.getHeight() * output.getWidth() * numFiltersPerGroup) * g ;
     ptrdiff_t biasesGrpOffset = numFiltersPerGroup * g ;
 
-    float alpha = 1.0f ;
-    float beta = 0.0f ;
+    float alpha = dataMult ;
+    float beta = outputMult ;
     CHECK(cudnnConvolutionForward(handle,
                                   &alpha,
                                   dataDesc, data.getMemory() + dataGrpOffset,

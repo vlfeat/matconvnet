@@ -494,12 +494,12 @@ for l = tests
       disp('testing vl_nncont');
 
       disp('testing vl_nnconvt') ;
-      m=1 ;
-      n=1 ;
-      k=1 ;
+      m=2 ;
+      n=2 ;
+      k=3 ;
       x = grandn(10,12,m,n,'single') ;
       f = grandn(3,4,k,m,'single') ;
-      b = grandn(1,size(x,3),'single') ;
+      b = grandn(1,k,'single') ;
       y = vl_nnconvt(x,f,b,'verbose') ;
       dzdy = grandn(size(y),'single') ;
       %[dzdx] = vl_nnconvt(x,f,b,dzdy,'verbose') ;

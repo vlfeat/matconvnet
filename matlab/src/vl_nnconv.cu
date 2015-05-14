@@ -390,8 +390,8 @@ void mexFunction(int nout, mxArray *out[],
   /* regular case */
   if (!backMode) {
     error = vl::nnconv_forward(context,
-                               output,
-                               data,
+                               output, 0,
+                               data, 1,
                                filters,
                                biases,
                                strideY, strideX,

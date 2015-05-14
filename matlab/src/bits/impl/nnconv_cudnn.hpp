@@ -20,8 +20,8 @@ namespace vl { namespace impl {
 
   template<typename type> vl::Error
   nnconv_forward_cudnn(Context& context,
-                       Tensor output,
-                       Tensor data,
+                       Tensor output, double outputMult,
+                       Tensor data, double dataMult,
                        Tensor filters,
                        Tensor biases,
                        int strideX, int strideY,
@@ -44,8 +44,8 @@ namespace vl { namespace impl {
 
   template<> vl::Error
   nnconv_forward_cudnn<float>(Context& context,
-                              Tensor output,
-                              Tensor data,
+                              Tensor output, double outputMult,
+                              Tensor data, double dataMult,
                               Tensor filters,
                               Tensor biases,
                               int strideX, int strideY,

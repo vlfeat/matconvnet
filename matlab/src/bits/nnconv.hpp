@@ -20,8 +20,8 @@ namespace vl {
 
   vl::Error
   nnconv_forward(vl::Context& context,
-                 vl::Tensor output,
-                 vl::Tensor data,
+                 vl::Tensor output, double outputMult,
+                 vl::Tensor data, double dataMult,
                  vl::Tensor filters,
                  vl::Tensor biases,
                  int strideY, int strideX,

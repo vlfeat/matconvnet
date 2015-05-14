@@ -21,8 +21,8 @@ namespace vl { namespace impl {
 
   template<vl::Device arch, typename type> inline vl::Error
   nnconv_forward_blas(Context& context,
-                      Tensor output,
-                      Tensor data,
+                      Tensor output, double outputMult,
+                      Tensor data, double dataMult,
                       Tensor filters,
                       Tensor biases,
                       int strideY, int strideX,
@@ -78,8 +78,8 @@ namespace vl { namespace impl {
 
 template<vl::Device arch, typename type> inline vl::Error
 vl::impl::nnconv_forward_blas(Context& context,
-                              Tensor output,
-                              Tensor data,
+                              Tensor output, double outputMult,
+                              Tensor data, double dataMult,
                               Tensor filters,
                               Tensor biases,
                               int strideY, int strideX,
@@ -125,8 +125,8 @@ vl::impl::nnconv_forward_blas(Context& context,
       ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
       ptrdiff_t tempGrpOffset = numOutputPixels * filtersVolume * g ;
       ptrdiff_t outputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
-      type alpha = 1 ;
-      type beta = 0 ;
+      type alpha = dataMult ;
+      type beta = outputMult ;
       error = gemm<arch,type>(context,
                               'n', 'n',
                               numOutputPixels, numFiltersPerGroup, filtersVolume,
