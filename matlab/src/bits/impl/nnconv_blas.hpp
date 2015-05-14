@@ -204,7 +204,7 @@ vl::impl::nnconv_backward_blas(Context& context,
     numGroups = data.getDepth() / derFilters.getDepth() ;
     filtersVolume = derFilters.getHeight() * derFilters.getWidth() * derFilters.getDepth() ;
   }
-  numFiltersPerGroup = derOutput.getSize() / numGroups ;
+  numFiltersPerGroup = derOutput.getDepth() / numGroups ;
 
 
   // get scratch space
@@ -270,10 +270,10 @@ vl::impl::nnconv_backward_blas(Context& context,
     /* compute derFilters dz/dF */
     if (derFilters) {
       // has derFilters, derOutput, data
-      ptrdiff_t derDataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
+      ptrdiff_t dataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
       error = vl::impl::im2row<arch,type>(context,
                                           (type*)tempMemory,
-                                          (type*)data.getMemory() + derDataOffset,
+                                          (type*)data.getMemory() + dataOffset,
                                           data.getHeight(), data.getWidth(), data.getDepth(),
                                           derFilters.getHeight(), derFilters.getWidth(),
                                           strideY, strideX,
