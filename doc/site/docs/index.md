@@ -5,6 +5,11 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+> **New:** MatConvNet used in planetary science research by the
+> University of Arizona (see the
+> [NVIDIA blog post](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/)).
+>
+>
 > **New:** 1.0-beta12 adds convolution transpose aka deconvolution
 > (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
 >
