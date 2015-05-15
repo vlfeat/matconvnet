@@ -4,7 +4,9 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2015 Andrea Vedaldi.
+
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -174,9 +176,9 @@ vl::nnconvt_forward(Context& context,
                     Tensor data,
                     Tensor filters,
                     Tensor biases,
-                    int strideY, int strideX,
-                    int padTop, int padBottom,
-                    int padLeft, int padRight)
+                    int upsampleY, int upsampleX,
+                    int cropTop, int cropBottom,
+                    int cropLeft, int cropRight)
 {
   vl::Error status = vlSuccess ;
   size_t dataOffset = data.getHeight()*data.getWidth()*data.getDepth() ;
@@ -196,9 +198,9 @@ vl::nnconvt_forward(Context& context,
     status = vl::nnconv_backward(context,
                                  outputSlice, Tensor(), Tensor(),
                                  Tensor(), filters, dataSlice,
-                                 strideY, strideX,
-                                 padTop, padBottom,
-                                 padLeft, padRight) ;
+                                 upsampleY, upsampleX,
+                                 cropTop, cropBottom,
+                                 cropLeft, cropRight) ;
     if (status != vlSuccess) { goto done ; }
   }
   if (biases) {
@@ -217,15 +219,15 @@ done:
 
 vl::Error
 vl::nnconvt_backward(Context& context,
-                    Tensor derData,
-                    Tensor derFilters,
-                    Tensor derBiases,
-                    Tensor data,
-                    Tensor filters,
-                    Tensor derOutput,
-                    int strideY, int strideX,
-                    int padTop, int padBottom,
-                     int padLeft, int padRight)
+                     Tensor derData,
+                     Tensor derFilters,
+                     Tensor derBiases,
+                     Tensor data,
+                     Tensor filters,
+                     Tensor derOutput,
+                     int upsampleY, int upsampleX,
+                     int cropTop, int cropBottom,
+                     int cropLeft, int cropRight)
 {
   vl::Error status = vl::vlSuccess ;
 
@@ -234,9 +236,9 @@ vl::nnconvt_backward(Context& context,
                                 derData, 0,
                                 derOutput, 1,
                                 filters, Tensor(),
-                                strideY, strideX,
-                                padTop, padBottom,
-                                padLeft, padRight) ;
+                                upsampleY, upsampleX,
+                                cropTop, cropBottom,
+                                cropLeft, cropRight) ;
     if (status != vlSuccess) { goto done ; }
   }
 
@@ -244,9 +246,9 @@ vl::nnconvt_backward(Context& context,
     status = vl::nnconv_backward(context,
                                  Tensor(), derFilters, Tensor(),
                                  derOutput, Tensor(), data,
-                                 strideY, strideX,
-                                 padTop, padBottom,
-                                 padLeft, padRight) ;
+                                 upsampleY, upsampleX,
+                                 cropTop, cropBottom,
+                                 cropLeft, cropRight) ;
     if (status != vlSuccess) { goto done ; }
   }
 

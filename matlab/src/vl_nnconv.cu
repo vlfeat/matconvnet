@@ -4,7 +4,9 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2015 Andrea Vedaldi.
+
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -160,7 +162,7 @@ void mexFunction(int nout, mxArray *out[],
             padRight = (int)mxGetPr(optarg)[3] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("PAD has neither one nor four elements.") ;
         }
         break ;
 

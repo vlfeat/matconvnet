@@ -4,7 +4,9 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2015 Andrea Vedaldi.
+
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -46,9 +48,9 @@ namespace vl {
                   vl::Tensor data,
                   vl::Tensor filters,
                   vl::Tensor biases,
-                  int strideY, int strideX,
-                  int padTop, int padBottom,
-                  int padLeft, int padRight) ;
+                  int upsampleY, int upsampleX,
+                  int cropTop, int cropBottom,
+                  int cropLeft, int cropRight) ;
 
   vl::Error
   nnconvt_backward(vl::Context& context,
@@ -58,9 +60,9 @@ namespace vl {
                    vl::Tensor data,
                    vl::Tensor filters,
                    vl::Tensor derOutput,
-                   int strideY, int strideX,
-                   int padTop, int padBottom,
-                   int padLeft, int padRight) ;
+                   int upsampleY, int upsampleX,
+                   int cropTop, int cropBottom,
+                   int cropLeft, int cropRight) ;
 }
 
 

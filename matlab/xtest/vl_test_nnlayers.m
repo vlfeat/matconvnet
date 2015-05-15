@@ -27,7 +27,7 @@ end
 rng(1) ;
 
 if nargin < 2
-  tests = 1:10 ;
+  tests = 1:14 ;
 end
 
 for l = tests
@@ -491,21 +491,66 @@ for l = tests
       end
 
     case 14
-      disp('testing vl_nncont');
 
       disp('testing vl_nnconvt') ;
-      m=2 ;
-      n=2 ;
-      k=3 ;
-      x = grandn(10,12,m,n,'single') ;
-      f = grandn(3,4,k,m,'single') ;
-      b = grandn(1,k,'single') ;
-      y = vl_nnconvt(x,f,b,'verbose') ;
-      dzdy = grandn(size(y),'single') ;
-      %[dzdx] = vl_nnconvt(x,f,b,dzdy,'verbose') ;
-      [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,'verbose') ;
-      vl_testder(@(x) vl_nnconvt(x,f,b), x, dzdy, dzdx, range * 1e-2) ;
-      vl_testder(@(f) vl_nnconvt(x,f,b), f, dzdy, dzdf, range * 1e-2) ;
-      vl_testder(@(b) vl_nnconvt(x,f,b), b, dzdy, dzdb, range * 1e-2) ;
+      for m=1:3
+        for n=1:4
+          for k=1:3
+            x = grandn(10,12,m,n,'single') ;
+            f = grandn(3,4,k,m,'single') ;
+            b = grandn(1,k,'single') ;
+            y = vl_nnconvt(x,f,b,'verbose') ;
+            dzdy = grandn(size(y),'single') ;
+            [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,'verbose') ;
+            vl_testder(@(x) vl_nnconvt(x,f,b), x, dzdy, dzdx, range * 1e-2) ;
+            vl_testder(@(f) vl_nnconvt(x,f,b), f, dzdy, dzdf, range * 1e-2) ;
+            vl_testder(@(b) vl_nnconvt(x,f,b), b, dzdy, dzdb, range * 1e-1) ;
+          end
+        end
+      end
+
+      disp('testing vl_nnconvt upsample and crop') ;
+      m = 3 ; n = 2 ; k = 3;
+      for sx=1:3
+        for sy=1:3
+          for px=1:3
+            for py=1:3
+              for px_=1:3
+                for py_=1:3
+                  opts = {'upsample',[sy sx],'crop',[py py_ px px_]} ;
+                  x = grandn(5,6,m,n,'single') ;
+                  f = grandn(3,4,k,m,'single') ;
+                  b = grandn(1,k,'single') ;
+                  y = vl_nnconvt(x,f,b,'verbose',opts{:}) ;
+                  dzdy = grandn(size(y),'single') ;
+                  [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,'verbose',opts{:}) ;
+                  vl_testder(@(x) vl_nnconvt(x,f,b,opts{:}), x, dzdy, dzdx, range * 1e-2) ;
+                  vl_testder(@(f) vl_nnconvt(x,f,b,opts{:}), f, dzdy, dzdf, range * 1e-2) ;
+                  vl_testder(@(b) vl_nnconvt(x,f,b,opts{:}), b, dzdy, dzdb, range * 1e-1) ;
+                end
+              end
+            end
+          end
+        end
+      end
+
+      disp('testing vl_nnconvt grouped filters') ;
+      for ng=1:3
+        n = 3 ;
+        for m=1:3
+          for k=1:3
+            opts = {'numgroups',ng} ;
+            x = grandn(10,12,m*ng,n,'single') ;
+            f = grandn(3,4,k,m*ng,'single') ;
+            b = grandn(1,k*ng,'single') ;
+            y = vl_nnconvt(x,f,b,'verbose',opts{:}) ;
+            dzdy = grandn(size(y),'single') ;
+            [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,'verbose',opts{:}) ;
+            vl_testder(@(x) vl_nnconvt(x,f,b,opts{:}), x, dzdy, dzdx, range * 1e-2) ;
+            vl_testder(@(f) vl_nnconvt(x,f,b,opts{:}), f, dzdy, dzdf, range * 1e-2) ;
+            vl_testder(@(b) vl_nnconvt(x,f,b,opts{:}), b, dzdy, dzdb, range * 1e-1) ;
+          end
+        end
+      end
   end
 end

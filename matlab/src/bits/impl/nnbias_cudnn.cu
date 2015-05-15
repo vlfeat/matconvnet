@@ -1,4 +1,4 @@
-// @file nnbias_blas.cu
+// @file nnbias_cudnn.cu
 // @brief biasolution block CuDNN-based implementation.
 // @author Andrea Vedaldi
 
@@ -17,6 +17,7 @@ the terms of the BSD license (see the COPYING file).
 #include "nnbias_cudnn.hpp"
 #include "../datacu.hpp"
 #include <assert.h>
+#include<iostream>
 
 using namespace vl ;
 
@@ -163,8 +164,8 @@ vl::impl::nnbias_backward_cudnn<float>(vl::Context& context,
                                      1,
                                      1)) ;
 
-    float alpha = derBiasesMult ;
-    float beta = derOutputMult ;
+    float alpha = derOutputMult ;
+    float beta = derBiasesMult ;
     CHECK(cudnnConvolutionBackwardBias
           (handle,
            &alpha,
@@ -184,6 +185,7 @@ vl::impl::nnbias_backward_cudnn<float>(vl::Context& context,
                                      derData.getWidth(),
                                      derData.getHeight())) ;
     // not implemented
+    assert(false) ;
   }
 
 done:

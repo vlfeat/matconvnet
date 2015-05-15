@@ -65,6 +65,8 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
 
   if (padLeft != padRight) return vl::vlErrorUnsupported ;
   if (padTop != padBottom) return vl::vlErrorUnsupported ;
+  if (filters.getHeight() > data.getHeight()) return vl::vlErrorUnsupported ;
+  if (filters.getWidth() > data.getWidth()) return vl::vlErrorUnsupported ;
 
   cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
   vl::Error error = vl::vlSuccess ;

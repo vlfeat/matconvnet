@@ -91,8 +91,8 @@ y_{i''j''d''} =
 f_{
 1+ S_hi' + m(i''+ P_h^-, S_h),\ %
 1+ S_wj' + m(j''+ P_w^-, S_w),\ %
-d',
-d''
+d'',
+d'
 } 
 \times \\
 x_{
@@ -107,13 +107,15 @@ m(k,S) = (k - 1) \bmod S,
 \qquad
 q(k,n) = \left\lfloor \frac{k-1}{S} \right\rfloor,
 \]
-$(S_h,S_w)$ are the vertical and horizontal \emph{upsampling factors},  $(P_h^-,P_h^+,P_h^-,P_h^+)$ the \emph{output crops}, and $\bx$ and $\bff$ are zero-padded as needed in the calculation. Furthermore, given the input and filter heights, the output height is given by
+$(S_h,S_w)$ are the vertical and horizontal \emph{input upsampling factors},  $(P_h^-,P_h^+,P_h^-,P_h^+)$ the \emph{output crops}, and $\bx$ and $\bff$ are zero-padded as needed in the calculation. Furthermore, given the input and filter heights, the output height is given by
 \[
   H'' = S_h (H - 1) + H' -P^-_h - P^+_h.
 \]
 The same is true for the width.
 
 To gain some intuition on this expression, consider only the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where $S_h$ divides $i''-1$; this sample is computed as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ in reverse order. The weights come from the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output is a weighted combination of the same elements of the input $x$ as for $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
+
+Note also that filter $k$ is stored as a slice $\bff_{:,:,k,:}$ of the 4D tensor $\bff$.
 
 % ------------------------------------------------------------------
 \section{Spatial pooling}\label{s:pooling}

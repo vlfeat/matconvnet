@@ -3,12 +3,13 @@
 // @author Andrea Vedaldi
 
 /*
- Copyright (C) 2015 Andrea Vedaldi and Max Jaderberg.
- All rights reserved.
+Copyright (C) 2015 Andrea Vedaldi.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "bits/mexutils.h"
 #include "bits/datamex.hpp"
@@ -25,9 +26,10 @@
 
 /* option codes */
 enum {
-  opt_stride = 0,
-  opt_pad,
+  opt_upsample = 0,
+  opt_crop,
   opt_verbose,
+  opt_num_groups,
   opt_no_der_data,
   opt_no_der_filters,
   opt_no_der_biases,
@@ -38,9 +40,10 @@ enum {
 
 /* options */
 vlmxOption  options [] = {
-  {"Stride",           1,   opt_stride             },
-  {"Pad",              1,   opt_pad                },
+  {"Upsample",         1,   opt_upsample           },
+  {"Crop",             1,   opt_crop               },
   {"Verbose",          0,   opt_verbose            },
+  {"NumGroups",        1,   opt_num_groups         },
   {"NoDerData",        0,   opt_no_der_data        },
   {"NoDerFilters",     0,   opt_no_der_filters     },
   {"NoDerBiases",      0,   opt_no_der_biases      },
@@ -79,16 +82,15 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  int strideX = 1 ;
-  int strideY = 1 ;
-  int padLeft = 0 ;
-  int padRight = 0 ;
-  int padTop = 0 ;
-  int padBottom = 0 ;
+  int upsampleX = 1 ;
+  int upsampleY = 1 ;
+  int cropLeft = 0 ;
+  int cropRight = 0 ;
+  int cropTop = 0 ;
+  int cropBottom = 0 ;
   int numFilterGroups = 1 ;
 
   bool backMode = false ;
-  bool hasFilters = false ;
   bool hasBiases = false ;
   bool fullyConnectedMode = false ;
   bool computeDerData = true ;
@@ -123,45 +125,52 @@ void mexFunction(int nout, mxArray *out[],
         ++ verbosity ;
         break ;
 
-      case opt_stride :
+      case opt_upsample :
         if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          mexErrMsgTxt("STRIDE is not a plain matrix.") ;
+          mexErrMsgTxt("upsample is not a plain matrix.") ;
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            strideY = (int)mxGetPr(optarg)[0] ;
-            strideX = strideY ;
+            upsampleY = (int)mxGetPr(optarg)[0] ;
+            upsampleX = upsampleY ;
             break ;
           case 2:
-            strideY = (int)mxGetPr(optarg)[0] ;
-            strideX = (int)mxGetPr(optarg)[1] ;
+            upsampleY = (int)mxGetPr(optarg)[0] ;
+            upsampleX = (int)mxGetPr(optarg)[1] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("upsample has neither one nor two elements.") ;
         }
         break ;
 
-      case opt_pad :
+      case opt_crop :
         if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          mexErrMsgTxt("PAD is not a plain matrix.") ;
+          mexErrMsgTxt("crop is not a plain matrix.") ;
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            padLeft = (int)mxGetPr(optarg)[0] ;
-            padRight = padLeft ;
-            padTop = padLeft ;
-            padBottom = padLeft ;
+            cropLeft = (int)mxGetPr(optarg)[0] ;
+            cropRight = cropLeft ;
+            cropTop = cropLeft ;
+            cropBottom = cropLeft ;
             break ;
           case 4:
-            padTop = (int)mxGetPr(optarg)[0] ;
-            padBottom = (int)mxGetPr(optarg)[1] ;
-            padLeft = (int)mxGetPr(optarg)[2] ;
-            padRight = (int)mxGetPr(optarg)[3] ;
+            cropTop = (int)mxGetPr(optarg)[0] ;
+            cropBottom = (int)mxGetPr(optarg)[1] ;
+            cropLeft = (int)mxGetPr(optarg)[2] ;
+            cropRight = (int)mxGetPr(optarg)[3] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("crop has neither one nor two elements.") ;
         }
         break ;
+
+      case opt_num_groups :
+        if (!mxIsScalar(optarg) || mxGetClassID(optarg) != mxDOUBLE_CLASS) {
+          mexErrMsgTxt("NUMGROUPS is not a plain scalar.") ;
+        }
+        numFilterGroups = (int)mxGetPr(optarg)[0] ;
+        break;
 
       case opt_no_der_data :
         computeDerData = VL_FALSE ;
@@ -201,11 +210,10 @@ void mexFunction(int nout, mxArray *out[],
   biases.init(in[IN_BIASES]) ;
   if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
 
-  hasFilters = !filters.isEmpty() ;
   hasBiases = !biases.isEmpty() ;
 
   /* check for GPU/data class consistency */
-  if (hasFilters && ! vl::areCompatible(data, filters)) {
+  if (! vl::areCompatible(data, filters)) {
     mexErrMsgTxt("DATA and FILTERS are not both CPU or GPU arrays.") ;
   }
   if (hasBiases && ! vl::areCompatible(data, biases)) {
@@ -216,55 +224,41 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* basic argument checks */
-  if (strideX < 1 || strideY < 1) {
-    mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
+  if (upsampleX < 1 || upsampleY < 1) {
+    mexErrMsgTxt("At least one element of upsample is smaller than one.") ;
   }
-  if (padLeft < 0 ||
-      padRight < 0 ||
-      padTop < 0 ||
-      padBottom < 0) {
-    mexErrMsgTxt("An element of PAD is negative.") ;
+  if (cropLeft < 0 ||
+      cropRight < 0 ||
+      cropTop < 0 ||
+      cropBottom < 0) {
+    mexErrMsgTxt("An element of crop is negative.") ;
   }
 
   /* Get the filter geometry */
   vl::TensorGeometry filtersGeom(filters) ;
-  int equivalentNumFilters ;
-  if (hasFilters) {
-    if (filtersGeom.getHeight() == 0 || filtersGeom.getWidth() == 0 || filtersGeom.getDepth() == 0) {
-      mexErrMsgTxt("A dimension of FILTERS is void.") ;
-    }
-    if (data.getHeight() + (padTop+padBottom) < filters.getHeight() ||
-        data.getWidth() + (padLeft+padRight) < filters.getWidth()) {
-      mexErrMsgTxt("FILTERS are larger than the outoput (including padding).") ;
-    }
-    /* grouped filters */
-    numFilterGroups = 1 ;
 
-    /*
-     todo: must allow for a different default
+  if (filtersGeom.getHeight() == 0 || filtersGeom.getWidth() == 0 || filtersGeom.getDepth() == 0) {
+    mexErrMsgTxt("A dimension of FILTERS is void.") ;
+  }
+  if (data.getHeight() + (cropTop+cropBottom) < filters.getHeight() ||
+      data.getWidth() + (cropLeft+cropRight) < filters.getWidth()) {
+    mexErrMsgTxt("FILTERS are larger than the outoput (including cropding).") ;
+  }
 
-     numFilterGroups = data.getDepth() / filters.getDepth() ;
-     if (numFilterGroups * filters.getDepth() != data.getDepth()) {
-     mexErrMsgTxt("The FILTERS depth does not divide the DATA depth.") ;
-     }
-     */
-    if (filters.getSize() != data.getDepth()) {
-      mexErrMsgTxt("The number of filters is not the same as the number of input dimensions.") ;
-    }
-    if (filters.getSize() % numFilterGroups != 0) {
-      mexErrMsgTxt("The number of filter groups does not divide the number of filters.") ;
-    }
-    equivalentNumFilters = filters.getSize() ;
-  } else {
-    /* empty filters -> pretend the identity filter bank */
-    filtersGeom = vl::TensorGeometry(1, 1, data.getDepth(), data.getDepth()) ;
-    numFilterGroups = 1 ;
-    equivalentNumFilters = data.getDepth() ;
+  /* grouped filters */
+  if (numFilterGroups < 1) {
+    mexErrMsgTxt("NUMGROUPS is less than 1.") ;
+  }
+  if (filters.getSize() % numFilterGroups != 0) {
+    mexErrMsgTxt("The number of filter groups does not divide the filter bank depth (fourth dimension of FILTERS).") ;
+  }
+  if (filters.getSize() != data.getDepth()) {
+    mexErrMsgTxt("The filter bank depth (fourth dimension of FILTERS) is not the same as the data depth (third dimension of X).") ;
   }
 
   /* Get the output geometry */
-  vl::TensorGeometry outputGeom((data.getHeight()-1)*strideY - (padTop+padBottom) + filtersGeom.getHeight(),
-                                (data.getWidth()-1)*strideX  - (padLeft+padRight) + filtersGeom.getWidth(),
+  vl::TensorGeometry outputGeom((data.getHeight()-1)*upsampleY - (cropTop+cropBottom) + filtersGeom.getHeight(),
+                                (data.getWidth()-1)*upsampleX  - (cropLeft+cropRight) + filtersGeom.getWidth(),
                                 filtersGeom.getDepth() * numFilterGroups,
                                 data.getSize()) ;
 
@@ -279,23 +273,6 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  /*
-   Detect fully connected mode (further optimisations):
-   the output is 1 x 1 pixels,
-   no padding,
-   one filter group,
-   stride of one pixel
-   */
-  fullyConnectedMode = (outputGeom.getHeight() == 1 &&
-                        outputGeom.getWidth() == 1 &&
-                        strideY == 1 &&
-                        strideX == 1 &&
-                        padTop == 0 &&
-                        padBottom == 0 &&
-                        padLeft == 0 &&
-                        padRight == 0 &&
-                        numFilterGroups == 1) ;
-
   /* create output buffers */
   vl::Device type = data.getMemoryType() ;
   vl::MexTensor output(context) ;
@@ -309,7 +286,7 @@ void mexFunction(int nout, mxArray *out[],
     if (computeDerData) {
       derData.init(type, data.getGeometry()) ;
     }
-    if (computeDerFilters && hasFilters) {
+    if (computeDerFilters) {
       derFilters.init(type, filters.getGeometry()) ;
     }
     if (computeDerBiases && hasBiases) {
@@ -328,18 +305,18 @@ void mexFunction(int nout, mxArray *out[],
     } else {
       mexPrintf("; BLAS\n") ;
     }
-    mexPrintf("vl_nnconvt: stride: [%d %d], pad: [%d %d %d %d]\n"
-              "vl_nnconvt: num filter groups: %d, has bias: %d, has filters: %d, is fully connected: %d\n",
-              strideY, strideX,
-              padTop, padBottom, padLeft, padRight,
-              numFilterGroups, hasBiases, hasFilters, fullyConnectedMode) ;
+    mexPrintf("vl_nnconvt: upsample: [%d %d], crop: [%d %d %d %d]\n"
+              "vl_nnconvt: num filter groups: %d, has bias: %d, is fully connected: %d\n",
+              upsampleY, upsampleX,
+              cropTop, cropBottom, cropLeft, cropRight,
+              numFilterGroups, hasBiases, fullyConnectedMode) ;
     vl::print("vl_nnconvt: data: ", data) ;
-    if (hasFilters) { vl::print("vl_nnconvt: filters: ", filters) ; }
+    vl::print("vl_nnconvt: filters: ", filters) ;
     if (hasBiases) { vl::print("vl_nnconvt: biases: ", biases) ; }
     if (backMode) {
       vl::print("vl_nnconvt: derOutput: ", derOutput) ;
       vl::print("vl_nnconvt: derData: ", derData) ;
-      if (hasFilters) { vl::print("vl_nnconvt: derFilters: ", derFilters) ; }
+      vl::print("vl_nnconvt: derFilters: ", derFilters) ;
       if (hasBiases) { vl::print("vl_nnconvt: derBiases: ", derBiases) ; }
     } else {
       vl::print("vl_nnconvt: output: ", output) ;
@@ -352,53 +329,6 @@ void mexFunction(int nout, mxArray *out[],
 
   vl::Error error ;
 
-#if 0
-  /*
-   special case: fully connected
-   (could be done as a regular case, but it is faster this way)
-   */
-  if (fullyConnectedMode) {
-    if (!backMode) {
-      error = vl::nnfullyconnected_forward(context,
-                                           output,
-                                           data,
-                                           filters,
-                                           biases) ;
-    } else {
-      error = vl::nnfullyconnected_backward(context,
-                                            derData,
-                                            derFilters,
-                                            derBiases,
-                                            data,
-                                            filters,
-                                            derOutput) ;
-    }
-    goto done ;
-  }
-#endif
-
-#if 0
-  /* special case: no filters = identity filter bank (subsample + bias) */
-  if (!hasFilters) {
-    if (!backMode) {
-      error = vl::nnsubsample_forward(context,
-                                      output,
-                                      data,
-                                      biases,
-                                      strideY, strideX,
-                                      padTop, padBottom, padLeft, padRight) ;
-    } else {
-      error = vl::nnsubsample_backward(context,
-                                       derData,
-                                       derBiases,
-                                       derOutput,
-                                       strideY, strideX,
-                                       padTop, padBottom, padLeft, padRight) ;
-    }
-    goto done ;
-  }
-#endif
-
   /* regular case */
   if (!backMode) {
     error = vl::nnconvt_forward(context,
@@ -406,8 +336,8 @@ void mexFunction(int nout, mxArray *out[],
                                 data,
                                 filters,
                                 biases,
-                                strideY, strideX,
-                                padTop, padBottom, padLeft, padRight) ;
+                                upsampleY, upsampleX,
+                                cropTop, cropBottom, cropLeft, cropRight) ;
   } else {
     error = vl::nnconvt_backward(context,
                                  derData,
@@ -416,21 +346,20 @@ void mexFunction(int nout, mxArray *out[],
                                  data,
                                  filters,
                                  derOutput,
-                                 strideY, strideX,
-                                 padTop, padBottom, padLeft, padRight) ;
+                                 upsampleY, upsampleX,
+                                 cropTop, cropBottom, cropLeft, cropRight) ;
   }
 
   /* -------------------------------------------------------------- */
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
 
-done:
   if (error != vl::vlSuccess) {
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
+    out[OUT_DERFILTERS] = (computeDerFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
     out[OUT_DERBIASES] = (computeDerBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;

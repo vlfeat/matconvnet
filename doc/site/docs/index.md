@@ -5,6 +5,9 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+> **New:** 1.0-beta12 adds convolution transpose aka deconvolution
+> (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
+>
 > **New:** 1.0-beta11 adds the following blocks: batch normalization
 > (see [`vl_nnbnorm`](mfiles/vl_nnbnorm)), spatial normalization
 > ([`vl_nnspnorm`](mfiles/vl_nnspnorm), p-distance
@@ -29,7 +32,7 @@ example CNNs are included to classify and encode images.
 > practical</a> on CNNs.
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta11](download/matconvnet-1.0-beta11.tar.gz)
+    - Tarball for [version 1.0-beta12](download/matconvnet-1.0-beta12.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**

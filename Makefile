@@ -41,7 +41,7 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta11
+VER = 1.0-beta12
 DIST = $(NAME)-$(VER)
 RSYNC = rsync
 HOST = vlfeat-admin:sites/sandbox-matconvnet

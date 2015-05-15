@@ -188,7 +188,9 @@ lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnfullyconnected.' ext]) 
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnsubsample.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnpooling.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnnormalize.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbias.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconv.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconvt.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
 
@@ -213,6 +215,7 @@ end
 % cuDNN-specific files
 if opts.enableCudnn
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnconv_cudnn.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbias_cudnn.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnpooling_cudnn.cu') ;
 end
 

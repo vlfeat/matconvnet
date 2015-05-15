@@ -206,7 +206,6 @@ vl::impl::nnconv_backward_blas(Context& context,
   }
   numFiltersPerGroup = derOutput.getDepth() / numGroups ;
 
-
   // get scratch space
   tempVolume = numOutputPixels * filtersVolume * numGroups ;
   if (tempVolume) {
