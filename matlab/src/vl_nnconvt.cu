@@ -166,7 +166,7 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_num_groups :
-        if (!mxIsScalar(optarg) || mxGetClassID(optarg) != mxDOUBLE_CLASS) {
+        if (!vlmxIsPlainMatrix(optarg,1,1)) {
           mexErrMsgTxt("NUMGROUPS is not a plain scalar.") ;
         }
         numFilterGroups = (int)mxGetPr(optarg)[0] ;
@@ -225,13 +225,13 @@ void mexFunction(int nout, mxArray *out[],
 
   /* basic argument checks */
   if (upsampleX < 1 || upsampleY < 1) {
-    mexErrMsgTxt("At least one element of upsample is smaller than one.") ;
+    mexErrMsgTxt("At least one element of UPSAMPLE is smaller than one.") ;
   }
   if (cropLeft < 0 ||
       cropRight < 0 ||
       cropTop < 0 ||
       cropBottom < 0) {
-    mexErrMsgTxt("An element of crop is negative.") ;
+    mexErrMsgTxt("An element of CROP is negative.") ;
   }
 
   /* Get the filter geometry */
