@@ -209,9 +209,18 @@ function err = error_multiclass(opts, labels, res)
 % -------------------------------------------------------------------------
 predictions = gather(res(end-1).x) ;
 [~,predictions] = sort(predictions, 3, 'descend') ;
-error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
-err(1,1) = sum(sum(sum(error(:,:,1,:)))) ;
-err(2,1) = sum(sum(sum(min(error(:,:,1:5,:),[],3)))) ;
+
+% skip null labels
+mass = single(labels(:,:,1,:) > 0) ;
+if size(labels,3) == 2
+  % if there is a second channel in labels, used it as weights
+  mass = mass .* labels(:,:,2,:) ;
+  labels(:,:,2,:) = [] ;
+end
+
+error = ~bsxfun(@eq, predictions, labels) ;
+err(1,1) = sum(sum(sum(mass .* error(:,:,1,:)))) ;
+err(2,1) = sum(sum(sum(mass .* min(error(:,:,1:5,:),[],3)))) ;
 
 % -------------------------------------------------------------------------
 function err = error_binaryclass(opts, labels, res)

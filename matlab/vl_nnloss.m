@@ -19,7 +19,7 @@ function Y = vl_nnloss(X,c,dzdy)
 %    CNN with respect to the input X given the derivative DZDY with
 %    respect to the block output Y. DZDX has the same dimension as X.
 
-% Copyright (C) 2014 Andrea Vedaldi.
+% Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -29,20 +29,29 @@ function Y = vl_nnloss(X,c,dzdy)
 X = X + 1e-4 ;
 sz = [size(X,1) size(X,2) size(X,3) size(X,4)] ;
 
-% index from 0
-c = c - 1 ;
-
 if numel(c) == sz(4)
   % one label per image
   c = reshape(c, [1 1 1 sz(4)]) ;
+end
+if size(c,1) == 1 & size(c,2) == 1
   c = repmat(c, [sz(1) sz(2)]) ;
-else
-  % one label per spatial location
-  sz_ = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
-  assert(isequal(sz_, [sz(1) sz(2) 1 sz(4)])) ;
 end
 
-% convert to indeces
+% one label per spatial location
+sz_ = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
+assert(isequal(sz_, [sz(1) sz(2) sz_(3) sz(4)])) ;
+assert(sz_(3)==1 | sz_(3)==2) ;
+
+% ignore null labels
+mass = single(c(:,:,1,:) > 0) ;
+if sz_(3) == 2
+  % the second channel of c (if present) is used as weights
+  mass = mass .* c(:,:,2,:) ;
+  c(:,:,2,:) = [] ;
+end
+
+% convert to indexes
+c = c - 1 ;
 c_ = 0:numel(c)-1 ;
 c_ = 1 + ...
   mod(c_, sz(1)*sz(2)) + ...
@@ -51,9 +60,10 @@ c_ = 1 + ...
 
 n = sz(1)*sz(2) ;
 if nargin <= 2
-  Y = - sum(log(X(c_))) / n ;
+  t = reshape(X(c_), [sz(1:2) 1 sz(4)]) ;
+  Y = - sum(sum(sum(log(t) .* mass,1),2),4) ;
 else
-  Y_ = - (1./X) * (dzdy/n) ;
+  Y_ = - bsxfun(@rdivide, bsxfun(@times, mass, dzdy), X) ;
   Y = Y_*0 ;
   Y(c_) = Y_(c_) ;
 end
