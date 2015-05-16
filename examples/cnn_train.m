@@ -163,13 +163,13 @@ for epoch=1:opts.numEpochs
     info.(f).objective(epoch) = stats.(f)(2) / n ;
     info.(f).error(:,epoch) = stats.(f)(3:end) / n ;
   end
-  if numGpus > 1
+  if numGpus == 1
+     net = vl_simplenn_move(net, 'cpu') ;
+  elseif numGpus > 1
     spmd(numGpus)
       net_ = vl_simplenn_move(net_, 'cpu') ;
     end
     net = net_{1} ;
-  else
-    net = vl_simplenn_move(net, 'cpu') ;
   end
   if ~evaluateMode, save(modelPath(epoch), 'net', 'info') ; end
 
