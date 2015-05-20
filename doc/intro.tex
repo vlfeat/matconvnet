@@ -40,7 +40,7 @@ While CNNs are relatively efficient to compute, training requires iterating many
 \subsection{The structure and evaluation of CNNs}\label{s:forward}
 % ------------------------------------------------------------------
 
-CNNs are obtained by connecting one or more \emph{computational blocks}. Each block $\by = f(\bx,\bw)$ takes an image $\bx$ and a set of parameters $\bw$ as input and produces a new image $\by$ as output. An image is a real 4D array; the first two dimensions index spatial coordinates (image rows and columns respectively), the third dimension feature channels (there can be any number), and the last dimension image instances. A computational block $f$ is therefore represented as follows:
+CNNs are obtained by connecting one or more \emph{computational blocks}. Each block $\by = f(\bx,\bw)$ takes an input $\bx$ and a set of parameters $\bw$ to produce an output $\by$. A computational block $f$ is therefore represented as follows:
 \begin{center}
 \begin{tikzpicture}[auto, node distance=2cm]
 \node (x) [data] {$\bx$};
@@ -52,11 +52,6 @@ CNNs are obtained by connecting one or more \emph{computational blocks}. Each bl
 \draw [->] (w.north) -- (f.south) {};
 \end{tikzpicture}
 \end{center}
-Formally, $\bx$ is a 4D tensor stacking $N$ 3D images
-\[
-   \bx \in \real^{H \times W \times D \times N}
-\]
-where $H$ and $W$ are the height and width of the images, $D$ its depth, and $N$ the number of images. In what follows, all operations are applied identically to each image in the stack $\bx$; hence for simplicity we will drop the last dimension in the discussion (equivalent to assuming $N=1$), but the ability to operate on image batches is very important for efficiency.
 
 In general, a CNN can be obtained by connecting blocks in a directed acyclic graph (DAG). In the simplest case, this graph reduces to a sequence of computational blocks $(f_1,f_2,\dots,f_L)$. Let $\bx_1,\bx_2,\dots,\bx_L$ be the output of each layer in the network, and let $\bx_0$ denote the network input. Each output $\bx_l$ depends on the previous output $\bx_{l-1}$ through a function $f_l$ with parameter $\bw_l$ as $\bx_l = f_l(\bx_{l-1};\bw_l)$; schematically:
 \begin{center}
@@ -80,6 +75,13 @@ In general, a CNN can be obtained by connecting blocks in a directed acyclic gra
 \draw [->] (wL.north) -- (fL.south) {};
 \end{tikzpicture}
 \end{center}
+
+In computer vision, the input $\bx_0$ usually represents a stack of images. Formally, $\bx$ is a 4D tensor stacking $N$ 3D images 
+\[
+   \bx \in \real^{H \times W \times D \times N}
+\]
+where $H$ and $W$ are the height and width of each image, $D$ is the number of channels, and $N$ the number of images. In what follows, all operations are applied identically to each image in the stack $\bx$; hence for simplicity we will drop the last dimension in the discussion (equivalent to assuming $N=1$), but the ability to operate on image batches is very important for efficiency.
+
 Given an input $\bx_0$, evaluating the network is a simple matter of evaluating all the intermediate stages in order to compute an overall function $\bx_L = f(\bx_0;\bw_1,\dots,\bw_L)$. 
 
 % ------------------------------------------------------------------
