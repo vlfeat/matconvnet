@@ -1,4 +1,4 @@
-function Y = vl_nnhingeloss(X,c,dzdy)
+function Y = vl_nnhingeloss(X,c,varargin)
 % VL_NNHINGELOSS  Hinge loss
 %    Y = VL_NNHINGELOSS(X, C) applies the the hinge loss to the data
 %    X. X has dimension H x W x D x N, packing N arrays of W x H
@@ -18,12 +18,30 @@ function Y = vl_nnhingeloss(X,c,dzdy)
 %    DZDX = VL_NNHINGELOSS(X, C, DZDY) computes the derivative DZDX of the
 %    CNN with respect to the input X given the derivative DZDY with
 %    respect to the block output Y. DZDX has the same dimension as X.
+%
+%    VL_NNHINGELOSS(..., 'option', value) takes the following options:
+%
+%    `norm`:: 2
+%        Specify the norm, 1 for L1 and 2 for L2
 
 % Copyright (C) 2015 James Thewlis & Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+
+opts.norm = 2 ;
+backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
+if backMode
+  dzdy = varargin{1} ;
+  opts = vl_argparse(opts, varargin(2:end)) ;
+else
+  opts = vl_argparse(opts, varargin) ;
+end
+
+if opts.norm ~= 1 && opts.norm ~= 2
+    error('Unknown norm for hinge loss') ;
+end
 
 sz = [size(X,1) size(X,2) size(X,3) size(X,4)] ;
 
@@ -53,16 +71,26 @@ X_ = -X ;
 X_(c_) = X_(c_) * -1 ;
 
 n = sz(1)*sz(2) ;
-if nargin <= 2
+if ~backMode
   % Effectively does (for the non-spatial case):
-  %   y(1,1,j,i) = max(0, 1 - X(1,1,j,i) * ((class(i) == j) * 2 - 1))^2
-  y = max(0, 1 - X_) .^ 2 ;
+  % L2:  y(1,1,j,i) = max(0, 1 - X(1,1,j,i) * t)^2
+  % L1:  y(1,1,j,i) = max(0, 1 - X(1,1,j,i) * t)
+  % Where t = (class(i) == j) * 2 - 1
+  y = max(0, 1 - X_) ;
+  if opts.norm == 2
+      y = y .* y ;
+  end
   Y = sum(y(:)) / n ;
 else
   % Computes
-  %   y(1,1,j,i) = - 2 * t * max(0, 1 - X(1,1,j,i) * t)
+  % L2:  y(1,1,j,i) = - 2 * t * max(0, 1 - X(1,1,j,i) * t)
+  % L1:  y(1,1,j,i) = - t * ((X(1,1,j,i)*t) < 1)
   % Where t = (class(i) == j) * 2 - 1
-  y = 2 * max(0, 1 - X_) ;
+  if opts.norm == 2
+      y = 2 * max(0, 1 - X_) ;
+  else
+      y = X_ < 1 ;
+  end
   y(c_) = -1 * y(c_) ;
   Y = y * dzdy / n;
 end
