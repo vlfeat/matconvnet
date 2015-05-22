@@ -72,34 +72,37 @@ for l = tests
       end
 
     case 2
-      disp('testing vl_nnloss multiple images convolutional') ;
-      C = 10 ;
-      c = [7 2 1] ;
-      n = 3 ;
-      x = grand(3,4,C,n) + 0.001 ; % non-negative
-      y = vl_nnloss(x,c) ;
-      dzdy = grandn(size(y)) ;
-      dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+      for loss={'vl_nnloss', 'vl_nnhingeloss'} ;
+        lossfn = str2func(loss{:}) ;
+        fprintf('testing %s multiple images convolutional\n', loss{:}) ;
+        C = 10 ;
+        c = [7 2 1] ;
+        n = 3 ;
+        x = grand(3,4,C,n) + 0.001 ; % non-negative
+        y = lossfn(x,c) ;
+        dzdy = grandn(size(y)) ;
+        dzdx = lossfn(x,c,dzdy) ;
+        vl_testder(@(x) lossfn(x,c), x, dzdy, dzdx, range * 1e-8) ;
 
-      disp('testing vl_nnloss multiple images') ;
-      C = 10 ;
-      c = [7 2 1] ;
-      n = 3 ;
-      x = grand(1,1,C,n) + 0.001 ; % non-negative
-      y = vl_nnloss(x,c) ;
-      dzdy = grandn(size(y)) ;
-      dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+        fprintf('testing %s multiple images\n', loss{:}) ;
+        C = 10 ;
+        c = [7 2 1] ;
+        n = 3 ;
+        x = grand(1,1,C,n) + 0.001 ; % non-negative
+        y = lossfn(x,c) ;
+        dzdy = grandn(size(y)) ;
+        dzdx = lossfn(x,c,dzdy) ;
+        vl_testder(@(x) lossfn(x,c), x, dzdy, dzdx, range * 1e-8) ;
 
-      disp('testing vl_nnloss') ;
-      C = 10 ;
-      c = 7 ;
-      x = grand(1,1,C,1) + 0.001 ; % non-negative
-      y = vl_nnloss(x,c) ;
-      dzdy = grandn(size(y)) ;
-      dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+        fprintf('testing %s\n', loss{:}) ;
+        C = 10 ;
+        c = 7 ;
+        x = grand(1,1,C,1) + 0.001 ; % non-negative
+        y = lossfn(x,c) ;
+        dzdy = grandn(size(y)) ;
+        dzdx = lossfn(x,c,dzdy) ;
+        vl_testder(@(x) lossfn(x,c), x, dzdy, dzdx, range * 1e-8) ;
+      end
 
     case 3
       disp('testing vl_nnsoftmax') ;
