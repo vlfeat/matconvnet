@@ -211,6 +211,11 @@ function err = error_multiclass(opts, labels, res)
 predictions = gather(res(end-1).x) ;
 [~,predictions] = sort(predictions, 3, 'descend') ;
 
+% be resilient to badly formatted labels
+if numel(labels) == size(predictions, 4)
+  labels = reshape(labels,1,1,1,[]) ;
+end
+
 % skip null labels
 mass = single(labels(:,:,1,:) > 0) ;
 if size(labels,3) == 2
