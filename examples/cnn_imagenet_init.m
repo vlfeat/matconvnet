@@ -12,6 +12,15 @@ switch opts.model
   case 'alexnet'
     net.normalization.imageSize = [227, 227, 3] ;
     net = alexnet(net, opts) ;
+  case 'vgg-f'
+    net.normalization.imageSize = [224, 224, 3] ;
+    net = vgg_f(net, opts) ;
+  case 'vgg-m'
+    net.normalization.imageSize = [224, 224, 3] ;
+    net = vgg_m(net, opts) ;
+  case 'vgg-s'
+    net.normalization.imageSize = [224, 224, 3] ;
+    net = vgg_s(net, opts) ;
   case 'vgg-vd-16'
     net.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
@@ -89,6 +98,128 @@ net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
 
 % --------------------------------------------------------------------
+function net = vgg_s(net, opts)
+% --------------------------------------------------------------------
+
+net.layers = {} ;
+net = add_block(net, opts, '1', 7, 7, 3, 96, 2, 0) ;
+net.layers{end+1} = struct('type', 'normalize', 'name', 'norm1', ...
+                           'param', [5 1 0.0001/5 0.75]) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool1', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 3, ...
+                           'pad', [0 2 0 2]) ;
+
+net = add_block(net, opts, '2', 5, 5, 96, 256, 1, 0) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool2', ...
+                           'method', 'max', ...
+                           'pool', [2 2], ...
+                           'stride', 2, ...
+                           'pad', [0 1 0 1]) ;
+
+net = add_block(net, opts, '3', 3, 3, 256, 512, 1, 1) ;
+net = add_block(net, opts, '4', 3, 3, 512, 512, 1, 1) ;
+net = add_block(net, opts, '5', 3, 3, 512, 512, 1, 1) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 3, ...
+                           'pad', [0 1 0 1]) ;
+
+net = add_block(net, opts, '6', 6, 6, 512, 4096, 1, 0) ;
+net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+
+net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
+net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+
+net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
+net.layers(end) = [] ;
+
+% --------------------------------------------------------------------
+function net = vgg_m(net, opts)
+% --------------------------------------------------------------------
+
+net.layers = {} ;
+net = add_block(net, opts, '1', 7, 7, 3, 96, 2, 0) ;
+net.layers{end+1} = struct('type', 'normalize', 'name', 'norm1', ...
+                           'param', [5 1 0.0001/5 0.75]) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool1', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 2, ...
+                           'pad', 0) ;
+
+net = add_block(net, opts, '2', 5, 5, 96, 256, 2, 1) ;
+net.layers{end+1} = struct('type', 'normalize', 'name', 'norm2', ...
+                           'param', [5 1 0.0001/5 0.75]) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool2', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 2, ...
+                           'pad', [0 1 0 1]) ;
+
+net = add_block(net, opts, '3', 3, 3, 256, 512, 1, 1) ;
+net = add_block(net, opts, '4', 3, 3, 512, 512, 1, 1) ;
+net = add_block(net, opts, '5', 3, 3, 512, 512, 1, 1) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 2, ...
+                           'pad', 0) ;
+
+net = add_block(net, opts, '6', 6, 6, 512, 4096, 1, 0) ;
+net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+
+net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
+net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+
+net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
+net.layers(end) = [] ;
+
+% --------------------------------------------------------------------
+function net = vgg_f(net, opts)
+% --------------------------------------------------------------------
+
+net.layers = {} ;
+net = add_block(net, opts, '1', 11, 11, 3, 64, 4, 0) ;
+net.layers{end+1} = struct('type', 'normalize', 'name', 'norm1', ...
+                           'param', [5 1 0.0001/5 0.75]) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool1', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 2, ...
+                           'pad', [0 1 0 1]) ;
+
+net = add_block(net, opts, '2', 5, 5, 64, 256, 1, 2) ;
+net.layers{end+1} = struct('type', 'normalize', 'name', 'norm2', ...
+                           'param', [5 1 0.0001/5 0.75]) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool2', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 2, ...
+                           'pad', 0) ;
+
+net = add_block(net, opts, '3', 3, 3, 256, 256, 1, 1) ;
+net = add_block(net, opts, '4', 3, 3, 256, 256, 1, 1) ;
+net = add_block(net, opts, '5', 3, 3, 256, 256, 1, 1) ;
+net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
+                           'method', 'max', ...
+                           'pool', [3 3], ...
+                           'stride', 2, ...
+                           'pad', 0) ;
+
+net = add_block(net, opts, '6', 6, 6, 256, 4096, 1, 0) ;
+net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+
+net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
+net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+
+net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
+net.layers(end) = [] ;
+
+
+% --------------------------------------------------------------------
 function net = vgg_vd(net, opts)
 % --------------------------------------------------------------------
 
@@ -153,61 +284,3 @@ net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
-
-% --------------------------------------------------------------------
-function net = vgg_vd_19(net, opts)
-% --------------------------------------------------------------------
-
-net.layers = {} ;
-net = add_block(net, opts, '1_1', 3, 3, 3, 64, 1, 1) ;
-net = add_block(net, opts, '1_2', 3, 3, 64, 64, 1, 1) ;
-net.layers{end+1} = struct('type', 'pool', 'name', 'pool1', ...
-                           'method', 'max', ...
-                           'pool', [2 2], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-
-net = add_block(net, opts, '2_1', 3, 3, 64, 128, 1, 1) ;
-net = add_block(net, opts, '2_2', 3, 3, 128, 128, 1, 1) ;
-net.layers{end+1} = struct('type', 'pool', 'name', 'pool2', ...
-                           'method', 'max', ...
-                           'pool', [2 2], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-
-net = add_block(net, opts, '3_1', 3, 3, 128, 256, 1, 1) ;
-net = add_block(net, opts, '3_2', 3, 3, 256, 256, 1, 1) ;
-net = add_block(net, opts, '3_3', 3, 3, 256, 256, 1, 1) ;
-net.layers{end+1} = struct('type', 'pool', 'name', 'pool3', ...
-                           'method', 'max', ...
-                           'pool', [2 2], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-
-net = add_block(net, opts, '4_1', 3, 3, 256, 512, 1, 1) ;
-net = add_block(net, opts, '4_2', 3, 3, 512, 512, 1, 1) ;
-net = add_block(net, opts, '4_3', 3, 3, 512, 512, 1, 1) ;
-net.layers{end+1} = struct('type', 'pool', 'name', 'pool4', ...
-                           'method', 'max', ...
-                           'pool', [2 2], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-
-net = add_block(net, opts, '5_1', 3, 3, 256, 512, 1, 1) ;
-net = add_block(net, opts, '5_2', 3, 3, 512, 512, 1, 1) ;
-net = add_block(net, opts, '5_3', 3, 3, 512, 512, 1, 1) ;
-net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
-                           'method', 'max', ...
-                           'pool', [2 2], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-
-net = add_block(net, opts, '6', 7, 7, 512, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
-
-net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
-
-net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
-net.layers(end) = [] ;
-
