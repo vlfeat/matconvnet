@@ -64,25 +64,33 @@ args = {} ;
 
 % copy parameters in the opts structure, recursively
 for i = 1:numel(params)
-  if isfield(opts, params{i})
+  field = findfield(opts, params{i}) ;
+  if ~isempty(field)
     if isstruct(values{i})
-      if ~isstruct(opts.(params{i}))
-        error('The value of parameter %d is a structure in the arguments but not a structure in OPT.',params{i}) ;
+      if ~isstruct(opts.(field))
+        error('The value of parameter %d is a structure in the arguments but not a structure in OPT.',field) ;
       end
       if nargout > 1
-        [opts.(params{i}), rest] = vl_argparse(opts.(params{i}), values{i}) ;
-        args = horzcat(args, {params{i}, cell2struct(rest(2:2:end), rest(1:2:end), 2)}) ;
+        [opts.(field), rest] = vl_argparse(opts.(field), values{i}) ;
+        args = horzcat(args, {field, cell2struct(rest(2:2:end), rest(1:2:end), 2)}) ;
       else
-        opts.(params{i}) = vl_argparse(opts.(params{i}), values{i}) ;
+        opts.(field) = vl_argparse(opts.(field), values{i}) ;
       end
     else
-      opts.(params{i}) = values{i} ;
+      opts.(field) = values{i} ;
     end
   else
     if nargout <= 1
-      error('Uknown parameter ''%s''', params{i}) ;
+      error('Uknown parameter ''%s''', field) ;
     else
-      args = horzcat(args, {params{i}, values{i}}) ;
+      args = horzcat(args, {field, values{i}}) ;
     end
   end
 end
+
+function field = findfield(opts, field)
+fields=fieldnames(opts) ;
+i=find(strcmpi(fields, field)) ;
+field=fields{i} ;
+
+
