@@ -23,6 +23,7 @@ opts.train.continue = true ;
 opts.train.gpus = [] ;
 opts.train.prefetch = true ;
 opts.train.sync = false ;
+opts.train.cudnn = true ;
 opts.train.expDir = opts.expDir ;
 switch opts.modelType
   case 'dropout', opts.train.learningRate = logspace(-2, -4, 60) ;

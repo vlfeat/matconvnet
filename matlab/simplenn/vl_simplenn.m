@@ -143,7 +143,8 @@ opts.conserveMemory = false ;
 opts.sync = false ;
 opts.disableDropout = false ;
 opts.freezeDropout = false ;
-opts.accumulate = false;
+opts.accumulate = false ;
+opts.cudnn = true ;
 opts.backPropDepth = +inf ;
 
 opts = vl_argparse(opts, varargin);
@@ -154,6 +155,12 @@ if (nargin <= 2) || isempty(dzdy)
   doder = false ;
 else
   doder = true ;
+end
+
+if opts.cudnn
+  cudnn = {'CuDNN'} ;
+else
+  cudnn = {'NoCuDNN'} ;
 end
 
 gpuMode = isa(x, 'gpuArray') ;
@@ -175,12 +182,19 @@ for i=1:n
   switch l.type
     case 'conv'
       if isfield(l, 'weights')
-        res(i+1).x = vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, 'pad', l.pad, 'stride', l.stride) ;
+        res(i+1).x = vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
+                               'pad', l.pad, 'stride', l.stride, ...
+                               cudnn{:}) ;
       else
-        res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, 'pad', l.pad, 'stride', l.stride) ;
+        res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, ...
+                               'pad', l.pad, 'stride', l.stride, ...
+                               cudnn{:}) ;
       end
     case 'pool'
-      res(i+1).x = vl_nnpool(res(i).x, l.pool, 'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
+      res(i+1).x = vl_nnpool(res(i).x, l.pool, ...
+                             'pad', l.pad, 'stride', l.stride, ...
+                             'method', l.method, ...
+                             cudnn{:}) ;
     case 'normalize'
       res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
     case 'softmax'
@@ -246,13 +260,15 @@ if doder
             [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
                 vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
                           res(i+1).dzdx, ...
-                          'pad', l.pad, 'stride', l.stride) ;
+                          'pad', l.pad, 'stride', l.stride, ...
+                          cudnn{:}) ;
           else
             % Legacy code: will go
             [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
                 vl_nnconv(res(i).x, l.filters, l.biases, ...
                           res(i+1).dzdx, ...
-                          'pad', l.pad, 'stride', l.stride) ;
+                          'pad', l.pad, 'stride', l.stride, ...
+                          cudnn{:}) ;
           end
         else
           dzdw = cell(1,2) ;
@@ -260,13 +276,15 @@ if doder
             [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
                 vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
                           res(i+1).dzdx, ...
-                          'pad', l.pad, 'stride', l.stride) ;
+                          'pad', l.pad, 'stride', l.stride, ...
+                          cudnn{:}) ;
           else
             % Legacy code: will go
             [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
                 vl_nnconv(res(i).x, l.filters, l.biases, ...
                           res(i+1).dzdx, ...
-                          'pad', l.pad, 'stride', l.stride) ;
+                          'pad', l.pad, 'stride', l.stride, ...
+                          cudnn{:}) ;
           end
           for j=1:2
             res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
@@ -276,7 +294,9 @@ if doder
 
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
-          'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
+                                'pad', l.pad, 'stride', l.stride, ...
+                                'method', l.method, ...
+                                cudnn{:}) ;
       case 'normalize'
         res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
       case 'softmax'
@@ -303,7 +323,8 @@ if doder
         if opts.disableDropout
           res(i).dzdx = res(i+1).dzdx ;
         else
-          res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
+          res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, ...
+                                     'mask', res(i+1).aux) ;
         end
       case 'bnorm'
         if ~opts.accumulate

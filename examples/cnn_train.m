@@ -32,6 +32,7 @@ opts.conserveMemory = false ;
 opts.backPropDepth = +inf ;
 opts.sync = false ;
 opts.prefetch = false ;
+opts.cudnn = true ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
 opts.errorFunction = 'multiclass' ;
@@ -290,7 +291,8 @@ for t=1:opts.batchSize:numel(subset)
                       'disableDropout', ~training, ...
                       'conserveMemory', opts.conserveMemory, ...
                       'backPropDepth', opts.backPropDepth, ...
-                      'sync', opts.sync) ;
+                      'sync', opts.sync, ...
+                      'cudnn', opts.cudnn) ;
 
     % accumulate training errors
     error = sum([error, [...
