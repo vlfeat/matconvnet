@@ -161,7 +161,7 @@ for wi=1:numel(fields)
           switch char(w)
             case 'name'
               if isfield(ly, 'name')
-                s=ly.name(max(1,end-6):end) ;
+                s=ly.name ;
               else
                 s='' ;
               end
@@ -233,6 +233,7 @@ for i=2:opts.maxNumColumns:size(table,2)
   switch opts.format
     case 'ascii', pascii(table(:,[1 sel])) ; fprintf('\n') ;
     case 'latex', platex(table(:,[1 sel])) ;
+    case 'csv',   pcsv(table(:,[1 sel])) ; fprintf('\n') ;
   end
 end
 
@@ -269,6 +270,20 @@ for i=1:size(table,1)
     fmt = sprintf('%%%ds|', sizes(j)) ;
     if isequal(s,'-'), s=repmat('-', 1, sizes(j)) ; end
     fprintf(fmt, s) ;
+  end
+  fprintf('\n') ;
+end
+
+% -------------------------------------------------------------------------
+function pcsv(table)
+% -------------------------------------------------------------------------
+sizes = max(cellfun(@(x) numel(x), table),[],1) + 2 ;
+for i=1:size(table,1)
+  if isequal(table{i,1},'-'), continue ; end
+  for j=1:size(table,2)
+    s = table{i,j} ;
+    fmt = sprintf('%%%ds,', sizes(j)) ;
+    fprintf(fmt, ['"' s '"']) ;
   end
   fprintf('\n') ;
 end
