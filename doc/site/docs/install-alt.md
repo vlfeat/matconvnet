@@ -24,6 +24,14 @@ For example:
 should work for a Mac with MATLAB R2014 installed in its default
 location. The other supported architecture is `glnxa64` (for Linux).
 
+> **Remark:** On the Mac, `vl_imreadjpeg` tool will use the native Mac OS X graphcis
+> library Core Graphics. On Linux, it uses instead LibJPEG.
+> The tool can be disabled by defining `ENABLE_IMREADJPEG=` as an empty
+> symbol. The options `IMAGELIB` option can be used to change the
+> image library used (e.g. to use LibJPEG on the Mac) and the
+> options `IMAGELIB_CFLAGS` and `IMAGELIB_LDFLAGS` to specify
+> custom compiler and linker options.
+
 ### Using verbose and debugging modes
 
 In order to compile in verbose mode, use the `VERB=yes` option. For example:
@@ -70,19 +78,6 @@ command line prompt, this may look like:
     > make ARCH=maci64 MATLABROOT=/Applications/MATLAB_R2014b.app \
            ENABLE_GPU=yes CUDAROOT=/Developer/NVIDIA/CUDA-6.5 CUDAMETHOD=nvcc \
            ENABLE_CUDNN=yes CUDNNROOT=local/
-
-### Compiling `vl_imreadjpeg`
-<a name='jpeg'></a>
-
-Recall that compling the `vl_imreadjpeg` command requries a copy of
-LibJPEG to be installed. Then, compiling looks like:
-
-    > make ENABLE_IMREADJPEG=yes \
-           LIBJPEG_INCLUDE=/opt/local/include \
-           LIBJPEG_LIB=/opt/local/lib
-
-This requires LibJPEG to be installed and available to the MEX
-compiler, as [explained earlier](install.md).
 
 
 ### Further examples

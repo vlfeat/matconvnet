@@ -105,7 +105,7 @@ vl::MexContext::initGpu()
  can happen using mexErrMsgTxt() or, implicitly, when an array
  creation function cannot complete, for example due to a memory error).
 
- Therefore the constructors make the allocated memory persistent. C++ 
+ Therefore the constructors make the allocated memory persistent. C++
  guarantees that the arrays are freeed upon error in the destructors.
 
  Note that, upon cerating an array, errors such as running out of
@@ -174,10 +174,10 @@ vl::MexTensor::~MexTensor()
 vl::Error
 vl::MexTensor::init(Device dev, TensorGeometry const & geom)
 {
-  mwSize dimensions [4] = {geom.getHeight(),
-                           geom.getWidth(),
-                           geom.getDepth(),
-                           geom.getSize()} ;
+  mwSize dimensions [4] = {(mwSize)geom.getHeight(),
+                           (mwSize)geom.getWidth(),
+                           (mwSize)geom.getDepth(),
+                           (mwSize)geom.getSize()} ;
   mwSize newMemorySize = geom.getNumElements() * sizeof(float) ;
   float * newMemory = NULL ;
   mxArray * newArray = NULL ;
@@ -230,10 +230,10 @@ vl::MexTensor::initWithZeros(vl::Device dev, TensorGeometry const & geom)
 
   clear() ;
 
-  mwSize dimensions [4] = {geom.getHeight(),
-                           geom.getWidth(),
-                           geom.getDepth(),
-                           geom.getSize()} ;
+  mwSize dimensions [4] = {(mwSize)geom.getHeight(),
+                           (mwSize)geom.getWidth(),
+                           (mwSize)geom.getDepth(),
+                           (mwSize)geom.getSize()} ;
   mwSize newMemorySize = geom.getNumElements() * sizeof(float) ;
   float * newMemory = NULL ;
   mxArray * newArray = NULL ;
@@ -302,7 +302,7 @@ vl::MexTensor::init(vl::Device dev, vl::TensorGeometry const & geom, float value
       fill<float>
       <<<divideUpwards(getNumElements(), VL_CUDA_NUM_THREADS),
         VL_CUDA_NUM_THREADS>>>
-        ((float*)getMemory(), getNumElements(), value) ;
+        ((float*)getMemory(), value, getNumElements()) ;
       cudaError_t error = cudaGetLastError() ;
       if (error != cudaSuccess) {
         clear() ;

@@ -9,15 +9,20 @@ site=doc/site/docs
 mfiles=\
 vl_argparse.m \
 vl_compilenn.m \
+vl_nnbnorm.m \
 vl_nnconv.m \
+vl_nnconvt.m \
 vl_nndropout.m \
 vl_nnloss.m \
 vl_nnnoffset.m \
 vl_nnnormalize.m \
+vl_nnpdist.m \
 vl_nnpool.m \
 vl_nnrelu.m \
+vl_nnsigmoid.m \
 vl_nnsoftmax.m \
 vl_nnsoftmaxloss.m \
+vl_nnspnorm.m \
 vl_rootnn.m \
 vl_setupnn.m \
 vl_simplenn.m \
@@ -36,10 +41,12 @@ doc-manual: doc/matconvnet-manual.pdf
 doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 	mkdir -p doc/.build
 	ln -sf ../references.bib doc/.build/references.bib
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
-	cd doc/.build ; $(BIBTEX) matconvnet-manual
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
-	$(PDFLATEX) -file-line-error -output-directory=doc/.build/ "$(<)"
+	cd "$(dir $(<))" ;\
+	$(PDFLATEX) -file-line-error -output-directory=../doc/.build/ "$(notdir $(<))" ;
+	cd doc/.build ; $(BIBTEX) matconvnet-manual || true ;
+	cd "$(dir $(<))" ;\
+	$(PDFLATEX) -file-line-error -output-directory=../doc/.build/ "$(notdir $(<))" ;\
+	$(PDFLATEX) -file-line-error -output-directory=../doc/.build/ "$(notdir $(<))" ;
 	cp -f doc/.build/matconvnet-manual.pdf doc/
 
 $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocparser.py

@@ -1,0 +1,229 @@
+% ------------------------------------------------------------------
+\chapter{Introduction to MatConvNet}\label{s:intro}
+% ------------------------------------------------------------------
+
+\vlnn is a simple MATLAB toolbox implementing Convolutional Neural Networks (CNN) for computer vision applications. This documents starts with a short overview of CNNs and how they are implemented in \vlnn. Section~\ref{s:blocks} lists all the computational building blocks implemented in \vlnn that can be combined to create CNNs and gives the technical details of each one. Finally, Section~\ref{s:wrappers} discusses more abstract CNN wrappers and example code and models.
+
+A \emph{Convolutional Neural Network} (CNN) can be viewed as a function $f$ mapping data $\bx$, for example an image, on an output vector $\by$. The function $f$ is a composition of a sequence (or a directed acyclic graph) of simpler functions $f_1,\dots,f_L$, also called \emph{computational blocks} in this document. Furthermore, these blocks are \emph{convolutional}, in the sense that they map an input image of feature map to an output feature map by applying a translation-invariant and local operator, e.g. a linear filter. The \vlnn toolbox contains implementation for the most commonly used computational blocks (described in Section~\ref{s:blocks}) which can be used either directly, or through simple wrappers. Thanks to the modular structure, it is a simple task to create and combine new blocks with the existing ones. %New blocks are also easy to create and combine with the existing ones.
+
+Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_L$. These are \emph{discriminatively learned from example data} such that the resulting function $f$ realizes an useful mapping. A typical example is image classification; in this case the output of the CNN is a vector $\by=f(\bx)\in\real^C$ containing the confidence that $\bx$ belong to any of $C$ possible classes. Given training data $(\bx^{(i)},\by^{(i)})$ (where $\by^{(i)}$ is the indicator vector of the class of $\bx^{(i)}$), the parameters are learned by solving
+\begin{equation}\label{e:objective}
+ \argmin_{\bw_1,\dots\bw_n}
+ \frac{1}{n}\sum_{i=1}^n
+ \ell\left(
+ f(\bx^{(i)};\bw_1,\dots,\bw_L),
+ \by^{(i)}
+ \right)
+\end{equation}
+where $\ell$ is a suitable \emph{loss function} (e.g. the hinge or log loss).
+
+The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundred-thousands or even millions of examples. Therefore efficiency is a paramount. Optimization often uses a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by moving towards the local minima in the direction of the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn can evaluate the derivatives of all the computational blocks. It also contains several examples of training small and large models using these capabilities and a default solver, although it is easy to write customized solvers on top of the library.
+
+While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore the computation speed is very important in practice. Larger models, in particular, may require the use of GPU to be trained in a reasonable time. \vlnn has integrated GPU support based on NVIDIA CUDA and MATLAB built-in CUDA capabilities.
+
+% ------------------------------------------------------------------
+\section{\vlnn at a glance}\label{s:vlnn}
+% ------------------------------------------------------------------
+
+\vlnn has a simple design philosophy. Rather than wrapping CNNs around complex layers of software, it exposes simple functions to compute CNN building blocks, such as linear convolution and ReLU operators. These building blocks are easy to combine into a complete CNNs and can be used to implement sophisticated learning algorithms. While several real-world examples of small and large CNN architectures and training routines are provided, it is always possible to go back to the basics and build your own, using the efficiency of MATLAB in prototyping. Often no C coding is required at all to try a new architectures. As such, \vlnn is an ideal playground for research in computer vision and CNNs.
+
+\vlnn contains the following elements:
+\begin{itemize}
+\item \emph{CNN computational blocks.} A set of optimized routines computing fundamental building blocks of a CNN. For example, a convolution block is implemented by \linebreak \verb!y=vl_nnconv(x,f,b)! where \verb!x! is an image, \verb!f! a filter bank, and \verb!b! a vector of biases (Section~\ref{s:convolution}). The derivatives are computed as
+\verb![dzdx,dzdf,dzdb] = vl_nnconv(x,f,b,dzdy)! where \verb!dzdy! is the derivative of the CNN output w.r.t \verb!y!~(Section~\ref{s:convolution}). Section~\ref{s:blocks} describes all the blocks in detail.
+\item \emph{CNN wrappers.} \vlnn provides a simple wrapper, suitably invoked by \verb!vl_simplenn!, that implements a CNN with a linear topology (a chain of blocks). This is good enough to run most of current state-of-the-art models for image classification. You are invited to look at the implementation of this function, as it is a great starting point to understand how to implement more complex CNNs.
+\item \emph{Example applications.} \vlnn provides several example of learning CNNs with stochastic gradient descent and CPU or GPU, on MNIST, CIFAR10, and ImageNet data.
+\item \emph{Pre-trained models.} \vlnn provides several state-of-the-art pre-trained CNN models that can be used off-the-shelf, either to classify images or to produce image encodings in the spirit of Caffe or DeCAF.
+\end{itemize}
+
+% ------------------------------------------------------------------
+\subsection{The structure and evaluation of CNNs}\label{s:forward}
+% ------------------------------------------------------------------
+
+CNNs are obtained by connecting one or more \emph{computational blocks}. Each block $\by = f(\bx,\bw)$ takes an image $\bx$ and a set of parameters $\bw$ as input and produces a new image $\by$ as output. An image is a real 4D array; the first two dimensions index spatial coordinates (image rows and columns respectively), the third dimension feature channels (there can be any number), and the last dimension image instances. A computational block $f$ is therefore represented as follows:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]
+\node (x) [data] {$\bx$};
+\node (f) [block,right of=x]{$f$};
+\node (y) [data, right of=f] {$\by$};
+\node (w) [data, below of=f] {$\bw$};
+\draw [->] (x.east) -- (f.west) {};
+\draw [->] (f.east) -- (y.west) {};
+\draw [->] (w.north) -- (f.south) {};
+\end{tikzpicture}
+\end{center}
+Formally, $\bx$ is a 4D tensor stacking $N$ 3D images
+\[
+   \bx \in \real^{H \times W \times D \times N}
+\]
+where $H$ and $W$ are the height and width of the images, $D$ its depth, and $N$ the number of images. In what follows, all operations are applied identically to each image in the stack $\bx$; hence for simplicity we will drop the last dimension in the discussion (equivalent to assuming $N=1$), but the ability to operate on image batches is very important for efficiency.
+
+In general, a CNN can be obtained by connecting blocks in a directed acyclic graph (DAG). In the simplest case, this graph reduces to a sequence of computational blocks $(f_1,f_2,\dots,f_L)$. Let $\bx_1,\bx_2,\dots,\bx_L$ be the output of each layer in the network, and let $\bx_0$ denote the network input. Each output $\bx_l$ depends on the previous output $\bx_{l-1}$ through a function $f_l$ with parameter $\bw_l$ as $\bx_l = f_l(\bx_{l-1};\bw_l)$; schematically:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]
+\node (x0)  [data] {$\bx_0$};
+\node (f1) [block,right of=x0]{$f_1$};
+\node (f2) [block,right of=f1,node distance=3cm]{$f_2$};
+\node (dots) [right of=f2]{...};
+\node (fL) [block,right of=dots]{$f_L$};
+\node (xL)  [data, right of=fL] {$\bx_L$};
+\node (w1) [data, below of=f1] {$\bw_1$};
+\node (w2) [data, below of=f2] {$\bw_2$};
+\node (wL) [data, below of=fL] {$\bw_L$};
+\draw [->] (x0.east) -- (f1.west) {};
+\draw [->] (f1.east) -- node {$\bx_2$} (f2.west);
+\draw [->] (f2.east) -- node {$\bx_3$} (dots.west) {};
+\draw [->] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
+\draw [->] (fL.east) -- (xL.west) {};
+\draw [->] (w1.north) -- (f1.south) {};
+\draw [->] (w2.north) -- (f2.south) {};
+\draw [->] (wL.north) -- (fL.south) {};
+\end{tikzpicture}
+\end{center}
+Given an input $\bx_0$, evaluating the network is a simple matter of evaluating all the intermediate stages in order to compute an overall function $\bx_L = f(\bx_0;\bw_1,\dots,\bw_L)$. 
+
+% ------------------------------------------------------------------
+\subsection{CNN derivatives}\label{s:backward}
+% ------------------------------------------------------------------
+
+In training a CNN, we are often interested in taking the derivative of a loss $\ell : f(\bx,\bw) \mapsto \real$ with respect to the parameters. This effectively amounts to extending the network with a \emph{scalar block} at the end:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]
+\node (x0)  [data] {$\bx_0$};
+\node (f1) [block,right of=x0]{$f_1$};
+\node (f2) [block,right of=f1,node distance=3cm]{$f_2$};
+\node (dots) [right of=f2]{...};
+\node (fL) [block,right of=dots]{$f_L$};
+\node (loss) [block,right of=fL,node distance=3cm]{$\ell$};
+\node (w1) [data, below of=f1] {$\bw_1$};
+\node (w2) [data, below of=f2] {$\bw_2$};
+\node (wL) [data, below of=fL] {$\bw_L$};
+\node (z) [data, right of=loss] {$z\in\real$};
+\draw [->] (x0.east) -- (f1.west) {};
+\draw [->] (f1.east) -- node {$\bx_2$} (f2.west);
+\draw [->] (f2.east) -- node {$\bx_3$} (dots.west) {};
+\draw [->] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
+\draw [->] (fL.east) -- node {$\bx_L$} (loss.west);
+\draw [->] (loss.east) -- (z) {};
+\draw [->] (w1.north) -- (f1.south) {};
+\draw [->] (w2.north) -- (f2.south) {};
+\draw [->] (wL.north) -- (fL.south) {};
+\end{tikzpicture}
+\end{center}
+The derivative of $\ell \circ f$ with respect to the parameters can be computed but starting from the end of the chain (or DAG) and working backwards using the chain rule, a process also known as back-propagation. For example the derivative w.r.t. $\bw_l$ is:
+\begin{equation}\label{e:chain-rule}
+ \frac{dz}{d(\vv\bw_l)^\top}
+ =
+ \frac{dz}{d(\vv\bx_{L})^\top}
+ \frac{d\vv\bx_{L}}{d(\vv\bx_{L-1})^\top}
+ \dots
+ \frac{d\vv\bx_{l+1}}{d(\vv\bx_{l})^\top}
+ \frac{d\vv\bx_{l}}{d(\vv\bw_{l})^\top}.
+\end{equation}
+Note that the derivatives are implicitly evaluated at the working point determined by the input $\bx_0$ during the evaluation of the network in the forward pass. The $\vv$ symbol is the vectorization operator, which simply reshape its tensor argument to a column vector. This notation for the derivatives is taken from~\cite{kinghorn96integrals} and is used throughout this document.
+
+Computing~\eqref{e:chain-rule} requires computing the derivative of each block $\bx_l = f_l(\bx_{l-1},\bw_l)$ with respect to its parameters $\bw_l$ and input $\bx_{l-1}$. Let us know focus on computing the derivatives for one computational block. We can look at the network as follows:
+\[
+    \underbrace{
+    \ell \circ f_{L}(\cdot,\bw_L)
+     \circ f_{L-1}(\cdot,\bw_{L-1})
+     \dots
+     \circ f_{l+1}(\cdot,\bw_{l+1})
+     }_{\displaystyle z(\cdot)}
+     \circ f_{l}(\bx_l,\bw_{l})
+     \circ \dots
+\]
+where $\circ$ denotes the composition of function. For simplicity, lump together the factors from $f_l+1$ to the loss $\ell$ into a single scalar function $z(\cdot)$ and drop the subscript $l$ from the first block. Hence, the problem is to compute the derivative of $(z \circ f)(\bx,\bw) \in \real$ with respect to the data $\bx$ and the parameters $\bw$. Graphically:
+\begin{center}
+\begin{tikzpicture}[auto, node distance=2cm]
+\node (x) [data] {$\bx$};
+\node (f) [block,right of=x ] {$f$};
+\node (bz)[block,right of=f ] {$z(\cdot)$};
+\node (z) [data, right of=bz] {$z$};
+\node (w) [data, below of=f ] {$\bw$};
+\draw [->] (x.east) -- (f.west) {};
+\draw [->] (f.east) -- node {$\by$}  (bz.west) {};
+\draw [->] (w.north) -- (f.south) {};
+\draw [->] (bz.east) -- (z.west) {};
+\end{tikzpicture}
+\end{center}
+The derivative of $z \circ f$ with respect to $\bx$ and $\bw$ are given by:
+\[
+\frac{dz}{d(\vv \bx)^\top}
+=
+\frac{dz}{d(\vv \by)^\top}
+\frac{d\vv f}{d(\vv \bx)^\top},
+\quad
+\frac{dz}{d(\vv \bw)^\top}
+=
+\frac{dz}{d(\vv \by)^\top}
+\frac{d\vv f}{d(\vv \bw)^\top},
+\]
+We note two facts. The first one is that, since $z$ is a scalar function, the derivatives have a number of elements equal to the number of parameters. So in particular $dz/d\vv \bx^\top$ can be reshaped into an array $dz/d\bx$ with the same shape of $\bx$, and the same applies to the `derivatives $dz/d\by$ and $dz/d\bw$. Beyond the notational convenience, this means that storage for the derivatives is not larger than the storage required for the model parameters and forward evaluation.
+
+The second fact is that computing $dz/d\bx$ and $dz/d\bw$ requires the derivative $dz/d\by$. The latter can be obtained by applying this calculation recursively to the next block in the chain.
+
+% ------------------------------------------------------------------
+\subsection{CNN modularity}\label{s:modularity}
+% ------------------------------------------------------------------
+
+Sections~\ref{s:forward} and~\ref{s:backward} suggests a modular programming interface for the implementation of CNN modules. Abstractly, we need two functionalities:
+\begin{itemize}
+\item \emph{Forward messages:} Evaluation of the output $\by=f(\bx,\bw)$ given input data $\bx$ and parameters $\bw$ (forward message).
+\item \emph{Backward messages:} Evaluation of the CNN derivative $dz/d\bx$ and $dz/d\bw$ with respect to the block input data $\bx$ and parameters $\bw$ given the block input data $\bx$ and paramters $\bw$ as well as the CNN derivative $dx/d\by$ with respect to the block output data $\by$.
+\end{itemize}
+
+% ------------------------------------------------------------------
+\subsection{Working with DAGs}\label{s:dag}
+% ------------------------------------------------------------------
+
+CNN can also be obtained from more complex composition of functions forming a DAG. There are $n+1$ variables $\bx_i$ and $n$ functions $f_i$ with corresponding arguments $\br_{ik}$:
+\begin{align*}
+\bx_0 &\\
+\bx_1 &= f_1(\br_{1,1},\dots,\br_{1,m_1}),\\
+\bx_2 &= f_2(\br_{2,1},\dots,\br_{2,m_2}),\\
+&\vdots\\
+\bx_n &= f_n(\br_{n,1},\dots,\br_{n,m_n})
+\end{align*}
+Variables are connected to arguments by relations
+\[
+     \br_{ik} = \bx_{\pi_{ik}}
+\]
+where $\pi_{ik}$ denotes the variable $\bx_{\pi_{ik}}$  that feeds argument $\br_{ik}$. Together with the implicit fact that each argument $\br_{ik}$ feeds into the  variable $\bx_i$ through function $f_i$, this defines a bipartite DAG representing the dependencies  between variables and argument. The DAG is bipartite. This DAG must be acyclic, hence assuring that, given the value of the input $\bx_0$, all other variables can be evaluated iteratively. Due to this property, without loss of generality we will assume that variables $\bx_0,\bx_1,\dots,\bx_n$ are sorted such that $\bx_i$ depends only on variables that come before in the order (i.e. one always has $\pi_{ik} < i$).
+
+Now assume that $\bx_n = z$ is a scalar network output (usually the learning loss). As before, we are interested in computing derivatives of this function with respect to the network variables. In order to do so, write the output of the DAG $z(\bx_i)$ as a function of the variable $\bx_i$; this has the following interpretation: the DAG is modified by removing function $f_i$ and making $\bx_i$ an input, setting $\bx_i$ to the specified value, setting all the other inputs to the working point at which the derivative should be computed, and evaluating the resulting DAG. Likewise, one can define functions $z(\br_{ij})$ for the arguments. The derivative with respect to $\bx_j$ can then be expressed as
+\[
+   \frac{dz}{d(\vv \bx_j)^\top}
+   =
+  \sum_{(i,k): \pi_{ik}=j}
+  \frac{dz}{d(\vv \bx_i)^\top}
+  \frac{d\vv \bx_i}{d(\vv \br_{ik})^\top}
+  \frac{d\vv \br_{ik}}{d(\vv \bx_j)^\top}
+   =
+   \sum_{(i,k): \pi_{ik}=j}
+   \frac{dz}{d(\vv \bx_i)^\top}
+   \frac{d\vv f_i}{d(\vv \br_{ik})^\top}.
+\]
+Note that these quantities can be computer recursively, backward from the output $z$. In this case, each variable node $\bx_i$ (corresponding to $f_i$) stores the derivative  $dz/d \bx_i$. When node $\bx_i$ is processed, the derivatives $d\vv f_i /d(\vv \br_{ik})^\top$ are computed for the $m_i$ arguments of the corresponding function $f_i$ pre-multiplied by the factor $dz/d \bx_i$ (available at that node) and then accumulated to the corresponding parent variables $\bx_j$'s derivatives $dz/d \bx_j$.
+
+% ------------------------------------------------------------------
+\section{About \vlnn}
+% ------------------------------------------------------------------
+
+\vlnn main features are:
+\begin{itemize}
+\item \emph{Flexibility.} Neural network layers are implemented in a straightforward manner, often directly in MATLAB code, so that they are easy to modify, extend, or integrate with new ones.
+\item \emph{Power.} The implementation can run the latest models such as Krizhevsky~\textit{et al.}~\cite{krizhevsky12imagenet}, including the DeCAF and Caffe variants, and variants from the Oxford Visual Geometry Group. Pre-learned features for different tasks can be easily downloaded.
+\item \emph{Efficiency.} The implementation is quite efficient, supporting both CPU and GPU computation (in the latest versions of MALTAB).
+\item \emph{Self contained.} The implementation is fully self-contained, requiring only MATLAB and a compatible C/C++ compiler to work (GPU code requires the freely-available CUDA DevKit). Several fully-functional image classification examples are included.\end{itemize}
+
+\paragraph{Relation to other CNN implementations.} There are many other open-source CNN implementations. \vlnn borrows its convolution algorithms from Caffe (and is in fact capable of running most of Caffe's models). Caffe is a \cpp framework using a custom CNN definition language based on Google Protocol Buffers. Both \vlnn and Caffe are predated by Cuda-Convnet~\cite{krizhevsky12imagenet}, a \cpp-based project that allows defining a CNN architectures using configuration files. While Caffe and Cuda-Convnet can be somewhat faster than \vlnn, the latter exposes individual CNN building blocks as MATLAB functions, as well as integrating with the native MATLAB GPU support, which makes it very convenient for fast prototyping. The DeepLearningToolbox~\cite{deepltbx12} is a MATLAB toolbox implementing, among others, CNNs, but it does not seem to have been tested on large scale problems. While \vlnn specialises on CNNs and computer vision applications, there are several general-purpose machine learning frameworks which include CNN support, but none of them interfaces natively with MATLAB. For example, the Torch7 toolbox~\cite{collobert2011torch7} uses Lua and Theano~\cite{bergstra2010} uses Python.
+
+% ------------------------------------------------------------------
+\subsection{Acknowledgments}\label{s:ack}
+% ------------------------------------------------------------------
+
+The implementation of several CNN computations in this library are inspired by the Caffe library~\cite{jia13caffe} (however, Caffe is \emph{not} a dependency). Several of the example networks have been trained by Karen Simonyan as part of~\cite{chatfield14return}.
+
+We kindly thank NVIDIA for suppling GPUs used in the creation of this software.
+

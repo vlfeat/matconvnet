@@ -5,6 +5,24 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+> **New:** 1.0-beta12 adds convolution transpose aka deconvolution
+> (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
+>
+> **New:** 1.0-beta11 adds the following blocks: batch normalization
+> (see [`vl_nnbnorm`](mfiles/vl_nnbnorm)), spatial normalization
+> ([`vl_nnspnorm`](mfiles/vl_nnspnorm), p-distance
+> ([`vl_nnpdist`](mfiles/vl_nnpdist)), sigmoid
+> ([`vl_nnsigmoid`](mfiles/vl_nnsigmoid)). Extends the example trainig
+> code `cnn_train` to support multiple GPUs. Improves the ImageNet and
+> CIFAR examples, including batch normalization for ImageNet and the
+> Network in Network model for CIFAR. See also
+> [Changes](about/#changes) for compatibility considerations. A faster
+> and more memory efficient version of batch normalization will arrive
+> soon.
+>
+> **New:** 1.0-beta10 establishes feature parity between platforms,
+> removes some dependencies on third-party image libraries.
+>
 > **New:** We have added [cuDNN](install.md#cudnn) support in
 > 1.0-beta9. This may have significant benefit in speed and memory
 > consupmtion.
@@ -14,7 +32,7 @@ example CNNs are included to classify and encode images.
 > practical</a> on CNNs.
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta9](download/matconvnet-1.0-beta9.tar.gz)
+    - Tarball for [version 1.0-beta12](download/matconvnet-1.0-beta12.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**

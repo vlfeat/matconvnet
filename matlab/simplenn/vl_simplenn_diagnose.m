@@ -31,13 +31,13 @@ dbmx = fmu ;
 
 for i=1:numel(net.layers)
   ly = net.layers{i} ;
-  if strcmp(ly.type, 'conv') && numel(ly.filters) > 0
+  if ismember(ly.type, {'conv', 'bnorm'}) && numel(ly.filters) > 0
     x = gather(ly.filters) ;
     fmu(i) = mean(x(:)) ;
     fmi(i) = min(x(:)) ;
     fmx(i) = max(x(:)) ;
   end
-  if strcmp(ly.type, 'conv') && numel(ly.biases) > 0
+  if ismember(ly.type, {'conv', 'bnorm'}) && numel(ly.biases) > 0
     x = gather(ly.biases) ;
     bmu(i) = mean(x(:)) ;
     bmi(i) = min(x(:)) ;
@@ -56,13 +56,13 @@ for i=1:numel(net.layers)
       dxmi(i) = min(x(:)) ;
       dxmx(i) = max(x(:)) ;
     end
-    if strcmp(ly.type, 'conv') && numel(res(i).dzdw{1}) > 0
+    if ismember(ly.type, {'conv', 'bnorm'}) && numel(res(i).dzdw{1}) > 0
       x = gather(res(i).dzdw{1}) ;
       dfmu(i) = mean(x(:)) ;
       dfmi(i) = min(x(:)) ;
       dfmx(i) = max(x(:)) ;
     end
-    if strcmp(ly.type, 'conv') && numel(res(i).dzdw{2}) > 0
+    if ismember(ly.type, {'conv', 'bnorm'}) && numel(res(i).dzdw{2}) > 0
       x = gather(res(i).dzdw{2}) ;
       dbmu(i) = mean(x(:)) ;
       dbmi(i) = min(x(:)) ;

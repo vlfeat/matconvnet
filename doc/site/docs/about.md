@@ -20,20 +20,40 @@ This library may be merged in the future with
 style, so if you are familiar with VLFeat, you should be right at home
 here.
 
+<a name='changes'></a>
 # Changes
 
-<a name='changes'></a>
+-   1.0-beta12 (May 2015). Added `vl_nnconvt` (convolution transpose or
+    deconvolition).
+-   1.0-beta11 (April 2015) Added batch normalization, spatial
+    normalization, sigmoid, p-distance.  Extended the example training
+    code to support multiple GPUs. Significantly improved the tuning
+    of the ImageNet and CIFAR examples. Added the CIFAR Network in
+    Network model.
 
-- 1.0-beta9 (February 2015) CuDNN support. Major rewrite of the C/CUDA core.
-- 1.0-beta8 (December 2014) New website. Experimental Windows support.
-- 1.0-beta7 (September 2014) Adds VGG verydeep models.
-- 1.0-beta6 (September 2014) Performance improvements.
-- 1.0-beta5 (September 2014) Bugfixes, adds more documentation,
-  improves ImageNet example.
-- 1.0-beta4 (August 2014) Further cleanup.
-- 1.0-beta3 (August 2014) Cleanup.
-- 1.0-beta2 (July 2014) Adds a set of standard models.
-- 1.0-beta1 (June 2014) First public release.
+    This version changes slightly the structure of `simplenn`. In
+    particular, the `filters` and `biases` fields in certain layers
+    have been replaced by a `weights` cell array containing both
+    tensors, simiplifying a significant amount of code. All examples
+    and downloadable models have been updated to reflact this
+    change. Models using the old structure format still work but are
+    deprecated.
+
+    The `cnn_train` training code example has been rewritten to
+    support multiple GPUs.  The inteface is nearly the same, but the
+    `useGpu` option has been replaced by a `gpus` list of GPUs to use.
+
+-   1.0-beta10 (March 2015) vl_imreadjpeg works under Windows as well.
+-   1.0-beta9 (February 2015) CuDNN support. Major rewrite of the C/CUDA core.
+-   1.0-beta8 (December 2014) New website. Experimental Windows support.
+-   1.0-beta7 (September 2014) Adds VGG verydeep models.
+-   1.0-beta6 (September 2014) Performance improvements.
+-   1.0-beta5 (September 2014) Bugfixes, adds more documentation,
+    improves ImageNet example.
+-   1.0-beta4 (August 2014) Further cleanup.
+-   1.0-beta3 (August 2014) Cleanup.
+-   1.0-beta2 (July 2014) Adds a set of standard models.
+-   1.0-beta1 (June 2014) First public release.
 
 # Copyright
 

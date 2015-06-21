@@ -1,0 +1,118 @@
+% ------------------------------------------------------------------
+\chapter{Geometry}\label{s:geometry}
+% ------------------------------------------------------------------
+
+This chapter looks at the geometry of the CNN input-output mapping.
+
+% ------------------------------------------------------------------
+\section{Receptive fields and transformations}\label{s:receptive}
+% ------------------------------------------------------------------
+
+Very often it is interesting to map a convolutional operator back to image space. Due to various downsampling and padding operations, this is not entirely trivial and analysed in this section. Considering a 1D example will be enough; hence, consider an input signal $x_i$, a filter $f_{i'}$ and an output signal $y_{i''}$, where
+\[
+   1 - P_w^- \leq i \leq W + P_w^+,  \qquad 1 \leq i' \leq W'.
+\]
+where $P_w^-,P_w^+ \geq 0$ is the amount of padding applied to the input signal to the left and right respectively. The output $y_i$ is obtained by applying a filter of size $W'$ in the following range
+\[
+   - P_w^- + S (i'' - 1) + [1, W'] = [1 - P_w^- + S(i'' - 1), - P_w^- + S(i''-1) + W']
+\]
+where $S$ is the subsampling factor. For $i'' = 1$, the leftmost sample of this window falls at the leftmost sample of the padded input signal. The rightmost sample $W'' \geq i''$ of the output signal is obtained by guaranteeing that the filter window stays within the padded input signal:
+\[
+- P_w^- + S(i''-1) + W' \leq W + P_w^+
+\qquad\Rightarrow\qquad
+i'' \leq \frac{W - W' + P_w^- + P_w^+}{S} + 1
+\]
+Since $i''$ is an integer quantity, the maximum value is:
+\begin{equation}\label{e:width}
+W'' = 
+\left\lfloor \frac{W - W' + P_w^- + P_w^+}{S} \right\rfloor
++ 1.
+\end{equation}
+Note that $W''$ is smaller than 1 if $W' > W + P_w^- + P_w^+$; in this case the filter $f_{i'}$ is wider than the padded input signal $x_i$ and the domain of $y_{i''}$ becomes empty (this generates an error in most MatConvNet functions).
+
+Now consider a sequence of convolutional operators. One starts from an input signal $x_0$ of width $W_0$ and applies a sequence of  operators of parameters
+$
+(P_{w1}^-,  P_{w1}^+, S_1, W'_1), 
+$
+$
+(P_{w2}^-,  P_{w2}^+, S_2, W'_2), 
+$
+$\dots,
+$
+$
+(P_{wL}^-,  P_{wL},^+ S_L, W'_L)
+$
+to obtain signals $x_1,x_2,\dots,x_L$ of width $W_1,W_2,\dots,W_L$ respectively. First, note that the widths of these signals are obtained from $W_0$ and the operator parameters by a recursive application of~\eqref{e:width}. Due to the flooring operation, unfortunately it does not seem possible to simplify significantly the resulting expression. However, disregarding this operation one obtains the approximate expression
+\[
+W_l \approx
+\frac{W_0}{\prod_{p=1}^l S_q}
+-
+\sum_{p=1}^l
+\frac
+{W'_p - P_{wp}^- - P_{wp}^+  - S_{p}}
+{\prod_{q=p}^l S_q}.
+\]
+This expression is exact when $S_1 = S_2 =\dots = S_l =1$:
+\[
+W_l = W_0 - \sum_{p=1}^l (W'_p - P_{wp}^- - P_{wp}^+ - 1).
+\]
+Note in particular that without padding and filters $W_p' >1$ the widths decrease with depth. 
+
+
+Next, we are interested in computing the samples $x_{0,i_0}$ of the input signal that affect a particular sample $x_{L,i_L}$ at the end of the chain (this we call the \emph{receptive field} of the operator). Suppose that at level $l$ we have determined that samples $i_l \in [I_l^-(i_L), I_l^+(i_L)]$ affect $x_{L,i_L}$ and compute the samples at the level below. These are given by the union of filter applications:
+\[
+ \cup_{I_l^-(i_L) \leq i_l \leq I_l^+(i_L)} \left(-P_{wl}^- + S_l (i_l-1)  + [1, W_l'] \right).
+\]
+Hence we find the recurrences:
+\begin{align*}
+ I_{l-1}^-(i_L) &= - P_{wl}^- + S_l (I_l^-(i_L)-1) + 1,
+ \\
+ I_{l-1}^+(i_L) &= - P_{wl}^- + S_l (I_l^+(i_L)-1) + W_l'.
+\end{align*}
+Given the base case $I_L^-(i_L) = I_L^+(i_L) = i_L$,  one gets:
+\begin{align*}
+I_{l}^-(i_L)
+&=
+1 
++ \left(\prod_{p=l+1}^L S_p\right) (i_L - 1)
+- \sum_{p =l+1}^L  \left(\prod_{q=l+1}^{p-1} S_q\right)P_{wp}^-,
+\\
+I_{l}^-(i_L)
+&=
+1 
++ \left(\prod_{p=l+1}^L S_p\right) (i_L - 1)
++ \sum_{p = l+1}^L  \left(\prod_{q=l+1}^{p-1} S_q\right)(W_p' - 1 - P_{wp}^-).
+\end{align*}
+We can now compute several quantities of interest. First, the receptive field width on the image is:
+\[
+ \Delta 
+ = I_0^+(i_L) - I_0^-(i_L) + 1
+ = 1+ \sum_{p = 1}^L  \left(\prod_{q=1}^{p-1} S_q\right)(W_p' - 1).
+\]
+Second, the leftmost sample of the input signal $x_{0,i_0}$ affecting output sample $x_{l,i_L}$ is
+\[
+i_0(i_L)  =
+1 
++ \left(\prod_{p=1}^L S_p\right) (i_L - 1)
+- \sum_{p =1}^L  \left(\prod_{q=1}^{p-1} S_q\right)P_{wp}^-
+\]
+Note that the effect of padding at different layers accumulates, resulting in an overall padding potentially larger than the padding $P_{w1}^-$ specified by the first operator (i.e. $i_0(1) \leq - P_{w1}^-$).
+
+Finally, it is interesting to reparametrise these coordinates as if the discrete signal were continuous and if (as it is usually the case) all the convolutional operators are ``centred''. For example, the operators could be filters with an odd size $W_l'$ equal to the delta function (e.g. for $W_l'=5$ then $f_l = (0,0,1,0,0)$). Let $u_L = i_L$ be the ``continuous'' version of index $i_L$, where each discrete sample corresponds, as per MATLAB's convention, to a tile of extent $u_L \in [-1/2,1/2] + i_L$ (hence $u_L$ is the centre coordinate of a sample). As before, $x_L(u_L)$ is obtained by applying an operator to the input signal $x_0$; the centre of the support of this operator falls at coordinate:
+\[
+  u_0(u_L) = \alpha\, (u_L - 1) + \beta = i_0(u_L) + \frac{\Delta-1}{2} = \alpha\, (u_L - 1) + \beta.
+\]
+Hence
+\[
+\alpha = \prod_{p=1}^L S_p,
+\qquad
+\beta
+ = 
+1
++ 
+\sum_{p = 1}^L  \left(\prod_{q=1}^{p-1} S_q\right)
+\left(
+\frac{W_p' - 1}{2}  - P_{wp}^-
+\right).
+\]
+Note in particular that the offset is zero if $S_1 =\dots=S_L=1$ and $P_{wp}^- = (W_p'-1)/2$ as in this case the padding is just enough such that the leftmost application of each convolutional operator has the centre that falls on the first sample of the corresponding input signal.

@@ -38,7 +38,7 @@ if numel(c) == sz(4)
   c = repmat(c, [sz(1) sz(2)]) ;
 else
   % one label per spatial location
-  sz_ = size(c) ;
+  sz_ = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
   assert(isequal(sz_, [sz(1) sz(2) 1 sz(4)])) ;
 end
 

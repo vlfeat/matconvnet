@@ -4,7 +4,9 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2015 Andrea Vedaldi.
+
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -34,6 +36,7 @@ enum {
   opt_no_der_biases,
   opt_cudnn,
   opt_no_cudnn,
+  opt_transpose
 } ;
 
 /* options */
@@ -159,7 +162,7 @@ void mexFunction(int nout, mxArray *out[],
             padRight = (int)mxGetPr(optarg)[3] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("PAD has neither one nor four elements.") ;
         }
         break ;
 
@@ -389,8 +392,8 @@ void mexFunction(int nout, mxArray *out[],
   /* regular case */
   if (!backMode) {
     error = vl::nnconv_forward(context,
-                               output,
-                               data,
+                               output, 0,
+                               data, 1,
                                filters,
                                biases,
                                strideY, strideX,
@@ -417,8 +420,8 @@ done:
   }
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERBIASES] = (computeDerBiases & hasBiases) ? derBiases.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
+    out[OUT_DERBIASES] = (computeDerBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;
   }

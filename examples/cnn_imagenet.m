@@ -1,23 +1,37 @@
 function cnn_imagenet(varargin)
 % CNN_IMAGENET   Demonstrates training a CNN on ImageNet
+%   The demo uses a model similar to AlexNet or the Caffe reference
+%   model. It can train it in the dropout and batch normalization
+%   variants using the 'modelType' option.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.dataDir = fullfile('data','imagenet12') ;
-opts.expDir = fullfile('data','imagenet12-baseline') ;
+opts.dataDir = fullfile('data','ILSVRC2012') ;
+opts.modelType = 'dropout' ; % bnorm or dropout
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
+opts.expDir = fullfile('data', sprintf('imagenet12-%s', opts.modelType)) ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.numFetchThreads = 12 ;
 opts.lite = false ;
-opts.numFetchThreads = 0 ;
+opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train.batchSize = 256 ;
-opts.train.numEpochs = 65 ;
+opts.train.numSubBatches = 1 ;
 opts.train.continue = true ;
-opts.train.useGpu = false ;
-opts.train.prefetch = false ;
-opts.train.learningRate = [0.01*ones(1, 25) 0.001*ones(1, 25) 0.0001*ones(1,15)] ;
+opts.train.gpus = [] ;
+opts.train.prefetch = true ;
+opts.train.sync = false ;
 opts.train.expDir = opts.expDir ;
+switch opts.modelType
+  case 'dropout', opts.train.learningRate = logspace(-2, -4, 60) ;
+  case 'bnorm',   opts.train.learningRate = logspace(-1, -4, 20) ;
+  otherwise, error('Unknown model type %s', opts.modelType) ;
+end
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.train.numEpochs = numel(opts.train.learningRate) ;
 opts = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
@@ -36,189 +50,75 @@ end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-net = initializeNetwork(opts) ;
-
-% compute the average image
-averageImagePath = fullfile(opts.expDir, 'average.mat') ;
-if exist(averageImagePath)
-  load(averageImagePath, 'averageImage') ;
-else
-  train = find(imdb.images.set == 1) ;
-  bs = 256 ;
-  fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
-  for t=1:bs:numel(train)
-    batch_time = tic ;
-    batch = train(t:min(t+bs-1, numel(train))) ;
-    fprintf('computing average image: processing batch starting with image %d ...', batch(1)) ;
-    temp = fn(imdb, batch) ;
-    im{t} = mean(temp, 4) ;
-    batch_time = toc(batch_time) ;
-    fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
-  end
-  averageImage = mean(cat(4, im{:}),4) ;
-  save(averageImagePath, 'averageImage') ;
+switch opts.modelType
+  case 'dropout', net = cnn_imagenet_init() ;
+  case 'bnorm',   net = cnn_imagenet_init_bnorm() ;
 end
 
-net.normalization.averageImage = averageImage ;
-clear averageImage im temp ;
+bopts = net.normalization ;
+bopts.numThreads = opts.numFetchThreads ;
+
+% compute image statistics (mean, RGB covariances etc)
+imageStatsPath = fullfile(opts.expDir, 'imageStats.mat') ;
+if exist(imageStatsPath)
+  load(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
+else
+  [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, bopts)
+  save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
+end
+
+% One can use the average RGB value, or use a different average for
+% each pixel
+%net.normalization.averageImage = averageImage ;
+net.normalization.averageImage = rgbMean ;
 
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
 
-fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
+[v,d] = eig(rgbCovariance) ;
+bopts.transformation = 'stretch' ;
+bopts.averageImage = rgbMean ;
+bopts.rgbVariance = 0.1*sqrt(d)*v' ;
+fn = getBatchWrapper(bopts) ;
 
 [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchWrapper(opts, numThreads)
+function fn = getBatchWrapper(opts)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatch(imdb,batch,opts,numThreads) ;
+fn = @(imdb,batch) getBatch(imdb,batch,opts) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getBatch(imdb, batch, opts, numThreads)
+function [im,labels] = getBatch(imdb, batch, opts)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
-                            'numThreads', numThreads, ...
-                            'prefetch', nargout == 0, ...
-                            'augmentation', 'f25') ;
+                            'prefetch', nargout == 0) ;
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
-function net = initializeNetwork(opt)
+function [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, opts)
 % -------------------------------------------------------------------------
-
-scal = 1 ;
-init_bias = 0.1;
-
-net.layers = {} ;
-
-% Block 1
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(11, 11, 3, 96, 'single'), ...
-                           'biases', zeros(1, 96, 'single'), ...
-                           'stride', 4, ...
-                           'pad', 0, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-net.layers{end+1} = struct('type', 'pool', ...
-                           'method', 'max', ...
-                           'pool', [3 3], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-net.layers{end+1} = struct('type', 'normalize', ...
-                           'param', [5 1 0.0001/5 0.75]) ;
-
-% Block 2
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(5, 5, 48, 256, 'single'), ...
-                           'biases', init_bias*ones(1, 256, 'single'), ...
-                           'stride', 1, ...
-                           'pad', 2, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-net.layers{end+1} = struct('type', 'pool', ...
-                           'method', 'max', ...
-                           'pool', [3 3], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-net.layers{end+1} = struct('type', 'normalize', ...
-                           'param', [5 1 0.0001/5 0.75]) ;
-
-% Block 3
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(3,3,256,384,'single'), ...
-                           'biases', init_bias*ones(1,384,'single'), ...
-                           'stride', 1, ...
-                           'pad', 1, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-
-% Block 4
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(3,3,192,384,'single'), ...
-                           'biases', init_bias*ones(1,384,'single'), ...
-                           'stride', 1, ...
-                           'pad', 1, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-
-% Block 5
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(3,3,192,256,'single'), ...
-                           'biases', init_bias*ones(1,256,'single'), ...
-                           'stride', 1, ...
-                           'pad', 1, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-net.layers{end+1} = struct('type', 'pool', ...
-                           'method', 'max', ...
-                           'pool', [3 3], ...
-                           'stride', 2, ...
-                           'pad', 0) ;
-
-% Block 6
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(6,6,256,4096,'single'),...
-                           'biases', init_bias*ones(1,4096,'single'), ...
-                           'stride', 1, ...
-                           'pad', 0, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-net.layers{end+1} = struct('type', 'dropout', ...
-                           'rate', 0.5) ;
-
-% Block 7
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(1,1,4096,4096,'single'),...
-                           'biases', init_bias*ones(1,4096,'single'), ...
-                           'stride', 1, ...
-                           'pad', 0, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-net.layers{end+1} = struct('type', 'relu') ;
-net.layers{end+1} = struct('type', 'dropout', ...
-                           'rate', 0.5) ;
-
-% Block 8
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.01/scal * randn(1,1,4096,1000,'single'), ...
-                           'biases', zeros(1, 1000, 'single'), ...
-                           'stride', 1, ...
-                           'pad', 0, ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'filtersWeightDecay', 1, ...
-                           'biasesWeightDecay', 0) ;
-
-% Block 9
-net.layers{end+1} = struct('type', 'softmaxloss') ;
-
-% Other details
-net.normalization.imageSize = [227, 227, 3] ;
-net.normalization.interpolation = 'bicubic' ;
-net.normalization.border = 256 - net.normalization.imageSize(1:2) ;
-net.normalization.averageImage = [] ;
-net.normalization.keepAspect = true ;
-
+train = find(imdb.images.set == 1) ;
+train = train(1: 101: end);
+bs = 256 ;
+fn = getBatchWrapper(opts) ;
+for t=1:bs:numel(train)
+  batch_time = tic ;
+  batch = train(t:min(t+bs-1, numel(train))) ;
+  fprintf('collecting image stats: batch starting with image %d ...', batch(1)) ;
+  temp = fn(imdb, batch) ;
+  z = reshape(permute(temp,[3 1 2 4]),3,[]) ;
+  n = size(z,2) ;
+  avg{t} = mean(temp, 4) ;
+  rgbm1{t} = sum(z,2)/n ;
+  rgbm2{t} = z*z'/n ;
+  batch_time = toc(batch_time) ;
+  fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
+end
+averageImage = mean(cat(4,avg{:}),4) ;
+rgbm1 = mean(cat(2,rgbm1{:}),2) ;
+rgbm2 = mean(cat(3,rgbm2{:}),3) ;
+rgbMean = rgbm1 ;
+rgbCovariance = rgbm2 - rgbm1*rgbm1' ;
