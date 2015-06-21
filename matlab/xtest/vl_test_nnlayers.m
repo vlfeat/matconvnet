@@ -552,5 +552,28 @@ for l = tests
           end
         end
       end
+      
+      disp('testing vl_nnconvt with 1x1 image') ;
+      m = 3 ;
+      n = 4 ;
+      k = 3 ;
+      for up=1:2
+        for fsx = (1:2)*up
+          for crop = 0:fsx-1
+            fsy = fsx * 3 ;
+            x = grandn(1,1,m,n,'single') ;
+            f = grandn(fsy,fsx,k,m,'single') ;
+            b = grandn(1,k,'single') ;
+            croph = floor(crop/2) ;
+            opts = {'crop', [croph, crop-croph, croph, crop-croph], 'upsample', [up up]} ;
+            y = vl_nnconvt(x,f,b,'verbose',opts{:}) ;
+            dzdy = grandn(size(y),'single') ;
+            [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,'verbose',opts{:}) ;
+            vl_testder(@(x) vl_nnconvt(x,f,b,opts{:}), x, dzdy, dzdx, range * 1e-2) ;
+            vl_testder(@(f) vl_nnconvt(x,f,b,opts{:}), f, dzdy, dzdf, range * 1e-2) ;
+            vl_testder(@(b) vl_nnconvt(x,f,b,opts{:}), b, dzdy, dzdb, range * 1e-1) ;
+          end
+        end
+      end
   end
 end

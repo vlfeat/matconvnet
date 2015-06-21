@@ -83,7 +83,7 @@ be the input tensor, filters, and output tensor. Imagine operating in the revers
 Convolution transpose is mainly useful in two settings. The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
 
 Convolution transpose can be expressed in closed form in the following rather unwieldy expression (derived in Section~\ref{s:impl-convolution-transpose}):
-\begin{multline*}
+\begin{multline}\label{e:convt}
 y_{i''j''d''} = 
  \sum_{d'=1}^{D}
  \sum_{i'=0}^{q(H',S_h)}
@@ -100,7 +100,7 @@ x_{
 1 - j' + q(j''+P_w^-,S_w),\ %
 d'
 }
-\end{multline*}
+\end{multline}
 where
 \[
 m(k,S) = (k - 1) \bmod S,
@@ -111,9 +111,9 @@ $(S_h,S_w)$ are the vertical and horizontal \emph{input upsampling factors},  $(
 \[
   H'' = S_h (H - 1) + H' -P^-_h - P^+_h.
 \]
-The same is true for the width.
+A similar formula holds true for the width.
 
-To gain some intuition on this expression, consider only the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where $S_h$ divides $i''-1$; this sample is computed as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ in reverse order. The weights come from the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output is a weighted combination of the same elements of the input $x$ as for $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
+To gain some intuition on this expression, consider only the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where the index $i''$ is chose such that $S_h$ divides $i''-1$; according to~\eqref{e:convt}, this sample is obtained as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ (note that the order is reversed). The weights are the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ subsampled with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output sampled is obtained as a weighted combination of the same elements of the input $x$ that were used to compute $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
 
 Note also that filter $k$ is stored as a slice $\bff_{:,:,k,:}$ of the 4D tensor $\bff$.
 

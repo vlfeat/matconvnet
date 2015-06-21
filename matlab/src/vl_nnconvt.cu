@@ -240,10 +240,6 @@ void mexFunction(int nout, mxArray *out[],
   if (filtersGeom.getHeight() == 0 || filtersGeom.getWidth() == 0 || filtersGeom.getDepth() == 0) {
     mexErrMsgTxt("A dimension of FILTERS is void.") ;
   }
-  if (data.getHeight() + (cropTop+cropBottom) < filters.getHeight() ||
-      data.getWidth() + (cropLeft+cropRight) < filters.getWidth()) {
-    mexErrMsgTxt("FILTERS are larger than the outoput (including cropding).") ;
-  }
 
   /* grouped filters */
   if (numFilterGroups < 1) {
@@ -261,6 +257,10 @@ void mexFunction(int nout, mxArray *out[],
                                 (data.getWidth()-1)*upsampleX  - (cropLeft+cropRight) + filtersGeom.getWidth(),
                                 filtersGeom.getDepth() * numFilterGroups,
                                 data.getSize()) ;
+
+  if (outputGeom.getHeight() < 1 || outputGeom.getWidth() < 1) {
+    mexErrMsgTxt("The output array is empty due to CROP being too large.") ;
+  }
 
   if (backMode && (derOutput != outputGeom)) {
     mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and FILTERS.") ;
