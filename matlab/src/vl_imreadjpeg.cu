@@ -220,7 +220,6 @@ void mexFunction(int nout, mxArray *out[],
   create_readers(requestedNumThreads, verbosity) ;
 
   if (verbosity) {
-    int num = 0 ;
     mexPrintf("vl_imreadjpeg: numThreads = %d, prefetch = %d, preallocate = %d\n",
               readers.size(), prefetch, preallocate) ;
   }
