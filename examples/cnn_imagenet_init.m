@@ -4,6 +4,7 @@ function net = cnn_imagenet_init(varargin)
 opts.scale = 1 ;
 opts.initBias = 0.1 ;
 opts.weightDecay = 1 ;
+opts.weightInitMethod = 'gaussian';
 opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts = vl_argparse(opts, varargin) ;
@@ -49,8 +50,7 @@ else
   name = 'conv' ;
 end
 net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ...
-                           'weights', {{0.01/opts.scale * randn(h, w, in, out, 'single'), ...
-                    zeros(out, 1, 'single')}}, ...
+                           'weights', {{init_weight(opts, h, w, in, out, 'single'), zeros(out, 1, 'single')}}, ...
                            'stride', stride, ...
                            'pad', pad, ...
                            'learningRate', [1 2], ...
@@ -63,6 +63,25 @@ if opts.batchNormalization
 end
 net.layers{end+1} = struct('type', 'relu', 'name', sprintf('relu%s',id)) ;
 
+% -------------------------------------------------------------------------
+function weights = init_weight(opts, h, w, in, out, type)
+% -------------------------------------------------------------------------
+% See K. He, X. Zhang, S. Ren, and J. Sun. Delving deep into
+% rectifiers: Surpassing human-level performance on imagenet
+% classification. CoRR, (arXiv:1502.01852v1), 2015.
+
+switch lower(opts.initMethod)
+  case 'gaussian'
+    weights = 0.01/opts.scale * randn(h, w, in, out, type) ;
+  case 'xavier'
+    sc = sqrt(3/(h*w*in)) ;
+    weights = (rand(h, w, in, out, type)*2 - 1)*sc ;
+  case 'xavierimproved'
+    sc = sqrt(6/(h*w*out))
+    weights = randn(h, w, in, out, type)*sc ;
+  otherwise
+    error('Uknown weight initialization method''%s''', opts.initMethod) ;
+end
 
 % --------------------------------------------------------------------
 function net = add_norm(net, opts, id)
@@ -231,7 +250,6 @@ net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
-
 
 % --------------------------------------------------------------------
 function net = vgg_vd(net, opts)
