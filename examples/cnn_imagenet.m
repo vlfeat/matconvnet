@@ -1,17 +1,19 @@
 function cnn_imagenet(varargin)
 % CNN_IMAGENET   Demonstrates training a CNN on ImageNet
-%   The demo uses a model similar to AlexNet or the Caffe reference
-%   model. It can train it in the dropout and batch normalization
-%   variants using the 'modelType' option.
+%   The demo can train the AlexNet, VGG-F, VGG-S, VGG-M, VGG-VD-16,
+%   and VGG-VD-19 architectures on ImageNet data.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.dataDir = fullfile('data','ILSVRC2012') ;
-opts.modelType = 'dropout' ; % bnorm or dropout
+opts.modelType = 'alexnet' ;
+opts.batchNormalization = false ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.expDir = fullfile('data', sprintf('imagenet12-%s', opts.modelType)) ;
+sfx = opts.modelType ;
+if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
+opts.expDir = fullfile('data', sprintf('imagenet12-%s', sfx)) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;
@@ -25,10 +27,10 @@ opts.train.prefetch = true ;
 opts.train.sync = false ;
 opts.train.cudnn = true ;
 opts.train.expDir = opts.expDir ;
-switch opts.modelType
-  case 'dropout', opts.train.learningRate = logspace(-2, -4, 60) ;
-  case 'bnorm',   opts.train.learningRate = logspace(-1, -4, 20) ;
-  otherwise, error('Unknown model type %s', opts.modelType) ;
+if opts.batchNormalization
+  opts.train.learningRate = logspace(-2, -4, 60) ;
+else
+  opts.train.learningRate = logspace(-1, -4, 20) ;
 end
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
@@ -51,11 +53,8 @@ end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
-switch opts.modelType
-  case 'dropout', net = cnn_imagenet_init() ;
-  case 'bnorm',   net = cnn_imagenet_init_bnorm() ;
-end
-
+net = cnn_imagenet_init('model', opts.modelType, ...
+                        'batchNormalization', opts.batchNormalization) ;
 bopts = net.normalization ;
 bopts.numThreads = opts.numFetchThreads ;
 
@@ -64,7 +63,7 @@ imageStatsPath = fullfile(opts.expDir, 'imageStats.mat') ;
 if exist(imageStatsPath)
   load(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 else
-  [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, bopts)
+  [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, bopts) ;
   save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 end
 
