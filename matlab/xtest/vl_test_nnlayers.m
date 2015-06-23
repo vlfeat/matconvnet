@@ -428,22 +428,27 @@ for l = tests
       
     case 11
       disp('testing vl_nnbnorm');
-      r = 13 ; c = 17 ;
-      nd = 4 ;
-      bs = 5 ;
-      x = grandn(r, c, nd, bs, 'single') ;
-      g = grandn(1, 1, nd, 1, 'single');
-      b = grandn(1, 1, nd, 1, 'single');
-      g = grandn(nd, 1, 'single');
-      b = grandn(nd, 1, 'single');
-
-      y = vl_nnbnorm(x,g,b) ;
-      dzdy = grandn(size(y), 'single') ;
-      [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy) ;
+      for r=[1 8 13]
+        for c=[1 8 17]
+          for nd=[1 3 4]
+            for bs=[4 7]
+              x = grandn(r, c, nd, bs, 'single') ;
+              g = grandn(1, 1, nd, 1, 'single');
+              b = grandn(1, 1, nd, 1, 'single');
+              g = grandn(nd, 1, 'single');
+              b = grandn(nd, 1, 'single');
+              
+              y = vl_nnbnorm(x,g,b, 'verbose') ;
+              dzdy = grandn(size(y), 'single') ;
+              [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy, 'verbose') ;
       
-      vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-3) ;
-      vl_testder(@(g) vl_nnbnorm(x,g,b), g, dzdy, dzdg, range * 1e-3) ;
-      vl_testder(@(b) vl_nnbnorm(x,g,b), b, dzdy, dzdb, range * 1e-3) ;
+              vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-2) ;
+              vl_testder(@(g) vl_nnbnorm(x,g,b), g, dzdy, dzdg, range * 1e-2) ;
+              vl_testder(@(b) vl_nnbnorm(x,g,b), b, dzdy, dzdb, range * 1e-2) ;
+            end
+          end
+        end
+      end
       
     case 12
       disp('testinb vl_nnspnorm');
