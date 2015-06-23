@@ -54,7 +54,7 @@ end
 %                                                                    Do job
 % -------------------------------------------------------------------------
 
-x_size = [size(x,1), size(x,2), size(x,3), size(x,4)];
+x_size = [size(x,1), size(x,2), size(x,3), size(x,4)] ;
 g_size = size(g) ;
 b_size = size(b) ;
 g = reshape(g, [1 x_size(3) 1]) ;

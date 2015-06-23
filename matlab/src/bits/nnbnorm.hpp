@@ -23,7 +23,7 @@ namespace vl {
                   vl::Tensor output,
                   vl::Tensor data,
                   vl::Tensor filters,
-                  vl::Tensor biaises,
+                  vl::Tensor biases,
                   float epsilon) ;
 
   vl::Error
@@ -33,7 +33,7 @@ namespace vl {
                    vl::Tensor derBiaises,
                    vl::Tensor data,
                    vl::Tensor filters,
-                   vl::Tensor biaises,
+                   vl::Tensor biases,
                    vl::Tensor derOutput,
                    float epsilon) ;
 }

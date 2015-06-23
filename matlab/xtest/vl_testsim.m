@@ -30,4 +30,5 @@ if nargin < 3 || isempty(tau)
   minv = min([min(a(:)), min(b(:))]) ;
   tau = max(1e-2 * (maxv - minv), 1e-3 * max(maxv, -minv)) ;
 end
+tau = max(tau, tau_min) ;
 assert(all(abs(a(:)-b(:)) < tau)) ;

@@ -29,7 +29,7 @@ enum {
 /* options */
 vlmxOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
-  {"Epsilon",					 1,   opt_epsilon           },
+  {"Epsilon",	       1,   opt_epsilon           },
   {0,                  0,   0                     }
 } ;
 
@@ -53,11 +53,11 @@ void atExit()
 /* ---------------------------------------------------------------- */
 
 enum {
-  IN_DATA = 0, IN_FILTERS, IN_BIAISES, IN_DEROUTPUT, IN_END
+  IN_DATA = 0, IN_MULTIPLIERS, IN_BIASES, IN_DEROUTPUT, IN_END
 } ;
 
 enum {
-  OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIAISES, OUT_END
+  OUT_RESULT = 0, OUT_DERMULTIPLIERS, OUT_DERBIASES, OUT_END
 } ;
 
 void mexFunction(int nout, mxArray *out[],
@@ -68,8 +68,8 @@ void mexFunction(int nout, mxArray *out[],
 
   // For the moment true need to be fixed
   bool computeDerData = true ;
-  bool computeDerFilters = true ;
-  bool computeDerBiaises = true ;
+  bool computeDerMultipliers = true ;
+  bool computeDerBiases = true ;
 
   int verbosity = 0 ;
   int opt ;
@@ -105,21 +105,21 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor filters(context);
-  vl::MexTensor biaises(context);
+  vl::MexTensor multipliers(context);
+  vl::MexTensor biases(context);
   vl::MexTensor derOutput(context) ;
 
   data.init(in[IN_DATA]) ;
-  filters.init(in[IN_FILTERS]) ;
-  biaises.init(in[IN_BIAISES]) ;
+  multipliers.init(in[IN_MULTIPLIERS]) ;
+  biases.init(in[IN_BIASES]) ;
   if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
 
   /* Check for GPU/data class consistency */
-  if (! vl::areCompatible(data, filters)) {
-    mexErrMsgTxt("DATA and FILTERS are not both CPU or GPU arrays.") ;
+  if (! vl::areCompatible(data, multipliers)) {
+    mexErrMsgTxt("DATA and MULTIPLIERS are not both CPU or GPU arrays.") ;
   }
-  if (! vl::areCompatible(data, biaises)) {
-    mexErrMsgTxt("DATA and BIAISES are not both CPU or GPU arrays.") ;
+  if (! vl::areCompatible(data, biases)) {
+    mexErrMsgTxt("DATA and BIASES are not both CPU or GPU arrays.") ;
   }
   if (backMode && ! vl::areCompatible(data, derOutput)) {
     mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
@@ -129,21 +129,21 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the filter geometry */
-  vl::TensorGeometry filtersGeom(filters) ;
-  if (filtersGeom.getHeight() != data.getDepth()) {
-    mexErrMsgTxt("The FILTERS size does not match the DATA depth.") ;
+  vl::TensorGeometry multipliersGeom(multipliers) ;
+  if (multipliersGeom.getHeight() != data.getDepth()) {
+    mexErrMsgTxt("The MULTIPLIERS size does not match the DATA depth.") ;
   }
-  vl::TensorGeometry biaisesGeom(biaises);
-  if (biaisesGeom.getHeight() != data.getDepth()) {
-    mexErrMsgTxt("The BIAISES size does not match the DATA depth.") ;
+  vl::TensorGeometry biasesGeom(biases);
+  if (biasesGeom.getHeight() != data.getDepth()) {
+    mexErrMsgTxt("The BIASES size does not match the DATA depth.") ;
   }
 
   /* Create output buffers */
   vl::Device type = data.getMemoryType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
-  vl::MexTensor derFilters(context) ;
-  vl::MexTensor derBiaises(context) ;
+  vl::MexTensor derMultipliers(context) ;
+  vl::MexTensor derBiases(context) ;
 
   if (!backMode) {
     output.init(type, data.getGeometry()) ;
@@ -151,24 +151,24 @@ void mexFunction(int nout, mxArray *out[],
     if (computeDerData) {
       derData.init(type, data.getGeometry()) ;
     }
-    if (computeDerFilters) {
-      derFilters.init(type, filters.getGeometry()) ;
+    if (computeDerMultipliers) {
+      derMultipliers.init(type, multipliers.getGeometry()) ;
     }
-    if (computeDerBiaises) {
-      derBiaises.init(type, biaises.getGeometry()) ;
+    if (computeDerBiases) {
+      derBiases.init(type, biases.getGeometry()) ;
     }
   }
 
   if (verbosity > 0) {
     mexPrintf("vl_nnbnorm: mode %s; %s\n",  (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
     vl::print("vl_nnbnorm: data: ", data) ;
-    vl::print("vl_nnbnorm: filters: ", filters) ;
-    vl::print("vl_nnbnorm: biaises: ", biaises) ;
+    vl::print("vl_nnbnorm: multipliers: ", multipliers) ;
+    vl::print("vl_nnbnorm: biases: ", biases) ;
     if (backMode) {
       vl::print("vl_nnbnorm: derOutput: ", derOutput) ;
       vl::print("vl_nnbnorm: derData: ", derData) ;
-      vl::print("vl_nnbnorm: derFilters: ", derFilters) ;
-      vl::print("vl_nnbnorm: derBiaises: ", derBiaises) ;
+      vl::print("vl_nnbnorm: derMultipliers: ", derMultipliers) ;
+      vl::print("vl_nnbnorm: derBiases: ", derBiases) ;
     } else {
       vl::print("vl_nnbnorm: output: ", output) ;
     }
@@ -184,17 +184,17 @@ void mexFunction(int nout, mxArray *out[],
     error = vl::nnbnorm_forward(context,
                                 output,
                                 data,
-                                filters,
-                                biaises,
+                                multipliers,
+                                biases,
                                 epsilon) ;
   } else {
     error = vl::nnbnorm_backward(context,
                                  derData,
-                                 derFilters,
-                                 derBiaises,
+                                 derMultipliers,
+                                 derBiases,
                                  data,
-                                 filters,
-                                 biaises,
+                                 multipliers,
+                                 biases,
                                  derOutput,
                                  epsilon);
   }
@@ -208,8 +208,8 @@ void mexFunction(int nout, mxArray *out[],
   }
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters)? derFilters.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERBIAISES] = (computeDerBiaises) ? derBiaises.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERMULTIPLIERS] = (computeDerMultipliers)? derMultipliers.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERBIASES] = (computeDerBiases) ? derBiases.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;
   }

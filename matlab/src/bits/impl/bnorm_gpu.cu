@@ -3,38 +3,87 @@
 // @author Sebastien Ehrhardt
 
 /*
-   Copyright (C) 2015 Sebastien Ehrhardt.
-   All rights reserved.
+Copyright (C) 2015 Sebastien Ehrhardt.
+All rights reserved.
 
-   This file is part of the VLFeat library and is made available under
-   the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "bnorm.hpp"
-#include "../datamex.hpp"
 #include "../datacu.hpp"
 #include "blashelper.hpp"
 #include <assert.h>
 #include <float.h>
 
+// MSB_WARP = log2(WARP_SIZE)
 #define WARP_SIZE 32
 #define MSB_WARP 5
 
 /* ---------------------------------------------------------------- */
-/*                                              bnorm_forward	      */
+/* ---------------------------------------------------------------- */
+/*                                                         Helpers	*/
+/* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-__device__ void warpReduce(volatile float * mdata, unsigned int tid, unsigned int blockSize) {
-  if (blockSize >=  64) {  mdata[tid] += mdata[tid + 32]; }
-  if (blockSize >=  32) {  mdata[tid] += mdata[tid + 16]; }
-  if (blockSize >=  16) {  mdata[tid] += mdata[tid +  8]; }
-  if (blockSize >=   8) {  mdata[tid] += mdata[tid +  4]; }
-  if (blockSize >=   4) {  mdata[tid] += mdata[tid +  2]; }
-  if (blockSize >=   2) {  mdata[tid] += mdata[tid +  1]; }
+
+static inline int getBlockSize(int dataSize)
+{
+  int blockSize = VL_CUDA_NUM_THREADS / 2 ;
+  if (dataSize < blockSize) {
+    unsigned int numWarps = dataSize / WARP_SIZE ;
+    if (numWarps < 4) {
+      blockSize = 2 * WARP_SIZE ;
+    }
+    else if (numWarps < 8) {
+      blockSize = 4 * WARP_SIZE ;
+    }
+    else {
+      blockSize = 8 * WARP_SIZE ;
+    }
+  }
+  return blockSize ;
 }
 
-//template <unsigned int blockSize>
-__device__ void warpDoubleReduce(volatile float * sdata, volatile float * mdata, unsigned int tid, unsigned int blockSize) {
+// The bockReduce function(s) computes the sum of the elements of the
+// array mdata[] (and sdata, rdata, tdata):
+//
+// mdata[0] <- mdata[0] + mdata[1] + ... + mdata[blockSize-1]
+//
+// blockSize is a power of two.
+//
+// When the reduction involves a single warp of 32 threads further
+// optimisation kick in. In fact, such threads work synchronously in the warp, and explicit syncrhonisation is not needed anymore.
+
+__forceinline__ __device__ void warpReduce(volatile float * mdata,
+                                           unsigned int tid,
+                                           unsigned int blockSize)
+{
+  if (blockSize >=  64) { mdata[tid] += mdata[tid + 32]; } // mdata[0:31] = mdata[0:31] + mdata[32:63]
+  if (blockSize >=  32) { mdata[tid] += mdata[tid + 16]; } // mdata[0:15] = mdata[0:15] + mdata[16:31]
+  if (blockSize >=  16) { mdata[tid] += mdata[tid +  8]; } // mdata[0:7] = mdata[0:7] + mdata[7:15]
+  if (blockSize >=   8) { mdata[tid] += mdata[tid +  4]; } // mdata[0:3] = mdata[0:3] + mdata[4:7]
+  if (blockSize >=   4) { mdata[tid] += mdata[tid +  2]; } // mdata[0:1] = mdata[0:1] + mdata[2:3]
+  if (blockSize >=   2) { mdata[tid] += mdata[tid +  1]; } // mdata[0] = mdata[0] + mdata[1]
+}
+
+__forceinline__ __device__ void blockReduce(volatile float * mdata,
+                                            unsigned int tid,
+                                            unsigned int blockSize,
+                                            unsigned int maxDataSize)
+{
+  __syncthreads();
+  if (blockSize >= 1024 && maxDataSize + WARP_SIZE >=512) { if (tid < 512) { mdata[tid] += mdata[tid + 512]; } __syncthreads(); }
+  if (blockSize >= 512  && maxDataSize + WARP_SIZE >=256) { if (tid < 256) { mdata[tid] += mdata[tid + 256]; } __syncthreads(); }
+  if (blockSize >= 256  && maxDataSize + WARP_SIZE >=128) { if (tid < 128) { mdata[tid] += mdata[tid + 128]; } __syncthreads(); }
+  if (blockSize >= 128  && maxDataSize + WARP_SIZE >=64 ) { if (tid <  64) { mdata[tid] += mdata[tid + 64];  } __syncthreads(); }
+  if (tid < 32) {
+    warpReduce(mdata, tid, blockSize);
+  }
+}
+
+__forceinline__ __device__ void warpReduce2(volatile float * sdata, volatile float * mdata, unsigned int tid, unsigned int blockSize)
+{
   if (blockSize >=  64) { sdata[tid] += sdata[tid + 32]; mdata[tid] += mdata[tid + 32]; }
   if (blockSize >=  32) { sdata[tid] += sdata[tid + 16]; mdata[tid] += mdata[tid + 16]; }
   if (blockSize >=  16) { sdata[tid] += sdata[tid +  8]; mdata[tid] += mdata[tid +  8]; }
@@ -43,7 +92,29 @@ __device__ void warpDoubleReduce(volatile float * sdata, volatile float * mdata,
   if (blockSize >=   2) { sdata[tid] += sdata[tid +  1]; mdata[tid] += mdata[tid +  1]; }
 }
 
-__device__ void warp4Reduce(volatile float * sdata, volatile float * mdata, volatile float * rdata, volatile float * tdata, unsigned int tid, unsigned int blockSize) {
+__forceinline__ __device__ void blockReduce2(volatile float * mdata,
+                                             volatile float * sdata,
+                                             unsigned int tid,
+                                             unsigned int blockSize,
+                                             unsigned int maxDataSize)
+{
+  __syncthreads();
+  if (blockSize >= 1024 && maxDataSize + WARP_SIZE >=512) { if (tid < 512) { sdata[tid] += sdata[tid + 512]; mdata[tid] += mdata[tid + 512]; } __syncthreads(); }
+  if (blockSize >= 512  && maxDataSize + WARP_SIZE >=256) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; mdata[tid] += mdata[tid + 256]; } __syncthreads(); }
+  if (blockSize >= 256  && maxDataSize + WARP_SIZE >=128) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; mdata[tid] += mdata[tid + 128]; } __syncthreads(); }
+  if (blockSize >= 128  && maxDataSize + WARP_SIZE >=64)  { if (tid <  64) { sdata[tid] += sdata[tid + 64];  mdata[tid] += mdata[tid + 64];  } __syncthreads(); }
+  if (tid < 32) {
+    warpReduce2(sdata, mdata, tid, blockSize);
+  }
+}
+
+__forceinline__ __device__ void warpReduce4(volatile float * sdata,
+                                            volatile float * mdata,
+                                            volatile float * rdata,
+                                            volatile float * tdata,
+                                            unsigned int tid,
+                                            unsigned int blockSize)
+{
   if (blockSize >=  64) { sdata[tid] += sdata[tid + 32]; mdata[tid] += mdata[tid + 32]; rdata[tid] += rdata[tid + 32]; tdata[tid] += tdata[tid + 32];}
   if (blockSize >=  32) { sdata[tid] += sdata[tid + 16]; mdata[tid] += mdata[tid + 16]; rdata[tid] += rdata[tid + 16]; tdata[tid] += tdata[tid + 16];}
   if (blockSize >=  16) { sdata[tid] += sdata[tid +  8]; mdata[tid] += mdata[tid +  8]; rdata[tid] += rdata[tid +  8]; tdata[tid] += tdata[tid +  8];}
@@ -52,545 +123,356 @@ __device__ void warp4Reduce(volatile float * sdata, volatile float * mdata, vola
   if (blockSize >=   2) { sdata[tid] += sdata[tid +  1]; mdata[tid] += mdata[tid +  1]; rdata[tid] += rdata[tid +  1]; tdata[tid] += tdata[tid +  1];}
 }
 
-
-__device__ void accessDataSum(
-		float * g_idata,
-		volatile float * mdata,
-    unsigned int row,//row
-    unsigned int quotient, // row/blockSize
-    unsigned int remain, // row%WARP_SIZE
-    unsigned int dec,
-    unsigned int n,
-    unsigned int blockSize,
-    unsigned int blockidx,
-    unsigned int tid)
+__forceinline__ __device__ void blockReduce4(volatile float * sdata,
+                                             volatile float * mdata,
+                                             volatile float * rdata,
+                                             volatile float * tdata,
+                                             unsigned int tid,
+                                             unsigned int blockSize,
+                                             unsigned int maxDataSize)
 {
-  unsigned int y = blockidx*(row);
-  unsigned int r = y - (y>>MSB_WARP)*WARP_SIZE;//y%WARP_SIZE
-  unsigned int i = y + tid -r;// 2* can be added to blockSize, will be modified later
-  unsigned int iter = 0;
-
-  if (row >= blockSize) {
-    if (remain == 0) {
-      // if r==0 all memory access are coalesced
-      r = row-quotient*blockSize;//row%blockSize
-      if( r==0){
-        while (iter < quotient){
-          mdata[tid] += g_idata[i];
-          i += blockSize;
-          iter++;
-        }
-      } else {
-        while (iter < quotient+1){
-          if (iter == quotient) {
-            // The last warps may have divergent kernels
-            if(tid<r) mdata[tid] += g_idata[i];
-            iter++;
-          } else {
-            mdata[tid] += g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
-      }
-    } else {
-      // Memory access are made coalesced this imply that some kernel will be waiting while some will be working
-      if(r>dec){
-        while (iter < quotient+1){
-          // Make all memory access coalesced
-          if (iter ==0) {
-            if (tid >= r){ mdata[tid] += g_idata[i]; }
-            else if (tid < r-dec){ mdata[tid] += g_idata[i+row+dec]; }
-            i += blockSize;
-            iter++;
-          }
-          // if blockSize is too small then can be quotient+1 instead of quotient (arrive when r > blockSize/2 so never in practice)
-          else if (iter == quotient) {
-            if(tid < blockSize - dec + r) mdata[tid] += g_idata[i];
-            iter++;
-          } else{
-            mdata[tid] += g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
-      } else{
-        while (iter < quotient+1){
-          // Make all memory access coalesced
-          if (iter ==0) {
-            if (tid >= r) mdata[tid] += g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-          // if blockSize is too small then can be quotient+1 instead of quotient (arrive when r > blockSize/2 so never in practice)
-          else if (iter == quotient) {
-            if(tid < blockSize - dec + r) mdata[tid] += g_idata[i];
-            iter++;
-          } else{
-            mdata[tid] += g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
-      }
-    }
-  } else {
-    // If row is too small. Highly suboptimal
-    if (remain == 0) {
-      // The last warps may have divergent kernels
-      if(tid<row) mdata[tid] += g_idata[i];
-    } else {
-      if(tid>=r && tid < r+row) { mdata[tid] += g_idata[i]; }
-      else if(r+row > blockSize && tid < row +r -blockSize) { mdata[tid] += g_idata[i+blockSize]; }
-    }
-  }
-  
-  // Nothing to optimize here
   __syncthreads();
-
-  if (blockSize >= 1024 && row + WARP_SIZE >=512) { if (tid < 512) {  mdata[tid] += mdata[tid + 512]; } __syncthreads(); }
-  if (blockSize >= 512  && row + WARP_SIZE >=256) { if (tid < 256) {  mdata[tid] += mdata[tid + 256]; } __syncthreads(); }
-  if (blockSize >= 256  && row + WARP_SIZE >=128) { if (tid < 128) {  mdata[tid] += mdata[tid + 128]; } __syncthreads(); }
-  if (blockSize >= 128  && row + WARP_SIZE >=64) { if (tid <  64) { mdata[tid] += mdata[tid + 64];  } __syncthreads(); }
+  if (blockSize >= 1024 && maxDataSize + WARP_SIZE >= 512) { if (tid < 512) { sdata[tid] += sdata[tid + 512]; mdata[tid] += mdata[tid + 512]; rdata[tid] += rdata[tid + 512]; tdata[tid] += tdata[tid + 512];} __syncthreads(); }
+  if (blockSize >= 512 && maxDataSize + WARP_SIZE >= 256) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; mdata[tid] += mdata[tid + 256]; rdata[tid] += rdata[tid + 256]; tdata[tid] += tdata[tid + 256];} __syncthreads(); }
+  if (blockSize >= 256 && maxDataSize + WARP_SIZE >= 128) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; mdata[tid] += mdata[tid + 128]; rdata[tid] += rdata[tid + 128]; tdata[tid] += tdata[tid + 128];} __syncthreads(); }
+  if (blockSize >= 128 && maxDataSize + WARP_SIZE >= 64) { if (tid <  64) { sdata[tid] += sdata[tid + 64];  mdata[tid] += mdata[tid + 64];  rdata[tid] += rdata[tid + 64]; tdata[tid] += tdata[tid + 64];} __syncthreads(); }
+  if (tid < 32) {
+    warpReduce4(sdata, mdata, rdata, tdata, tid, blockSize);
+  }
 }
 
-__global__ void computeMatrixSum(
-    float * g_idata,
-    float * g_ires,
-    unsigned int row,//row
-    unsigned int quotient, // row/blockSize
-    unsigned int remain, // row%WARP_SIZE
-    unsigned int dec,
-    unsigned int n)
+/*
+ In the following we often need to use blocks of threads to sum over 
+ data which is not necessarily naturally aligned with thread blocks or even thread warps.
+ 
+ The trick is to look at the block as a jumping window, sliding it over the memory
+ that needs to be summed, but always aligned at natural block boundaries. This means
+ that occasionally blocks will only be partially filled with useful memory:
+
+    +-------+ +-------+           +-------+ +-------+      aligned blocks (with two warps each)
+    |   :   | |   :   |           |   :   | |   :   |      covering the data
+    +-------+ +-------+           +-------+ +-------+                                      
+      +-------------+             +-------------+          data to sum                     
+                                                                                           
++-------------------------------------------------------->                                 
+              increasing memory addresses                                                  
+
+ 
+ This pattern is repreated several times in the code below.
+ */
+
+
+// Get largest memory address that is aligned to a warp worth of float
+// and smaller than x.
+
+__forceinline__ __device__ uintptr_t getBlockBeginning(void const * x)
 {
-  extern __shared__ float s[];
-  float *mdata = s;
-
-  unsigned int tid = threadIdx.x;
-  unsigned int blockidx = blockIdx.x;
-  unsigned int blockSize = blockDim.x;
-  mdata[tid] = 0;
-
-  accessDataSum(g_idata, mdata, row, quotient, remain, dec, n, blockSize, blockidx, tid);
-
-  if (tid < 32) warpReduce(mdata, tid, blockSize);
-  if (tid == 0) g_ires[blockidx] = mdata[0];
+  return (uintptr_t)(x) & (~((uintptr_t)(WARP_SIZE*sizeof(float)) - 1)) ;
 }
 
-__global__ void divide(
-    float * mu,
-    float * sigma,
-    float mass,
-    unsigned int n )
+// Use the current block of thread to sum over a given column of a matrix. The selected
+// column is given by the thread block index in the block grid.
+
+__forceinline__ __device__ float matrixSumHelper(float const * matrix, int numRows)
+{
+  // One thread block per column to sum
+  extern __shared__ float scratch [] ;
+  int tid = threadIdx.x ;
+  int column = blockIdx.x ;
+  int blockSize = blockDim.x ;
+
+  scratch[tid] = 0 ;
+
+  float const * columnBegin = matrix + column * numRows ;
+  float const * columnEnd = columnBegin + numRows ;
+  float const * block = (float const*) getBlockBeginning(columnBegin) + tid ;
+  while (block < columnEnd) {
+    if (block >= columnBegin) {
+      scratch[tid] += *block ;
+    }
+    block += blockSize ;
+  }
+
+  // Now we have a block worth of partial sums for the column
+  // Finish by reducing and saving
+  blockReduce(scratch, tid, blockSize, numRows) ;
+
+  return scratch[0] ;
+}
+
+/* ---------------------------------------------------------------- */
+/* ---------------------------------------------------------------- */
+/*                                                    bnorm_forward	*/
+/* ---------------------------------------------------------------- */
+/* ---------------------------------------------------------------- */
+
+
+__global__ void divide(float * mu,
+                       float * sigma,
+                       float mass,
+                       unsigned int n)
 {
   unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
-  if(idx <n){
+  if(idx < n){
     float mean = mu[idx]/mass;
     mu[idx] = mean;
     sigma[idx] = sigma[idx]/mass-mean*mean;
   }
 }
 
-//template <unsigned int blockSize>
-__global__ void computeMuSigma(
-    float const * g_idata,
-    float * g_odata1,
-    unsigned int depth,
-    unsigned int row,
-    unsigned int WH,//width*height
-    unsigned int quotient, // WH/blockSize
-    unsigned int remain, // WH%WARP_SIZE
-    unsigned int j,
-    unsigned int r1,
-    unsigned int dec,
-    unsigned int n)
+// The kernel accumulates means and variances for the data.
+// Each block of thread sums over one or more data planes, resulting
+// in an array accumulator[] of dimension numChunks x 2*numChannels.
+//
+// If each thread block scans all the images, then numChunks = 1.
+// However, for efficiency different thread blocks do different
+// subset of images, resulting in numChunks partial results to be integrated
+// later.
+//
+// The first part accumulator[:,0:numChannels-1] stores the data for the mean
+// and the second part accumulator[:,numChannels,2*numChannels-1] the data
+// for the sigmas.
+
+__global__ void computePartialMuSigma(float * accumulator,
+                                      float const * data,
+                                      int planeArea,
+                                      int numPlanes,
+                                      int numChannels,
+                                      int numChunks)
 {
-  extern __shared__ float s[];
-  float *mdata = s;
-  unsigned int tid = threadIdx.x;
-  unsigned int blockidx = blockIdx.x;
-  unsigned int blockSize = blockDim.x;
-  float *sdata = (float*)&mdata[blockSize];
+  int tid = threadIdx.x ;
+  int plane = blockIdx.x ;
+  int blockSize = blockDim.x ;
+  int planeStride = gridDim.x ;
+  int channel = blockIdx.x % numChannels ;
+  extern __shared__ float s[] ;
+  float * mdata = s ;
+  float * sdata = mdata + blockSize ;
 
-  unsigned int y = blockidx*(WH);
-  unsigned int r = y - (y>>MSB_WARP)*WARP_SIZE;//y%WARP_SIZE
-  unsigned int i = y + tid -r;// 2* can be added to blockSize, will be modified later
-  unsigned int iter = 0;
-  sdata[tid] = 0;
-  mdata[tid] = 0;
+  mdata[tid] = 0 ;
+  sdata[tid] = 0 ;
 
-  if (WH >= blockSize) {
-    if (remain == 0) {
-      // if r==0 all memory access are coalesced
-      r = WH-quotient*blockSize;//WH%blockSize
-      if( r==0){
-        while (y < n){
-          if (iter == quotient-1) {
-            mdata[tid] += g_idata[i];
-            sdata[tid] += g_idata[i]*g_idata[i];
-            y += j;
-            i = y +tid;
-            iter = 0;
-          } else {
-            mdata[tid] += g_idata[i];
-            sdata[tid] += g_idata[i]*g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
-      } else {
-        while (y < n){
-          if (iter == quotient) {
-            // The last warps may have divergent kernels
-            if(tid<r) {
-              mdata[tid] += g_idata[i];
-              sdata[tid] += g_idata[i]*g_idata[i];
-            }
-            y += j;
-            i = y+tid;
-            iter = 0;
-          } else {
-            mdata[tid] += g_idata[i];
-            sdata[tid] += g_idata[i]*g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
+  while (plane < numPlanes) {
+    float const * planeBegin = data + plane * planeArea ;
+    float const * planeEnd = planeBegin + planeArea ;
+    float const * block = (float const*) getBlockBeginning(planeBegin) + tid ;
+    while (block < planeEnd) {
+      if (block >= planeBegin) {
+        float x = *block ;
+        mdata[tid] += x ;
+        sdata[tid] += x * x ;
       }
-    } else {
-      // Memory access are made coalesced this imply that some kernel will be waiting while some will be working
-      while (y < n){
-        // Make all memory access coalesced
-        if (iter ==0) {
-          if (tid >= r){
-            mdata[tid] += g_idata[i];
-            sdata[tid] += g_idata[i]*g_idata[i];
-          }
-          else if(r > dec && tid < r-dec ) {
-            mdata[tid] += g_idata[i+WH+dec];
-            sdata[tid] += g_idata[i+WH+dec]*g_idata[i+WH+dec];
-          }
-          i += blockSize;
-          iter++;
-        }
-        // if blockSize is too small then can be quotient+1 instead of quotient (arrive when r > blockSize/2 so never in practice)
-        else if (iter == quotient) {
-          if(tid < blockSize - dec + r){
-            mdata[tid] += g_idata[i];
-            sdata[tid] += g_idata[i]*g_idata[i];
-          }
-          r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-          y += j;
-          i = y+tid-r;
-          iter =0;
-        } else{
-          mdata[tid] += g_idata[i];
-          sdata[tid] += g_idata[i]*g_idata[i];
-          i += blockSize;
-          iter++;
-        }
-      }
+      block += blockSize ;
     }
-  } else {
-    // If WH is too small. Highly suboptimal
-    if (remain == 0) {
-      while(y < n){
-        // The last warps may have divergent kernels
-        if(tid<WH) {
-          mdata[tid] += g_idata[i];
-          sdata[tid] += g_idata[i]*g_idata[i];
-        }
-        y += j;
-        i = y+tid;
-      }
-    } else {
-      while (y < n){
-        if(tid>=r && tid < r+WH){
-          mdata[tid] += g_idata[i];
-          sdata[tid] += g_idata[i]*g_idata[i];
-        }
-        else if( WH +r > blockSize && tid < WH +r -blockSize) {
-          mdata[tid] += g_idata[i+blockSize];
-          sdata[tid] += g_idata[i+blockSize]*g_idata[i+blockSize];
-        }
-        r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-        y += j;
-        i = y+tid-r;
-      }
-    }
+    plane += planeStride ;
   }
 
-  // Nothing to optimize here
-  __syncthreads();
+  blockReduce2(sdata, mdata, tid, blockSize, planeArea) ;
 
-  if (blockSize >= 1024 && WH + WARP_SIZE >=512) { if (tid < 512) { sdata[tid] += sdata[tid + 512]; mdata[tid] += mdata[tid + 512]; } __syncthreads(); }
-  if (blockSize >= 512  && WH + WARP_SIZE >=256) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; mdata[tid] += mdata[tid + 256]; } __syncthreads(); }
-  if (blockSize >= 256  && WH + WARP_SIZE >=128) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; mdata[tid] += mdata[tid + 128]; } __syncthreads(); }
-  if (blockSize >= 128  && WH + WARP_SIZE >=64) { if (tid <  64) { sdata[tid] += sdata[tid + 64];  mdata[tid] += mdata[tid + 64];  } __syncthreads(); }
-
-  if (tid < 32) warpDoubleReduce(sdata, mdata, tid, blockSize);
   if (tid == 0) {
-    i = (blockIdx.x/depth)+(blockIdx.x%depth)*row;
-    g_odata1[i] = mdata[0];
-    g_odata1[i + gridDim.x] = sdata[0];
+    int chunk = blockIdx.x / numChannels ;
+    int i = chunk + channel * numChunks ;
+    accumulator[i] = mdata[0];
+    accumulator[i + gridDim.x] = sdata[0];
   }
 }
 
-//template <unsigned int blockSize>
-__global__ void normalize(
-    float const * g_idata,
-    float * g_imean,
-    float * g_isigma,
-    float * g_ig,
-    float * g_ib,
-    float * g_odata,
-    float epsilon,
-    unsigned int depth,
-    unsigned int WH,
-    unsigned int quotient, // WH/blockSize
-    unsigned int remain, // WH%WARP_SIZE
-    unsigned int j,
-    unsigned int r1,
-    unsigned int dec,
-    unsigned int n)
+__global__ void reduceMuSigma(float * accumulator,
+                              float const * matrix,
+                              int numRows)
 {
-  unsigned int tid = threadIdx.x;
-  unsigned int channel = blockIdx.x%depth;
-  unsigned int blockSize = blockDim.x;
+  int tid = threadIdx.x ;
+  int column = blockIdx.x ;
+  float x = matrixSumHelper(matrix, numRows) ;
+  if (tid == 0) {
+    accumulator[column] = x ;
+  }
+}
+
+__global__ void normalize(float * outputData,
+                          float const * data,
+                          float const * means,
+                          float const * sigmas,
+                          float const * multipliers,
+                          float const * biases,
+                          int planeArea,
+                          int numPlanes,
+                          int numChannels,
+                          float epsilon)
+{
+  int tid = threadIdx.x ;
+  int plane = blockIdx.x ;
+  int blockSize = blockDim.x ;
+  int planeStride = gridDim.x ;
+  int channel = blockIdx.x % numChannels ;
 
   // Not optimized for compute capability < 1.2
-  float mu = g_imean[channel];
-  float sigma = g_isigma[channel];
-  float g = g_ig[channel];
-  float b = g_ib[channel];
-  float G = g*rsqrt(sigma+epsilon);
+  float mean = means[channel];
+  float sigma = sigmas[channel];
+  float multiplier = multipliers[channel];
+  float bias = biases[channel];
+  float coefficient = multiplier * rsqrt(sigma + epsilon) ;
 
-  unsigned int y = blockIdx.x*(WH);
-  unsigned int r = y - (y>>MSB_WARP)*WARP_SIZE;//y%WARP_SIZE
-  unsigned int i = y + tid -r;// 2* can be added to blockSize, will be modified later
-  unsigned int iter = 0;
-
-  if (WH >= blockSize) {
-    if (remain == 0) {
-      r = WH-quotient*blockSize;//WH%blockSize
-      // if r==0 all memory access are coalesced
-      if( r==0){
-        while (y < n){
-          // distinguish the case where WH*K is divisible by blockSize or not
-          // WARNING the last warp may have divergent kernels here
-          if (iter == quotient-1) {
-            g_odata[i] = G*(g_idata[i]-mu) + b;
-            y += j;
-            i = y +tid;
-            iter = 0;
-          } else {
-            g_odata[i] = G*(g_idata[i]-mu) + b;
-            i += blockSize;
-            iter++;
-          }
-        }
-      } else {
-        while (y < n){
-          if (iter == quotient) {
-            if(tid<r) g_odata[i] = G*(g_idata[i]-mu) + b;
-            y += j;
-            i = y+tid;
-            iter = 0;
-          } else {
-            g_odata[i] = G*(g_idata[i]-mu) + b;
-            i += blockSize;
-            iter++;
-          }
-        }
+  while (plane < numPlanes) {
+    float const * planeBegin = data + plane * planeArea ;
+    float const * planeEnd = planeBegin + planeArea ;
+    float const * block = (float const*) getBlockBeginning(planeBegin) + tid ;
+    float * oblock = outputData + (block - data) ;
+    while (block < planeEnd) {
+      if (block >= planeBegin) {
+        *oblock = coefficient * (*block - mean) + bias ;
       }
-    } else {
-      // Memory access are made coalesced this imply that some kernel will be waiting while some will be working
-      while (y < n){
-        // Make all memory access coalesced
-        if (iter ==0) {
-          //!! WARNING The first warp may have divergent kernels here
-          if (tid >= r) {  g_odata[i] = G*(g_idata[i]-mu) + b;}
-          else if(r >= dec && tid < r-dec ) { g_odata[i+WH+dec] = G*(g_idata[i+WH+dec]-mu) + b;}
-          i += blockSize;
-          iter++;
-        }
-        else if (iter == quotient) {
-          if(tid < blockSize - dec + r) g_odata[i] = G*(g_idata[i]-mu) + b;
-          r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-          y += j;
-          i = y+tid-r;
-          iter =0;
-        } else{
-          g_odata[i] = G*(g_idata[i]-mu) + b;
-          i += blockSize;
-          iter++;
-        }
-      }
+      block += blockSize ;
+      oblock += blockSize ;
     }
-  } else { // If WH is too small. Highly suboptimal
-    if (remain == 0) {
-      while (y < n){
-        if(tid<WH) {
-          g_odata[i] = G*(g_idata[i]-mu) + b;
-        }
-        y += j;
-        i = y+tid;
-      }
-    } else {
-      while (y < n){
-        if(tid>=r && tid <  r +WH){ g_odata[i] = G*(g_idata[i]-mu) + b; }
-        else if(r+WH > blockSize && tid < WH +r -blockSize) { g_odata[i+blockSize] = G*(g_idata[i+blockSize]-mu) + b; }
-        r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-        y += j;
-        i = y+tid-r;
-      }
-    }
+    plane += planeStride ;
   }
 }
 
-  template<> vl::Error
+template<> vl::Error
 vl::impl::bnorm_forward<vl::GPU, float>(Context& context,
-    float* output,
-    float const* data,
-    float* filters,
-    float* biaises,
-    size_t height, size_t width, size_t depth, size_t size, float epsilon)
+                                        float* output,
+                                        float const* data,
+                                        float const* multipliers,
+                                        float const* biases,
+                                        int height, int width, int depth, int size,
+                                        float epsilon)
 {
-  unsigned int featureWidth = height*width;
-  unsigned int num_threads = VL_CUDA_NUM_THREADS>>1, num_threads_sum = VL_CUDA_NUM_THREADS>>1;
 
-  if(featureWidth < num_threads){
-    if(featureWidth>>(MSB_WARP) <4){
-      num_threads = 2*WARP_SIZE;
-    }
-    else if (4<=(featureWidth>>(MSB_WARP)) && (featureWidth>>(MSB_WARP))<8){
-      num_threads = 4*WARP_SIZE;
-    } else {
-      num_threads = 8*WARP_SIZE;
-    }
-  }
+/*
+ 
+ The data is organised in SIZE images, each of which is composed of DEPTH
+ planes. The goal is to compute the mean and std of the features in each
+ plane. In the follwing diagram, planes are enumerated from left to right
+ and top to bottom, listing first all the plane for one image (a row) and then
+ subsequent images (in different rows).
 
-  unsigned int k = featureWidth / num_threads;
-  unsigned int remain = featureWidth-(featureWidth>>MSB_WARP)*WARP_SIZE;//featureWidth%WARP_SIZE
-  unsigned int mass = featureWidth*size;
-  unsigned int volume = mass*depth;
-  unsigned int gridDimension = depth*size;
-  unsigned int row = size;
-  unsigned int dec = (k+1)*num_threads-featureWidth;//num_threads-(featureWidth%num_threads)
+     +-------+   +-------+   +-------+   +-------+                             
+     |plane 1|   |p 2    |   |p 3    |   |p 4    |  numPlanes = 12             
+     |ch 1   |   |c 2    |   |c 3    |   |c 4    |  depth = 4                  
+     |image 1|   |i 1    |   |i 1    |   |i 1    |  planeArea = 28
+ +---+block 1|   |b 2    |   |b 3    |   |b 4    |  planeStride = gridSize = 8
+ |   +-------+   +-------+   +-------+   +-------+                             
+ |                                                                             
+ |   +-------+   +-------+   +-------+   +-------+                             
+ |   |p 5    |   |p 6    |   |p 7    |   |p 8    |                             
+ |   |c 1    |   |c 2    |   |c 3    |   |c 4    |                             
+ |   |i 2    |   |i 2    |   |i 2    |   |i 2    |                             
+ |   |b 5    |   |b 6    |   |b 7    |   |b 8    |                             
+ |   +-------+   +-------+   +-------+   +-------+                             
+ |                                                                             
+ |   +-------+   +-------+   +-------+   +-------+                             
+ |   |p 9    |   |p 10   |   |p 11   |   |p 12   |                             
+ |   |c 1    |   |c 2    |   |c 3    |   |c 4    |                             
+ |   |i 3    |   |i 3    |   |i 3    |   |i 3    |
+ +-->+b 1    |   |b 2    |   |b 3    |   |b 4    |
+     +-------+   +-------+   +-------+   +-------+                             
 
-  // Compute gridDimension avoid to set too much work groups
-  if(gridDimension>65536) {
-    if(depth>=65536){
-      row = 1;
-      gridDimension = depth;
-    } else {
-      row = 65536/depth+1;
-      gridDimension =row*depth;
-    }
-  }
+ 
+ We create gridSize thread blocks. Each block is assigned to sum
+ over a successive plane in the order above. Since there may be less blocks
+ than planes overall, these warp around (in the example, thread block 1
+ integrates planes 1 and planes 9).
 
-  unsigned int update = gridDimension*featureWidth;
-  unsigned int r1 = update-(update>>MSB_WARP)*WARP_SIZE;
+ */
 
-  float *mean, *sigma;
+  float *mean ;
+  float *sigma ;
   cudaError_t status;
   vl::Device type = GPU;
+  unsigned int planeArea = height * width ;
+  unsigned int numPlanes = depth * size ;
+  unsigned int blockSize = getBlockSize(planeArea) ;
 
-  if(gridDimension != depth){
-    // intermediate outputs
-    unsigned int fin1 = (gridDimension%WARP_SIZE==0) ? gridDimension : WARP_SIZE*((gridDimension>>MSB_WARP)+1);
-    float * intermediateOutput = (float*) context.getWorkspace(type, (gridDimension+fin1+2*depth) * sizeof(float)) ;
-    mean = intermediateOutput + gridDimension+fin1;
+  // Try allocating one block for each plane. However, if
+  // this corresponds to too many blocks, reduce the number,
+  // still making sure that the number of blocksis a multiple of
+  // DEPTH. The latter is needed so that a block always sums
+  // features belonging to the same channel,
+  // even across different images.
+  unsigned int row = size ;
+  unsigned int gridSize = row * depth ;
+  if (gridSize > 65536) {
+    if (depth >= 65536) {
+      row = 1 ;
+    } else {
+      row = 65536/depth + 1 ;
+    }
+    gridSize = row * depth ;
+  }
+
+  if (gridSize != depth){
+
+    // Get intermediate buffers
+    unsigned int fin1 = (gridSize%WARP_SIZE==0) ? gridSize : WARP_SIZE*((gridSize>>MSB_WARP)+1);
+    float * intermediateOutput = (float*) context.getWorkspace(type, (gridSize+fin1+2*depth) * sizeof(float)) ;
+    mean = intermediateOutput + gridSize+fin1;
     sigma = mean + depth;
 
     // Compute mean and variance at the same time
-    computeMuSigma<<<gridDimension, num_threads, 2*num_threads*sizeof(float)>>>
-      (data, intermediateOutput, depth, row, featureWidth, k, remain, update, r1, dec, volume);
+    computePartialMuSigma <<<gridSize, blockSize, 2*blockSize*sizeof(float)>>>
+    (intermediateOutput,
+     data,
+     planeArea,
+     numPlanes,
+     depth,
+     row) ;
 
     status = cudaPeekAtLastError() ;
-    if(status!= cudaSuccess) mexErrMsgTxt("Error in computeMuSigma") ;
+    if (status != cudaSuccess) return vl::vlErrorCuda ;
 
-    // Mean and variance computation
-    if(row < num_threads_sum){
-      if(row>>(MSB_WARP) <4){
-        num_threads_sum = 2*WARP_SIZE;
-      }
-      else if (4<=(row>>(MSB_WARP)) && (row>>(MSB_WARP))<8){
-        num_threads_sum = 4*WARP_SIZE;
-      } else {
-        num_threads_sum = 8*WARP_SIZE;
-      }
-    }
+    int blockSizeSum = getBlockSize(row) ;
+    reduceMuSigma <<<2*depth,blockSizeSum,blockSizeSum*sizeof(float)>>>
+    (mean, intermediateOutput, row) ;
 
-    computeMatrixSum<<<2*depth,num_threads_sum,num_threads_sum*sizeof(float)>>>
-      (intermediateOutput, mean, row, row/num_threads_sum, row%WARP_SIZE, num_threads_sum-(row%num_threads_sum),2*gridDimension);
+    status = cudaPeekAtLastError() ;
+    if (status != cudaSuccess) return vl::vlErrorCuda ;
 
-  } else{
+  } else {
     mean = (float*) context.getWorkspace(type, 2*depth * sizeof(float)) ;
     sigma = mean + depth;
 
-    computeMuSigma<<<gridDimension, num_threads, 2*num_threads*sizeof(float)>>>
-      (data, mean, depth, row, featureWidth, k, remain, update, r1, dec, volume);
+    computePartialMuSigma<<<gridSize, blockSize, 2*blockSize*sizeof(float)>>>
+    (mean,
+     data,
+     planeArea,
+     numPlanes,
+     depth,
+     row) ;
 
     status = cudaPeekAtLastError() ;
-    if(status!= cudaSuccess) mexErrMsgTxt("Error in computeMuSigma") ;
+    return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
   }
 
-  divide<<<divideUpwards(depth,num_threads),num_threads>>>
-    (mean, mean+depth, (float)mass, depth);
+  unsigned int mass = planeArea*size;
+  divide <<<divideUpwards(depth,blockSize),blockSize>>>
+  (mean, mean+depth, (float)mass, depth);
 
-  // Compute output
-  normalize<<< gridDimension, num_threads>>>
-    (data, mean, sigma, filters, biaises, output, epsilon, depth, featureWidth, k, remain, update, r1, dec, volume);
+  normalize <<<gridSize, blockSize>>>
+  (output, data, mean, sigma, multipliers, biases,
+   planeArea,
+   numPlanes,
+   depth,
+   epsilon) ;
+
   status = cudaPeekAtLastError() ;
-  if(status!= cudaSuccess) mexErrMsgTxt("Error in normalize") ;
-
   return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 /* ---------------------------------------------------------------- */
-/*                                             bnorm_backward       */
+/* ---------------------------------------------------------------- */
+/*                                                   bnorm_backward */
+/* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-__global__ void computeMatrixDerSum(
-    float * g_idata,
-    float * g_omean,
-    float * g_oderFilters,
-    float * g_oderBiaises,
-    unsigned int depth,
-    unsigned int row,//row
-    unsigned int quotient, // row/blockSize
-    unsigned int remain, // row%WARP_SIZE
-    unsigned int dec,
-    unsigned int n)
-{
-  extern __shared__ float s[];
-  float *mdata = s;
-  unsigned int tid = threadIdx.x;
-  unsigned int blockidx = blockIdx.x;
-  unsigned int blockSize = blockDim.x;
-  mdata[tid] = 0;
-
-  accessDataSum(g_idata, mdata, row, quotient, remain, dec, n, blockSize, blockidx, tid);
-
-  if (tid < 32) warpReduce(mdata, tid, blockSize);
-  if (tid == 0){
-    if(blockidx/(depth>>2)<1){ g_oderFilters[blockidx%(depth>>2)] = mdata[0]; }
-    else if ( blockidx/(depth>>2)== 1) { g_oderBiaises[blockidx%(depth>>2)] = mdata[0]; }
-    else { g_omean[blockidx%(depth>>1)] = mdata[0]; }
-  }
-}
-
-
-__global__ void divideSigma(
-    float * dzdg,
-    float * dzdb,
-    float * mu,
-    float * sigma,
-    float epsilon,
-    float mass,
-    unsigned int n
-    )
+__global__ void divideSigma(float * dzdg,
+                            float * dzdb,
+                            float * mu,
+                            float * sigma,
+                            float epsilon,
+                            float mass,
+                            unsigned int n
+                            )
 {
   unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if(idx<n){
@@ -601,413 +483,247 @@ __global__ void divideSigma(
   }
 }
 
-//template <unsigned int blockSize>
-__global__ void computeDerSum(
-    float const * g_idata,
-    float const * g_iderOutput,
-    float * g_imu,
-    float * g_odata1,
-    float * g_odata2,
-    unsigned int depth,
-    unsigned int row,
-    unsigned int WH,//width*height
-    unsigned int quotient, // WH/blockSize
-    unsigned int remain, // WH%WARP_SIZE
-    unsigned int j,
-    unsigned int r1,
-    unsigned int dec,
-    unsigned int n)
+__global__ void computePartialMuSigmaDer(float * buffer1,
+                                         float * buffer2,
+                                         float * buffer3,
+                                         float const * data,
+                                         float const * derOutput,
+                                         int planeArea,
+                                         int numPlanes,
+                                         int numChannels,
+                                         int numChunks)
 {
-  extern __shared__ float s[];
-  float *mdata = s;
-  unsigned int tid = threadIdx.x;
-  unsigned int blockidx = blockIdx.x;
-  unsigned int blockSize = blockDim.x;
-  float *sdata = (float*)&mdata[blockSize];
-  float *rdata = (float*)&sdata[blockSize];
-  float *tdata = (float*)&rdata[blockSize];
+  int tid = threadIdx.x ;
+  int plane = blockIdx.x ;
+  int blockSize = blockDim.x ;
+  int planeStride = gridDim.x ;
+  int channel = blockIdx.x % numChannels ;
+  extern __shared__ float s[] ;
+  float * mdata = s ;
+  float * sdata = mdata + blockSize ;
+  float * rdata = sdata + blockSize ;
+  float * tdata = rdata + blockSize ;
 
+  mdata[tid] = 0 ;
+  sdata[tid] = 0 ;
+  rdata[tid] = 0 ;
+  tdata[tid] = 0 ;
 
-  unsigned int y = blockidx*(WH);
-  unsigned int r = y - (y>>MSB_WARP)*WARP_SIZE;//y%WARP_SIZE
-  unsigned int i = y + tid -r;// 2* can be added to blockSize, will be modified later
-  unsigned int iter = 0;
-  sdata[tid] = 0;
-  mdata[tid] = 0;
-  rdata[tid] = 0;
-  tdata[tid] = 0;
-
-  if (WH >= blockSize) {
-    if (remain == 0) {
-      r = WH-blockSize*quotient;//WH%blockSize
-      // if r==0 all memory access are coalesced
-      if( r==0){
-        while (y < n){
-          if (iter == quotient-1) {
-            mdata[tid] += g_idata[i]*g_iderOutput[i];
-            sdata[tid] += g_iderOutput[i];
-            rdata[tid] += g_idata[i]*g_idata[i];
-            tdata[tid] += g_idata[i];
-            y += j;
-            i = y +tid;
-            iter = 0;
-          } else {
-            mdata[tid] += g_idata[i]*g_iderOutput[i];
-            sdata[tid] += g_iderOutput[i];
-            rdata[tid] += g_idata[i]*g_idata[i];
-            tdata[tid] += g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
-      } else {
-        while (y < n){
-          if (iter == quotient) {
-            // The last warps may have divergent kernels
-            if(tid<r) {
-              mdata[tid] += g_idata[i]*g_iderOutput[i];
-              sdata[tid] += g_iderOutput[i];
-              rdata[tid] += g_idata[i]*g_idata[i];
-              tdata[tid] += g_idata[i];
-            }
-            y += j;
-            i = y+tid;
-            iter = 0;
-          } else {
-            mdata[tid] += g_idata[i]*g_iderOutput[i];
-            sdata[tid] += g_iderOutput[i];
-            rdata[tid] += g_idata[i]*g_idata[i];
-            tdata[tid] += g_idata[i];
-            i += blockSize;
-            iter++;
-          }
-        }
+  while (plane < numPlanes) {
+    float const * planeBegin = data + plane * planeArea ;
+    float const * planeEnd = planeBegin + planeArea ;
+    float const * block = (float const*) getBlockBeginning(planeBegin) + tid ;
+    float const * dblock = derOutput + (block - data) ;
+    while (block < planeEnd) {
+      if (block >= planeBegin) {
+        float x = *block ;
+        float dy = *dblock ;
+        mdata[tid] += x * dy ;
+        sdata[tid] += dy ;
+        rdata[tid] += x * x ;
+        tdata[tid] += x ;
       }
-    } else {
-      // Memory access are made coalesced this imply that some kernel will be waiting while some will be working
-      while (y < n){
-        // Make all memory access coalesced
-        if (iter ==0) {
-          if (tid >= r){
-            mdata[tid] += g_idata[i]*g_iderOutput[i];
-            sdata[tid] += g_iderOutput[i];
-            rdata[tid] += g_idata[i]*g_idata[i];
-            tdata[tid] += g_idata[i];
-          }
-          else if(r > dec && tid < r-dec ) {
-            mdata[tid] += g_idata[i+WH+dec]*g_iderOutput[i+WH+dec];
-            sdata[tid] += g_iderOutput[i+WH+dec];
-            rdata[tid] += g_idata[i+WH+dec]*g_idata[i+WH+dec];
-            tdata[tid] += g_idata[i+WH+dec];
-          }
-          i += blockSize;
-          iter++;
-        }
-        // if blockSize is too small then can be quotient+1 instead of quotient (arrive when r > blockSize/2 so never in practice)
-        else if (iter == quotient) {
-          if(tid < blockSize - dec + r){
-            mdata[tid] += g_idata[i]*g_iderOutput[i];
-            sdata[tid] += g_iderOutput[i];
-            rdata[tid] += g_idata[i]*g_idata[i];
-            tdata[tid] += g_idata[i];
-          }
-          r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-          y += j;
-          i = y+tid-r;
-          iter =0;
-        } else{
-          mdata[tid] += g_idata[i]*g_iderOutput[i];
-          sdata[tid] += g_iderOutput[i];
-          rdata[tid] += g_idata[i]*g_idata[i];
-          tdata[tid] += g_idata[i];
-          i += blockSize;
-          iter++;
-        }
-      }
+      block += blockSize ;
+      dblock += blockSize ;
     }
-  } else {
-    // If WH is too small. Highly suboptimal
-    if (remain == 0) {
-      while (y < n){
-        // The last warps may have divergent kernels
-        if(tid<WH) {
-          mdata[tid] += g_idata[i]*g_iderOutput[i];
-          sdata[tid] += g_iderOutput[i];
-          rdata[tid] += g_idata[i]*g_idata[i];
-          tdata[tid] += g_idata[i];
-        }
-        y += j;
-        i = y+tid;
-      }
-    } else {
-      while (y < n){
-        if(tid>=r && tid < WH + r){
-          mdata[tid] += g_idata[i]*g_iderOutput[i];
-          sdata[tid] += g_iderOutput[i];
-          rdata[tid] += g_idata[i]*g_idata[i];
-          tdata[tid] += g_idata[i];
-        }
-        else if(WH +r > blockSize && tid < WH +r -blockSize) {
-          mdata[tid] += g_idata[i+blockSize]*g_iderOutput[i+blockSize];
-          sdata[tid] += g_iderOutput[i+blockSize];
-          rdata[tid] += g_idata[i+blockSize]*g_idata[i+blockSize];
-          tdata[tid] += g_idata[i+blockSize];
-        }
-        r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-        y += j;
-        i = y+tid-r;
-        iter =0;
-      }
-    }
+    plane += planeStride ;
   }
 
   // Nothing to optimize here
-  __syncthreads();
 
-  if (blockSize >= 1024 && WH + WARP_SIZE >= 512) { if (tid < 512) { sdata[tid] += sdata[tid + 512]; mdata[tid] += mdata[tid + 512]; rdata[tid] += rdata[tid + 512]; tdata[tid] += tdata[tid + 512];} __syncthreads(); }
-  if (blockSize >= 512 && WH + WARP_SIZE >= 256) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; mdata[tid] += mdata[tid + 256]; rdata[tid] += rdata[tid + 256]; tdata[tid] += tdata[tid + 256];} __syncthreads(); }
-  if (blockSize >= 256 && WH + WARP_SIZE >= 128) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; mdata[tid] += mdata[tid + 128]; rdata[tid] += rdata[tid + 128]; tdata[tid] += tdata[tid + 128];} __syncthreads(); }
-  if (blockSize >= 128 && WH + WARP_SIZE >= 64) { if (tid <  64) { sdata[tid] += sdata[tid + 64];  mdata[tid] += mdata[tid + 64];  rdata[tid] += rdata[tid + 64]; tdata[tid] += tdata[tid + 64];} __syncthreads(); }
-
-
-
-  if (tid < 32) warp4Reduce(sdata, mdata, rdata, tdata, tid, blockSize);
+  blockReduce4(sdata, mdata, rdata, tdata, tid, blockSize, planeArea);
   if (tid == 0) {
-    if(depth==gridDim.x){
-      g_odata1[blockidx] = mdata[0];
-      g_odata2[blockidx] = sdata[0];
-      g_imu[blockidx] = tdata[0];
-      g_imu[blockidx+depth] = rdata[0];
-    } else{
-      i = (blockIdx.x/depth)+(blockIdx.x%depth)*row;
-      g_odata1[i] = mdata[0];
-      g_odata1[i + gridDim.x] = sdata[0];
-      g_odata1[i + 2*gridDim.x] = tdata[0];
-      g_odata1[i + 3*gridDim.x] = rdata[0];
+    if (numChannels == gridDim.x) {
+      // Final output ready
+      buffer1[blockIdx.x] = mdata[0];
+      buffer2[blockIdx.x] = sdata[0];
+      buffer3[blockIdx.x] = tdata[0];
+      buffer3[blockIdx.x+numChannels] = rdata[0];
+    } else {
+      // Partially accumulated outut
+      int chunk = blockIdx.x / numChannels ;
+      int i = chunk + channel * numChunks ;
+      buffer1[i] = mdata[0]; // derMultipliers
+      buffer1[i + gridDim.x] = sdata[0]; // derBiases
+      buffer1[i + 2*gridDim.x] = tdata[0]; // means
+      buffer1[i + 3*gridDim.x] = rdata[0]; // sigmas
     }
   }
 }
 
-__global__ void normalizeBackward(
-    float const * g_idata,
-    float * g_iderOutput,
-    float * g_imean,
-    float * g_isigma,
-    float const * g_ig,
-    float * g_imuz,
-    float * g_idzdg,
-    float * g_odata,
-    float epsilon,
-    float mass,
-    unsigned int depth,
-    unsigned int WH,
-    unsigned int quotient, // WH/blockSize
-    unsigned int remain, // WH%WARP_SIZE
-    unsigned int j,
-    unsigned int r1,
-    unsigned int dec,
-    unsigned int n)
+__global__ void reduceMuSigmaDer(float * accumulator,
+                                 float * derMultipliers,
+                                 float * derBiases,
+                                 float const * matrix,
+                                 int numRows,
+                                 int numChannels)
 {
-  unsigned int tid = threadIdx.x;
-  unsigned int channel = blockIdx.x%depth;
-  unsigned int blockSize = blockDim.x;
+  int tid = threadIdx.x ;
+  int column = blockIdx.x ;
+  float x = matrixSumHelper(matrix, numRows) ;
+  if (tid == 0) {
+    // Recall that the matrix stores in order [derMultipliers derBiases means sigmas]
+    // containing four types of data
+    int type = column / numChannels ;
+    int channel = column % numChannels ;
+
+    if (type == 0) {
+      derMultipliers[channel] = x ;
+    }
+    else if (type == 1) {
+      derBiases[channel] = x ;
+    }
+    else if (type == 2) {
+      accumulator[channel] = x ;
+    }
+    else {
+      accumulator[channel + numChannels] = x ;
+    }
+  }
+}
+
+__global__ void normalizeBackward(float * derData,
+                                  float const * data,
+                                  float const * derOutput,
+                                  float const * means,
+                                  float const * sigmas,
+                                  float const * multipliers,
+                                  float const * derBiases,
+                                  float const * derMultipliers,
+                                  int planeArea,
+                                  int numPlanes,
+                                  int numChannels,
+                                  float epsilon,
+                                  float mass)
+
+{
+  int tid = threadIdx.x ;
+  int plane = blockIdx.x ;
+  int blockSize = blockDim.x ;
+  int planeStride = gridDim.x ;
+  int channel = blockIdx.x % numChannels ;
 
   // Not optimized for compute capability < 1.2
-  float mu = g_imean[channel];
-  float sigma2 = g_isigma[channel] +epsilon;
-  float g = g_ig[channel];
-  float muz = g_imuz[channel]/mass;
-  float dzdg = g_idzdg[channel];
-  float G1 = g*rsqrt(sigma2);
-  float G2 = (g *dzdg)/(sigma2*mass);
+  float mu = means[channel];
+  float sigma2 = sigmas[channel] + epsilon;
+  float multiplier = multipliers[channel] ;
+  float muz = derBiases[channel] / mass;
+  float derMultiplier = derMultipliers[channel];
+  float G1 = multiplier * rsqrt(sigma2);
+  float G2 = (multiplier * derMultiplier) / (sigma2 * mass);
 
-  unsigned int y = blockIdx.x*(WH);
-  unsigned int r = y - (y>>MSB_WARP)*WARP_SIZE;//y%WARP_SIZE
-  unsigned int i = y + tid -r;// 2* can be added to blockSize, will be modified later
-  unsigned int iter = 0;
-
-  if (WH >= blockSize) {
-    if (remain == 0) {
-      r = WH-quotient*blockSize;//WH%blockSize
-      // if r==0 all memory access are coalesced
-      if( r==0){
-        while (y < n){
-          if (iter == quotient-1) {
-            g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-            y += j;
-            i = y +tid;
-            iter = 0;
-          } else {
-            g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-            i += blockSize;
-            iter++;
-          }
-        }
-      } else {
-        while (y < n){
-          if (iter == quotient) {
-            if(tid<r) g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-            y += j;
-            i = y+tid;
-            iter = 0;
-          } else {
-            g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-            i += blockSize;
-            iter++;
-          }
-        }
+  while (plane < numPlanes) {
+    float const * planeBegin = data + plane * planeArea ;
+    float const * planeEnd = planeBegin + planeArea ;
+    float const * block = (float const*) getBlockBeginning(planeBegin) + tid ;
+    float const * dblock = derOutput + (block - data) ;
+    float * oblock = derData + (block - data) ;
+    while (block < planeEnd) {
+      if (block >= planeBegin) {
+        *oblock = G1 * (*dblock - muz) - G2 * (*block - mu);
       }
-    } else {
-      // Memory access are made coalesced this imply that some kernel will be waiting while some will be working
-      while (y < n){
-        // Make all memory access coalesced
-        if (iter ==0) {
-          //!! WARNING The first warp may have divergent kernels here
-          if (tid >= r){  g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);}
-          else if(r>=dec && tid < r-dec ){ g_odata[i+WH+dec] = G1*(g_iderOutput[i+WH+dec]-muz) - G2*(g_idata[i+WH+dec]-mu); }
-          i += blockSize;
-          iter++;
-        }
-        else if (iter == quotient) {
-          if(tid < blockSize - dec + r) g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-          r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-          y += j;
-          i = y+tid-r;
-          iter =0;
-        } else{
-          g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-          i += blockSize;
-          iter++;
-        }
-      }
+      block += blockSize ;
+      dblock += blockSize ;
+      oblock += blockSize ;
     }
-  } else { // If WH is too small. Highly suboptimal
-    if (remain == 0) {
-      while (y < n){
-        if(tid<WH)  g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);
-        y += j;
-        i = y+tid;
-      }
-    } else {
-      while (y < n){
-        if(tid>=r && tid < WH + r){ g_odata[i] = G1*(g_iderOutput[i]-muz) - G2*(g_idata[i]-mu);}
-        else if(r+WH > blockSize && tid < WH +r -blockSize) { g_odata[i+blockSize] = G1*(g_iderOutput[i+blockSize]-muz) - G2*(g_idata[i+blockSize]-mu); }
-        r = ((r+r1)>WARP_SIZE) ? (r+r1)-WARP_SIZE : r+r1;
-        y += j;
-        i = y+tid-r;
-        iter =0;
-      }
-    }
+    plane += planeStride ;
   }
 }
 
-  template<> vl::Error
-vl::impl::bnorm_backward<vl::GPU, float>(Context& context, float* derData,
-    float* derFilters,
-    float* derBiaises,
-    float const* data,
-    float const* filters,
-    float const* biaises,
-    size_t height, size_t width, size_t depth, size_t size,
-    float* derOutput, float epsilon)
+template<> vl::Error
+vl::impl::bnorm_backward<vl::GPU, float>(Context& context,
+                                         float* derData,
+                                         float* derMultipliers,
+                                         float* derBiases,
+                                         float const* data,
+                                         float const* multipliers,
+                                         float const* biases,
+                                         float const* derOutput,
+                                         int height, int width, int depth, int size,
+                                         float epsilon)
 {
-  unsigned int featureWidth = height*width;
-  unsigned int num_threads = VL_CUDA_NUM_THREADS>>1;
-  unsigned int num_threads_sum = VL_CUDA_NUM_THREADS>>1;
-
-  if(featureWidth < num_threads){
-    if(featureWidth>>(MSB_WARP) <4){
-      num_threads = 2*WARP_SIZE;
-    }
-    else if (4<=(featureWidth>>(MSB_WARP)) && (featureWidth>>(MSB_WARP))<8){
-      num_threads = 4*WARP_SIZE;
-    } else {
-      num_threads = 8*WARP_SIZE;
-    }
-  }
-
-  unsigned int k = featureWidth / num_threads;
-  unsigned int remain = featureWidth-(featureWidth>>MSB_WARP)*WARP_SIZE;//featureWidth%WARP_SIZE
-  unsigned int mass = featureWidth*size;
-  unsigned int volume = mass*depth;
-  unsigned int gridDimension = depth*size;
-  unsigned int row = size;
-  unsigned int dec = (k+1)*num_threads-featureWidth;//num_threads-(featureWidth%num_threads)
-
-  // Compute gridDimension avoid to set too much work groups
-  if(gridDimension>65536) {
-    if(depth>=65536){
-      // Unlikely to happen
-      gridDimension = depth;
-    } else {
-      row = 65536/depth+1;
-      gridDimension =row*depth;
-    }
-  }
-
-  unsigned int update = gridDimension*featureWidth;
-  unsigned int r1 = update-(update>>MSB_WARP)*WARP_SIZE;//update%WARP_SIZE
-
   vl::Device type = GPU;
   float *intermediateOutput;
-  float *mean, *sigma;
+  float *mean ;
+  float *sigma;
   cudaError_t status;
+  unsigned int planeArea = height * width ;
+  unsigned int numPlanes = depth * size ;
+  unsigned int blockSize = getBlockSize(planeArea) ;
 
-  if(gridDimension != depth){
-    // intermediate outputs
-    unsigned int fin1 = (gridDimension%WARP_SIZE==0) ? gridDimension : WARP_SIZE*((gridDimension>>MSB_WARP)+1);
-    // Might be optimize here to get coalescent access
-    intermediateOutput = (float*) context.getWorkspace(type, (3*gridDimension+fin1+2*depth) * sizeof(float)) ;
-    mean = intermediateOutput + fin1 + 3*gridDimension;
-    sigma = mean + depth;
-
-    status = cudaPeekAtLastError() ;
-    if(status!= cudaSuccess) mexErrMsgTxt("Error in computeMuSigma") ;
-
-    // Mean, variance, derFilters and derBiaises computation
-    computeDerSum<<<gridDimension, num_threads, 4*num_threads*sizeof(float)>>>
-      (data, derOutput, NULL, intermediateOutput, NULL, depth, row, featureWidth, k, remain, update, r1, dec, volume);
-
-
-    if(row < num_threads_sum){
-      if(row>>(MSB_WARP) <4){
-        num_threads_sum = 2*WARP_SIZE;
-      }
-      else if (4<=(row>>(MSB_WARP)) && (row>>(MSB_WARP))<8){
-        num_threads_sum = 4*WARP_SIZE;
-      } else {
-        num_threads_sum = 8*WARP_SIZE;
-      }
+  unsigned int row = size ;
+  unsigned int gridSize = row * depth ;
+  if (gridSize > 65536) {
+    if (depth >= 65536) {
+      row = 1 ;
+    } else {
+      row = 65536/depth + 1 ;
     }
+    gridSize = row * depth ;
+  }
 
-    // Mean and variance computation
-    computeMatrixDerSum<<<4*depth,num_threads_sum,num_threads_sum*sizeof(float)>>>
-      (intermediateOutput, mean, derFilters, derBiaises, 4*depth, row, row/num_threads_sum, row%WARP_SIZE, num_threads_sum-(row%num_threads_sum),4*gridDimension);
+  if(gridSize != depth){
+
+    // Get intermediate buffers
+    unsigned int fin1 = (gridSize%WARP_SIZE==0) ? gridSize : WARP_SIZE*((gridSize>>MSB_WARP)+1);
+    // Might be optimize here to get coalescent access
+    intermediateOutput = (float*) context.getWorkspace(type, (3*gridSize+fin1+2*depth) * sizeof(float)) ;
+    mean = intermediateOutput + fin1 + 3*gridSize;
+    sigma = mean + depth;
+    
+    status = cudaPeekAtLastError() ;
+    if (status != cudaSuccess) return vl::vlErrorCuda ;
+
+    // Mean, variance, derMultipliers and derBiases computation
+    computePartialMuSigmaDer<<<gridSize, blockSize, 4*blockSize*sizeof(float)>>>
+    (intermediateOutput,
+     NULL,
+     NULL,
+     data,
+     derOutput,
+     planeArea,
+     numPlanes,
+     depth,
+     row) ;
+
+    int blockSizeSum = getBlockSize(row) ;
+    reduceMuSigmaDer <<<4*depth,blockSizeSum,blockSizeSum*sizeof(float)>>>
+    (mean, derMultipliers, derBiases,
+     intermediateOutput, row, depth) ;
 
     status = cudaPeekAtLastError() ;
-    if(status!= cudaSuccess) mexErrMsgTxt("Error in computeMuSigma") ;
-
-  } else{
+    if (status != cudaSuccess) return vl::vlErrorCuda ;
+  } else {
     mean = (float*) context.getWorkspace(type, (2*depth) * sizeof(float)) ;
     sigma = mean + depth;
 
-    computeDerSum<<<gridDimension, num_threads, 4*num_threads*sizeof(float)>>>
-      (data, derOutput, mean, derFilters, derBiaises, depth, row, featureWidth, k, remain, update, r1, dec, volume);
+    computePartialMuSigmaDer <<<gridSize, blockSize, 4*blockSize*sizeof(float)>>>
+    (derMultipliers,
+     derBiases,
+     mean,
+     data,
+     derOutput,
+     planeArea,
+     numPlanes,
+     depth,
+     row) ;
 
     status = cudaPeekAtLastError() ;
-    if(status!= cudaSuccess) mexErrMsgTxt("Error in computeDerSum") ;
+    if (status != cudaSuccess) return vl::vlErrorCuda ;
   }
 
-  divideSigma<<<divideUpwards(depth,num_threads),num_threads>>>(derFilters, derBiaises, mean,sigma,epsilon,(float)mass,depth);
-
+  unsigned int mass = planeArea*size;
+  divideSigma<<<divideUpwards(depth,blockSize),blockSize>>>
+  (derMultipliers, derBiases, mean,sigma,epsilon,(float)mass,depth);
+  
   // Compute output
-  normalizeBackward<<< gridDimension, num_threads>>>
-    (data, derOutput, mean, sigma, filters, derBiaises, derFilters, derData,
-     epsilon, (float)mass, depth, featureWidth, k, remain, update, r1, dec, volume);
+  normalizeBackward <<<gridSize, blockSize>>>
+  (derData,
+   data, derOutput, mean, sigma,
+   multipliers, derBiases, derMultipliers,
+   planeArea, numPlanes, depth,
+   epsilon, (float)mass) ;
 
   status = cudaPeekAtLastError() ;
-  if(status!= cudaSuccess) mexErrMsgTxt("Error in normalizeBackward") ;
-
-  // Delete dynamic variables
   return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }

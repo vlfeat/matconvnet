@@ -10,8 +10,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __vl_data_hpp__
-#define __vl_data_hpp__
+#ifndef __vl__data_hpp__
+#define __vl__data_hpp__
 
 #include <cstddef>
 #include <string>
