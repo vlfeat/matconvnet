@@ -81,9 +81,9 @@ for i = 1:numel(params)
     end
   else
     if nargout <= 1
-      error('Uknown parameter ''%s''', field) ;
+      error('Uknown parameter ''%s''', params{i}) ;
     else
-      args = horzcat(args, {field, values{i}}) ;
+      args = horzcat(args, {params{i}, values{i}}) ;
     end
   end
 end
@@ -91,6 +91,10 @@ end
 function field = findfield(opts, field)
 fields=fieldnames(opts) ;
 i=find(strcmpi(fields, field)) ;
-field=fields{i} ;
+if ~isempty(i)
+  field=fields{i} ;
+else
+  field=[] ;
+end
 
 
