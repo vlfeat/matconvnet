@@ -19,6 +19,12 @@ assert(isequal(size(a),size(b))) ;
 if isempty(a), return ; end
 delta = a - b ;
 %max(abs(a(:)-b(:)))
+if nargin > 2 && ~isempty(tau) && tau < 0
+  tau_min = -tau ;
+  tau = [] ;
+else
+  tau_min = 0 ;
+end
 if nargin < 3 || isempty(tau)
   maxv = max([max(a(:)), max(b(:))]) ;
   minv = min([min(a(:)), min(b(:))]) ;

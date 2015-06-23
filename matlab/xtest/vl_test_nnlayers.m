@@ -431,17 +431,14 @@ for l = tests
       r = 13 ; c = 17 ;
       nd = 4 ;
       bs = 5 ;
-      
-      dtype = 'single' ;
-      
-      x = grandn(r, c, nd, bs, dtype) ;
-      g = grandn(1, 1, nd, 1);
-      b = grandn(1, 1, nd, 1);
-      g = grandn(nd, 1);
-      b = grandn(nd, 1);
-      
+      x = grandn(r, c, nd, bs, 'single') ;
+      g = grandn(1, 1, nd, 1, 'single');
+      b = grandn(1, 1, nd, 1, 'single');
+      g = grandn(nd, 1, 'single');
+      b = grandn(nd, 1, 'single');
+
       y = vl_nnbnorm(x,g,b) ;
-      dzdy = grandn(size(y), dtype) ;
+      dzdy = grandn(size(y), 'single') ;
       [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy) ;
       
       vl_testder(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, range * 1e-3) ;

@@ -1,7 +1,7 @@
-function [y,dzdg,dzdb] = vl_nnbnorm(x,g,b,varargin)
+function [y,dzdg,dzdb] = vl_nnbnorm_old(x,g,b,varargin)
 % VL_NNBNORM  CNN batch normalisation
-%    Y = VL_NNBNORM(X,G,B) computes the batch normalization of the
-%    input X. This is defined as
+%   Y = VL_NNBNORM(X,G,B) computes the batch normalization of the
+%   input X. This is defined as:
 %
 %      Y(i,j,k,t) = G(k) * (X(i,j,k,t) - mu(k)) / sigma(k) + B(k)
 %
@@ -24,12 +24,12 @@ function [y,dzdg,dzdb] = vl_nnbnorm(x,g,b,varargin)
 %
 %   VL_NNBNROM(..., 'Option', value) takes the following options:
 %
-%   Epsilon:: 1e-4
+%   `Epsilon`:: 1e-4
 %       Specify the EPSILON constant.
 %
 %   See also: VL_NNNORMALIZE().
 
-% Copyright (C) 2015 Karel Lenc.
+% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -54,43 +54,35 @@ end
 %                                                                    Do job
 % -------------------------------------------------------------------------
 
-one = ones(1,1,'like',x);
-eps = opts.epsilon;
+x_size = [size(x,1), size(x,2), size(x,3), size(x,4)];
+g_size = size(g) ;
+b_size = size(b) ;
+g = reshape(g, [1 x_size(3) 1]) ;
+b = reshape(b, [1 x_size(3) 1]) ;
+x = reshape(x, [x_size(1)*x_size(2) x_size(3) x_size(4)]) ;
 
-x_sz = [size(x,1), size(x,2), size(x,3), size(x,4)];
-% Create an array of size #channels x #samples
-x = permute(x, [3 1 2 4]);
-x = reshape(x, x_sz(3), []);
-
-% do the job
-u = mean(x, 2);
-v = var(x, 1, 2);
-
-v_nf = sqrt(v + opts.epsilon) ;
-x_mu = bsxfun(@minus, x, u);
-x_n = bsxfun(@times, x_mu, 1./v_nf);
+mass = prod(x_size([1 2 4])) ;
+mu = sum(sum(x,1),3) / mass  ;
+y = bsxfun(@minus, x, mu); % y <- x_mu
+sigma2 = sum(sum(y .* y,1),3) / mass + opts.epsilon ;
+sigma = sqrt(sigma2) ;
 
 if ~backMode
-  y = bsxfun(@times, x_n, g);
-  y = bsxfun(@plus, y, b);
+  y = bsxfun(@plus, bsxfun(@times, g ./ sigma, y), b) ;
 else
-  dzdy = permute(dzdy, [3 1 2 4]);
-  dzdy = reshape(dzdy, x_sz(3), []);
+  % remember: y contains x_mu
+  dzdy = reshape(dzdy, size(x)) ;
+  dzdg = sum(sum(dzdy .* y,1),3) ./ sigma ;
+  dzdb = sum(sum(dzdy,1),3) ;
 
-  m = one * size(x, 2);
-  dvdx = 2./(m - 0*one) .* bsxfun(@minus, x_mu, one ./ m * sum(x_mu,2));
+  muz = dzdb / mass;
+  y = ...
+    bsxfun(@times, g ./ sigma, bsxfun(@minus, dzdy, muz)) - ...
+    bsxfun(@times, g .* dzdg ./ (sigma2 * mass), y) ;
 
-  v_nf_d = -0.5 * (v + one*eps) .^ (-3/2);
-
-  dzdx = bsxfun(@times, bsxfun(@minus, dzdy, one ./ m * sum(dzdy,2)), 1./v_nf(:));
-  dzdx = dzdx + bsxfun(@times, bsxfun(@times, dvdx, sum(dzdy .* x_mu, 2)), v_nf_d);
-  %dzdx = dzdy;
-  y = bsxfun(@times, dzdx, g);
-  dzdg = sum(dzdy .* x_n, 2);
-  dzdb = sum(dzdy, 2);
+  dzdg = reshape(dzdg, g_size) ;
+  dzdb = reshape(dzdb, b_size) ;
 end
 
-y = reshape(y, x_sz(3), x_sz(1), x_sz(2), x_sz(4));
-y = permute(y, [2 3 1 4]);
-
+y = reshape(y, x_size) ;
 end
