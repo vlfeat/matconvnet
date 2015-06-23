@@ -160,7 +160,7 @@ for epoch=1:opts.numEpochs
   for f = sets
     f = char(f) ;
     n = numel(eval(f)) ;
-    info.(f).speed(epoch) = n / stats.(f)(1) ;
+    info.(f).speed(epoch) = n / stats.(f)(1) * max(1, numGpus) ;
     info.(f).objective(epoch) = stats.(f)(2) / n ;
     info.(f).error(:,epoch) = stats.(f)(3:end) / n ;
   end
