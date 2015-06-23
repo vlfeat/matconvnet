@@ -4,21 +4,15 @@ function Y = vl_nnsoftmaxloss(X,c,dzdy)
 %    the logistic loss the data X. X has dimension H x W x D x N,
 %    packing N arrays of W x H D-dimensional vectors.
 %
-%    C contains the class labels, which should be integer in the range
-%    1 to D.  C can be an array with either N elements or with H x W x
-%    1 x N dimensions. In the fist case, a given class label is
+%    C contains the class labels, which should be integers in the range
+%    1 to D. C can be an array with either N elements or with dimensions
+%    H x W x 1 x N dimensions. In the fist case, a given class label is
 %    applied at all spatial locations; in the second case, different
 %    class labels can be specified for different locations.
 %
-%    D can be thought of as the number of possible classes and the
-%    function computes the softmax along the D dimension. Often W=H=1,
-%    but this is not a requirement, as the operator is applied
-%    convolutionally at all spatial locations.
-%
-%    DZDX = VL_NNSOFTMAXLOSS(X, C, DZDY) computes the derivative DZDX
-%    of the CNN with respect to the input X given the derivative DZDY
-%    with respect to the block output Y. DZDX has the same dimension
-%    as X.
+%    DZDX = VL_NNSOFTMAXLOSS(X, C, DZDY) computes the derivative DZDX of the
+%    function projected on the output derivative DZDY.
+%    DZDX has the same dimension as X.
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
@@ -42,7 +36,7 @@ sz_ = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
 assert(isequal(sz_, [sz(1) sz(2) sz_(3) sz(4)])) ;
 assert(sz_(3)==1 | sz_(3)==2) ;
 
-% c = 0 is used to skip entries
+% class c = 0 skips a spatial location
 mass = single(c(:,:,1,:) > 0) ;
 if sz_(3) == 2
   % the second channel of c (if present) is used as weights
