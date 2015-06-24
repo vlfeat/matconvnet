@@ -22,9 +22,9 @@ numInputs = numel(inputs);
 inputNames = {inputs.name};
 
 has_names = cellfun(@(a) isfield(a, 'name') || isprop(a, 'name'), net.layers);
-has_inputs = cellfun(@(a) isfield(a, 'inputs') || isprop(a, 'name'), net.layers);
+has_inputs = cellfun(@(a) isfield(a, 'inputs') || isprop(a, 'inputs'), net.layers);
 
-if any(~has_inputs) || ~any(has_names)
+if any(~has_inputs) || any(~has_names)
   error('Not a valid DAGNN network.');
 end
 
