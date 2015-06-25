@@ -4,7 +4,7 @@ function net = cnn_imagenet_init(varargin)
 opts.scale = 1 ;
 opts.initBias = 0.1 ;
 opts.weightDecay = 1 ;
-opts.weightInitMethod = 'gaussian';
+opts.weightInitMethod = 'xavierimproved' ;
 opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts = vl_argparse(opts, varargin) ;
@@ -38,7 +38,7 @@ net.normalization.border = 256 - net.normalization.imageSize(1:2) ;
 net.normalization.interpolation = 'bicubic' ;
 net.normalization.averageImage = [] ;
 net.normalization.keepAspect = true ;
-
+ 
 % --------------------------------------------------------------------
 function net = add_block(net, opts, id, h, w, in, out, stride, pad, init_bias)
 % --------------------------------------------------------------------
@@ -70,17 +70,17 @@ function weights = init_weight(opts, h, w, in, out, type)
 % rectifiers: Surpassing human-level performance on imagenet
 % classification. CoRR, (arXiv:1502.01852v1), 2015.
 
-switch lower(opts.initMethod)
+switch lower(opts.weightInitMethod)
   case 'gaussian'
     weights = 0.01/opts.scale * randn(h, w, in, out, type) ;
   case 'xavier'
     sc = sqrt(3/(h*w*in)) ;
     weights = (rand(h, w, in, out, type)*2 - 1)*sc ;
   case 'xavierimproved'
-    sc = sqrt(6/(h*w*out))
+    sc = sqrt(6/(h*w*out)) ;
     weights = randn(h, w, in, out, type)*sc ;
   otherwise
-    error('Uknown weight initialization method''%s''', opts.initMethod) ;
+    error('Uknown weight initialization method''%s''', opts.weightInitMethod) ;
 end
 
 % --------------------------------------------------------------------
