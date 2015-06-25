@@ -441,7 +441,7 @@ vl::impl::bnorm_forward<vl::GPU, float>(Context& context,
      row) ;
 
     status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    if (status != cudaSuccess) return vl::vlErrorCuda ;
   }
 
   unsigned int mass = planeArea*size;
