@@ -15,6 +15,7 @@ the terms of the BSD license (see the COPYING file).
 #include "blashelper.hpp"
 #include <assert.h>
 #include <float.h>
+#include <stdint.h>
 
 // MSB_WARP = log2(WARP_SIZE)
 #define WARP_SIZE 32
@@ -142,22 +143,22 @@ __forceinline__ __device__ void blockReduce4(volatile float * sdata,
 }
 
 /*
- In the following we often need to use blocks of threads to sum over 
+ In the following we often need to use blocks of threads to sum over
  data which is not necessarily naturally aligned with thread blocks or even thread warps.
- 
+
  The trick is to look at the block as a jumping window, sliding it over the memory
  that needs to be summed, but always aligned at natural block boundaries. This means
  that occasionally blocks will only be partially filled with useful memory:
 
     +-------+ +-------+           +-------+ +-------+      aligned blocks (with two warps each)
     |   :   | |   :   |           |   :   | |   :   |      covering the data
-    +-------+ +-------+           +-------+ +-------+                                      
-      +-------------+             +-------------+          data to sum                     
-                                                                                           
-+-------------------------------------------------------->                                 
-              increasing memory addresses                                                  
+    +-------+ +-------+           +-------+ +-------+
+      +-------------+             +-------------+          data to sum
 
- 
++-------------------------------------------------------->
+              increasing memory addresses
+
+
  This pattern is repreated several times in the code below.
  */
 
@@ -340,7 +341,7 @@ vl::impl::bnorm_forward<vl::GPU, float>(Context& context,
 {
 
 /*
- 
+
  The data is organised in SIZE images, each of which is composed of DEPTH
  planes. The goal is to compute the mean and std of the features in each
  plane. In the follwing diagram, planes are enumerated from left to right
@@ -368,7 +369,7 @@ vl::impl::bnorm_forward<vl::GPU, float>(Context& context,
  +-->+b 1    |   |b 2    |   |b 3    |   |b 4    |
      +-------+   +-------+   +-------+   +-------+                             
 
- 
+
  We create gridSize thread blocks. Each block is assigned to sum
  over a successive plane in the order above. Since there may be less blocks
  than planes overall, these warp around (in the example, thread block 1
@@ -391,11 +392,13 @@ vl::impl::bnorm_forward<vl::GPU, float>(Context& context,
   // features belonging to the same channel,
   // even across different images.
   unsigned int row = size ;
-  unsigned int gridSize = row * depth ;
-  if (gridSize > 65536) {
-    if (depth >= 65536) {
-      row = 1 ;
-    } else {
+  unsigned int gridSize =  depth ;
+
+  // Avoid thread overload : a thread will execute less than ten thousand operation
+  if (planeArea*size > 10000*blockSize) {
+    row = (depth*planeArea*size)/(9999*blockSize) + 1 ;
+    // gridSize limit
+    if (depth*row > 65536) {
       row = 65536/depth + 1 ;
     }
     gridSize = row * depth ;
@@ -652,11 +655,13 @@ vl::impl::bnorm_backward<vl::GPU, float>(Context& context,
   unsigned int blockSize = getBlockSize(planeArea) ;
 
   unsigned int row = size ;
-  unsigned int gridSize = row * depth ;
-  if (gridSize > 65536) {
-    if (depth >= 65536) {
-      row = 1 ;
-    } else {
+  unsigned int gridSize = depth ;
+
+  // Avoid thread overload : a thread will execute less than ten thousand operation
+  if (planeArea*size > 10000*blockSize) {
+    row = (depth*planeArea*size)/(9999*blockSize) + 1 ;
+    // gridSize limit
+    if (depth*row > 65536) {
       row = 65536/depth + 1 ;
     }
     gridSize = row * depth ;
@@ -670,7 +675,7 @@ vl::impl::bnorm_backward<vl::GPU, float>(Context& context,
     intermediateOutput = (float*) context.getWorkspace(type, (3*gridSize+fin1+2*depth) * sizeof(float)) ;
     mean = intermediateOutput + fin1 + 3*gridSize;
     sigma = mean + depth;
-    
+
     status = cudaPeekAtLastError() ;
     if (status != cudaSuccess) return vl::vlErrorCuda ;
 
@@ -715,7 +720,7 @@ vl::impl::bnorm_backward<vl::GPU, float>(Context& context,
   unsigned int mass = planeArea*size;
   divideSigma<<<divideUpwards(depth,blockSize),blockSize>>>
   (derMultipliers, derBiases, mean,sigma,epsilon,(float)mass,depth);
-  
+
   // Compute output
   normalizeBackward <<<gridSize, blockSize>>>
   (derData,
