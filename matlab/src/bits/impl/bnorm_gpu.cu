@@ -21,6 +21,9 @@ the terms of the BSD license (see the COPYING file).
 #define WARP_SIZE 32
 #define MSB_WARP 5
 
+
+// macro function
+#define min(a,b) (a > b ? b : a);
 /* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 /*                                                         Helpers	*/
@@ -395,14 +398,17 @@ vl::impl::bnorm_forward<vl::GPU, float>(Context& context,
   unsigned int gridSize =  depth ;
 
   // Avoid thread overload : a thread will execute less than ten thousand operation
-  if (planeArea*size > 10000*blockSize) {
-    row = (depth*planeArea*size)/(9999*blockSize) + 1 ;
+  /*if (planeArea*size > 10000*blockSize) {
+    row = min((depth*planeArea*size)/(9999*blockSize)+1,size) ;
     // gridSize limit
-    if (depth*row > 65536) {
+    if(depth >= 65536){
+      row = 1;
+    }
+    else if (depth*row > 65536) {
       row = 65536/depth + 1 ;
     }
     gridSize = row * depth ;
-  }
+  }*/
 
   if (gridSize != depth){
 
@@ -658,14 +664,17 @@ vl::impl::bnorm_backward<vl::GPU, float>(Context& context,
   unsigned int gridSize = depth ;
 
   // Avoid thread overload : a thread will execute less than ten thousand operation
-  if (planeArea*size > 10000*blockSize) {
-    row = (depth*planeArea*size)/(9999*blockSize) + 1 ;
+  /*if (planeArea*size > 10000*blockSize) {
+    row = min((depth*planeArea*size)/(9999*blockSize)+1,size) ;
     // gridSize limit
-    if (depth*row > 65536) {
+    if(depth >= 65536){
+      row = 1;
+    }
+    else if (depth*row > 65536) {
       row = 65536/depth + 1 ;
     }
     gridSize = row * depth ;
-  }
+  }*/
 
   if(gridSize != depth){
 
