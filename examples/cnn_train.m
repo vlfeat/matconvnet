@@ -131,15 +131,6 @@ for epoch=1:opts.numEpochs
     end
   end
 
-  % move CNN to GPU as needed
-  if numGpus == 1
-    net = vl_simplenn_move(net, 'gpu') ;
-  elseif numGpus > 1
-    spmd(numGpus)
-      net_ = vl_simplenn_move(net, 'gpu') ;
-    end
-  end
-
   % train one epoch and validate
   train = opts.train(randperm(numel(opts.train))) ; % shuffle
   val = opts.val ;
@@ -148,9 +139,10 @@ for epoch=1:opts.numEpochs
     [~,stats.val] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net) ;
   else
     spmd(numGpus)
-      [net_, stats_train_] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net_) ;
+      [net_, stats_train_] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
       [~, stats_val_] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net_) ;
     end
+    net = net_{1} ;
     stats.train = sum([stats_train_{:}],2) ;
     stats.val = sum([stats_val_{:}],2) ;
   end
@@ -163,14 +155,6 @@ for epoch=1:opts.numEpochs
     info.(f).speed(epoch) = n / stats.(f)(1) * max(1, numGpus) ;
     info.(f).objective(epoch) = stats.(f)(2) / n ;
     info.(f).error(:,epoch) = stats.(f)(3:end) / n ;
-  end
-  if numGpus == 1
-     net = vl_simplenn_move(net, 'cpu') ;
-  elseif numGpus > 1
-    spmd(numGpus)
-      net_ = vl_simplenn_move(net_, 'cpu') ;
-    end
-    net = net_{1} ;
   end
   if ~evaluateMode, save(modelPath(epoch), 'net', 'info') ; end
 
@@ -241,8 +225,17 @@ function err = error_none(opts, labels, res)
 err = zeros(0,1) ;
 
 % -------------------------------------------------------------------------
-function  [net,stats,prof] = process_epoch(opts, getBatch, epoch, subset, learningRate, imdb, net)
+function  [net_cpu,stats,prof] = process_epoch(opts, getBatch, epoch, subset, learningRate, imdb, net_cpu)
 % -------------------------------------------------------------------------
+
+% move CNN to GPU as needed
+numGpus = numel(opts.gpus) ;
+if numGpus >= 1
+  net = vl_simplenn_move(net_cpu, 'gpu') ;
+else
+  net = net_cpu ;
+  net_cpu = [] ;
+end
 
 % validation mode if learning rate is zero
 training = learningRate > 0 ;
@@ -309,7 +302,7 @@ for t=1:opts.batchSize:numel(subset)
   % gather and accumulate gradients across labs
   if training
     if numGpus <= 1
-      net = accumulate_gradients(opts, learningRate, batchSize, net, res) ;
+      [net,res] = accumulate_gradients(opts, learningRate, batchSize, net, res) ;
     else
       if isempty(mmap)
         mmap = map_gradients(opts.memoryMapFile, net, res, numGpus) ;
@@ -345,11 +338,17 @@ if nargout > 2
   mpiprofile off ;
 end
 
+if numGpus >= 1
+  net_cpu = vl_simplenn_move(net, 'cpu') ;
+else
+  net_cpu = net ;
+end
+
 % -------------------------------------------------------------------------
 function [net,res] = accumulate_gradients(opts, lr, batchSize, net, res, mmap)
 % -------------------------------------------------------------------------
-for l=1:numel(net.layers)
-  for j=1:numel(res(l).dzdw)
+for l=numel(net.layers):-1:1
+  for j=1:min(numel(res(l).dzdw),1)
     thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
     thisLR = lr * net.layers{l}.learningRate(j) ;
 
@@ -368,7 +367,9 @@ for l=1:numel(net.layers)
         opts.momentum * net.layers{l}.momentum{j} ...
         - thisDecay * net.layers{l}.weights{j} ...
         - (1 / batchSize) * res(l).dzdw{j} ;
+      qres(res,net) ;
       net.layers{l}.weights{j} = net.layers{l}.weights{j} + thisLR * net.layers{l}.momentum{j} ;
+      qres(res,net) ;
     else
       % Legacy code: to be removed
       if j == 1
