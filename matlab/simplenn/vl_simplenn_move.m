@@ -15,7 +15,7 @@ function net = vl_simplenn_move(net, destination)
 switch destination
   case 'gpu', moveop = @(x) gpuArray(x) ;
   case 'cpu', moveop = @(x) gather(x) ;
-  otherwise, error('Unknown desitation ''%s''.', destination) ;
+  otherwise, error('Unknown destination ''%s''.', destination) ;
 end
 for l=1:numel(net.layers)
   switch net.layers{l}.type
