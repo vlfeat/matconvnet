@@ -26,7 +26,7 @@
 %
 %    VL_NNCONVT(..., 'option', value, ...) takes the following options:
 %
-%    `Upsampling`:: 1
+%    `Upsample`:: 1
 %      The input stride (upsampling factor). Passing [UPY UPX] allows
 %      specifying different upsampling factors for the vertical and
 %      horizontal directions.
