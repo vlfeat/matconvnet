@@ -27,7 +27,7 @@ opts.train.prefetch = true ;
 opts.train.sync = false ;
 opts.train.cudnn = true ;
 opts.train.expDir = opts.expDir ;
-if opts.batchNormalization
+if ~opts.batchNormalization
   opts.train.learningRate = logspace(-2, -4, 60) ;
 else
   opts.train.learningRate = logspace(-1, -4, 20) ;

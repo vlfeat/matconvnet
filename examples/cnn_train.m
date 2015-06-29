@@ -367,9 +367,7 @@ for l=numel(net.layers):-1:1
         opts.momentum * net.layers{l}.momentum{j} ...
         - thisDecay * net.layers{l}.weights{j} ...
         - (1 / batchSize) * res(l).dzdw{j} ;
-      qres(res,net) ;
       net.layers{l}.weights{j} = net.layers{l}.weights{j} + thisLR * net.layers{l}.momentum{j} ;
-      qres(res,net) ;
     else
       % Legacy code: to be removed
       if j == 1

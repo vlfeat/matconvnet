@@ -4,7 +4,8 @@ function net = cnn_imagenet_init(varargin)
 opts.scale = 1 ;
 opts.initBias = 0.1 ;
 opts.weightDecay = 1 ;
-opts.weightInitMethod = 'xavierimproved' ;
+%opts.weightInitMethod = 'xavierimproved' ;
+opts.weightInitMethod = 'gaussian' ;
 opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts = vl_argparse(opts, varargin) ;
@@ -72,16 +73,18 @@ function weights = init_weight(opts, h, w, in, out, type)
 
 switch lower(opts.weightInitMethod)
   case 'gaussian'
-    weights = 0.01/opts.scale * randn(h, w, in, out, type) ;
+    sc = 0.01/opts.scale ;
+    weights = randn(h, w, in, out, type)*sc;
   case 'xavier'
     sc = sqrt(3/(h*w*in)) ;
     weights = (rand(h, w, in, out, type)*2 - 1)*sc ;
   case 'xavierimproved'
-    sc = sqrt(6/(h*w*out)) ;
+    sc = sqrt(2/(h*w*out)) ;
     weights = randn(h, w, in, out, type)*sc ;
   otherwise
-    error('Uknown weight initialization method''%s''', opts.weightInitMethod) ;
+    error('Unknown weight initialization method''%s''', opts.weightInitMethod) ;
 end
+sc
 
 % --------------------------------------------------------------------
 function net = add_norm(net, opts, id)
@@ -91,6 +94,16 @@ if ~opts.batchNormalization
                              'name', sprintf('norm%s', id), ...
                              'param', [5 1 0.0001/5 0.75]) ;
 end
+
+% --------------------------------------------------------------------
+function net = add_dropout(net, opts, id)
+% --------------------------------------------------------------------
+if ~opts.batchNormalization
+  net.layers{end+1} = struct('type', 'dropout', ...
+                             'name', sprintf('dropout%s', id), ...
+                             'rate', 0.5) ;
+end
+
 
 % --------------------------------------------------------------------
 function net = alexnet(net, opts)
@@ -126,13 +139,14 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
                            'pad', 0) ;
 
 net = add_block(net, opts, '6', 6, 6, 256, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+net = add_dropout(net, opts, '6') ;
 
 net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+net = add_dropout(net, opts, '7') ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
+if opts.batchNormalization, net.layers(end) = [] ; end
 
 % --------------------------------------------------------------------
 function net = vgg_s(net, opts)
@@ -165,13 +179,14 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
                            'pad', [0 1 0 1]) ;
 
 net = add_block(net, opts, '6', 6, 6, 512, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+net = add_dropout(net, opts, '6') ;
 
 net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+net = add_dropout(net, opts, '7') ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
+if opts.batchNormalization, net.layers(end) = [] ; end
 
 % --------------------------------------------------------------------
 function net = vgg_m(net, opts)
@@ -204,13 +219,14 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
                            'pad', 0) ;
 
 net = add_block(net, opts, '6', 6, 6, 512, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+net = add_dropout(net, opts, '6') ;
 
 net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+net = add_dropout(net, opts, '7') ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
+if opts.batchNormalization, net.layers(end) = [] ; end
 
 % --------------------------------------------------------------------
 function net = vgg_f(net, opts)
@@ -243,13 +259,14 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
                            'pad', 0) ;
 
 net = add_block(net, opts, '6', 6, 6, 256, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+net = add_dropout(net, opts, '6') ;
 
 net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+net = add_dropout(net, opts, '7') ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
+if opts.batchNormalization, net.layers(end) = [] ; end
 
 % --------------------------------------------------------------------
 function net = vgg_vd(net, opts)
@@ -309,10 +326,11 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
                            'pad', 0) ;
 
 net = add_block(net, opts, '6', 7, 7, 512, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout6', 'rate', 0.5) ;
+net = add_dropout(net, opts, '6') ;
 
 net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
-net.layers{end+1} = struct('type', 'dropout', 'name', 'dropout7', 'rate', 0.5) ;
+net = add_dropout(net, opts, '7') ;
 
 net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
 net.layers(end) = [] ;
+if opts.batchNormalization, net.layers(end) = [] ; end
