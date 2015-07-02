@@ -9,6 +9,7 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 opts.dataDir = fullfile('data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
 opts.batchNormalization = false ;
+opts.weightInitMethod = 'gaussian' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 sfx = opts.modelType ;
@@ -54,7 +55,8 @@ end
 % -------------------------------------------------------------------------
 
 net = cnn_imagenet_init('model', opts.modelType, ...
-                        'batchNormalization', opts.batchNormalization) ;
+                        'batchNormalization', opts.batchNormalization, ...
+                        'weightInitMethod', opts.weightInitMethod) ;
 bopts = net.normalization ;
 bopts.numThreads = opts.numFetchThreads ;
 

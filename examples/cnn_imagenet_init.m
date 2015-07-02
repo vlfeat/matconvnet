@@ -33,6 +33,12 @@ switch opts.model
   otherwise
     error('Unknown model ''%s''', opts.model) ;
 end
+
+% final touches
+switch lower(opts.weightInitMethod)
+  case {'xavier', 'xavierimproved'}
+    net.layers{end}.weights{1} = net.layers{end}.weights{1} / 10 ;
+end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 net.normalization.border = 256 - net.normalization.imageSize(1:2) ;
@@ -84,7 +90,6 @@ switch lower(opts.weightInitMethod)
   otherwise
     error('Unknown weight initialization method''%s''', opts.weightInitMethod) ;
 end
-sc
 
 % --------------------------------------------------------------------
 function net = add_norm(net, opts, id)
