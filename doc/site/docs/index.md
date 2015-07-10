@@ -5,10 +5,12 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+> **New:** 1.0-beta13 adds a much faster version of batch
+> normalization and contains several bugfixes and minor improvements.
+>
 > **New:** MatConvNet used in planetary science research by the
 > University of Arizona (see the
 > [NVIDIA blog post](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/)).
->
 >
 > **New:** 1.0-beta12 adds convolution transpose aka deconvolution
 > (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
@@ -24,20 +26,9 @@ example CNNs are included to classify and encode images.
 > [Changes](about/#changes) for compatibility considerations. A faster
 > and more memory efficient version of batch normalization will arrive
 > soon.
->
-> **New:** 1.0-beta10 establishes feature parity between platforms,
-> removes some dependencies on third-party image libraries.
->
-> **New:** We have added [cuDNN](install.md#cudnn) support in
-> 1.0-beta9. This may have significant benefit in speed and memory
-> consupmtion.
->
-> **New:** There is a new introductory <a
-> href='http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html'>VGG
-> practical</a> on CNNs.
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta12](download/matconvnet-1.0-beta12.tar.gz)
+    - Tarball for [version 1.0-beta13](download/matconvnet-1.0-beta13.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**

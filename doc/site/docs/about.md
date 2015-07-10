@@ -23,6 +23,8 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta13 (July 2015). Much faster batch normalization and several
+    minor improvements and bugfixes.
 -   1.0-beta12 (May 2015). Added `vl_nnconvt` (convolution transpose or
     deconvolition).
 -   1.0-beta11 (April 2015) Added batch normalization, spatial

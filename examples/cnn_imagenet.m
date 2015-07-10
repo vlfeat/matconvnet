@@ -1,7 +1,7 @@
 function cnn_imagenet(varargin)
 % CNN_IMAGENET   Demonstrates training a CNN on ImageNet
-%   The demo can train the AlexNet, VGG-F, VGG-S, VGG-M, VGG-VD-16,
-%   and VGG-VD-19 architectures on ImageNet data.
+%   This demo demonstrates training the AlexNet, VGG-F, VGG-S, VGG-M,
+%   VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
