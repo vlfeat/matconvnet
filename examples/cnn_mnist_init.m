@@ -3,6 +3,9 @@ function net = cnn_mnist_init(varargin)
 opts.useBnorm = true ;
 opts = vl_argparse(opts, varargin) ;
 
+rng('default');
+rng(0) ;
+
 f=1/100 ;
 net.layers = {} ;
 net.layers{end+1} = struct('type', 'conv', ...
