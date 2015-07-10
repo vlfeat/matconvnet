@@ -64,7 +64,10 @@ args = {} ;
 
 % copy parameters in the opts structure, recursively
 for i = 1:numel(params)
-  field = findfield(opts, params{i}) ;
+  field = params{i} ;
+  if ~isfield(opts, field)
+    field = findfield(opts, field) ;
+  end
   if ~isempty(field)
     if isstruct(values{i})
       if ~isstruct(opts.(field))
