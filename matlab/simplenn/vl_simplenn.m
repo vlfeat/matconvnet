@@ -51,7 +51,15 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - layer.type = 'conv'
 %     - layer.weights = {filters, biases}
 %     - layer.stride: the sampling stride (usually 1).
-%     - layer.padding: the padding (usually 0).
+%     - layer.pad: the padding (usually 0).
+%
+%   Convolution transpose layer::
+%     The convolution transpose layer wraps VL_NNCONVT(). It has fields:
+%
+%     - layer.type = 'convt'
+%     - layer.weights = {filters, biases}
+%     - layer.upsample: the upsampling factor.
+%     - layer.crop: the amount of output cropping.
 %
 %   Max pooling layer::
 %     The max pooling layer wraps VL_NNPOOL(). It has fields:
@@ -60,7 +68,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - layer.method: pooling method ('max' or 'avg').
 %     - layer.pool: the pooling size.
 %     - layer.stride: the sampling stride (usually 1).
-%     - layer.padding: the padding (usually 0).
+%     - layer.pad: the padding (usually 0).
 %
 %   Normalization layer::
 %     The normalization layer wraps VL_NNNORMALIZE(). It has fields
@@ -190,6 +198,16 @@ for i=1:n
                                'pad', l.pad, 'stride', l.stride, ...
                                cudnn{:}) ;
       end
+    case 'convt'
+      if isfield(l, 'weights')
+        res(i+1).x = vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, ...
+                               'crop', l.crop, 'upsample', l.upsample, ...
+                               cudnn{:}) ;
+      else
+        res(i+1).x = vl_nnconv(res(i).x, l.filters, l.biases, ...
+                               'crop', l.pad, 'upsample', l.upsample, ...
+                               cudnn{:}) ;
+      end
     case 'pool'
       res(i+1).x = vl_nnpool(res(i).x, l.pool, ...
                              'pad', l.pad, 'stride', l.stride, ...
@@ -292,6 +310,44 @@ if doder
           clear dzdw ;
         end
 
+      case 'convt'
+        if ~opts.accumulate
+          if isfield(l, 'weights')
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, ...
+                          res(i+1).dzdx, ...
+                          'crop', l.crop, 'upsample', l.upsample, ...
+                          cudnn{:}) ;
+          else
+            % Legacy code: will go
+            [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
+                vl_nnconvt(res(i).x, l.filters, l.biases, ...
+                         res(i+1).dzdx, ...
+                          'crop', l.crop, 'upsample', l.upsample, ...
+                          cudnn{:}) ;
+          end
+        else
+          dzdw = cell(1,2) ;
+          if isfield(l, 'weights')
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, ...
+                          res(i+1).dzdx, ...
+                          'crop', l.crop, 'upsample', l.upsample, ...
+                          cudnn{:}) ;
+          else
+            % Legacy code: will go
+            [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+                vl_nnconvt(res(i).x, l.filters, l.biases, ...
+                          res(i+1).dzdx, ...
+                          'crop', l.crop, 'upsample', l.upsample, ...
+                          cudnn{:}) ;
+          end
+          for j=1:2
+            res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
+          end
+          clear dzdw ;
+        end
+       
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
                                 'pad', l.pad, 'stride', l.stride, ...
