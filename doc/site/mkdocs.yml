@@ -8,7 +8,7 @@ extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX
 repo_url: https://github.com/vlfeat/matconvnet
 
 pages:
-- ['index.md', 'MatConvNet: CNNs for MATLAB']
+- ['index.md']
 
 - ['install.md', 'Getting Started', 'Installing']
 - ['pretrained.md', 'Getting Started', 'Pretrained models']
