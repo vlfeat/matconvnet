@@ -23,7 +23,7 @@ pages:
 - ['mfiles/vl_nnspnorm.md', 'Functions', 'vl_nnspnorm']
 - ['mfiles/vl_nnpdist.md', 'Functions', 'vl_nnpdist']
 - ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
-- ['mfiles/vl_nnconvt.md', 'Functions', 'vl_nnconv']
+- ['mfiles/vl_nnconvt.md', 'Functions', 'vl_nnconvt']
 - ['mfiles/vl_nndropout.md', 'Functions', 'vl_nndropout']
 - ['mfiles/vl_nnloss.md', 'Functions', 'vl_nnloss']
 - ['mfiles/vl_nnnoffset.md', 'Functions', 'vl_nnnoffset']
