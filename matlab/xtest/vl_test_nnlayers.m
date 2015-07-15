@@ -86,7 +86,7 @@ for l = tests
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-4) ;
       
       disp('testing vl_nnloss multiple images') ;
       C = 10 ;
@@ -96,7 +96,7 @@ for l = tests
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-4) ;
       
       disp('testing vl_nnloss') ;
       C = 10 ;
@@ -105,7 +105,7 @@ for l = tests
       y = vl_nnloss(x,c) ;
       dzdy = grandn(size(y)) ;
       dzdx = vl_nnloss(x,c,dzdy) ;
-      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-8) ;
+      vl_testder(@(x) vl_nnloss(x,c), x, dzdy, dzdx, range * 1e-4) ;
       
     case 3
       disp('testing vl_nnsoftmax') ;
