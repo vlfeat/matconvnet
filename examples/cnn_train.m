@@ -348,7 +348,7 @@ end
 function [net,res] = accumulate_gradients(opts, lr, batchSize, net, res, mmap)
 % -------------------------------------------------------------------------
 for l=numel(net.layers):-1:1
-  for j=1:min(numel(res(l).dzdw),1)
+  for j=1:numel(res(l).dzdw)
     thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
     thisLR = lr * net.layers{l}.learningRate(j) ;
 
