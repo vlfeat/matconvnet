@@ -223,6 +223,8 @@ for i=1:n
       res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
     case 'relu'
       res(i+1).x = vl_nnrelu(res(i).x) ;
+    case 'lrelu'
+      res(i+1).x = vl_nnlrelu(res(i).x, [], 'leak', l.leak) ;
     case 'sigmoid'
       res(i+1).x = vl_nnsigmoid(res(i).x) ;
     case 'noffset'
@@ -347,7 +349,7 @@ if doder
           end
           clear dzdw ;
         end
-       
+
       case 'pool'
         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
                                 'pad', l.pad, 'stride', l.stride, ...
@@ -368,6 +370,14 @@ if doder
           % if res(i).x is empty, it has been optimized away, so we use this
           % hack (which works only for ReLU):
           res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx) ;
+        end
+      case 'lrelu'
+        if ~isempty(res(i).x)
+          res(i).dzdx = vl_nnlrelu(res(i).x, res(i+1).dzdx, 'leak', l.leak) ;
+        else
+          % if res(i).x is empty, it has been optimized away, so we use this
+          % hack (which works only for ReLU):
+          res(i).dzdx = vl_nnlrelu(res(i+1).x, res(i+1).dzdx, 'leak', l.leak) ;
         end
       case 'sigmoid'
         res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
