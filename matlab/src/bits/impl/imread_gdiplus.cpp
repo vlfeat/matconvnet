@@ -127,6 +127,8 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
 	  break ;
   }
 
+  bitmap.UnlockBits(&data) ;
+
 done:
   return image ;
 }
