@@ -1,0 +1,311 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="matlab\vl_argparse.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_setupnn.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_compilenn.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_imreadjpeg.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnbnorm.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnconv.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnconvt.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nndropout.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnloss.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnnoffset.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnnormalize.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnpdist.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnpool.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnrelu.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnsigmoid.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnsoftmax.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnsoftmaxloss.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_nnspnorm.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\vl_rootnn.m">
+      <Filter>matlab</Filter>
+    </None>
+    <None Include="matlab\src\vl_imreadjpeg.cu">
+      <Filter>src</Filter>
+    </None>
+    <None Include="matlab\src\vl_nnbnorm.cu">
+      <Filter>src</Filter>
+    </None>
+    <None Include="matlab\src\vl_nnconv.cu">
+      <Filter>src</Filter>
+    </None>
+    <None Include="matlab\src\vl_nnconvt.cu">
+      <Filter>src</Filter>
+    </None>
+    <None Include="matlab\src\vl_nnnormalize.cu">
+      <Filter>src</Filter>
+    </None>
+    <None Include="matlab\src\vl_nnpool.cu">
+      <Filter>src</Filter>
+    </None>
+    <None Include="matlab\src\bits\data.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\datacu.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\datamex.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnbias.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnbnorm.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnconv.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnfullyconnected.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnnormalize.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnpooling.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\nnsubsample.cu">
+      <Filter>matlab\bits</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\bnorm_gpu.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\copy_gpu.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\im2row_gpu.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\nnbias_cudnn.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\nnconv_cudnn.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\nnpooling_cudnn.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\normalize_gpu.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\pooling_gpu.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+    <None Include="matlab\src\bits\impl\subsample_gpu.cu">
+      <Filter>matlab\bits\impl</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="matlab">
+      <UniqueIdentifier>{b811c080-cb75-4593-9fc5-d07b3566a222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{e325fc55-af0f-49b5-a02d-37eb6b182a74}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="matlab\bits">
+      <UniqueIdentifier>{7abb3e48-e978-4d99-8f12-6af14582eebf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="matlab\bits\impl">
+      <UniqueIdentifier>{ba2f396e-289f-47bc-b12c-2f07fece498c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="matlab\src\vl_imreadjpeg.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\vl_nnpool.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\vl_nnbnorm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\vl_nnconv.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\vl_nnconvt.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\vl_nnnormalize.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\data.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\datamex.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnbias.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnbnorm.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnconv.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnfullyconnected.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnnormalize.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnpooling.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\nnsubsample.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\bnorm_cpu.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\copy_cpu.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\im2row_cpu.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\imread_gdiplus.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\imread_libjpeg.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\imread_quartz.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\normalize_cpu.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\pooling_cpu.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\subsample_cpu.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+    <ClCompile Include="matlab\src\bits\impl\tinythread.cpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="matlab\src\bits\nnsubsample.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\data.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\datacu.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\datamex.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\imread.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\mexutils.h">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\nnbias.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\nnbnorm.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\nnconv.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\nnfullyconnected.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\nnnormalize.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\nnpooling.hpp">
+      <Filter>matlab\bits</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\blashelper.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\tinythread.h">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\bnorm.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\copy.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\fast_mutex.h">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\im2row.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\imread_helpers.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\nnbias_blas.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\nnbias_cudnn.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\nnconv_blas.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\nnconv_cudnn.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\nnpooling_cudnn.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\normalize.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\pooling.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="matlab\src\bits\impl\subsample.hpp">
+      <Filter>matlab\bits\impl</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
