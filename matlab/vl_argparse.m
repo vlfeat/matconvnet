@@ -1,9 +1,12 @@
-function [opts, args] = vl_argparse(opts, args)
+function [opts, args] = vl_argparse(opts, args, varargin)
 % VL_ARGPARSE  Parse list of parameter-value pairs
 %   OPTS = VL_ARGPARSE(OPTS, ARGS) updates the structure OPTS based on
 %   the specified parameter-value pairs ARGS={PAR1, VAL1, ... PARN,
 %   VALN}. The function produces an error if an unknown parameter name
-%   is passed on. Values that are structures are copied recursively.
+%   is passed on.
+%
+%   Values that are structures are copied recursively. This behaviour
+%   can be suppressed by using VL_ARGPARSE(OPTS, ARGS, 'nonrecursive').
 %
 %   Any of the PAR, VAL pairs can be replaced by a structure; in this
 %   case, the fields of the structure are used as paramaters and the
@@ -44,6 +47,18 @@ function [opts, args] = vl_argparse(opts, args)
 if ~isstruct(opts), error('OPTS must be a structure') ; end
 if ~iscell(args), args = {args} ; end
 
+recursive = true ;
+if numel(varargin) == 1
+  if strcmp(lower(varargin{1}), 'nonrecursive') ;
+    recursive = false ;
+  else
+    error('Unknown option specified.') ;
+  end
+end
+if numel(varargin) > 1
+  error('There can be at most one option.') ;
+end
+
 % convert ARGS into a structure
 ai = 1 ;
 params = {} ;
@@ -69,9 +84,9 @@ for i = 1:numel(params)
     field = findfield(opts, field) ;
   end
   if ~isempty(field)
-    if isstruct(values{i})
+    if isstruct(values{i}) & recursive
       if ~isstruct(opts.(field))
-        error('The value of parameter %d is a structure in the arguments but not a structure in OPT.',field) ;
+        error('The value specified for the parameter ''%s'' is a structure, but this parameter is not defined as a structure in OPTS.',field) ;
       end
       if nargout > 1
         [opts.(field), rest] = vl_argparse(opts.(field), values{i}) ;
