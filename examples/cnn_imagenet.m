@@ -8,13 +8,14 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 
 opts.dataDir = fullfile('data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
+opts.networkType = 'simplenn' ;
 opts.batchNormalization = false ;
 opts.weightInitMethod = 'gaussian' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
-opts.expDir = fullfile('data', sprintf('imagenet12-%s', sfx)) ;
+opts.expDir = fullfile('data', sprintf('imagenet12-%s-%s', sfx, opts.networkType)) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;
@@ -74,6 +75,16 @@ end
 %net.normalization.averageImage = averageImage ;
 net.normalization.averageImage = rgbMean ;
 
+switch lower(opts.networkType)
+  case 'simplenn'
+  case 'dagnn'
+    net = dagnn.DagNN.fromSimpleNN(net) ;
+    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
+                 {'prediction','label'}, 'top1error') ;
+  otherwise
+    error('Unknown netowrk type ''%s''.', opts.networkType) ;
+end
+
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
@@ -82,17 +93,24 @@ net.normalization.averageImage = rgbMean ;
 bopts.transformation = 'stretch' ;
 bopts.averageImage = rgbMean ;
 bopts.rgbVariance = 0.1*sqrt(d)*v' ;
-fn = getBatchWrapper(bopts) ;
 
-[net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
+switch lower(opts.networkType)
+  case 'simplenn'
+    fn = getBatchSimpleNNWrapper(bopts) ;
+    [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
+  case 'dagnn'
+    fn = getBatchDagNNWrapper(bopts) ;
+    opts.train = rmfield(opts.train, {'sync', 'cudnn'}) ;
+    info = cnn_train_dag(net, imdb, fn, opts.train) ;
+end
 
 % -------------------------------------------------------------------------
-function fn = getBatchWrapper(opts)
+function fn = getBatchSimpleNNWrapper(opts)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatch(imdb,batch,opts) ;
+fn = @(imdb,batch) getBatchSimpleNN(imdb,batch,opts) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getBatch(imdb, batch, opts)
+function [im,labels] = getBatchSimpleNN(imdb, batch, opts)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
@@ -100,12 +118,27 @@ im = cnn_imagenet_get_batch(images, opts, ...
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
+function fn = getBatchDagNNWrapper(opts)
+% -------------------------------------------------------------------------
+fn = @(imdb,batch) getBatchDagNN(imdb,batch,opts) ;
+
+% -------------------------------------------------------------------------
+function inputs = getBatchDagNN(imdb, batch, opts)
+% -------------------------------------------------------------------------
+images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
+im = cnn_imagenet_get_batch(images, opts, ...
+                            'prefetch', nargout == 0) ;
+if nargout > 0
+  inputs = {'input', im, 'label', imdb.images.label(batch)} ;
+end
+
+% -------------------------------------------------------------------------
 function [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, opts)
 % -------------------------------------------------------------------------
 train = find(imdb.images.set == 1) ;
 train = train(1: 101: end);
 bs = 256 ;
-fn = getBatchWrapper(opts) ;
+fn = getBatchSimpleNNWrapper(opts) ;
 for t=1:bs:numel(train)
   batch_time = tic ;
   batch = train(t:min(t+bs-1, numel(train))) ;
