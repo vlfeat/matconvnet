@@ -222,9 +222,8 @@ for i=1:n
     case 'softmaxloss'
       res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
     case 'relu'
-      res(i+1).x = vl_nnrelu(res(i).x) ;
-    case 'lrelu'
-      res(i+1).x = vl_nnlrelu(res(i).x, [], 'leak', l.leak) ;
+      if isfield(l, 'leak'), leak = {'leak', opts.leak} ; else leak = {} ; end
+      res(i+1).x = vl_nnrelu(res(i).x,[],leak{:}) ;
     case 'sigmoid'
       res(i+1).x = vl_nnsigmoid(res(i).x) ;
     case 'noffset'
@@ -364,20 +363,13 @@ if doder
       case 'softmaxloss'
         res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'relu'
+        if isfield(l, 'leak'), leak = {'leak', opts.leak} ; else leak = {} ; end
         if ~isempty(res(i).x)
-          res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
+          res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx, leak{:}) ;
         else
           % if res(i).x is empty, it has been optimized away, so we use this
           % hack (which works only for ReLU):
-          res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx) ;
-        end
-      case 'lrelu'
-        if ~isempty(res(i).x)
-          res(i).dzdx = vl_nnlrelu(res(i).x, res(i+1).dzdx, 'leak', l.leak) ;
-        else
-          % if res(i).x is empty, it has been optimized away, so we use this
-          % hack (which works only for ReLU):
-          res(i).dzdx = vl_nnlrelu(res(i+1).x, res(i+1).dzdx, 'leak', l.leak) ;
+          res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx, leak{:}) ;
         end
       case 'sigmoid'
         res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
