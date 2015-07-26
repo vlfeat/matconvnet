@@ -251,12 +251,12 @@ end
 res = [] ;
 mmap = [] ;
 stats = [] ;
+start = tic ;
 
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: batch %3d/%3d: ', mode, epoch, ...
           fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
-  batchTime = tic ;
   numDone = 0 ;
   error = [] ;
   for s=1:opts.numSubBatches
@@ -314,12 +314,14 @@ for t=1:opts.batchSize:numel(subset)
   end
 
   % print learning statistics
-  batchTime = toc(batchTime) ;
-  stats = sum([stats,[batchTime ; error]],2); % works even when stats=[]
-  speed = batchSize/batchTime ;
 
-  fprintf(' %.2f s (%.1f data/s)', batchTime, speed) ;
+  time = toc(start) ;
+  stats = sum([stats,[0 ; error]],2); % works even when stats=[]
+  stats(1) = time ;
   n = (t + batchSize - 1) / max(1,numlabs) ;
+  speed = n/time ;
+  fprintf('%.1f Hz%s\n', speed) ;
+
   fprintf(' obj:%.3g', stats(2)/n) ;
   for i=1:numel(opts.errorLabels)
     fprintf(' %s:%.3g', opts.errorLabels{i}, stats(i+2)/n) ;
