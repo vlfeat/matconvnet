@@ -43,6 +43,7 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 NAME = matconvnet
 VER = 1.0-beta13
 DIST = $(NAME)-$(VER)
+LATEST = $(NAME)-latest
 RSYNC = rsync
 HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
@@ -244,9 +245,10 @@ pack:
 	COPYFILE_DISABLE=1 \
 	COPY_EXTENDED_ATTRIBUTES_DISABLE=1 \
 	$(GIT) archive --prefix=$(NAME)-$(VER)/ v$(VER) | gzip > $(DIST).tar.gz
+	ln -sf $(DIST).tar.gz $(LATEST).tar.gz
 
 post: pack
-	$(RSYNC) -aP $(DIST).tar.gz $(HOST)/download/
+	$(RSYNC) -aP $(DIST).tar.gz $(LATEST).tar.gz $(HOST)/download/
 
 post-models:
 	$(RSYNC) -aP data/models/*.mat $(HOST)/models/
