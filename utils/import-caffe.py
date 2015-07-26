@@ -1,6 +1,6 @@
 #! /usr/bin/python
 # file: import-caffe.py
-# brief: Caffe importer
+# brief: Caffe importer for SimpleNN
 # author: Andrea Vedaldi and Karel Lenc
 
 # Requires Google Protobuf for Python and SciPy
