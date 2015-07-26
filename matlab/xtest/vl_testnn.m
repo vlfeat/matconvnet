@@ -1,0 +1,27 @@
+function vl_testnn(varargin)
+% VL_TESTNN   Run MatConvNet test suite
+opts.cpu = true ;
+opts.gpu = false ;
+opts.command = 'nn' ;
+opts.break = false ;
+opts = vl_argparse(opts, varargin) ;
+
+import matlab.unittest.constraints.* ;
+import matlab.unittest.selectors.* ;
+
+% Choose which tests to run
+sel = HasName(StartsWithSubstring(opts.command)) ;
+if opts.cpu & ~opts.gpu
+  sel = sel & HasName(ContainsSubstring('cpu')) ;
+end
+if opts.gpu & ~opts.cpu
+  sel = sel & HasName(ContainsSubstring('gpu')) ;
+end
+
+% Run tests
+suite = matlab.unittest.TestSuite.fromFolder('matlab/xtest/suite/', sel) ;
+runner = matlab.unittest.TestRunner.withTextOutput('Verbosity',3);
+if opts.break
+  runner.addPlugin(matlab.unittest.plugins.StopOnFailuresPlugin) ;
+end
+result = runner.run(suite);
