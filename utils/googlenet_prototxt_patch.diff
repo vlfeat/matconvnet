@@ -1,0 +1,29 @@
+--- ../data/tmp/googlenet/train_val_googlenet.prototxt.orig	2015-03-07 17:02:28.222672252 +0000
++++ ../data/tmp/googlenet/train_val_googlenet.prototxt	2015-03-07 18:06:13.974669287 +0000
+@@ -853,7 +853,7 @@
+   weight_decay: 1
+   weight_decay: 0
+   inner_product_param {
+-    num_output: 205
++    num_output: 1000
+     weight_filler {
+       type: "gaussian"
+       std: 0.01
+@@ -1546,7 +1546,7 @@
+   weight_decay: 1
+   weight_decay: 0
+   inner_product_param {
+-    num_output: 205
++    num_output: 1000
+     weight_filler {
+       type: "gaussian"
+       std: 0.01
+@@ -2195,7 +2195,7 @@
+   weight_decay: 1
+   weight_decay: 0
+   inner_product_param {
+-    num_output: 205
++    num_output: 1000
+     weight_filler {
+       type: "gaussian"
+       std: 0.01
