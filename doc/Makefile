@@ -3,6 +3,7 @@ MARKDOWN = markdown2
 PDFLATEX = pdflatex
 BIBTEX = bibtex
 MKDOCS = mkdocs
+SVG2PDF = svg2pdf
 
 site=doc/site/docs
 
@@ -33,12 +34,14 @@ vl_simplenn_move.m
 mfile_src=$(addprefix matlab/src/, $(mfiles))
 mfile_doc=$(patsubst %.m,%.md,$(addprefix $(site)/mfiles/, $(mfiles)))
 mds=$(wildcard doc/site/docs/*.md)
+svg_src=$(wildcard doc/figures/*.svg)
+svg_tgt=$(patsubst %.svg, %.pdf, $(svg_src))
 
 doc: doc-site doc-manual
 doc-site: doc/site/site/index.html
 doc-manual: doc/matconvnet-manual.pdf
 
-doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
+doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex $(svg_tgt)
 	mkdir -p doc/.build
 	ln -sf ../references.bib doc/.build/references.bib
 	cd "$(dir $(<))" ;\
@@ -49,6 +52,9 @@ doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex
 	$(PDFLATEX) -file-line-error -output-directory=../doc/.build/ "$(notdir $(<))" ;
 	cp -f doc/.build/matconvnet-manual.pdf doc/
 
+doc/figures/%.pdf : doc/figures/%.svg
+	$(SVG2PDF) "$(<)" "$(@)"
+
 $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocparser.py
 	$(PYTHON) doc/matdoc.py "$(<)" > "$(@)"
 
@@ -57,6 +63,7 @@ doc/site/site/index.html : doc/site/mkdocs.yml $(mfile_doc) $(mds)
 
 doc-clean:
 	rm -f doc/matdocparser.pyc doc/matdoc.pyc
+	rm -f $(svg_tgt)
 
 doc-distclean:
 	rm -f doc/matconvnet-manual.pdf
@@ -66,3 +73,4 @@ doc-info:
 	@echo "mds=$(mds)"
 	@echo "mfile_src=$(mfile_src)"
 	@echo "mfile_doc=$(mfile_doc)"
+	@echo "svg_tgt=$(svg_tgt)"
