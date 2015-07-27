@@ -1,4 +1,4 @@
-classdef Convt < dagnn.Layer
+classdef ConvTranspose < dagnn.Layer
   properties
     size = [0 0 0 0]
     hasBias = true
