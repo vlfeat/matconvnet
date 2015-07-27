@@ -22,7 +22,7 @@ example CNNs are included to classify and encode images.
 > (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta13](download/matconvnet-1.0-beta13.tar.gz)
+    - Tarball for [version 1.0-beta14](download/matconvnet-1.0-beta14.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**
