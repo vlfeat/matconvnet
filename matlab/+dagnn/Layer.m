@@ -31,7 +31,7 @@ classdef Layer < handle
     %  state.
     end
 
-    function params = init(obj)
+    function params = initParams(obj)
     %INIT Initialize layer parameters
     %  PARAMS = INIT(OBJ) takes the layer object OBJ and returns a cell
     %  array of layer parameters PARAMS with some initial
@@ -129,6 +129,14 @@ classdef Layer < handle
       end
     end
 
+    function transformations = getSpatialTransformations(obj)
+      transformations = {} ;
+    end
+    
+    function outputSizes = getOutputSizes(obj, inputSizes)      
+      outputSizes = {} ;
+    end
+    
     function load(obj, varargin)
     %LOAD Initialize the layer from a paramter structure
     %  LOAD(OBJ, S) initializes the layer object OBJ from the parameter

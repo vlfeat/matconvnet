@@ -1,35 +1,36 @@
-function str = display(self, inputs, varargin)
-% DISPLAY   Display information about the DAGNN
-%    DAGNN.DISPLAY() displays a summary of the functions and parameters in the network.
+function str = print(self, inputSizes, varargin)
+%PRINT Print information about the DagNN object
+%   PRINT(OBJ) displays a summary of the functions and parameters in the network.
+%   STR = PRINT(OBJ) returns the summary as a string instead of printing it.
 %
-%    DAGNN.DISPLAY(INPUTS) where INPUTS is a cell array of the type
-%    {'input1nam', input1size, 'input2name', input2size, ...} prints
-%    information using the specified size for each of the listed inputs.
+%   PRINT(OBJ, INPUTSIZES) where INPUTSIZES is a cell array of the type
+%   {'input1nam', input1size, 'input2name', input2size, ...} prints
+%   information using the specified size for each of the listed inputs.
 %
-%    DAGNN.DISPLAY(..., OPT, VAL, ...) allows specifying the following
-%    options:
+%   PRINT(OBj, ..., OPT, VAL, ...) allows specifying the following
+%   options:
 %
-%    All:: false
-%       Display all the information below.
+%   All:: false
+%      Display all the information below.
 %
-%    Functions:: true
-%       Whether to display the functions.
+%   Functions:: true
+%      Whether to display the functions.
 %
-%    Parameters:: true
-%       Whether to display the parameters.
+%   Parameters:: true
+%      Whether to display the parameters.
 %
-%    Variables:: false
-%       Whether to display the variables.
+%   Variables:: false
+%      Whether to display the variables.
 %
-%    Dependencies:: false
-%       Whether to display the dependency (geometric transformation)
-%       of each variables from each
-%       input.
+%   Dependencies:: false
+%      Whether to display the dependency (geometric transformation)
+%      of each variables from each
+%      input.
 %
-%    Format:: 'ascii'
-%       Choose between 'ascii', 'latex', and 'csv'.
+%   Format:: 'ascii'
+%      Choose between 'ascii', 'latex', and 'csv'.
 %
-%    See also: DAGNN, DAGNN.GETVARGEOMETRY().
+%   See also: DAGNN, DAGNN.GETVARGEOMETRY().
 
 opts.all = false ;
 opts.format = 'ascii' ;
@@ -37,34 +38,41 @@ opts.format = 'ascii' ;
 
 opts.functions = true ;
 opts.parameters = true ;
-opts.variables = opts.all ;
+opts.variables = opts.all || nargin > 1 ;
 opts.dependencies = opts.all ;
 opts.maxNumColumns = 18 ;
 opts = vl_argparse(opts, varargin) ;
 
-if nargin == 1, inputs = {} ; end
-geom = self.getVarGeometry(inputs) ;
+if nargin == 1, inputSizes = {} ; end
+sizes = self.getVarSizes(inputSizes) ;
 str = {''} ;
 
 if opts.functions
-  % print functions
   table = {'func', '-', 'type', 'inputs', 'outputs', 'params', 'pad', 'stride'} ;
-  for v = 1:numel(self.params)
-    table{v+1,1} = self.layers(v).name ;
-    table{v+1,2} = '-' ;
-    table{v+1,3} = class(self.layers(v).block) ;
-    table{v+1,4} = strtrim(sprintf('%s ', self.layers(v).inputs{:})) ;
-    table{v+1,5} = strtrim(sprintf('%s ', self.layers(v).outputs{:})) ;
-    table{v+1,6} = strtrim(sprintf('%s ', self.layers(v).params{:})) ;
-    table{v+1,7} = pdims(self.layers(v).block.pad) ;
-    table{v+1,8} = pdims(self.layers(v).block.stride) ;
+  for l = 1:numel(self.layers)
+    layer = self.layers(l) ;
+    table{l+1,1} = layer.name ;
+    table{l+1,2} = '-' ;
+    table{l+1,3} = class(layer.block) ;
+    table{l+1,4} = strtrim(sprintf('%s ', layer.inputs{:})) ;
+    table{l+1,5} = strtrim(sprintf('%s ', layer.outputs{:})) ;
+    table{l+1,6} = strtrim(sprintf('%s ', layer.params{:})) ;
+    if isprop(layer.block, 'pad')
+      table{l+1,7} = pdims(layer.block.pad) ;
+    else
+      table{l+1,7} = 'n/a' ;
+    end
+    if isprop(layer.block, 'stride')
+      table{l+1,8} = pdims(layer.block.stride) ;
+    else
+      table{l+1,8} = 'n/a' ;
+    end
   end
   str{end+1} = printtable(opts, table') ;
   str{end+1} = sprintf('\n') ;
 end
 
 if opts.parameters
-  % print parameters
   table = {'param', '-', 'dims', 'size', 'fanout'} ;
   for v = 1:numel(self.params)
     table{v+1,1} = self.params(v).name ;
@@ -78,13 +86,12 @@ if opts.parameters
 end
 
 if opts.variables
-  % print variables
   table = {'var', '-', 'dims', 'size', 'fanin', 'fanout'} ;
   for v = 1:numel(self.vars)
     table{v+1,1} = self.vars(v).name ;
     table{v+1,2} = '-' ;
-    table{v+1,3} = pdims(geom.vars(v).size) ;
-    table{v+1,4} = pmem(prod(geom.vars(v).size) * 4) ;
+    table{v+1,3} = pdims(sizes{v}) ;
+    table{v+1,4} = pmem(prod(sizes{v}) * 4) ;
     table{v+1,5} = sprintf('%d',self.vars(v).fanin) ;
     table{v+1,6} = sprintf('%d',self.vars(v).fanout) ;
   end

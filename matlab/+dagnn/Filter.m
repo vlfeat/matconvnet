@@ -4,12 +4,7 @@ classdef Filter < dagnn.Layer
     stride = [1 1]
   end
   methods
-    function [outputSizes, transforms] = forwardGeometry(self, inputSizes, paramSizes)
-      outputSizes = {} ;
-      transforms = {} ;
-    end
-
-  function set.pad(obj, pad)
+    function set.pad(obj, pad)
       if numel(pad) == 1
         obj.pad = [pad pad pad pad] ;
       elseif numel(pad) == 2
@@ -18,13 +13,26 @@ classdef Filter < dagnn.Layer
         obj.pad = pad ;
       end
     end
-
+    
     function set.stride(obj, stride)
       if numel(stride) == 1
         obj.stride = [stride stride] ;
       else
         obj.stride = stride ;
       end
+    end
+    
+    function kernelSize = getKernelSize(obj)
+      kernelSize = [1 1] ;
+    end
+    
+    function outputSizes = getOutputSizes(obj, inputSizes)
+      ks = obj.getKernelSize() ;
+      outputSizes{1} = [...
+        fix((inputSizes{1}(1) + obj.pad(1) + obj.pad(3) - ks(1) + 1) / obj.stride(1)), ...
+        fix((inputSizes{1}(2) + obj.pad(2) + obj.pad(4) - ks(2) + 1) / obj.stride(2)), ...
+        1, ...
+        inputSizes{1}(4)] ;
     end
   end
 end

@@ -1,5 +1,5 @@
 function stats = cnn_train_dag(net, imdb, getBatch, varargin)
-% CNN_TRAIN_DAG   Demonstrates training a CNN using the DagNN wrapper
+%CNN_TRAIN_DAG Demonstrates training a CNN using the DagNN wrapper
 %    CNN_TRAIN_DAG() is similar to CNN_TRAIN(), but works with
 %    the DagNN wrapper instead of the SimpleNN wrapper.
 
@@ -8,7 +8,6 @@ function stats = cnn_train_dag(net, imdb, getBatch, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
-
 
 opts.expDir = fullfile('data','exp') ;
 opts.continue = false ;

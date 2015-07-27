@@ -3,6 +3,12 @@ function obj = fromSimpleNN(net)
 %   DAG = FROMSIMPLENN(NET) initializes a DAG neural network from the
 %   specified NET neural network.
 
+% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
 import dagnn.*
 
 obj = DagNN() ;

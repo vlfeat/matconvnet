@@ -1,6 +1,6 @@
 function reset(obj)
-% RESET  Reset the DagNN
-%   The function clears any intermediate value stored in the DagNN
+% RESET Reset the DagNN
+%   RESET(obj) resets the DagNN obj. The function clears any intermediate value stored in the DagNN
 %   object, including parameter gradients. It also calls the reset
 %   function of every layer.
 

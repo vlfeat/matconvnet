@@ -9,7 +9,7 @@ classdef DagNN < handle
 %   networks with an arbitrary topology, such as siamese
 %   architectures.
 
-% Copyright (C) 2015 Andrea Vedaldi.
+% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -20,12 +20,12 @@ classdef DagNN < handle
     vars
     layers
     meta
-    conserveMemory = true
-    paramDersAccumulate = false
   end
 
   properties (Transient)
     mode = 'normal'
+    paramDersAccumulate = false
+    conserveMemory = true
   end
 
   properties (Transient, SetAccess = private, GetAccess = public)
@@ -98,19 +98,14 @@ classdef DagNN < handle
     % Process data with the DagNN
     initParams(obj)
     eval(obj, inputs, derOutputs)
+    
+    % Get information about the DagNN
+    varSizes = getVarSizes(obj, inputSizes)
 
     % ---------------------------------------------------------------------
     %                                                           Access data
     % ---------------------------------------------------------------------
-    function ders = getParamDers(obj)
-    end
-
-    function addParamDers(obj, ders)
-    end
-
-    function rescaleParamDers(obj, ders)
-    end
-
+    
     function inputs = getInputs(obj)
     %GETINPUTS Get the names of the input variables
     %   INPUTS = GETINPUTS(obj) returns a cell array containing the name

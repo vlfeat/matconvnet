@@ -1,5 +1,9 @@
 function rebuild(obj)
-% REBUILD  Rebuild internal indexes to variables and such
+%REBUILD Rebuild internal data structures
+%   REBUILD(obj) rebuilds the internal data structures
+%   of the DagNN obj. It is an helper function used internally
+%   to update the network when layers are added or removed.
+
 keep = [obj.vars.fanout] > 0 | [obj.vars.fanin] > 0 ;
 obj.vars = obj.vars(keep) ;
 

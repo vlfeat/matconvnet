@@ -57,7 +57,7 @@ function eval(obj, inputs, derOutputs)
 %     possible to preserve individual variables by setting the
 %     property `obj.vars(v).precious` to `true`.
 
-% Copyright (C) 2015 Andrea Vedaldi.
+% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

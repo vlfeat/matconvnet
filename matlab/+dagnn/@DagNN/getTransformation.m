@@ -1,5 +1,6 @@
-function geom = getVarGeometry(self, inputs)
-% GETVARGEOMETRY   Get the geometry of the DAGNN variables
+function geom = getTransformation(self, inputs)
+%GETTRANSFORMATION Get the geometric transformation between two variables
+%  
 
 % Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
