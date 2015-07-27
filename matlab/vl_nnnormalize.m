@@ -1,4 +1,4 @@
-% VL_NNNORMALIZE  Feature-wise sliding window normalization
+%VL_NNNORMALIZE CNN LRN normalization.
 %   Y = VL_NNORMALIZE(X, PARAM) performs feature-wise sliding window
 %   normalization of the image X. The normalized output is given by:
 %
@@ -18,8 +18,8 @@
 %   normalize the whole feature vector.
 %
 %   DZDX = VL_NNORMALIZE(X, PARAM, DZDY) computes the derivative of
-%   the network output DZDX with respect to the block input X given
-%   the derivative DZDY with respect to the block output Y.
+%   the block projected onto DZDY. DZDX and DZDY have the same
+%   dimensions as X and Y respectively.
 
 % Copyright (C) 2014 Andrea Vedaldi.
 % All rights reserved.

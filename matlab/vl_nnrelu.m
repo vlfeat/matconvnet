@@ -1,11 +1,11 @@
 function y = vl_nnrelu(x,dzdy,varargin)
-% VL_NNRELU CNN rectified linear unit
+%VL_NNRELU CNN rectified linear unit.
 %   Y = VL_NNRELU(X) applies the rectified linear unit to the data
 %   X. X can have arbitrary size.
 %
-%   DZDX = VL_NNRELU(X, DZDY) computes the network derivative DZDX
-%   with respect to the input X given the derivative DZDY with respect
-%   to the output Y. DZDX has the same dimension as X.
+%   DZDX = VL_NNRELU(X, DZDY) computes the derivative of the block
+%   projected onto DZDY. DZDX and DZDY have the same dimensions as
+%   X and Y respectively.
 %
 %   VL_NNRELU(...,'OPT',VALUE,...) takes the following options:
 %

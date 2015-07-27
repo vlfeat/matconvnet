@@ -1,19 +1,21 @@
 function y = vl_nnspnorm(x, param, dzdy)
-% VL_NNSPNORM  CNN spaital normalization
-%    Y = VL_NNSPNORM(X, PARAM) computes the spatial normalization of the
-%    data X with parameters PARAM = [PH PW ALPHA BETA]. Here PH and PW
-%    define the size of the spatial neighbourhood used for nomalization.
+%VL_NNSPNORM CNN spaital normalization.
+%   Y = VL_NNSPNORM(X, PARAM) computes the spatial normalization of
+%   the data X with parameters PARAM = [PH PW ALPHA BETA]. Here PH and
+%   PW define the size of the spatial neighbourhood used for
+%   nomalization.
 %
-%    For each feature channel, the function computes the sum of
-%    squares of X inside each rectangle, N2(i,j). It then divides each
-%    element of X as follows:
+%   For each feature channel, the function computes the sum of squares
+%   of X inside each rectangle, N2(i,j). It then divides each element
+%   of X as follows:
 %
-%       Y(i,j) = X(i,j) / (1 + ALPHA * N2(i,j))^BETA.
+%      Y(i,j) = X(i,j) / (1 + ALPHA * N2(i,j))^BETA.
 %
-%    DZDX = VL_NNSPNORM(X, PARAM, DZDY) computes the derivative DZDX
-%    of the block followed by a function whose derivative is DZDY.
+%   DZDX = VL_NNSPNORM(X, PARAM, DZDY) computes the derivative of the
+%   block projected onto DZDY. DZDX and DZDY have the same dimensions
+%   as X and Y respectively.
 
-% Copyright (C) 2015 Andrea Vedaldi, Karel Lenc, and Max Jaderberg.
+% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

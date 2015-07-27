@@ -1,5 +1,5 @@
 function [opts, args] = vl_argparse(opts, args, varargin)
-% VL_ARGPARSE  Parse list of parameter-value pairs
+%VL_ARGPARSE Parse list of parameter-value pairs.
 %   OPTS = VL_ARGPARSE(OPTS, ARGS) updates the structure OPTS based on
 %   the specified parameter-value pairs ARGS={PAR1, VAL1, ... PARN,
 %   VALN}. The function produces an error if an unknown parameter name
@@ -21,21 +21,19 @@ function [opts, args] = vl_argparse(opts, args, varargin)
 %     The function can be used to parse a list of arguments
 %     passed to a MATLAB functions:
 %
-%       function myFunction(x,y,z,varargin)
-%       opts.parameterName = defaultValue ;
-%       opts = vl_argparse(opts, varargin)
+%        function myFunction(x,y,z,varargin)
+%        opts.parameterName = defaultValue ;
+%        opts = vl_argparse(opts, varargin)
 %
 %     If only a subset of the options should be parsed, for example
 %     because the other options are interpreted by a subroutine, then
 %     use the form
 %
-%      [opts, varargin] = vl_argparse(opts, varargin)
+%        [opts, varargin] = vl_argparse(opts, varargin)
 %
 %     that copies back to VARARGIN any unknown parameter.
 %
 %   See also: VL_HELP().
-
-% Authors: Andrea Vedaldi
 
 % Copyright (C) 2015 Andrea Vedaldi.
 % Copyright (C) 2007-12 Andrea Vedaldi and Brian Fulkerson.

@@ -1,5 +1,5 @@
 function Y = vl_nnloss(X,c,dzdy,varargin)
-% VL_NNLOSS  CNN categorical or attribute loss
+%VL_NNLOSS CNN categorical or attribute loss.
 %   Y = VL_NNLOSS(X, C) computes the loss incurred by the prediction
 %   scores X given the categorical labels C.
 %
@@ -27,9 +27,9 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %   can be active at the same time, while categories are mutually
 %   exclusive.
 %
-%   DZDX = VL_NNLOSS(X, C, DZDY) computes the derivative DZDX of the
-%   function projected on the output derivative DZDY. DZDX has the
-%   same dimension as X and DZDY the same dimension as Y.
+%   DZDX = VL_NNLOSS(X, C, DZDY) computes the derivative of the block
+%   projected onto the output derivative DZDY. DZDX and DZDY have the
+%   same dimensions as X and Y respectively.
 %
 %   VL_NNLOSS() supports several loss functions, which caxn be selected
 %   by using the option `type` described below. When each scalar c in

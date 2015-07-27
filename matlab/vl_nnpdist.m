@@ -1,37 +1,45 @@
 function y = vl_nnpdist(x, x0, p, varargin)
-% VL_NNPDIST  CNN p-distance from target
-%    VL_NNPDIST(X, X0, P) computes the P distance raised of each feature
-%    vector in X to the corresponding feature vector in X0:
+%VL_NNPDIST CNN p-distance from target.
+%   VL_NNPDIST(X, X0, P) computes the P distance raised of each feature
+%   vector in X to the corresponding feature vector in X0:
 %
-%      Y(i,j,1) = (SUM_d (X(i,j,d) - X0(i,j,d))^P)^1/P
+%     Y(i,j,1) = (SUM_d (X(i,j,d) - X0(i,j,d))^P)^1/P
 %
-%    X0 should have the same size as X; the outoput Y has the same
-%    height and width as X, but depth equal to 1. Optionally, X0 can
-%    be a 1 x 1 x D x N array, in which case the same target feature
-%    vector in X0 is compared to all feature vectors in X.
+%   X0 should have the same size as X; the outoput Y has the same
+%   height and width as X, but depth equal to 1. Optionally, X0 can
+%   be a 1 x 1 x D x N array, in which case the same target feature
+%   vector in X0 is compared to all feature vectors in X.
 %
-%    Setting the `noRoot` option to `true` does not take the 1/P power
-%    in the formula, computing instead
+%   Setting the `noRoot` option to `true` does not take the 1/P power
+%   in the formula, computing instead
 %
-%      Y(i,j,1) = SUM_d (X(i,j,d) - X0(i,j,d))^P
+%     Y(i,j,1) = SUM_d (X(i,j,d) - X0(i,j,d))^P
 %
-%    For example, `vn_nnpdist(x, x0, 2, 'noRoot', true)` computes the
-%    squared L2 distance.
+%   For example, `vn_nnpdist(x, x0, 2, 'noRoot', true)` computes the
+%   squared L2 distance.
 %
-%    Options:
+%   DZDX = VL_NNPDISTP(X, X0, P, DZDY) computes the derivative of the
+%   block projected onto DZDY. DZDX and DZDY have the same dimensions
+%   as X and Y, respectively.
 %
-%    `NoRoot`:: `false`
-%       If set to true, compute the P-distance to the P-th power.
+%   VL_NNPDIST(..., 'OPT', VAL, ...) accepts the following options:
 %
-%    `Epsilon`:: 1e-6
-%       When computing derivatives, quantities that are divided in are
-%       lower boudned by this value. For example, the L2 distance is
-%       not smooth at the origin; this option prevents the
-%       derivative from diverging.
+%   `NoRoot`:: `false`
+%      If set to true, compute the P-distance to the P-th power.
 %
-%
-%    DZDX = VL_NNPDISTP(X, X0, P, DZDY) computes the derivative.
+%   `Epsilon`:: 1e-6
+%      When computing derivatives, quantities that are divided in are
+%      lower boudned by this value. For example, the L2 distance is
+%      not smooth at the origin; this option prevents the
+%      derivative from diverging.
 
+
+
+% Copyright (C) 2015  Karel Lenc and Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
 % -------------------------------------------------------------------------
 %                                                             Parse options

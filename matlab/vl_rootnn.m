@@ -1,5 +1,5 @@
 function root = vl_rootnn()
-% VL_ROOTNN Get the root path of the MatConvNet toolbox
+%VL_ROOTNN Get the root path of the MatConvNet toolbox.
 %   VL_ROOTNN() returns the path to the MatConvNet toolbox.
 
 % Copyright (C) 2014 Andrea Vedaldi.
