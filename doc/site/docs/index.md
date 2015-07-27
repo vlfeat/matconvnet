@@ -5,6 +5,12 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+> **New:** 1.0-beta14 adds a new object-oriented network wrapper,
+> `DagNN`, supporting arbitrary network topologies. This release also
+> adds GoogLeNet as a pre-trained model, new building blocks such as
+> `vl_nnconcat`, a rewritten loss function block `vl_nnloss`,
+> better documentation, and bugfixes.
+>
 > **New:** 1.0-beta13 adds a much faster version of batch
 > normalization and contains several bugfixes and minor improvements.
 >
@@ -14,18 +20,6 @@ example CNNs are included to classify and encode images.
 >
 > **New:** 1.0-beta12 adds convolution transpose aka deconvolution
 > (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
->
-> **New:** 1.0-beta11 adds the following blocks: batch normalization
-> (see [`vl_nnbnorm`](mfiles/vl_nnbnorm)), spatial normalization
-> ([`vl_nnspnorm`](mfiles/vl_nnspnorm), p-distance
-> ([`vl_nnpdist`](mfiles/vl_nnpdist)), sigmoid
-> ([`vl_nnsigmoid`](mfiles/vl_nnsigmoid)). Extends the example trainig
-> code `cnn_train` to support multiple GPUs. Improves the ImageNet and
-> CIFAR examples, including batch normalization for ImageNet and the
-> Network in Network model for CIFAR. See also
-> [Changes](about/#changes) for compatibility considerations. A faster
-> and more memory efficient version of batch normalization will arrive
-> soon.
 
 *   **Obtaining MatConvNet**
     - Tarball for [version 1.0-beta13](download/matconvnet-1.0-beta13.tar.gz)
