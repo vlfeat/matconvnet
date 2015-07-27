@@ -34,7 +34,7 @@ vl_simplenn_move.m
 mfile_src=$(addprefix matlab/src/, $(mfiles))
 mfile_doc=$(patsubst %.m,%.md,$(addprefix $(site)/mfiles/, $(mfiles)))
 mds=$(wildcard doc/site/docs/*.md)
-svg_src=$(wildcard doc/figures/*.svg)
+svg_src=$(wildcard doc/figures/svg/*.svg)
 svg_tgt=$(patsubst %.svg, %.pdf, $(svg_src))
 
 doc: doc-site doc-manual
@@ -52,7 +52,7 @@ doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex $(svg_tgt)
 	$(PDFLATEX) -file-line-error -output-directory=../doc/.build/ "$(notdir $(<))" ;
 	cp -f doc/.build/matconvnet-manual.pdf doc/
 
-doc/figures/%.pdf : doc/figures/%.svg
+doc/figures/svg/%.pdf : doc/figures/svg/%.svg
 	$(SVG2PDF) "$(<)" "$(@)"
 
 $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocparser.py

@@ -16,9 +16,11 @@ local
 doc/site/docs/mfiles
 doc/site/site
 
+doc/figures/*.pdf
+doc/figures/*.idraw
+
 # Visual C
 *.suo
 *.user
 *.sdf
 *.opensdf
-

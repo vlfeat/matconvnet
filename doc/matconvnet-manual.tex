@@ -5,6 +5,7 @@
 \usepackage{xspace}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
+\usetikzlibrary{positioning,calc,matrix,arrows}
 \usepackage{pgfplots} 
 \usepackage{listings}
 \usepackage{color}
@@ -15,7 +16,8 @@
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
 \newcommand{\diag}{\operatorname{diag}}
-\newcommand{\vlnn}{\textsc{MatConvNet}\xspace}
+\newcommand{\matconvnet}{\textsc{MatConvNet}\xspace}
+\newcommand{\matlab}{\textsc{MATLAB}\xspace}
 \newcommand{\cpp}{C{}\texttt{++}~}
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
@@ -30,8 +32,12 @@
 \newcommand{\argmax}{\operatornamewithlimits{argmax}}
 \newcommand{\sign}{\operatornamewithlimits{sign}}
 
-\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] \tikzstyle{data} = []
+\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] 
+\tikzstyle{data} = []
+\tikzstyle{datac} = [draw, circle, minimum height=1em, minimum width=1em,inner sep=3pt]
+\tikzstyle{par} = [draw, circle, minimum height=1em, minimum width=1em,fill=black!20,inner sep=3pt]
 \tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{to} = [->,>=stealth',shorten >=1pt,semithick]
 
 \VerbatimFootnotes
 
@@ -45,11 +51,9 @@
 	tabsize=4,
 	rulecolor=,
 	language=matlab,
-	basicstyle=\footnotesize,
+	basicstyle=\small,
 	upquote=true,
-	columns=fixed,
-	aboveskip={1.2\baselineskip},
-	belowskip={1.2\baselineskip},
+	columns=fullflexible,
 	showstringspaces=false,
 	extendedchars=true,
 	breaklines=false,
@@ -63,6 +67,8 @@
 	commentstyle=\itshape\color[rgb]{0.133,0.545,0.133},
 	stringstyle=\color[rgb]{0.627,0.126,0.941},
 }
+\lstMakeShortInline[columns=fullflexible, breaklines = true,
+ breakatwhitespace = true]!
 
 \title{MatConvNet \\
 \Large
@@ -73,16 +79,20 @@ Andrea Vedaldi
 Karel Lenc}
 \date{}
 
+\sloppy
+
 % ------------------------------------------------------------------
 \begin{document}
 % ------------------------------------------------------------------
+
+%\end{document}
 
 \frontmatter
 \maketitle{}
 \clearpage
 
 \begin{abstract}
-\vlnn is an implementation of Convolutional Neural Networks (CNNs) for MATLAB. The toolbox is designed with an emphasis on simplicity and flexibility. It exposes the building blocks of CNNs as easy-to-use MATLAB functions, providing routines for computing linear convolutions with filter banks, feature pooling, and many more. In this manner, \vlnn allows fast prototyping of new CNN architectures; at the same time, it supports efficient computation on CPU and GPU allowing to train complex models on large datasets such as ImageNet ILSVRC. This document provides an overview of CNNs and how they are implemented in \vlnn and gives the technical details of each computational block in the toolbox.
+\matconvnet is an implementation of Convolutional Neural Networks (CNNs) for MATLAB. The toolbox is designed with an emphasis on simplicity and flexibility. It exposes the building blocks of CNNs as easy-to-use MATLAB functions, providing routines for computing linear convolutions with filter banks, feature pooling, and many more. In this manner, \matconvnet allows fast prototyping of new CNN architectures; at the same time, it supports efficient computation on CPU and GPU allowing to train complex models on large datasets such as ImageNet ILSVRC. This document provides an overview of CNNs and how they are implemented in \matconvnet and gives the technical details of each computational block in the toolbox.
 \end{abstract}
 \clearpage
 
@@ -91,6 +101,7 @@ Karel Lenc}
 
 \mainmatter
 \input{intro}
+\input{fundamentals}
 \input{wrappers}
 \input{blocks}
 \input{geometry}
