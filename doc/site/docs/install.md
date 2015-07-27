@@ -12,13 +12,13 @@ In order to install the library, follows these steps:
     in order to add MatConvNet to MATLAB's search path.
 
 At this point the library is ready to use. You can test it by using
-the command:
+the command (using MATLAB R2014a or later):
 
-    > vl_test_nnlayers
+    > vl_testnn
 
 To test GPU support (if you have [compiled it](#gpu)) use instead:
 
-> vl_test_nnlayers(true)
+    > vl_testnn('gpu',true)
 
 Note that the second tests runs slower than the CPU version; do not
 worry, this is an artefact of the test procedure.

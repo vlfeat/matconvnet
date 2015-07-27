@@ -61,6 +61,19 @@ here.
 -   1.0-beta2 (July 2014) Adds a set of standard models.
 -   1.0-beta1 (June 2014) First public release.
 
+# Contributors
+
+MatConvNet is developed by several hands:
+
+* Andrea Vedaldi, project coordiantor
+* Karel Lenc, DaG, several building blocks and examples
+* Sébastien Ehrhardt, GPU implementation of batch normalization, FCN
+  example
+* Max Jaderberg, general improvements and bugfixes
+
+MatConvNet quality also depends on the many people using the toolbox
+and providing us with feedback and bug reports.
+
 # Copyright
 
 This package was originally created by
