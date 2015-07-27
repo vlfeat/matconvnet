@@ -34,12 +34,14 @@ example CNNs are included to classify and encode images.
 *   **Documentation**
     - [PDF manual](matconvnet-manual.pdf)
     - [MATLAB functions](functions.md)
+    - [FAQ](faq.md)
 
 *   **Getting started**
-    - [Installation instructions](install)
-    - [Using pre-trained models](pretrained)
-    - [Training your own models](training)
-    - [Working with GPU accelerated code](gpu)
+    - [Quick start guide](quick.md)
+    - [Installation instructions](install.md)
+    - [Using pre-trained models](pretrained.md)
+    - [Training your own models](training.md)
+    - [Working with GPU accelerated code](gpu.md)
     - [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html),
       [slides](http://www.robots.ox.ac.uk/~vedaldi/assets/teach/2015/vedaldi15aims-bigdata-lecture-4-deep-learning-handout.pdf)
 

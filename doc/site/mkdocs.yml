@@ -10,11 +10,13 @@ repo_url: https://github.com/vlfeat/matconvnet
 pages:
 - ['index.md']
 
+- ['quick.md', 'Getting Started', 'Quick start']
 - ['install.md', 'Getting Started', 'Installing']
 - ['pretrained.md', 'Getting Started', 'Pretrained models']
 - ['training.md', 'Getting Started', 'Training new models']
 - ['gpu.md', 'Getting Started', 'Using GPU code']
 - ['about.md', 'Getting Started', 'About']
+- ['faq.md', 'Getting Started', 'Frequently-asked questions']
 
 - ['functions.md', 'Functions', 'Overview']
 - ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
