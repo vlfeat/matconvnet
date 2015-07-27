@@ -124,6 +124,52 @@
 		2D528BB11A8284FA006EC40A /* nnconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnconv.cu; path = matlab/src/bits/nnconv.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D528BB21A8284FA006EC40A /* nnconv.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnconv.hpp; path = matlab/src/bits/nnconv.hpp; sourceTree = "<group>"; };
 		2D5C34D519745588002B399E /* vl_nnpool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnpool.m; path = matlab/vl_nnpool.m; sourceTree = "<group>"; };
+		2D6833011B66615F00FA6D98 /* BatchNorm.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BatchNorm.m; path = "matlab/+dagnn/BatchNorm.m"; sourceTree = "<group>"; };
+		2D6833021B66615F00FA6D98 /* Concat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Concat.m; path = "matlab/+dagnn/Concat.m"; sourceTree = "<group>"; };
+		2D6833031B66615F00FA6D98 /* Conv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Conv.m; path = "matlab/+dagnn/Conv.m"; sourceTree = "<group>"; };
+		2D6833041B66615F00FA6D98 /* ConvTranspose.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ConvTranspose.m; path = "matlab/+dagnn/ConvTranspose.m"; sourceTree = "<group>"; };
+		2D6833051B66615F00FA6D98 /* DropOut.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DropOut.m; path = "matlab/+dagnn/DropOut.m"; sourceTree = "<group>"; };
+		2D6833061B66615F00FA6D98 /* ElementWise.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ElementWise.m; path = "matlab/+dagnn/ElementWise.m"; sourceTree = "<group>"; };
+		2D6833071B66615F00FA6D98 /* Filter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Filter.m; path = "matlab/+dagnn/Filter.m"; sourceTree = "<group>"; };
+		2D6833081B66615F00FA6D98 /* Layer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Layer.m; path = "matlab/+dagnn/Layer.m"; sourceTree = "<group>"; };
+		2D6833091B66615F00FA6D98 /* Loss.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Loss.m; path = "matlab/+dagnn/Loss.m"; sourceTree = "<group>"; };
+		2D68330A1B66615F00FA6D98 /* LRN.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = LRN.m; path = "matlab/+dagnn/LRN.m"; sourceTree = "<group>"; };
+		2D68330B1B66615F00FA6D98 /* NormOffset.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NormOffset.m; path = "matlab/+dagnn/NormOffset.m"; sourceTree = "<group>"; };
+		2D68330C1B66615F00FA6D98 /* Pooling.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Pooling.m; path = "matlab/+dagnn/Pooling.m"; sourceTree = "<group>"; };
+		2D68330D1B66615F00FA6D98 /* ReLU.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ReLU.m; path = "matlab/+dagnn/ReLU.m"; sourceTree = "<group>"; };
+		2D68330E1B66615F00FA6D98 /* Sigmoid.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Sigmoid.m; path = "matlab/+dagnn/Sigmoid.m"; sourceTree = "<group>"; };
+		2D68330F1B66615F00FA6D98 /* SoftMax.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SoftMax.m; path = "matlab/+dagnn/SoftMax.m"; sourceTree = "<group>"; };
+		2D6833101B66615F00FA6D98 /* SpatialNorm.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SpatialNorm.m; path = "matlab/+dagnn/SpatialNorm.m"; sourceTree = "<group>"; };
+		2D6833121B66617100FA6D98 /* addLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = addLayer.m; path = "matlab/+dagnn/@DagNN/addLayer.m"; sourceTree = "<group>"; };
+		2D6833131B66617100FA6D98 /* DagNN.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DagNN.m; path = "matlab/+dagnn/@DagNN/DagNN.m"; sourceTree = "<group>"; };
+		2D6833141B66617100FA6D98 /* eval.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = eval.m; path = "matlab/+dagnn/@DagNN/eval.m"; sourceTree = "<group>"; };
+		2D6833151B66617100FA6D98 /* fromSimpleNN.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = fromSimpleNN.m; path = "matlab/+dagnn/@DagNN/fromSimpleNN.m"; sourceTree = "<group>"; };
+		2D6833161B66617100FA6D98 /* getVarGeometry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = getVarGeometry.m; path = "matlab/+dagnn/@DagNN/getVarGeometry.m"; sourceTree = "<group>"; };
+		2D6833171B66617100FA6D98 /* initParams.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = initParams.m; path = "matlab/+dagnn/@DagNN/initParams.m"; sourceTree = "<group>"; };
+		2D6833181B66617100FA6D98 /* loadobj.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = loadobj.m; path = "matlab/+dagnn/@DagNN/loadobj.m"; sourceTree = "<group>"; };
+		2D6833191B66617100FA6D98 /* move.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = move.m; path = "matlab/+dagnn/@DagNN/move.m"; sourceTree = "<group>"; };
+		2D68331A1B66617100FA6D98 /* print.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = print.m; path = "matlab/+dagnn/@DagNN/print.m"; sourceTree = "<group>"; };
+		2D68331B1B66617100FA6D98 /* rebuild.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = rebuild.m; path = "matlab/+dagnn/@DagNN/rebuild.m"; sourceTree = "<group>"; };
+		2D68331C1B66617100FA6D98 /* removeLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = removeLayer.m; path = "matlab/+dagnn/@DagNN/removeLayer.m"; sourceTree = "<group>"; };
+		2D68331D1B66617100FA6D98 /* reset.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = reset.m; path = "matlab/+dagnn/@DagNN/reset.m"; sourceTree = "<group>"; };
+		2D68331E1B66617100FA6D98 /* saveobj.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = saveobj.m; path = "matlab/+dagnn/@DagNN/saveobj.m"; sourceTree = "<group>"; };
+		2D6833201B66624E00FA6D98 /* nnbnorm.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnbnorm.m; path = matlab/xtest/suite/nnbnorm.m; sourceTree = "<group>"; };
+		2D6833211B66624E00FA6D98 /* nnconcat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnconcat.m; path = matlab/xtest/suite/nnconcat.m; sourceTree = "<group>"; };
+		2D6833221B66624E00FA6D98 /* nnconv.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnconv.m; path = matlab/xtest/suite/nnconv.m; sourceTree = "<group>"; };
+		2D6833231B66624E00FA6D98 /* nnconvt.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnconvt.m; path = matlab/xtest/suite/nnconvt.m; sourceTree = "<group>"; };
+		2D6833241B66624E00FA6D98 /* nndropout.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nndropout.m; path = matlab/xtest/suite/nndropout.m; sourceTree = "<group>"; };
+		2D6833251B66624E00FA6D98 /* nnloss.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnloss.m; path = matlab/xtest/suite/nnloss.m; sourceTree = "<group>"; };
+		2D6833261B66624E00FA6D98 /* nnnormalize.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnnormalize.m; path = matlab/xtest/suite/nnnormalize.m; sourceTree = "<group>"; };
+		2D6833271B66624E00FA6D98 /* nnoffset.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnoffset.m; path = matlab/xtest/suite/nnoffset.m; sourceTree = "<group>"; };
+		2D6833281B66624E00FA6D98 /* nnpdist.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnpdist.m; path = matlab/xtest/suite/nnpdist.m; sourceTree = "<group>"; };
+		2D6833291B66624E00FA6D98 /* nnpool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnpool.m; path = matlab/xtest/suite/nnpool.m; sourceTree = "<group>"; };
+		2D68332A1B66624E00FA6D98 /* nnrelu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnrelu.m; path = matlab/xtest/suite/nnrelu.m; sourceTree = "<group>"; };
+		2D68332B1B66624E00FA6D98 /* nnsigmoid.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnsigmoid.m; path = matlab/xtest/suite/nnsigmoid.m; sourceTree = "<group>"; };
+		2D68332C1B66624E00FA6D98 /* nnsoftmax.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnsoftmax.m; path = matlab/xtest/suite/nnsoftmax.m; sourceTree = "<group>"; };
+		2D68332D1B66624E00FA6D98 /* nnsoftmaxloss.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnsoftmaxloss.m; path = matlab/xtest/suite/nnsoftmaxloss.m; sourceTree = "<group>"; };
+		2D68332E1B66624E00FA6D98 /* nnspnorm.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnspnorm.m; path = matlab/xtest/suite/nnspnorm.m; sourceTree = "<group>"; };
+		2D68332F1B66624E00FA6D98 /* nntest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nntest.m; path = matlab/xtest/suite/nntest.m; sourceTree = "<group>"; };
+		2D6833301B66626B00FA6D98 /* vl_testnn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_testnn.m; path = matlab/xtest/vl_testnn.m; sourceTree = "<group>"; };
 		2D6D0421196A894A00022E96 /* mex_CUDA_glnxa64.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = mex_CUDA_glnxa64.xml; path = matlab/src/config/mex_CUDA_glnxa64.xml; sourceTree = "<group>"; };
 		2D6D0422196A894A00022E96 /* mex_CUDA_maci64.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = mex_CUDA_maci64.xml; path = matlab/src/config/mex_CUDA_maci64.xml; sourceTree = "<group>"; };
 		2D6D0423196A894A00022E96 /* mex_CUDA_glnxa64.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; name = mex_CUDA_glnxa64.sh; path = matlab/src/config/mex_CUDA_glnxa64.sh; sourceTree = "<group>"; };
@@ -361,6 +407,73 @@
 			name = impl;
 			sourceTree = "<group>";
 		};
+		2D6833001B66614E00FA6D98 /* +dagnn */ = {
+			isa = PBXGroup;
+			children = (
+				2D6833111B66616300FA6D98 /* @DagNN */,
+				2D6833011B66615F00FA6D98 /* BatchNorm.m */,
+				2D6833021B66615F00FA6D98 /* Concat.m */,
+				2D6833031B66615F00FA6D98 /* Conv.m */,
+				2D6833041B66615F00FA6D98 /* ConvTranspose.m */,
+				2D6833051B66615F00FA6D98 /* DropOut.m */,
+				2D6833061B66615F00FA6D98 /* ElementWise.m */,
+				2D6833071B66615F00FA6D98 /* Filter.m */,
+				2D6833081B66615F00FA6D98 /* Layer.m */,
+				2D6833091B66615F00FA6D98 /* Loss.m */,
+				2D68330A1B66615F00FA6D98 /* LRN.m */,
+				2D68330B1B66615F00FA6D98 /* NormOffset.m */,
+				2D68330C1B66615F00FA6D98 /* Pooling.m */,
+				2D68330D1B66615F00FA6D98 /* ReLU.m */,
+				2D68330E1B66615F00FA6D98 /* Sigmoid.m */,
+				2D68330F1B66615F00FA6D98 /* SoftMax.m */,
+				2D6833101B66615F00FA6D98 /* SpatialNorm.m */,
+			);
+			name = "+dagnn";
+			sourceTree = "<group>";
+		};
+		2D6833111B66616300FA6D98 /* @DagNN */ = {
+			isa = PBXGroup;
+			children = (
+				2D6833121B66617100FA6D98 /* addLayer.m */,
+				2D6833131B66617100FA6D98 /* DagNN.m */,
+				2D6833141B66617100FA6D98 /* eval.m */,
+				2D6833151B66617100FA6D98 /* fromSimpleNN.m */,
+				2D6833161B66617100FA6D98 /* getVarGeometry.m */,
+				2D6833171B66617100FA6D98 /* initParams.m */,
+				2D6833181B66617100FA6D98 /* loadobj.m */,
+				2D6833191B66617100FA6D98 /* move.m */,
+				2D68331A1B66617100FA6D98 /* print.m */,
+				2D68331B1B66617100FA6D98 /* rebuild.m */,
+				2D68331C1B66617100FA6D98 /* removeLayer.m */,
+				2D68331D1B66617100FA6D98 /* reset.m */,
+				2D68331E1B66617100FA6D98 /* saveobj.m */,
+			);
+			name = "@DagNN";
+			sourceTree = "<group>";
+		};
+		2D68331F1B66623300FA6D98 /* suite */ = {
+			isa = PBXGroup;
+			children = (
+				2D6833201B66624E00FA6D98 /* nnbnorm.m */,
+				2D6833211B66624E00FA6D98 /* nnconcat.m */,
+				2D6833221B66624E00FA6D98 /* nnconv.m */,
+				2D6833231B66624E00FA6D98 /* nnconvt.m */,
+				2D6833241B66624E00FA6D98 /* nndropout.m */,
+				2D6833251B66624E00FA6D98 /* nnloss.m */,
+				2D6833261B66624E00FA6D98 /* nnnormalize.m */,
+				2D6833271B66624E00FA6D98 /* nnoffset.m */,
+				2D6833281B66624E00FA6D98 /* nnpdist.m */,
+				2D6833291B66624E00FA6D98 /* nnpool.m */,
+				2D68332A1B66624E00FA6D98 /* nnrelu.m */,
+				2D68332B1B66624E00FA6D98 /* nnsigmoid.m */,
+				2D68332C1B66624E00FA6D98 /* nnsoftmax.m */,
+				2D68332D1B66624E00FA6D98 /* nnsoftmaxloss.m */,
+				2D68332E1B66624E00FA6D98 /* nnspnorm.m */,
+				2D68332F1B66624E00FA6D98 /* nntest.m */,
+			);
+			name = suite;
+			sourceTree = "<group>";
+		};
 		2D6D0420196A892E00022E96 /* config */ = {
 			isa = PBXGroup;
 			children = (
@@ -435,6 +548,8 @@
 		2DD3FACA18EC0E4C00053032 /* matlab */ = {
 			isa = PBXGroup;
 			children = (
+				2DD3FAD118EC0E8100053032 /* xtest */,
+				2D6833001B66614E00FA6D98 /* +dagnn */,
 				2D416C781B39E1D00092638E /* simplenn */,
 				2D1ECF5419CDE63200F4A122 /* vl_argparse.m */,
 				2D19E6781AB2171800D4FF0C /* vl_compilenn.m */,
@@ -455,7 +570,6 @@
 				2D416C771B39E1C60092638E /* vl_nnspnorm.m */,
 				2DD3FADA18EC118700053032 /* vl_rootnn.m */,
 				2DD3FADB18EC118700053032 /* vl_setupnn.m */,
-				2DD3FAD118EC0E8100053032 /* xtest */,
 			);
 			name = matlab;
 			sourceTree = "<group>";
@@ -463,9 +577,11 @@
 		2DD3FAD118EC0E8100053032 /* xtest */ = {
 			isa = PBXGroup;
 			children = (
+				2D68331F1B66623300FA6D98 /* suite */,
 				2D6D042C196A896300022E96 /* vl_testsim.m */,
 				2DD3FAD418EC0E9000053032 /* vl_test_nnlayers.m */,
 				2DD3FAD918EC0E9000053032 /* vl_testder.m */,
+				2D6833301B66626B00FA6D98 /* vl_testnn.m */,
 			);
 			name = xtest;
 			sourceTree = "<group>";
@@ -568,7 +684,7 @@
 				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = "Andrea Vedaldi";
 			};
-			buildConfigurationList = 2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconv" */;
+			buildConfigurationList = 2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconvnet" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -778,7 +894,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconv" */ = {
+		2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconvnet" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2D375DB618A7F064008A97EE /* Debug */,
