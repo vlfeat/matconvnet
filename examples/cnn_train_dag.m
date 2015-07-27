@@ -121,8 +121,10 @@ for epoch=1:opts.numEpochs
       values(end+1,:) = [stats.(s).(f)] ;
     end
   end
-  plot(1:epoch, values') ;
-  legend(leg{:}) ;
+  subplot(1,2,1) ; plot(1:epoch, values') ;
+  legend(leg{:}) ; xlabel('epoch') ; ylabel('metric') ;
+  subplot(1,2,2) ; semilogy(1:epoch, values') ;
+  legend(leg{:}) ; xlabel('epoch') ; ylabel('metric') ;
   grid on ;
   drawnow ;
   print(1, modelFigPath, '-dpdf') ;
