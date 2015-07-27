@@ -23,20 +23,17 @@ classdef Pooling < dagnn.Filter
       derParams = {} ;
     end
 
+    function kernelSize = getKernelSize(obj)
+      kernelSize = obj.poolSize
+    end
+
+    function outputSizes = getOutputSizes(obj, inputSizes)
+      outputSizes = getOutputSizes@dagnn.Filter(obj, inputSizes) ;
+      outputSizes{1}(3) = inputSizes{1}(3) ;
+    end
+
     function obj = Pooling(varargin)
       obj.load(varargin) ;
     end
-
-    % function [outputSizes, transforms] = forwardGeometry(self, inputSizes, paramSizes)
-    %   transforms{1} = [...
-    %     self.stride(1), 0, 1 - self.pad(1) - self.stride(1) 0 0 0 ;
-    %     0, self.stride(2), 1 - self.pad(3) - self.stride(2) 0 0 0 ;
-    %     0, 0, 1, 0, 0, 0, ;
-    %     0, 0, 0, self.stride(1), 0, 1 - self.pad(1) - self.stride(1) + self.poolSize(1) - 1 ;
-    %     0, 0, 0, 0, self.stride(2), 1 - self.pad(3) - self.stride(2) + self.poolSize(2) - 1 ;
-    %     0, 0, 0, 0, 0, 1] ;
-    %   outputSizes{1}(1:2) = floor((inputSizes{1}(1:2) + self.pad([1 3]) + self.pad([2 4]) - self.poolSize(:)') ./ self.stride(:)') + 1 ;
-    %   outputSizes{1}(3:4) = inputSizes{1}(3:4) ;
-    % end
   end
 end

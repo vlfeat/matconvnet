@@ -1,4 +1,4 @@
-function str = print(self, inputSizes, varargin)
+function str = print(obj, inputSizes, varargin)
 %PRINT Print information about the DagNN object
 %   PRINT(OBJ) displays a summary of the functions and parameters in the network.
 %   STR = PRINT(OBJ) returns the summary as a string instead of printing it.
@@ -30,8 +30,14 @@ function str = print(self, inputSizes, varargin)
 %   Format:: 'ascii'
 %      Choose between 'ascii', 'latex', and 'csv'.
 %
-%   See also: DAGNN, DAGNN.GETVARGEOMETRY().
+%   See also: DAGNN, DAGNN.GETVARSIZES().
 
+if nargin > 1 && isstr(inputSizes)
+  % called directly with options, skipping second argument
+  varargin = {inputSizes, varargin{:}} ;
+  inputSizes = {} ;
+end
+  
 opts.all = false ;
 opts.format = 'ascii' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
@@ -39,21 +45,23 @@ opts.format = 'ascii' ;
 opts.functions = true ;
 opts.parameters = true ;
 opts.variables = opts.all || nargin > 1 ;
+opts.memory = true ;
 opts.dependencies = opts.all ;
 opts.maxNumColumns = 18 ;
 opts = vl_argparse(opts, varargin) ;
 
 if nargin == 1, inputSizes = {} ; end
-sizes = self.getVarSizes(inputSizes) ;
+varSizes = obj.getVarSizes(inputSizes) ;
+paramSizes = cellfun(@size, {obj.params.value}, 'UniformOutput', false) ;
 str = {''} ;
 
 if opts.functions
   table = {'func', '-', 'type', 'inputs', 'outputs', 'params', 'pad', 'stride'} ;
-  for l = 1:numel(self.layers)
-    layer = self.layers(l) ;
+  for l = 1:numel(obj.layers)
+    layer = obj.layers(l) ;
     table{l+1,1} = layer.name ;
     table{l+1,2} = '-' ;
-    table{l+1,3} = class(layer.block) ;
+    table{l+1,3} = player(class(layer.block)) ;
     table{l+1,4} = strtrim(sprintf('%s ', layer.inputs{:})) ;
     table{l+1,5} = strtrim(sprintf('%s ', layer.outputs{:})) ;
     table{l+1,6} = strtrim(sprintf('%s ', layer.params{:})) ;
@@ -73,47 +81,55 @@ if opts.functions
 end
 
 if opts.parameters
-  table = {'param', '-', 'dims', 'size', 'fanout'} ;
-  for v = 1:numel(self.params)
-    table{v+1,1} = self.params(v).name ;
+  table = {'param', '-', 'dims', 'mem', 'fanout'} ;
+  for v = 1:numel(obj.params)
+    table{v+1,1} = obj.params(v).name ;
     table{v+1,2} = '-' ;
-    table{v+1,3} = pdims(size(self.params(v).value)) ;
-    table{v+1,4} = pmem(prod(size(self.params(v).value)) * 4) ;
-    table{v+1,5} = sprintf('%d',self.params(v).fanout) ;
+    table{v+1,3} = pdims(paramSizes{v}) ;
+    table{v+1,4} = pmem(prod(paramSizes{v}) * 4) ;
+    table{v+1,5} = sprintf('%d',obj.params(v).fanout) ;
   end
   str{end+1} = printtable(opts, table') ;
   str{end+1} = sprintf('\n') ;
 end
 
 if opts.variables
-  table = {'var', '-', 'dims', 'size', 'fanin', 'fanout'} ;
-  for v = 1:numel(self.vars)
-    table{v+1,1} = self.vars(v).name ;
+  table = {'var', '-', 'dims', 'mem', 'fanin', 'fanout'} ;
+  for v = 1:numel(obj.vars)
+    table{v+1,1} = obj.vars(v).name ;
     table{v+1,2} = '-' ;
-    table{v+1,3} = pdims(sizes{v}) ;
-    table{v+1,4} = pmem(prod(sizes{v}) * 4) ;
-    table{v+1,5} = sprintf('%d',self.vars(v).fanin) ;
-    table{v+1,6} = sprintf('%d',self.vars(v).fanout) ;
+    table{v+1,3} = pdims(varSizes{v}) ;
+    table{v+1,4} = pmem(prod(varSizes{v}) * 4) ;
+    table{v+1,5} = sprintf('%d',obj.vars(v).fanin) ;
+    table{v+1,6} = sprintf('%d',obj.vars(v).fanout) ;
   end
+  str{end+1} = printtable(opts, table') ;
+  str{end+1} = sprintf('\n') ;
+end
+
+if opts.memory
+  paramMem = sum(cellfun(@prod, paramSizes)) * 4 ;
+  varMem = sum(cellfun(@prod, varSizes)) * 4 ;
+  table = {'params', 'vars', 'total'} ;
+  table{2,1} = pmem(paramMem) ;
+  table{2,2} = pmem(varMem) ;
+  table{2,3} = pmem(paramMem + varMem) ;
   str{end+1} = printtable(opts, table') ;
   str{end+1} = sprintf('\n') ;
 end
 
 if opts.dependencies
   % print variable to input dependencies
-  for i = 1:numel(geom.inputs)
-    table = {sprintf('dep on ''%s''', geom.inputs{i}), '-', 'stride', 'offset', 'rec. field'} ;
-    for v = 1:numel(geom.vars)
-      j = find(strcmp(geom.inputs{i}, {geom.vars(v).transforms.name})) ;
-      map = geom.vars(v).transforms(j).map ;
-      stride = [map(1,1), map(2,2)] ;
-      offset = [map(1,3), map(2,3)] ;
-      rf = [map(4,6) - map(1,3) + 1, map(5,6) - map(2,3) + 1] ;
-      table{v+1,1} = self.vars(v).name ;
+  inputs = obj.getInputs() ;
+  rfs = obj.getVarReceptiveFields(inputs) ;
+  for i = 1:size(rfs,1)
+    table = {sprintf('rec. field ''%s''', inputs{i}), '-', 'size', 'stride', 'offset'} ;
+    for v = 1:size(rfs,2)
+      table{v+1,1} = obj.vars(v).name ;
       table{v+1,2} = '-' ;
-      table{v+1,3} = pdims(stride) ;
-      table{v+1,4} = pdims(offset + rf / 2) ;
-      table{v+1,5} = pdims(rf) ;
+      table{v+1,3} = pdims(rfs(i,v).size) ;
+      table{v+1,4} = pdims(rfs(i,v).stride) ;
+      table{v+1,5} = pdims(rfs(i,v).offset) ;
     end
     str{end+1} = printtable(opts, table') ;
     str{end+1} = sprintf('\n') ;
@@ -222,4 +238,11 @@ else
   s = sprintf('%.4gx', x(:)) ;
   s(end) = [] ;
 end
+end
+
+% -------------------------------------------------------------------------
+function x = player(x)
+% -------------------------------------------------------------------------
+if numel(x) < 7, return ; end
+if x(1:6) == 'dagnn.', x = x(7:end) ; end
 end

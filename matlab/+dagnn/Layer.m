@@ -129,8 +129,28 @@ classdef Layer < handle
       end
     end
 
-    function transformations = getSpatialTransformations(obj)
-      transformations = {} ;
+    function rfs = getReceptiveFields(obj)
+    %GETRECEPTIVEFIELDS  Get receptive fields.
+    %   RFS = GETRECEPTIVEFIELDS(OBJ) gets the receptive fields
+    %   of each output varaibles in each input variable.
+    %
+    %   A *receptive field* is a structure with fields
+    %
+    %   - size: size of the receptive field
+    %   - stride: stride of the receptive field
+    %   - offset: offset of the receptive field
+    %
+    %   It should be interpreted as follows. Given a pixel of
+    %   vertical coordinate u in an output variable OUT(y,...) , the first and last
+    %   pixels affecting that pixel in an input variable IN(v,...) are:
+    %
+    %        v_first = stride(1) * (y - 1) + offset(1) - size(1)/2 + 1
+    %        v_last  = stride(1) * (y - 1) + offset(1) + size(1)/2 + 1
+    %
+    %   RFS is a struct array of such structure, with one row for each
+    %   input variable and one column for each output variable, expressing
+    %   all possible combinations of inputs and outputs.
+      rfs = [] ;
     end
     
     function outputSizes = getOutputSizes(obj, inputSizes)      
