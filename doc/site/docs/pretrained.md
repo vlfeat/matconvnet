@@ -60,6 +60,17 @@ used in MatConvNet.
      - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
      - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
 
+-    GoogLeNet model from the
+     [Caffe zoo](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet). This
+     model uses the `DagNN` wrapper instead of `vl_simplenn`.
+
+     **Citation:** `Going deeper with convolutions.' *C. Szegedy,
+     W. Liu, Y. Jia, P. Sermanet, S. Reed, D. Anguelov, D. Erhan,
+     V. Vanhoucke, and A. Rabinovich,* arXiv preprint,
+     (1409.4842v1-2), 2015.
+
+     - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat)
+
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
