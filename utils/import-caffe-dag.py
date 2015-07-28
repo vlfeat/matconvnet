@@ -1,7 +1,7 @@
 #! /usr/bin/python
-# file: import-caffe.py
+# file: import-caffe-dag.py
 # brief: Caffe importer for DagNN
-# author: Andrea Vedaldi and Karel Lenc
+# author: Karel Lenc and Andrea Vedaldi
 
 # Requires Google Protobuf for Python and SciPy
 
