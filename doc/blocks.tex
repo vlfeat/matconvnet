@@ -78,15 +78,17 @@ An application of grouping is implementing the Krizhevsky and Hinton network~\ci
 	\caption{Convolution vs convolution transpose. The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The purple areas represented padding $P_=2$ and $P_+=3$ which is zero-filled. Filters are applied a sliding-window manner across the input signal.}\label{f:convt}
 \end{figure}
 
-The \emph{convolution transpose} block (some authors call it improperly deconvolution) implements an operator this is the transpose of the convolution described in \autoref{s:convolution}. This is  implemented by thefunction !vl_nnconvt!. Let:
+The \emph{convolution transpose} block (sometimes referred to as ``deconvolution'') is the transpose of the convolution block described in \autoref{s:convolution}. In \matconvnet, convolution transpose is  implemented by the function !vl_nnconvt!. 
+
+In order to understand convolution transpose, let:
 \[
  \bx\in\real^{H \times W \times D}, \quad
  \bff\in\real^{H' \times W' \times D \times D''}, \quad
  \by\in\real^{H'' \times W'' \times D''}, \quad
 \]
-be the input tensor, filters, and output tensor. Imagine operating in the reverse direction and to use the filter bank $\bff$ to convolve $\by$ to obtain $\bx$ as in \autoref{s:convolution}; since this operation is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$.
+be the input tensor, filters, and output tensors. Imagine operating in the reverse direction by using the filter bank $\bff$ to convolve the output $\by$ to obtain the input $\bx$, using the definitions given in~\autoref{s:convolution} for the convolution operator; since convolution is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$.
 
-Convolution transpose is mainly useful in two settings. The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
+There are two important applications of convolution transpose The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
 
 Convolution transpose can be expressed in closed form in the following rather unwieldy expression (derived in \autoref{s:impl-convolution-transpose}):
 \begin{multline}\label{e:convt}
