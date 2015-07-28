@@ -386,15 +386,16 @@ for layer in layers:
     pad = [opts.pad]*4
     stride = [opts.stride]*2
 
-    mtype = u'dagnn.Conv'
-    mopts['pad'] = row(pad)
-    mopts['stride'] = row(stride)
-
     if args.transpose:
       arrays[0] = arrays[0].transpose([1,0,2,3])
       if inputs[0] == 'data':
         # BGR -> RGB
         arrays[0] = arrays[0][:,:,: : -1,:]
+
+    mtype = u'dagnn.Conv'
+    mopts['size'] = row(arrays[0].shape)
+    mopts['pad'] = row(pad)
+    mopts['stride'] = row(stride)
 
     params = [layer.name + 'f', layer.name + 'b']
     mparam = np.empty((2,),dtype=mparamdt)
@@ -474,6 +475,7 @@ for layer in layers:
         arrays[0] = arrays[0][:,:,: : -1,:]
 
     mtype = u'dagnn.Conv'
+    mopts['size'] = row(arrays[0].shape)
     mopts['pad'] = row(pad)
     mopts['stride'] = row(stride)
 
