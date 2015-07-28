@@ -12,8 +12,8 @@ classdef ElementWise < dagnn.Layer
       rfs.offset = [1 1] ;
     end
     
-    function outputSizes = getOutputSizes(obj, inputSizes, paramSizes)
+    function outputSizes = getOutputSizes(obj, inputSizes)
       outputSizes = inputSizes ;
-    end  
+    end
   end
 end

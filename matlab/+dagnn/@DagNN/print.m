@@ -108,8 +108,8 @@ if opts.variables
 end
 
 if opts.memory
-  paramMem = sum(cellfun(@prod, paramSizes)) * 4 ;
-  varMem = sum(cellfun(@prod, varSizes)) * 4 ;
+  paramMem = sum(cellfun(@getMem, paramSizes)) ;
+  varMem = sum(cellfun(@getMem, varSizes)) ;
   table = {'params', 'vars', 'total'} ;
   table{2,1} = pmem(paramMem) ;
   table{2,2} = pmem(varMem) ;
@@ -246,3 +246,11 @@ function x = player(x)
 if numel(x) < 7, return ; end
 if x(1:6) == 'dagnn.', x = x(7:end) ; end
 end
+
+% -------------------------------------------------------------------------
+function m = getMem(sz)
+% -------------------------------------------------------------------------
+m = prod(sz) * 4 ;
+if isnan(m), m = 0 ; end
+end
+

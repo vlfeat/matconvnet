@@ -16,7 +16,7 @@ classdef ReLU < dagnn.ElementWise
 
     function forwardAdvanced(obj, layer)
       if ~obj.useShortCircuit || ~obj.net.conserveMemory
-        forwardAdvanced@Layer(obj, layer) ;
+        forwardAdvanced@dagnn.Layer(obj, layer) ;
         return ;
       end
       net = obj.net ;
@@ -28,7 +28,7 @@ classdef ReLU < dagnn.ElementWise
 
     function backwardAdvanced(obj, layer)
       if ~obj.useShortCircuit || ~obj.net.conserveMemory
-        backwardAdvanced@Layer(obj, layer) ;
+        backwardAdvanced@dagnn.Layer(obj, layer) ;
         return ;
       end
       net = obj.net ;

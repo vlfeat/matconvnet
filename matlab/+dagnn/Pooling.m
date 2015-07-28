@@ -24,7 +24,7 @@ classdef Pooling < dagnn.Filter
     end
 
     function kernelSize = getKernelSize(obj)
-      kernelSize = obj.poolSize
+      kernelSize = obj.poolSize ;
     end
 
     function outputSizes = getOutputSizes(obj, inputSizes)

@@ -23,13 +23,26 @@ classdef Loss < dagnn.ElementWise
       derParams = {} ;
     end
 
-    function obj = Loss(varargin)
-      obj.load(varargin) ;
-    end
-
     function reset(obj)
       obj.average = 0 ;
       obj.numAveraged = 0 ;
+    end
+    
+    function outputSizes = getOutputSizes(obj, inputSizes, paramSizes)
+      outputSizes{1} = [1 1 1 inputSizes{1}(1)] ;
+    end
+    
+    function rfs = getReceptiveFields(obj)
+      % the receptive field depends on the dimension of the variables
+      % which is not known until the network is run
+      rfs(1,1).size = [NaN NaN] ;
+      rfs(1,1).stride = [NaN NaN] ;
+      rfs(1,1).offset = [NaN NaN] ;
+      rfs(2,1) = rfs(1,1) ;
+    end
+    
+    function obj = Loss(varargin)
+      obj.load(varargin) ;
     end
   end
 end

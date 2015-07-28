@@ -20,3 +20,6 @@ scores = squeeze(gather(net.vars(end).value)) ;
 figure(1) ; clf ; imagesc(im) ;
 title(sprintf('%s (%d), score %.3f',...
 net.meta.description{best}, best, bestScore)) ;
+
+% print the network structure
+net.print({'data', [size(im_), 1]}) ;
