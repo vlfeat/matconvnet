@@ -222,7 +222,7 @@ for i=1:n
     case 'softmaxloss'
       res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
     case 'relu'
-      if isfield(l, 'leak'), leak = {'leak', opts.leak} ; else leak = {} ; end
+      if isfield(l, 'leak'), leak = {'leak', l.leak} ; else leak = {} ; end
       res(i+1).x = vl_nnrelu(res(i).x,[],leak{:}) ;
     case 'sigmoid'
       res(i+1).x = vl_nnsigmoid(res(i).x) ;
@@ -360,7 +360,7 @@ if doder
       case 'softmaxloss'
         res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'relu'
-        if isfield(l, 'leak'), leak = {'leak', opts.leak} ; else leak = {} ; end
+        if isfield(l, 'leak'), leak = {'leak', l.leak} ; else leak = {} ; end
         if ~isempty(res(i).x)
           res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx, leak{:}) ;
         else
