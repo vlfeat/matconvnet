@@ -115,8 +115,6 @@ if numel(c) == inputSize(4)
   c = repmat(c, inputSize(1:2)) ;
 end
 
-% check label format
-
 % --------------------------------------------------------------------
 % Spatial weighting
 % --------------------------------------------------------------------
@@ -160,15 +158,14 @@ end
 switch lower(opts.loss)
   case {'log', 'softmaxlog', 'mhinge', 'mshinge'}
     % from category labels to indexes
-    numPixelsPerImage = uint64(prod(inputSize(1:2))) ;
+    numPixelsPerImage = prod(inputSize(1:2)) ;
     numPixels = numPixelsPerImage * inputSize(4) ;
     imageVolume = numPixelsPerImage * inputSize(3) ;
 
-    % below: uint64() also cuts off at zero
     n = reshape(0:numPixels-1,labelSize) ;
     offset = 1 + mod(n, numPixelsPerImage) + ...
-             imageVolume * (n / numPixelsPerImage) ;
-    ci = offset + numPixelsPerImage * uint64(c - 1) ;
+             imageVolume * fix(n / numPixelsPerImage) ;
+    ci = offset + numPixelsPerImage * max(c - 1,0) ;
 end
 
 if nargin <= 2 || isempty(dzdy)
@@ -221,7 +218,7 @@ else
       Q = X ;
       Q(ci) = -inf ;
       [~, q] = max(Q,[],3) ;
-      qi = offset + numPixelsPerImage * uint64(q - 1) ;
+      qi = offset + numPixelsPerImage * (q - 1) ;
       W = (dzdy * instanceWeights) .* (X(ci) - X(qi) < 1) ;
       Y = zerosLike(X) ;
       Y(ci) = - W ;

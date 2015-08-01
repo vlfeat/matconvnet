@@ -1,6 +1,8 @@
 classdef nnloss < nntest
-  properties (TestParameter)
-    loss = {'binarylog', 'hinge', 'logistic', 'log', 'softmaxlog', 'mhinge', 'mshinge'}
+  properties (TestParameter)   
+    loss = {...
+      'classerror', 'log', 'softmaxlog', 'mhinge', 'mshinge', ...
+      'binaryerror', 'binarylog', 'logistic', 'hinge'}
     weighed = {false, true}
   end
 
@@ -16,7 +18,7 @@ classdef nnloss < nntest
       w = 5 ;
       h = 4 ;
       switch loss
-        case {'log', 'softmaxlog', 'mhinge', 'mshinge'}
+        case {'log', 'softmaxlog', 'mhinge', 'mshinge', 'classerror'}
           % multiclass
           instanceWeights = test.rand(h,w, 'single') / test.range / (h*w) ;
           c = single(randi(numClasses, h,w,1,numImages)) ;
@@ -29,12 +31,12 @@ classdef nnloss < nntest
         case {'log'}
           x = test.rand(h,w, numClasses, numImages, 'single') / test.range * .80 + .10 ;
           x = bsxfun(@rdivide, x, sum(x,3)) ;
-        case {'softmaxlog', 'mhinge', 'mshinge'}
-          x = test.randn(h,w, numClasses, numImages, 'single') / test.range ;
-        case {'hinge', 'logistic'}
-          x = test.randn(h,w, numAttributes, numImages, 'single') / test.range ;
         case {'binarylog'}
           x = test.rand(h,w, numAttributes, numImages, 'single') / test.range * .80 + .10 ;
+        case {'softmaxlog', 'mhinge', 'mshinge', 'classerror'}
+          x = test.randn(h,w, numClasses, numImages, 'single') / test.range ;
+        case {'hinge', 'logistic', 'binaryerror'}
+          x = test.randn(h,w, numAttributes, numImages, 'single') / test.range ;     
       end
     end
   end

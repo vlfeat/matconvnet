@@ -1,5 +1,10 @@
 function vl_testnn(varargin)
-% VL_TESTNN   Run MatConvNet test suite
+%VL_TESTNN Run MatConvNet test suite
+%   VL_TESTNN('cpu', true)
+%   VL_TESTNN('gpu', true)
+%   VL_TESTNN('command', 'nnloss')
+
+
 opts.cpu = true ;
 opts.gpu = false ;
 opts.command = 'nn' ;
