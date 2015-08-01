@@ -7,7 +7,7 @@ classdef Concat < dagnn.ElementWise
   properties (Transient)
     inputSizes = {}
   end
-  
+
   methods
     function outputs = forward(obj, inputs, params)
       outputs{1} = vl_nnconcat(inputs, obj.dim) ;
@@ -16,6 +16,7 @@ classdef Concat < dagnn.ElementWise
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutpus)
       outputs{1} = vl_nnconcat(inputs, derOutputs{1}, 'inputSizes', obj.inputSizes) ;
+      derParams = {} ;
     end
 
     function reset(obj)
@@ -29,7 +30,7 @@ classdef Concat < dagnn.ElementWise
       end
       outputSizes{1} = sz ;
     end
-    
+
     function rfs = getReceptiveFields(obj)
       if obj.dim == 3 || obj.dim == 4
         rfs = getReceptiveFields@dagnn.ElementWise(obj) ;
@@ -42,7 +43,7 @@ classdef Concat < dagnn.ElementWise
         end
       end
     end
-          
+
     function obj = Concat(varargin)
       obj.load(varargin) ;
     end
