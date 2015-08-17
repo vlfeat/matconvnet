@@ -62,7 +62,12 @@ $(if $(ENABLE_GPU),-DENABLE_GPU,) \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
 SHELL = /bin/bash # sh not good enough
+
 NVCC = $(CUDAROOT)/bin/nvcc
+NVCCVER = $(shell $(NVCC) --version | \
+sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
+xargs printf '%02d%02d%02d')
+NVCCVER_LT_70 = $(shell test $(NVCCVER) -lt 070000 && echo true)
 
 # this is used *onyl* for the 'nvcc' method
 NVCCFLAGS = \
@@ -94,7 +99,12 @@ endif
 # Mac OS X Intel
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 MEXFLAGS_GPU += -L$(CUDAROOT)/lib
+ifeq ($(NVCCVER_LT_70),true)
+# if using an old version of CUDA
 MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS -stdlib=libstdc++'
+else
+MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS'
+endif
 IMAGELIB_DEFAULT = quartz
 endif
 
@@ -226,10 +236,16 @@ info: doc-info
 	@echo "cpp_tgt=$(cpp_tgt)"
 	@echo "cu_src=$(cu_src)"
 	@echo "cu_tgt=$(cu_tgt)"
+	@echo '------------------------------'
 	@echo 'MEXFLAGS=$(MEXFLAGS)'
 	@echo 'MEXFLAGS_GPU=$(MEXFLAGS_GPU)'
 	@echo 'MEXFLAGS_NVCC=$(MEXFLAGS_NVCC)'
+	@echo '------------------------------'
+	@echo 'NVCC=$(NVCC)'
+	@echo 'NVCCVER=$(NVCCVER)'
+	@echo 'NVCCVER_LT_70=$(NVCCVER_LT_70)'
 	@echo 'NVCCFLAGS=$(NVCCFLAGS)'
+
 
 clean: doc-clean
 	find . -name '*~' -delete
