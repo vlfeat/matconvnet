@@ -235,29 +235,29 @@ end
 
 if opts.enableGpu
   opts.verbose && fprintf('%s: * CUDA configuration *\n', mfilename) ;
-  if isempty(opts.cudaRoot), opts.cudaRoot = search_cuda_devkit(opts); end
-  check_nvcc(opts.cudaRoot);
+
+  % Find the CUDA Devkit
+  if isempty(opts.cudaRoot), opts.cudaRoot = search_cuda_devkit(opts) ; end
   opts.verbose && fprintf('%s:\tCUDA: using CUDA Devkit ''%s''.\n', ...
                           mfilename, opts.cudaRoot) ;
+
+  opts.nvccPath = fullfile(opts.cudaRoot, 'bin', 'nvcc') ;
   switch arch
     case 'win64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib', 'x64') ;
     case 'maci64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib') ;
     case 'glnxa64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib64') ;
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
-  opts.nvccPath = fullfile(opts.cudaRoot, 'bin', 'nvcc') ;
 
-  % CUDA arch string (select GPU architecture)
+  % Activate the CUDA Devkit
+  cuver = activate_nvcc(opts.nvccPath) ;
+  opts.verbose && fprintf('%s:\tCUDA: using NVCC ''%s'' (%d).\n', ...
+                          mfilename, opts.nvccPath, cuver) ;
+
+  % Set the CUDA arch string (select GPU architecture)
   if isempty(opts.cudaArch), opts.cudaArch = get_cuda_arch(opts) ; end
   opts.verbose && fprintf('%s:\tCUDA: NVCC architecture string: ''%s''.\n', ...
                           mfilename, opts.cudaArch) ;
-
-  % Make sure NVCC is visible by MEX by setting the corresp. env. var
-  if ~strcmp(getenv('MW_NVCC_PATH'), opts.nvccPath)
-    warning('Setting the ''MW_NVCC_PATH'' environment variable to ''%s''', ...
-            opts.nvccPath) ;
-    setenv('MW_NVCC_PATH', opts.nvccPath) ;
-  end
 end
 
 % --------------------------------------------------------------------
@@ -322,15 +322,15 @@ flags.link{end+1} = '-largeArrayDims' ;
 flags.mexcc = flags.cc ;
 flags.mexcc{end+1} = '-largeArrayDims' ;
 flags.mexcc{end+1} = '-cxx' ;
-if strcmp(arch, 'maci64')
+if strcmp(arch, 'maci64') && cuver < 70000
   % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
   % Clang libc++. This should go away in the future.
   flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
   flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
   if  ~verLessThan('matlab', '8.5.0')
-    % Complicating matters, MATLAB 8.5.0 links to Clang c++ by default
-    % when linking MEX files overriding the option above. More force
-    % is needed:
+    % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
+    % default when linking MEX files overriding the option above. We
+    % force it to use GCC libstdc++
     flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
   end
 end
@@ -548,7 +548,7 @@ paths{end+1} = sprintf('/usr/local/cuda/bin/nvcc') ;
 % Validate each candidate NVCC path
 for i=1:numel(paths)
   nvcc(i).path = paths{i} ;
-  [nvcc(i).isvalid, nvcc(i).version] = validate_nvcc(opts,paths{i}) ;
+  [nvcc(i).isvalid, nvcc(i).version] = validate_nvcc(paths{i}) ;
 end
 if opts.verbose
   fprintf('\t| %5s | %5s | %-70s |\n', 'valid', 'ver', 'NVCC path') ;
@@ -572,41 +572,57 @@ if opts.verbose
 end
 
 % -------------------------------------------------------------------------
-function [valid, cuver]  = validate_nvcc(opts, nvcc_path)
+function [valid, cuver]  = validate_nvcc(nvccPath)
 % -------------------------------------------------------------------------
-valid = false ;
-cuver = 0 ;
-if ~isempty(nvcc_path)
-  [status, output] = system(sprintf('"%s" --version', nvcc_path)) ;
-  valid = (status == 0) ;
+[status, output] = system(sprintf('"%s" --version', nvccPath)) ;
+valid = (status == 0) ;
+if ~valid
+  cuver = 0 ;
+  return ;
 end
-if ~valid, return ; end
 match = regexp(output, 'V(\d+\.\d+\.\d+)', 'match') ;
 if isempty(match), valid = false ; return ; end
 cuver = [1e4 1e2 1] * sscanf(match{1}, 'V%d.%d.%d') ;
 
 % --------------------------------------------------------------------
-function check_nvcc(cuda_root)
+function cuver = activate_nvcc(nvccPath)
 % --------------------------------------------------------------------
-% Checks whether the nvcc is in the path. If not, guessed out of CudaRoot.
-[status, ~] = system('nvcc --help');
-if status ~= 0
-  warning('nvcc not found in PATH. Trying to guess out of CudaRoot.');
-  cuda_bin_path = fullfile(cuda_root, 'bin');
-  prev_path = getenv('PATH');
+
+% Validate the NVCC compiler installation
+[valid, cuver] = validate_nvcc(nvccPath) ;
+if ~valid
+  error('The NVCC compiler ''%s'' does not appear to be valid.', nvccPath) ;
+end
+
+% Make sure that NVCC is visible by MEX by setting the MW_NVCC_PATH
+% environment variable to the NVCC compiler path
+if ~strcmp(getenv('MW_NVCC_PATH'), nvccPath)
+  warning('Setting the ''MW_NVCC_PATH'' environment variable to ''%s''', nvccPath) ;
+  setenv('MW_NVCC_PATH', nvccPath) ;
+end
+
+% In some operating systems and MATLAB versions, NVCC must also be
+% available in the command line search path. Make sure that this is%
+% the case.
+[valid_, cuver_] = validate_nvcc('nvcc') ;
+if ~valid || cuver_ ~= cuver
+  warning('NVCC not found in the command line path or the one found does not matches ''%s''.', nvccPath);
+  nvccDir = fileparts(nvccPath) ;
+  prevPath = getenv('PATH') ;
   switch computer
-    case 'PCWIN64', separator = ';';
-    case {'GLNXA64', 'MACI64'}, separator = ':';
+    case 'PCWIN64', separator = ';' ;
+    case {'GLNXA64', 'MACI64'}, separator = ':' ;
   end
-  setenv('PATH', [prev_path separator cuda_bin_path]);
-  [status, ~] = system('nvcc --help');
-  if status ~= 0
-    setenv('PATH', prev_path);
-    error('Unable to find nvcc.');
+  setenv('PATH', [nvccDir separator prevPath]) ;
+  [valid_, cuver_] = validate_nvcc('nvcc') ;
+  if ~valid_ || cuver_ ~= cuver
+    setenv('PATH', prevPath) ;
+    error('Unable to set the command line path to point to ''%s'' correctly.', nvccPath) ;
   else
-    fprintf('Location of nvcc (%s) added to your PATH.\n', cuda_bin_path);
+    fprintf('Location of NVCC (%s) added to your command search PATH.\n', nvccDir) ;
   end
 end
+
 
 % --------------------------------------------------------------------
 function cudaArch = get_cuda_arch(opts)
