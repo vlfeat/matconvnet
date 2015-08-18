@@ -1,35 +1,32 @@
 classdef nntest < matlab.unittest.TestCase
-  properties (ClassSetupParameter)
+  properties (MethodSetupParameter)
     device = {'cpu', 'gpu'}
   end
 
   properties
     randn
     rand
+    toDevice
     range = 128
   end
 
-  methods (TestClassSetup)
+  methods (TestMethodSetup)
     function generators(test, device)
       range = 128 ;
+      seed = 0 ;
       switch device
         case 'gpu'
           gpuDevice ;
           test.randn = @(varargin) range * gpuArray.randn(varargin{:}) ;
           test.rand = @(varargin) range * gpuArray.rand(varargin{:}) ;
+          test.toDevice = @(x) gpuArray(x) ;
+          parallel.gpu.rng(seed, 'combRecursive') ;
         case 'cpu'
           test.randn = @(varargin) range * randn(varargin{:}) ;
           test.rand = @(varargin) range * rand(varargin{:}) ;
+          test.toDevice = @(x) gather(x) ;
+          rng(seed, 'combRecursive') ;
       end
-    end
-  end
-
-  methods (TestMethodSetup)
-    function random_generators(device)
-      if strcmp(device, 'gpu')
-        parallel.gpu.rng(0, 'combRecursive');
-      end
-      rng(0, 'combRecursive') ;
     end
   end
 
@@ -43,6 +40,8 @@ classdef nntest < matlab.unittest.TestCase
     end
 
     function eq(test,a,b,tau)
+      a = gather(a) ;
+      b = gather(b) ;
       if nargin > 3 && ~isempty(tau) && tau < 0
         tau_min = -tau ;
         tau = [] ;

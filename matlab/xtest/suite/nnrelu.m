@@ -3,7 +3,7 @@ classdef nnrelu < nntest
     x
   end
 
-  methods (TestClassSetup)
+  methods (TestMethodSetup)
     function data(test,device)
       % make sure that all elements in x are different. in this way,
       % we can compute numerical derivatives reliably by adding a delta < .5.

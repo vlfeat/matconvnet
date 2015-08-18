@@ -5,33 +5,38 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %
 %   The prediction scores X are organised as a field of prediction
 %   vectors, represented by a H x W x D x N array. The first two
-%   dimensions, H and W, are spatial and give the height and width of
-%   the field;the third dimension D is the number of categories;
-%   finally, the dimension N is the number of data items (images)
-%   packed in the array. While often one has H = W = 1, W, H > 1 is
-%   useful in dense labelling problems such as image segmentation.
+%   dimensions, H and W, are spatial and correspond to the height and
+%   width of the field; the third dimension D is the number of
+%   categories or classes; finally, the dimension N is the number of
+%   data items (images) packed in the array.
+%
+%   While often one has H = W = 1, the case W, H > 1 is useful in
+%   dense labelling problems such as image segmentation. In the latter
+%   case, the loss is summed across pixels (unless otherwise specified
+%   using the `InstanceWeights` option described below).
 %
 %   The array C contains the categorical labels. In the simplest case,
-%   C is an array of integers in the range [1, D] with an overall
-%   number of elements equal to N. In this case, C is interpreted as
-%   specifying one label per image. If H, W > 1, the same label is
-%   implicitly applied to all spatial locations.
+%   C is an array of integers in the range [1, D] with N elements
+%   specifying one label for each of the N images. If H, W > 1, the
+%   same label is implicitly applied to all spatial locations.
 %
 %   In the second form, C has dimension H x W x 1 x N and specifies a
 %   categorical label for each spatial location.
 %
 %   In the third form, C has dimension H x W x D x N and specifies
 %   attributes rather than categories. Here elements in C are either
-%   +1 or -1 and C, where +1 denotes that an attribute is presnet and
+%   +1 or -1 and C, where +1 denotes that an attribute is present and
 %   -1 that it is not. The key difference is that multiple attributes
 %   can be active at the same time, while categories are mutually
-%   exclusive.
+%   exclusive. By default, the loss is *summed* across attributes
+%   (unless otherwise specified using the `InstanceWeights` option
+%   described below).
 %
 %   DZDX = VL_NNLOSS(X, C, DZDY) computes the derivative of the block
 %   projected onto the output derivative DZDY. DZDX and DZDY have the
 %   same dimensions as X and Y respectively.
 %
-%   VL_NNLOSS() supports several loss functions, which caxn be selected
+%   VL_NNLOSS() supports several loss functions, which can be selected
 %   by using the option `type` described below. When each scalar c in
 %   C is interpreted as a categorical label (first two forms above),
 %   the following losses can be used:
@@ -92,7 +97,17 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %     binary classification. This is equivalent to the `mshinge` loss
 %     if class c=+1 is assigned score x and class c=-1 is assigned
 %     score 0.
-
+%
+%   VL_NNLOSS(...,'OPT', VALUE, ...) supports these additionals
+%   options:
+%
+%   InstanceWeights:: []
+%     Allows to weight the loss as L'(x,c) = WGT L(x,c), where WGT is
+%     a per-instance weight extracted from the array
+%     `InstanceWeights`. For categorical losses, this is either a H x
+%     W x 1 or a H x W x 1 x N array. For attribute losses, this is
+%     either a H x W x D or a H x W x D x N array.
+%
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
 %
@@ -147,8 +162,6 @@ end
 
 if ~isempty(opts.instanceWeights)
   instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
-else
-  instanceWeights = instanceWeights * (1 / prod(labelSize(1:3))) ;
 end
 
 % --------------------------------------------------------------------
@@ -199,40 +212,41 @@ if nargin <= 2 || isempty(dzdy)
   end
   Y = instanceWeights(:)' * t(:) ;
 else
+  dzdy = dzdy * instanceWeights ;
   switch lower(opts.loss)
     case 'classerror'
       Y = zerosLike(X) ;
     case 'log'
       Y = zerosLike(X) ;
-      Y(ci) = (- dzdy * instanceWeights) ./ max(X(ci), 1e-8) ;
+      Y(ci) = - dzdy ./ max(X(ci), 1e-8) ;
     case 'softmaxlog'
       Xmax = max(X,[],3) ;
       ex = exp(bsxfun(@minus, X, Xmax)) ;
       Y = bsxfun(@rdivide, ex, sum(ex,3)) ;
       Y(ci) = Y(ci) - 1 ;
-      Y = bsxfun(@times, dzdy * instanceWeights, Y) ;
+      Y = bsxfun(@times, dzdy, Y) ;
     case 'mhinge'
       Y = zerosLike(X) ;
-      Y(ci) = (- dzdy * instanceWeights) .* (X(ci) < 1) ;
+      Y(ci) = - dzdy .* (X(ci) < 1) ;
     case 'mshinge'
       Q = X ;
       Q(ci) = -inf ;
       [~, q] = max(Q,[],3) ;
       qi = offset + numPixelsPerImage * (q - 1) ;
-      W = (dzdy * instanceWeights) .* (X(ci) - X(qi) < 1) ;
+      W = dzdy .* (X(ci) - X(qi) < 1) ;
       Y = zerosLike(X) ;
       Y(ci) = - W ;
       Y(qi) = + W ;
     case 'binaryerror'
       Y = zerosLike(X) ;
     case 'binarylog'
-      Y = - (dzdy * instanceWeights) ./ (X + (c-1)*0.5) ;
+      Y = - dzdy ./ (X + (c-1)*0.5) ;
     case 'logistic'
       % t = exp(-Y.*X) / (1 + exp(-Y.*X)) .* (-Y)
       % t = 1 / (1 + exp(Y.*X)) .* (-Y)
-      Y = (- dzdy * instanceWeights) .* c ./ (1 + exp(c.*X)) ;
+      Y = - dzdy .* c ./ (1 + exp(c.*X)) ;
     case 'hinge'
-      Y = (- dzdy * instanceWeights) .* c .* (c.*X < 1) ;
+      Y = - dzdy .* c .* (c.*X < 1) ;
   end
 end
 
@@ -244,6 +258,3 @@ if isa(x,'gpuArray')
 else
   y = zeros(size(x),'single') ;
 end
-
-
-function ci = getIndex(c, inputSize)
