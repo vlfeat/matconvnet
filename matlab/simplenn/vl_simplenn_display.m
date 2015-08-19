@@ -1,4 +1,4 @@
-function info = vl_simplenn_display(net, varargin)
+function [info, str] = vl_simplenn_display(net, varargin)
 % VL_SIMPLENN_DISPLAY  Simple CNN statistics
 %    VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
 %
@@ -115,7 +115,7 @@ for l = 1:numel(net.layers)
   end
 end
 
-if nargout > 0, return ; end
+if nargout < 2, return ; end
 
 % print table
 table = {} ;
@@ -228,17 +228,30 @@ for wi=1:numel(fields)
   end
 end
 
+str = {} ;
 for i=2:opts.maxNumColumns:size(table,2)
   sel = i:min(i+opts.maxNumColumns-1,size(table,2)) ;
-  switch opts.format
-    case 'ascii', pascii(table(:,[1 sel])) ; fprintf('\n') ;
-    case 'latex', platex(table(:,[1 sel])) ;
-    case 'csv',   pcsv(table(:,[1 sel])) ; fprintf('\n') ;
-  end
+  str{end+1} = ptable(opts, table(:,[1 sel])) ;
 end
 
-fprintf('parameter memory: %s (%.2g parameters)\n', pmem(wmem), wmem/4) ;
-fprintf('data memory: %s (for batch size %d)\n', pmem(xmem), info.dataSize(4,1)) ;
+table = {...
+  'parameter memory', sprintf('%s (%.2g parameters)', pmem(wmem), wmem/4);
+  'data memory', sprintf('%s (for batch size %d)', pmem(xmem), info.dataSize(4,1))} ;
+str{end+1} = ptable(opts, table) ;
+
+str = horzcat(str{:}) ;
+
+if nargout == 0, fprintf('%s', str) ; end
+
+% -------------------------------------------------------------------------
+function str = ptable(opts, table)
+% -------------------------------------------------------------------------
+switch opts.format
+  case 'ascii', str = pascii(table) ;
+  case 'latex', str = platex(table) ;
+  case 'csv',   str = pcsv(table) ; 
+end  
+str = horzcat(str,sprintf('\n')) ;
 
 % -------------------------------------------------------------------------
 function s = pmem(x)
@@ -261,49 +274,54 @@ else
 end
 
 % -------------------------------------------------------------------------
-function pascii(table)
+function str = pascii(table)
 % -------------------------------------------------------------------------
+str = {} ;
 sizes = max(cellfun(@(x) numel(x), table),[],1) ;
 for i=1:size(table,1)
   for j=1:size(table,2)
     s = table{i,j} ;
     fmt = sprintf('%%%ds|', sizes(j)) ;
     if isequal(s,'-'), s=repmat('-', 1, sizes(j)) ; end
-    fprintf(fmt, s) ;
+    str{end+1} = sprintf(fmt, s) ;
   end
-  fprintf('\n') ;
+  str{end+1} = sprintf('\n') ;
 end
+str = horzcat(str{:}) ;
 
 % -------------------------------------------------------------------------
-function pcsv(table)
+function str = pcsv(table)
 % -------------------------------------------------------------------------
+str = {} ;
 sizes = max(cellfun(@(x) numel(x), table),[],1) + 2 ;
 for i=1:size(table,1)
   if isequal(table{i,1},'-'), continue ; end
   for j=1:size(table,2)
     s = table{i,j} ;
-    fmt = sprintf('%%%ds,', sizes(j)) ;
-    fprintf(fmt, ['"' s '"']) ;
+    str{end+1} = sprintf('%s,', ['"' s '"']) ;
   end
-  fprintf('\n') ;
+  str{end+1} = sprintf('\n') ;
 end
+str = horzcat(str{:}) ;
 
 % -------------------------------------------------------------------------
-function platex(table)
+function str = platex(table)
 % -------------------------------------------------------------------------
+str = {} ;
 sizes = max(cellfun(@(x) numel(x), table),[],1) ;
-fprintf('\\begin{tabular}{%s}\n', repmat('c', 1, numel(sizes))) ;
+str{end+1} = sprintf('\\begin{tabular}{%s}\n', repmat('c', 1, numel(sizes))) ;
 for i=1:size(table,1)
-  if isequal(table{i,1},'-'), fprintf('\\hline\n') ; continue ; end
+  if isequal(table{i,1},'-'), str{end+1} = sprintf('\\hline\n') ; continue ; end
   for j=1:size(table,2)
     s = table{i,j} ;
     fmt = sprintf('%%%ds', sizes(j)) ;
-    fprintf(fmt, latexesc(s)) ;
-    if j<size(table,2), fprintf('&') ; end
+    str{end+1} = sprintf(fmt, latexesc(s)) ;
+    if j<size(table,2), str{end+1} = sprintf('&') ; end
   end
-  fprintf('\\\\\n') ;
+  str{end+1} = sprintf('\\\\\n') ;
 end
-fprintf('\\end{tabular}\n') ;
+str{end+1} = sprintf('\\end{tabular}\n') ;
+str = horzcat(str{:}) ;
 
 % -------------------------------------------------------------------------
 function s = latexesc(s)
