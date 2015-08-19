@@ -4,7 +4,7 @@ classdef Conv < dagnn.Filter
     hasBias = true
     opts = {'cuDNN'}
   end
-  
+
   methods
     function outputs = forward(obj, inputs, params)
       if ~obj.hasBias, params{2} = [] ; end
@@ -14,7 +14,7 @@ classdef Conv < dagnn.Filter
         'stride', obj.stride, ...
         obj.opts{:}) ;
     end
-    
+
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       if ~obj.hasBias, params{2} = [] ; end
       [derInputs{1}, derParams{1}, derParams{2}] = vl_nnconv(...
@@ -23,22 +23,22 @@ classdef Conv < dagnn.Filter
         'stride', obj.stride, ...
         obj.opts{:}) ;
     end
-    
+
     function kernelSize = getKernelSize(obj)
       kernelSize = obj.size(1:2) ;
     end
-    
+
     function outputSizes = getOutputSizes(obj, inputSizes)
       outputSizes = getOutputSizes@dagnn.Filter(obj, inputSizes) ;
       outputSizes{1}(3) = obj.size(4) ;
     end
-    
+
     function params = initParams(obj)
       sc = sqrt(2 / prod(obj.size(1:3))) ;
       params{1} = randn(obj.size,'single') * sc ;
       params{2} = zeros(obj.size(4),1,'single') * sc ;
     end
-    
+
     function obj = Conv(varargin)
       obj.load(varargin) ;
     end

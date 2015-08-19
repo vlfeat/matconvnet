@@ -13,7 +13,7 @@ classdef Filter < dagnn.Layer
         obj.pad = pad ;
       end
     end
-    
+
     function set.stride(obj, stride)
       if numel(stride) == 1
         obj.stride = [stride stride] ;
@@ -21,11 +21,11 @@ classdef Filter < dagnn.Layer
         obj.stride = stride ;
       end
     end
-    
+
     function kernelSize = getKernelSize(obj)
       kernelSize = [1 1] ;
     end
-    
+
     function outputSizes = getOutputSizes(obj, inputSizes)
       ks = obj.getKernelSize() ;
       outputSizes{1} = [...
@@ -34,14 +34,14 @@ classdef Filter < dagnn.Layer
         1, ...
         inputSizes{1}(4)] ;
     end
-    
+
     function rfs = getReceptiveFields(obj)
       ks = obj.getKernelSize() ;
       y1 = 1 - obj.pad(1) ;
       y2 = 1 - obj.pad(1) + ks(1) - 1 ;
       x1 = 1 - obj.pad(2) ;
       x2 = 1 - obj.pad(2) + ks(2) - 1 ;
-      h = y2 - y1 + 1 ; 
+      h = y2 - y1 + 1 ;
       w = x2 - x1 + 1 ;
       rfs.size = [h, w] ;
       rfs.stride = obj.stride ;

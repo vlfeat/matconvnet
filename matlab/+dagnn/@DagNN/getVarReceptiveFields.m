@@ -35,10 +35,10 @@ for l = 1:numel(obj.layers)
   in = obj.layers(l).inputIndexes ;
   out = obj.layers(l).outputIndexes ;
   blockRfs = obj.layers(l).block.getReceptiveFields() ;
-  
+
   for w = 1:numel(var)
     if all(out <= var(w)), continue ; end
-        
+
     % find receptive fields in each of the inputs of the block
     for i = 1:numel(in)
       for j = 1:numel(out)

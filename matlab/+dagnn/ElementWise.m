@@ -5,13 +5,13 @@ classdef ElementWise < dagnn.Layer
       outputSizes = inputSizes ;
       transforms = {eye(6)} ;
     end
-    
+
     function rfs = getReceptiveFields(obj)
       rfs.size = [1 1] ;
       rfs.stride = [1 1] ;
       rfs.offset = [1 1] ;
     end
-    
+
     function outputSizes = getOutputSizes(obj, inputSizes)
       outputSizes = inputSizes ;
     end

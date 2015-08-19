@@ -37,7 +37,7 @@ if nargin > 1 && isstr(inputSizes)
   varargin = {inputSizes, varargin{:}} ;
   inputSizes = {} ;
 end
-  
+
 opts.all = false ;
 opts.format = 'ascii' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;

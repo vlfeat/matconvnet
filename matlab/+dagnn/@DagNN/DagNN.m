@@ -98,14 +98,14 @@ classdef DagNN < handle
     % Process data with the DagNN
     initParams(obj)
     eval(obj, inputs, derOutputs)
-    
+
     % Get information about the DagNN
     varSizes = getVarSizes(obj, inputSizes)
 
     % ---------------------------------------------------------------------
     %                                                           Access data
     % ---------------------------------------------------------------------
-    
+
     function inputs = getInputs(obj)
     %GETINPUTS Get the names of the input variables
     %   INPUTS = GETINPUTS(obj) returns a cell array containing the name
