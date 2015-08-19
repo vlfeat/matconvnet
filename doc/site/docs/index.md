@@ -5,10 +5,11 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
-> **New:** 1.0-beta14 adds a new object-oriented network wrapper,
-> `DagNN`, supporting arbitrary network topologies. This release also
-> adds GoogLeNet as a pre-trained model, new building blocks such as
-> `vl_nnconcat`, a rewritten loss function block `vl_nnloss`,
+> **New:** 1.0-beta14 adds a new object-oriented
+> [network wrapper `DagNN`](wrappers.md) supporting arbitrary network
+> topologies. This release also adds GoogLeNet as a pre-trained model,
+> new building blocks such as [`vl_nnconcat`](mfiles/vl_nnconcat.md),
+> a rewritten loss function block [`vl_nnloss`](mfiles/vl_nnloss.md),
 > better documentation, and bugfixes.
 >
 > **New:** 1.0-beta13 adds a much faster version of batch
@@ -35,6 +36,7 @@ example CNNs are included to classify and encode images.
     - [Installation instructions](install.md)
     - [Using pre-trained models](pretrained.md)
     - [Training your own models](training.md)
+    - [CNN wrappers: linear chains or DAGs](wrappers.md)
     - [Working with GPU accelerated code](gpu.md)
     - [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html),
       [slides](http://www.robots.ox.ac.uk/~vedaldi/assets/teach/2015/vedaldi15aims-bigdata-lecture-4-deep-learning-handout.pdf)

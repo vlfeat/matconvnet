@@ -12,16 +12,18 @@ pages:
 
 - ['quick.md', 'Getting Started', 'Quick start']
 - ['install.md', 'Getting Started', 'Installing']
+- ['wrappers.md', 'Getting Started', 'CNN wrappers']
 - ['pretrained.md', 'Getting Started', 'Pretrained models']
 - ['training.md', 'Getting Started', 'Training new models']
 - ['gpu.md', 'Getting Started', 'Using GPU code']
 - ['about.md', 'Getting Started', 'About']
 - ['faq.md', 'Getting Started', 'Frequently-asked questions']
 
-- ['functions.md', 'Functions', 'Overview']
-- ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
-- ['mfiles/vl_compilenn.md', 'Functions', 'vl_compilenn']
+- ['functions.md', 'Functions', 'Function index']
+
+
 - ['mfiles/vl_nnbnorm.md', 'Functions', 'vl_nnbnorm']
+- ['mfiles/vl_nnconcat.md', 'Functions', 'vl_nnconcat']
 - ['mfiles/vl_nnspnorm.md', 'Functions', 'vl_nnspnorm']
 - ['mfiles/vl_nnpdist.md', 'Functions', 'vl_nnpdist']
 - ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
@@ -35,12 +37,18 @@ pages:
 - ['mfiles/vl_nnsigmoid.md', 'Functions', 'vl_nnsigmoid']
 - ['mfiles/vl_nnsoftmax.md', 'Functions', 'vl_nnsoftmax']
 - ['mfiles/vl_nnsoftmaxloss.md', 'Functions', 'vl_nnsoftmaxloss']
-- ['mfiles/vl_rootnn.md', 'Functions', 'vl_rootnn']
-- ['mfiles/vl_setupnn.md', 'Functions', 'vl_setupnn']
+
+- ['mfiles/+dagnn/@DagNN/DagNN.md', 'Functions', 'DagNN wrapper']
+
 - ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
 - ['mfiles/vl_simplenn_diagnose.md', 'Functions', 'vl_simplenn_diagnose']
 - ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_simplenn_display']
 - ['mfiles/vl_simplenn_move.md', 'Functions', 'vl_simplenn_move']
+
+- ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
+- ['mfiles/vl_compilenn.md', 'Functions', 'vl_compilenn']
+- ['mfiles/vl_rootnn.md', 'Functions', 'vl_rootnn']
+- ['mfiles/vl_setupnn.md', 'Functions', 'vl_setupnn']
 
 - ['developers.md', 'Developers', 'Developer notes']
 - ['install-alt.md', 'Developers', 'Compiling from the command line']

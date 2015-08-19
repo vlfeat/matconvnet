@@ -41,6 +41,9 @@ def extract(path):
         if line.startswith('function'):
             seenfunction = True
             continue
+        if line.startswith('classdef'):
+            seenfunction = True
+            continue
         if not line.startswith('%'):
             if (seenfunction and seenpercent) or not seenfunction:
                 break

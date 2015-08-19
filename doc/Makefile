@@ -11,6 +11,7 @@ mfiles=\
 vl_argparse.m \
 vl_compilenn.m \
 vl_nnbnorm.m \
+vl_nnconcat.m \
 vl_nnconv.m \
 vl_nnconvt.m \
 vl_nndropout.m \
@@ -29,7 +30,8 @@ vl_setupnn.m \
 vl_simplenn.m \
 vl_simplenn_diagnose.m \
 vl_simplenn_display.m \
-vl_simplenn_move.m
+vl_simplenn_move.m \
++dagnn/@DagNN/DagNN.m
 
 mfile_src=$(addprefix matlab/src/, $(mfiles))
 mfile_doc=$(patsubst %.m,%.md,$(addprefix $(site)/mfiles/, $(mfiles)))
@@ -56,6 +58,7 @@ doc/figures/svg/%.pdf : doc/figures/svg/%.svg
 	$(SVG2PDF) "$(<)" "$(@)"
 
 $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocparser.py
+	mkdir -p $(dir $(@))
 	$(PYTHON) doc/matdoc.py "$(<)" > "$(@)"
 
 doc/site/site/index.html : doc/site/mkdocs.yml $(mfile_doc) $(mds)
