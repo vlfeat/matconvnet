@@ -72,8 +72,8 @@ for l = 1:numel(net.layers)
           if isfield(net.layers{l},'crop')
             block.crop = net.layers{l}.crop ;
           end
-          if isfield(net.layers{l},'numgroups')
-            block.numgroups = net.layers{l}.numgroups ;
+          if isfield(net.layers{l},'numGroups')
+            block.numGroups = net.layers{l}.numGroups ;
           end
       end
     case 'pool'
