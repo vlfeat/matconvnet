@@ -115,7 +115,7 @@ for l = 1:numel(net.layers)
   end
 end
 
-if nargout < 2, return ; end
+if nargout == 1, return ; end
 
 % print table
 table = {} ;
@@ -241,7 +241,10 @@ str{end+1} = ptable(opts, table) ;
 
 str = horzcat(str{:}) ;
 
-if nargout == 0, fprintf('%s', str) ; end
+if nargout == 0
+  fprintf('%s', str) ;
+  clear info str ;
+end
 
 % -------------------------------------------------------------------------
 function str = ptable(opts, table)
