@@ -37,11 +37,13 @@ for l = 1:numel(net.layers)
         params(1).value = net.layers{l}.filters ;
         params(2).name = sprintf('%sb',name) ;
         params(2).value = net.layers{l}.biases ;
+        sz = size(net.layers{l}.filters) ;
       else
         params(1).name = sprintf('%sf',name) ;
         params(1).value = net.layers{l}.weights{1} ;
         params(2).name = sprintf('%sb',name) ;
         params(2).value = net.layers{l}.weights{2} ;
+        sz = size(net.layers{l}.weights{1}) ;
       end
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
@@ -54,7 +56,7 @@ for l = 1:numel(net.layers)
       switch net.layers{l}.type
         case 'conv'
           block = Conv() ;
-          block.size = size(net.layers{l}.weights{1}) ;
+          block.size = sz ;
           if isfield(net.layers{l},'pad')
             block.pad = net.layers{l}.pad ;
           end
@@ -63,6 +65,7 @@ for l = 1:numel(net.layers)
           end
         case 'convt'
           block = ConvTranspose() ;
+          block.size = sz ;
           if isfield(net.layers{l},'upsample')
             block.upsample = net.layers{l}.upsample ;
           end
