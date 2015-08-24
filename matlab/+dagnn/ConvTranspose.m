@@ -44,6 +44,24 @@ classdef ConvTranspose < dagnn.Layer
       params{2} = zeros(obj.size(3),1,'single') * sc ;
     end
 
+    function set.crop(obj, crop)
+      if numel(crop) == 1
+        obj.crop = [crop crop crop crop] ;
+      elseif numel(crop) == 2
+        obj.crop = crop([1 1 2 2]) ;
+      else
+        obj.crop = crop ;
+      end
+    end
+
+    function set.upsample(obj, upsample)
+      if numel(upsample) == 1
+        obj.upsample = [upsample upsample] ;
+      else
+        obj.upsample = upsample ;
+      end
+    end
+    
     function obj = ConvTranspose(varargin)
       obj.load(varargin) ;
     end
