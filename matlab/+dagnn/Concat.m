@@ -14,7 +14,7 @@ classdef Concat < dagnn.ElementWise
       obj.inputSizes = cellfun(@size, inputs, 'UniformOutput', false) ;
     end
 
-    function [derInputs, derParams] = backward(obj, inputs, params, derOutpus)
+    function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       outputs{1} = vl_nnconcat(inputs, derOutputs{1}, 'inputSizes', obj.inputSizes) ;
       derParams = {} ;
     end
