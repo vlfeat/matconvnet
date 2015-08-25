@@ -33,25 +33,35 @@ for l = 1:numel(net.layers)
   switch net.layers{l}.type
     case {'conv', 'convt'}
       if isfield(net.layers{l},'filters')
+        sz = size(net.layers{l}.filters) ;
+        hasBias = ~isempty(net.layers{l}.biases) ;    
         params(1).name = sprintf('%sf',name) ;
         params(1).value = net.layers{l}.filters ;
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.biases ;
-        sz = size(net.layers{l}.filters) ;
+        if hasBias
+          params(2).name = sprintf('%sb',name) ;
+          params(2).value = net.layers{l}.biases ;
+        end
       else
+        sz = size(net.layers{l}.weights{1}) ;
+        hasBias = ~isempty(net.layers{l}.weights{2}) ;
         params(1).name = sprintf('%sf',name) ;
         params(1).value = net.layers{l}.weights{1} ;
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.weights{2} ;
-        sz = size(net.layers{l}.weights{1}) ;
+        if hasBias
+          params(2).name = sprintf('%sb',name) ;
+          params(2).value = net.layers{l}.weights{2} ;
+        end
       end
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
-        params(2).learningRate = net.layers{l}.learningRate(2) ;
+        if hasBias
+          params(2).learningRate = net.layers{l}.learningRate(2) ;
+        end
       end
       if isfield(net.layers{l},'weightDecay')
         params(1).weightDecay = net.layers{l}.weightDecay(1) ;
-        params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+        if hasBias
+          params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+        end
       end
       switch net.layers{l}.type
         case 'conv'
@@ -76,6 +86,7 @@ for l = 1:numel(net.layers)
             block.numGroups = net.layers{l}.numGroups ;
           end
       end
+      block.hasBias = hasBias ;
     case 'pool'
       block = Pooling() ;
       if isfield(net.layers{l},'method')
