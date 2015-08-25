@@ -117,7 +117,7 @@ for epoch=1:opts.numEpochs
     for f = setdiff(fieldnames(stats.train)', {'num', 'time'})
       f = char(f) ;
       leg{end+1} = sprintf('%s (%s)', f, s) ;
-      values(end+1,:) = [stats.(s).(f)] ;
+      values(end+1,:) = [stats.(s).(f)(1)] ;
     end
   end
   subplot(1,2,1) ; plot(1:epoch, values') ;
@@ -212,7 +212,8 @@ for t=1:opts.batchSize:numel(subset)
     stats.num/stats.time * max(numGpus, 1)) ;
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
     f = char(f) ;
-    fprintf(' %s:%.3f', f, stats.(f)) ;
+    fprintf(' %s:', f) ;
+    fprintf(' %.3f', stats.(f)) ;
   end
   fprintf('\n') ;
 end
