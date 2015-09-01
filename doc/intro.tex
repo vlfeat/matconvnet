@@ -4,7 +4,7 @@
 
 \vlnn is a simple MATLAB toolbox implementing Convolutional Neural Networks (CNN) for computer vision applications. This documents starts with a short overview of CNNs and how they are implemented in \vlnn. Section~\ref{s:blocks} lists all the computational building blocks implemented in \vlnn that can be combined to create CNNs and gives the technical details of each one. Finally, Section~\ref{s:wrappers} discusses more abstract CNN wrappers and example code and models.
 
-A \emph{Convolutional Neural Network} (CNN) can be viewed as a function $f$ mapping data $\bx$, for example an image, on an output vector $\by$. The function $f$ is a composition of a sequence (or a directed acyclic graph) of simpler functions $f_1,\dots,f_L$, also called \emph{computational blocks} in this document. Furthermore, these blocks are \emph{convolutional}, in the sense that they map an input image of feature map to an output feature map by applying a translation-invariant and local operator, e.g. a linear filter. The \vlnn toolbox contains implementation for the most commonly used computational blocks (described in Section~\ref{s:blocks}) which can be used either directly, or through simple wrappers. Thanks to the modular structure, it is a simple task to create and combine new blocks with the existing ones. %New blocks are also easy to create and combine with the existing ones.
+A \emph{Convolutional Neural Network} (CNN) can be viewed as a function $f$ mapping data $\bx$, for example an image, on an output vector $\by$. The function $f$ is a composition of a sequence (or a directed acyclic graph) of simpler functions $f_1,\dots,f_L$, also called \emph{computational blocks} in this document. Furthermore, these blocks are \emph{convolutional}, in the sense that they map an input feature map to an output feature map by applying a translation-invariant and local operator, e.g. a linear filter. The \vlnn toolbox contains implementation for the most commonly used computational blocks (described in Section~\ref{s:blocks}) which can be used either directly, or through simple wrappers. Thanks to the modular structure, it is a simple task to create and combine new blocks with the existing ones. %New blocks are also easy to create and combine with the existing ones.
 
 Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_L$. These are \emph{discriminatively learned from example data} such that the resulting function $f$ realizes an useful mapping. A typical example is image classification; in this case the output of the CNN is a vector $\by=f(\bx)\in\real^C$ containing the confidence that $\bx$ belong to any of $C$ possible classes. Given training data $(\bx^{(i)},\by^{(i)})$ (where $\by^{(i)}$ is the indicator vector of the class of $\bx^{(i)}$), the parameters are learned by solving
 \begin{equation}\label{e:objective}
@@ -17,7 +17,7 @@ Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_L$. These are \emp
 \end{equation}
 where $\ell$ is a suitable \emph{loss function} (e.g. the hinge or log loss).
 
-The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundred-thousands or even millions of examples. Therefore efficiency is a paramount. Optimization often uses a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by moving towards the local minima in the direction of the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn can evaluate the derivatives of all the computational blocks. It also contains several examples of training small and large models using these capabilities and a default solver, although it is easy to write customized solvers on top of the library.
+The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundreds of thousands or even millions of examples. Therefore efficiency is a paramount. Optimization often uses a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by moving towards the local minima in the direction of the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn can evaluate the derivatives of all the computational blocks. It also contains several examples of training small and large models using these capabilities and a default solver, although it is easy to write customized solvers on top of the library.
 
 While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore the computation speed is very important in practice. Larger models, in particular, may require the use of GPU to be trained in a reasonable time. \vlnn has integrated GPU support based on NVIDIA CUDA and MATLAB built-in CUDA capabilities.
 
@@ -120,9 +120,9 @@ The derivative of $\ell \circ f$ with respect to the parameters can be computed 
  \frac{d\vv\bx_{l+1}}{d(\vv\bx_{l})^\top}
  \frac{d\vv\bx_{l}}{d(\vv\bw_{l})^\top}.
 \end{equation}
-Note that the derivatives are implicitly evaluated at the working point determined by the input $\bx_0$ during the evaluation of the network in the forward pass. The $\vv$ symbol is the vectorization operator, which simply reshape its tensor argument to a column vector. This notation for the derivatives is taken from~\cite{kinghorn96integrals} and is used throughout this document.
+Note that the derivatives are implicitly evaluated at the working point determined by the input $\bx_0$ during the evaluation of the network in the forward pass. The $\vv$ symbol is the vectorization operator, which simply reshapes its tensor argument to a column vector. This notation for the derivatives is taken from~\cite{kinghorn96integrals} and is used throughout this document.
 
-Computing~\eqref{e:chain-rule} requires computing the derivative of each block $\bx_l = f_l(\bx_{l-1},\bw_l)$ with respect to its parameters $\bw_l$ and input $\bx_{l-1}$. Let us know focus on computing the derivatives for one computational block. We can look at the network as follows:
+Computing~\eqref{e:chain-rule} requires computing the derivative of each block $\bx_l = f_l(\bx_{l-1},\bw_l)$ with respect to its parameters $\bw_l$ and input $\bx_{l-1}$. Let us now focus on computing the derivatives for one computational block. We can look at the network as follows:
 \[
     \underbrace{
     \ell \circ f_{L}(\cdot,\bw_L)
@@ -133,7 +133,7 @@ Computing~\eqref{e:chain-rule} requires computing the derivative of each block $
      \circ f_{l}(\bx_l,\bw_{l})
      \circ \dots
 \]
-where $\circ$ denotes the composition of function. For simplicity, lump together the factors from $f_l+1$ to the loss $\ell$ into a single scalar function $z(\cdot)$ and drop the subscript $l$ from the first block. Hence, the problem is to compute the derivative of $(z \circ f)(\bx,\bw) \in \real$ with respect to the data $\bx$ and the parameters $\bw$. Graphically:
+where $\circ$ denotes the composition of function. For simplicity, lump together the factors from $f_{l+1}$ to the loss $\ell$ into a single scalar function $z(\cdot)$ and drop the subscript $l$ from the first block. Hence, the problem is to compute the derivative of $(z \circ f)(\bx,\bw) \in \real$ with respect to the data $\bx$ and the parameters $\bw$. Graphically:
 \begin{center}
 \begin{tikzpicture}[auto, node distance=2cm]
 \node (x) [data] {$\bx$};
@@ -147,7 +147,7 @@ where $\circ$ denotes the composition of function. For simplicity, lump together
 \draw [->] (bz.east) -- (z.west) {};
 \end{tikzpicture}
 \end{center}
-The derivative of $z \circ f$ with respect to $\bx$ and $\bw$ are given by:
+The derivatives of $z \circ f$ with respect to $\bx$ and $\bw$ are given by:
 \[
 \frac{dz}{d(\vv \bx)^\top}
 =
@@ -159,7 +159,7 @@ The derivative of $z \circ f$ with respect to $\bx$ and $\bw$ are given by:
 \frac{dz}{d(\vv \by)^\top}
 \frac{d\vv f}{d(\vv \bw)^\top},
 \]
-We note two facts. The first one is that, since $z$ is a scalar function, the derivatives have a number of elements equal to the number of parameters. So in particular $dz/d\vv \bx^\top$ can be reshaped into an array $dz/d\bx$ with the same shape of $\bx$, and the same applies to the `derivatives $dz/d\by$ and $dz/d\bw$. Beyond the notational convenience, this means that storage for the derivatives is not larger than the storage required for the model parameters and forward evaluation.
+We note two facts. The first one is that, since $z$ is a scalar function, the derivatives have a number of elements equal to the number of parameters. So in particular $dz/d\vv \bx^\top$ can be reshaped into an array $dz/d\bx$ with the same shape as $\bx$, and the same applies to the derivatives $dz/d\by$ and $dz/d\bw$. Beyond the notational convenience, this means that storage for the derivatives is not larger than the storage required for the model parameters and forward evaluation.
 
 The second fact is that computing $dz/d\bx$ and $dz/d\bw$ requires the derivative $dz/d\by$. The latter can be obtained by applying this calculation recursively to the next block in the chain.
 
@@ -170,14 +170,14 @@ The second fact is that computing $dz/d\bx$ and $dz/d\bw$ requires the derivativ
 Sections~\ref{s:forward} and~\ref{s:backward} suggests a modular programming interface for the implementation of CNN modules. Abstractly, we need two functionalities:
 \begin{itemize}
 \item \emph{Forward messages:} Evaluation of the output $\by=f(\bx,\bw)$ given input data $\bx$ and parameters $\bw$ (forward message).
-\item \emph{Backward messages:} Evaluation of the CNN derivative $dz/d\bx$ and $dz/d\bw$ with respect to the block input data $\bx$ and parameters $\bw$ given the block input data $\bx$ and paramters $\bw$ as well as the CNN derivative $dx/d\by$ with respect to the block output data $\by$.
+\item \emph{Backward messages:} Evaluation of the CNN derivative $dz/d\bx$ and $dz/d\bw$ with respect to the block input data $\bx$ and parameters $\bw$ given the block input data $\bx$ and paramters $\bw$ as well as the CNN derivative $dz/d\by$ with respect to the block output data $\by$.
 \end{itemize}
 
 % ------------------------------------------------------------------
 \subsection{Working with DAGs}\label{s:dag}
 % ------------------------------------------------------------------
 
-CNN can also be obtained from more complex composition of functions forming a DAG. There are $n+1$ variables $\bx_i$ and $n$ functions $f_i$ with corresponding arguments $\br_{ik}$:
+A CNN can also be obtained from more complex composition of functions forming a DAG. There are $n+1$ variables $\bx_i$ and $n$ functions $f_i$ with corresponding arguments $\br_{ik}$:
 \begin{align*}
 \bx_0 &\\
 \bx_1 &= f_1(\br_{1,1},\dots,\br_{1,m_1}),\\
