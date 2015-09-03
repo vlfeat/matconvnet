@@ -117,7 +117,8 @@ for epoch=1:opts.numEpochs
     for f = setdiff(fieldnames(stats.train)', {'num', 'time'})
       f = char(f) ;
       leg{end+1} = sprintf('%s (%s)', f, s) ;
-      values(end+1,:) = [stats.(s).(f)(1)] ;
+      tmp = [stats.(s).(f)] ;
+      values(end+1,:) = tmp(1,:)' ;
     end
   end
   subplot(1,2,1) ; plot(1:epoch, values') ;
