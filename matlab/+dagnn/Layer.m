@@ -116,7 +116,7 @@ classdef Layer < handle
         else
           net.vars(v).der = net.vars(v).der + derInputs{i} ;
         end
-        net.numPendingVarRefs(v) == net.numPendingVarRefs(v) + 1 ;
+        net.numPendingVarRefs(v) = net.numPendingVarRefs(v) + 1 ;
       end
 
       for i = 1:numel(par)
