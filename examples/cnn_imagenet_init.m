@@ -318,7 +318,7 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool4', ...
                            'stride', 2, ...
                            'pad', 0) ;
 
-net = add_block(net, opts, '5_1', 3, 3, 256, 512, 1, 1) ;
+net = add_block(net, opts, '5_1', 3, 3, 512, 512, 1, 1) ;
 net = add_block(net, opts, '5_2', 3, 3, 512, 512, 1, 1) ;
 net = add_block(net, opts, '5_3', 3, 3, 512, 512, 1, 1) ;
 if strcmp(opts.model, 'vgg-vd-19')
