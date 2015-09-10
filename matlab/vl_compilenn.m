@@ -322,7 +322,7 @@ flags.link{end+1} = '-largeArrayDims' ;
 flags.mexcc = flags.cc ;
 flags.mexcc{end+1} = '-largeArrayDims' ;
 flags.mexcc{end+1} = '-cxx' ;
-if strcmp(arch, 'maci64') && cuver < 70000
+if strcmp(arch, 'maci64') && opts.enableGpu && cuver < 70000
   % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
   % Clang libc++. This should go away in the future.
   flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
