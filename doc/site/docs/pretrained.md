@@ -24,6 +24,18 @@ used in MatConvNet.
 
 ## Download the pretrained models
 
+-    GoogLeNet model imported from the
+[Caffe version](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet) (DagNN format).
+
+     **Citation:** `Going Deeper with Convolutions', *Christian
+     Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed,
+     Dragomir Anguelov, Dumitru Erhan, Vincent Vanhoucke, Andrew
+     Rabinovich*, CVPR, 2015,
+     ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Szegedy_Going_Deeper_With_2015_CVPR_paper.pdf)).
+
+     - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat')
+       [DagNN format]
+
 -    VGG models from the
      [Very Deep Convolutional Networks for Large-Scale Visual Recognition](http://www.robots.ox.ac.uk/~vgg/research/very_deep/)
      project.
