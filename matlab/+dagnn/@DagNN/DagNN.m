@@ -1,13 +1,41 @@
 classdef DagNN < handle
-% DagNN  Directed acyclic graph neural network
-%   DagNN is currently the second and most advanced wrapper in
-%   MatConvNet, the other one being SimpleNN. The wrapper is contained
-%   in the dagnn namespace and is composed of the DagNN object class
-%   as well as other objects implementing individual layers.
+%DagNN Directed acyclic graph neural network
+%   DagNN is a CNN wrapper alternative to SimpleNN. It is object
+%   oriented and allows constructing networks with a directed acyclic
+%   graph (DAG) topology. It is therefore far more flexible, although
+%   a little more complex and slightly slower for small CNNs.
 %
-%   Differently from SimpleNN, DagNN supports convolutional neural
-%   networks with an arbitrary topology, such as siamese
-%   architectures.
+%   A DAG object contains the following data members:
+%
+%   - `layers`: The network layers.
+%   - `vars`: The network variables.
+%   - `params`: The network parameters.
+%   - `meta`: Additional information relative to the CNN (e.g. input
+%      image format specification).
+%
+%   There are additional transient data members:
+%
+%   `mode`:: [`normal`]
+%      This flag can either be `normal` or `test`. In the latter case,
+%      certain blocks switch to a test mode suitable for validation or
+%      evaluation as opposed to training. For instance, dropout
+%      becomes a pass-through block in `test` mode.
+%
+%   `paramDersAccumulate`:: [`false`]
+%      If this flag is set to `true`, then the derivatives of the
+%      network parameters are accumulated rather than rewritten the
+%      next time the derivatives are computed.
+%
+%   `conserveMemory`:: [`true`]
+%      If this flag is set to `true`, the DagNN will discard
+%      intermediate variable values as soon as they are not needed
+%      anymore in the calculations. This is particularly important to
+%      save memory on GPUs.
+%
+%   `device`:: [`cpu`]
+%      This flag tells whether the DagNN resides in CPU or GPU
+%      memory. Use the `DagNN.move()` function to move the DagNN
+%      between devices.
 
 % Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
@@ -16,9 +44,9 @@ classdef DagNN < handle
 % the terms of the BSD license (see the COPYING file).
 
   properties
-    params
-    vars
     layers
+    vars
+    params
     meta
   end
 
@@ -32,7 +60,7 @@ classdef DagNN < handle
     device = 'cpu' ;
   end
 
-  properties (Transient, Access = {?dagnn.DagNN, ?dagnn.Layer})
+  properties (Transient, Access = {?dagnn.DagNN, ?dagnn.Layer}, Hidden = true)
     numPendingVarRefs
     computingDerivative = false
   end
@@ -47,7 +75,7 @@ classdef DagNN < handle
 
   methods
     function obj = DagNN()
-    % DAGNN  Initialize an empty DaG
+    %DAGNN  Initialize an empty DaG
     %   OBJ = DAGNN() initializes an empty DaG.
     %
     %   See Also addLayer
@@ -191,7 +219,7 @@ classdef DagNN < handle
 
   methods (Access = private)
     function v = addVar(obj, name)
-    % ADDVAR  Add a variable to the DaG
+    %ADDVAR  Add a variable to the DaG
     %   V = ADDVAR(obj, NAME) adds a varialbe with the specified
     %   NAME to the DaG. This is an internal function; variables
     %   are automatically added when adding layers to the network.
@@ -209,7 +237,7 @@ classdef DagNN < handle
     end
 
     function p = addParam(obj, name)
-    % ADDPARAM  Add a parameter to the DaG
+    %ADDPARAM  Add a parameter to the DaG
     %   V = ADDPARAM(obj, NAME) adds a parameter with the specified NAME
     %   to the DaG. This is an internal function; parameters are
     %   automatically added when adding layers to the network.
