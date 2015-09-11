@@ -80,7 +80,7 @@ end
 inputs = [] ;
 
 obj.numPendingVarRefs = [obj.vars.fanout] ;
-for l = 1:numel(obj.layers)
+for l = obj.executionOrder
   time = tic ;
   obj.layers(l).block.forwardAdvanced(obj.layers(l)) ;
   obj.layers(l).forwardTime = toc(time) ;
@@ -98,7 +98,7 @@ v = obj.getVarIndex(derOutputs(1:2:end)) ;
 derOutputs = [] ;
 
 obj.numPendingVarRefs = zeros(1, numel(obj.vars)) ;
-for l = numel(obj.layers):-1:1
+for l = fliplr(obj.executionOrder)
   time = tic ;
   obj.layers(l).block.backwardAdvanced(obj.layers(l)) ;
   obj.layers(l).backwardTime = toc(time) ;
