@@ -47,7 +47,7 @@ classdef ReLU < dagnn.ElementWise
       else
           net.vars(in).der = net.vars(in).der + derInputs ;
       end
-      net.numPendingVarRefs(in) == net.numPendingVarRefs(in) + 1 ;
+      net.numPendingVarRefs(in) = net.numPendingVarRefs(in) + 1 ;
     end
 
     function obj = ReLU(varargin)
