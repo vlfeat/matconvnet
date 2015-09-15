@@ -21,7 +21,7 @@ classdef DagNN < handle
 %      evaluation as opposed to training. For instance, dropout
 %      becomes a pass-through block in `test` mode.
 %
-%   `paramDersAccumulate`:: [`false`]
+%   `accumulateParamDers`:: [`false`]
 %      If this flag is set to `true`, then the derivatives of the
 %      network parameters are accumulated rather than rewritten the
 %      next time the derivatives are computed.
@@ -52,7 +52,7 @@ classdef DagNN < handle
 
   properties (Transient)
     mode = 'normal'
-    paramDersAccumulate = false
+    accumulateParamDers = false
     conserveMemory = true
   end
 

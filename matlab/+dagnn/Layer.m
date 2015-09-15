@@ -121,7 +121,7 @@ classdef Layer < handle
 
       for i = 1:numel(par)
         p = par(i) ;
-        if isempty(net.params(p).der) || ~net.paramDersAccumulate
+        if isempty(net.params(p).der) || ~net.accumulateParamDers
           net.params(p).der = derParams{i} ;
         else
           net.params(p).der = net.params(p).der + derParams{i} ;

@@ -182,7 +182,7 @@ for t=1:opts.batchSize:numel(subset)
     end
 
     if strcmp(mode, 'train')
-      net.paramDersAccumulate = (s ~= 1) ;
+      net.accumulateParamDers = (s ~= 1) ;
       net.eval(inputs, opts.derOutputs) ;
     else
       net.eval(inputs) ;
