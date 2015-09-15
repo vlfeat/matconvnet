@@ -27,18 +27,15 @@ obj.layers(f) = struct(...
 block.net = obj ;
 
 for input = inputs
-  v = obj.addVar(char(input)) ;
-  obj.vars(v).fanout = obj.vars(v).fanout + 1 ;
+  obj.addVar(char(input)) ;
 end
 
 for output = outputs
-  v = obj.addVar(char(output)) ;
-  obj.vars(v).fanin = obj.vars(v).fanin + 1 ;
+  obj.addVar(char(output)) ;
 end
 
 for param = params
-  p = obj.addParam(char(param)) ;
-  obj.params(p).fanout = obj.params(p).fanout + 1 ;
+ obj.addParam(char(param)) ;
 end
 
 obj.rebuild() ;

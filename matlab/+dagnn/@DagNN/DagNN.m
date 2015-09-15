@@ -63,6 +63,7 @@ classdef DagNN < handle
   properties (Transient, Access = {?dagnn.DagNN, ?dagnn.Layer}, Hidden = true)
     numPendingVarRefs
     computingDerivative = false
+    executionOrder
   end
 
   properties (Transient, Access = private, Hidden = true)
@@ -121,6 +122,9 @@ classdef DagNN < handle
     % Manipualte the DagNN
     addLayer(obj, name, block, inputs, outputs, params)
     removeLayer(obj, name)
+    setLayerInputs(obj, leyer, inputs)
+    setLayerOutput(obj, layer, outputs)
+    setLayerParams(obj, layer, params)
     rebuild(obj)
 
     % Process data with the DagNN
@@ -153,6 +157,34 @@ classdef DagNN < handle
       outputs = {obj.vars(v).name} ;
     end
 
+    function l = getLayerIndex(obj, name)
+    %GETLAYERINDEX Get the index of a layer
+    %   INDEX = GETLAYERINDEX(obj, NAME) returns the index of the layer
+    %   NAME. NAME can also be a cell array of strings. If no layer with such a name is found, the value
+    %   NaN is returned for the index.
+    %
+    %   Variables can then be accessed as the `obj.layers(INDEX)`
+    %   property of the DaG.
+    %
+    %   Indexes are stable unless the DaG is modified (e.g. by adding
+    %   or removing layers); hence they can be cached for faster
+    %   variable access.
+    %
+    %   See Also getParamIndex(), getVarIndex().
+      if iscell(name)
+        l = zeros(1, numel(name)) ;
+        for k = 1:numel(name)
+          l(k) = obj.getLayerIndex(name{k}) ;
+        end
+      else
+        if isfield(obj.layerNames, name)
+          l = obj.layerNames.(name) ;
+        else
+          l = NaN ;
+        end
+      end
+    end
+
     function v = getVarIndex(obj, name)
     %GETVARINDEX Get the index of a variable
     %   INDEX = GETVARINDEX(obj, NAME) obtains the index of the variable
@@ -167,7 +199,7 @@ classdef DagNN < handle
     %   or removing layers); hence they can be cached for faster
     %   variable access.
     %
-    %    See Also getParamIndex
+    %   See Also getParamIndex(), getLayerIndex().
       if iscell(name)
         v = zeros(1, numel(name)) ;
         for k = 1:numel(name)
@@ -196,7 +228,7 @@ classdef DagNN < handle
     %   or removing layers); hence they can be cached for faster
     %   parameter access.
     %
-    %   See Also getVarIndex
+    %   See Also getVarIndex(), getLayerIndex().
       if iscell(name)
         p = zeros(1, numel(name)) ;
         for k = 1:numel(name)
