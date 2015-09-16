@@ -29,7 +29,7 @@ classdef Loss < dagnn.ElementWise
     end
 
     function outputSizes = getOutputSizes(obj, inputSizes, paramSizes)
-      outputSizes{1} = [1 1 1 inputSizes{1}(1)] ;
+      outputSizes{1} = [1 1 1 inputSizes{1}(4)] ;
     end
 
     function rfs = getReceptiveFields(obj)

@@ -1,4 +1,4 @@
-function v = setLoayerInputs(obj, layer, inputs)
+function v = setLayerInputs(obj, layer, inputs)
 %SETLAYERINPUTS  Set or change the inputs to a layer
 %   Example: NET.SETLAYERINPUTS('layerName', {'input1', 'input2', ...})
 

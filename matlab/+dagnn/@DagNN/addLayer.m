@@ -25,6 +25,7 @@ obj.layers(f) = struct(...
   'block', {block}) ;
 
 block.net = obj ;
+block.layerIndex = f ;
 
 for input = inputs
   obj.addVar(char(input)) ;

@@ -11,14 +11,18 @@ parFanOut = zeros(1, numel(obj.params)) ;
 for l = 1:numel(obj.layers)
   ii = obj.getVarIndex(obj.layers(l).inputs) ;
   oi = obj.getVarIndex(obj.layers(l).outputs) ;
-  pi = obj.getParamIndex(obj.layers(l).params) ; 
+  pi = obj.getParamIndex(obj.layers(l).params) ;
   obj.layers(l).inputIndexes = ii ;
   obj.layers(l).outputIndexes = oi ;
   obj.layers(l).paramIndexes = pi ;
-  varFanIn(ii) = varFanIn(ii) + 1 ;
-  varFanOut(oi) = varFanOut(oi) + 1 ;
+  varFanOut(ii) = varFanOut(ii) + 1 ;
+  varFanIn(oi) = varFanIn(oi) + 1 ;
   parFanOut(pi) = parFanOut(pi) + 1 ;
 end
+
+[obj.vars.fanin] = tolist(num2cell(varFanIn)) ;
+[obj.vars.fanout] = tolist(num2cell(varFanOut)) ;
+[obj.params.fanout] = tolist(num2cell(parFanOut)) ;
 
 % dump unused variables
 keep = (varFanIn + varFanOut) > 0 ;
@@ -30,11 +34,12 @@ keep = parFanOut > 0 ;
 obj.params = obj.params(keep) ;
 parRemap = cumsum(keep) ;
 
-% update the indexes to account for removed variables and parameters
+% update the indexes to account for removed layers, variables and parameters
 for l = 1:numel(obj.layers)
   obj.layers(l).inputIndexes = varRemap(obj.layers(l).inputIndexes) ;
   obj.layers(l).outputIndexes = varRemap(obj.layers(l).outputIndexes) ;
   obj.layers(l).paramIndexes = parRemap(obj.layers(l).paramIndexes) ;
+  obj.layers(l).block.layerIndex = l ;
 end
 
 % update the variable and parameter names hash maps
@@ -83,3 +88,6 @@ for o = obj.layers(layer).outputIndexes ;
   end
 end
 order(layer) = n + 1 ;
+
+function varargout = tolist(x)
+[varargout{1:numel(x)}] = x{:} ;

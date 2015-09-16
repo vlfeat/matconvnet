@@ -1,8 +1,9 @@
 classdef Layer < handle
   %LAYER Base class for a network layer in a DagNN
 
-  properties (SetAccess = {?dagnn.DagNN}, GetAccess = protected, Hidden, Transient)
+  properties (Access = {?dagnn.DagNN, ?dagnn.Layer}, Hidden, Transient)
     net
+    layerIndex
   end
 
   methods
@@ -61,18 +62,27 @@ classdef Layer < handle
       par = layer.paramIndexes ;
       net = obj.net ;
 
-      % clear inputs if not needed anymore
       inputs = {net.vars(in).value} ;
-      if ~net.computingDerivative & net.conserveMemory
-        for v = in
-          if net.vars(v).precious, continue ; end
-          net.numPendingVarRefs(v) = net.numPendingVarRefs(v) - 1 ;
-          if net.numPendingVarRefs(v) == 0, net.vars(v).value = [] ; end
+
+      % give up if any of the inputs is empty (this allows to run
+      % subnetworks by specifying only some of the variables as input --
+      % however it is somewhat dangerous as inputs could be legitimaly
+      % empty)
+      if any(cellfun(@isempty, inputs)), return ; end
+
+      % clear inputs if not needed anymore
+      for v = in
+        net.numPendingVarRefs(v) = net.numPendingVarRefs(v) - 1 ;
+        if net.numPendingVarRefs(v) == 0
+          if ~net.vars(v).precious & ~net.computingDerivative & net.conserveMemory
+            net.vars(v).value = [] ;
+          end
         end
       end
 
       %[net.vars(out).value] = deal([]) ;
 
+      % call the simplified interface
       outputs = obj.forward(inputs, {net.params(par).value}) ;
       [net.vars(out).value] = deal(outputs{:}) ;
     end
@@ -96,7 +106,8 @@ classdef Layer < handle
       end
 
       if net.conserveMemory
-        % clear output variables (value and derivative) unless precious
+        % clear output variables (value and derivative)
+        % unless precious
         for i = out
           if net.vars(i).precious, continue ; end
           net.vars(i).der = [] ;

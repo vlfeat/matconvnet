@@ -39,8 +39,8 @@ classdef Filter < dagnn.Layer
       ks = obj.getKernelSize() ;
       y1 = 1 - obj.pad(1) ;
       y2 = 1 - obj.pad(1) + ks(1) - 1 ;
-      x1 = 1 - obj.pad(2) ;
-      x2 = 1 - obj.pad(2) + ks(2) - 1 ;
+      x1 = 1 - obj.pad(3) ;
+      x2 = 1 - obj.pad(3) + ks(2) - 1 ;
       h = y2 - y1 + 1 ;
       w = x2 - x1 + 1 ;
       rfs.size = [h, w] ;

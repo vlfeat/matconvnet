@@ -37,11 +37,20 @@ classdef ConvTranspose < dagnn.Layer
         inputSizes{1}(4)] ;
     end
 
+    function rfs = getReceptiveFields(obj)
+      rfs.size = (obj.size(1:2) - 1) ./ obj.upsample + 1 ;
+      rfs.stride = 1 ./ [obj.upsample] ;
+      rfs.offset = (2*obj.crop([1 3]) - obj.size(1:2) + 1) ...
+        ./ (2*obj.upsample) + 1 ;
+    end
+
     function params = initParams(obj)
       % todo: test this initialization method
       sc = sqrt(2 / prod(obj.size([1 2 4]))) ;
       params{1} = randn(obj.size,'single') * sc ;
-      params{2} = zeros(obj.size(3),1,'single') * sc ;
+      if obj.hasBias
+        params{2} = zeros(obj.size(3),1,'single') * sc ;
+      end
     end
 
     function set.crop(obj, crop)
@@ -61,9 +70,10 @@ classdef ConvTranspose < dagnn.Layer
         obj.upsample = upsample ;
       end
     end
-    
+
     function obj = ConvTranspose(varargin)
       obj.load(varargin) ;
+      obj.upsample = obj.upsample ;
     end
   end
 end

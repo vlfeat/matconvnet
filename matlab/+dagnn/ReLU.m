@@ -23,7 +23,9 @@ classdef ReLU < dagnn.ElementWise
       in = layer.inputIndexes ;
       out = layer.outputIndexes ;
       net.vars(out).value = vl_nnrelu(net.vars(in).value, [], obj.opts{:}) ;
-      net.vars(in).value = [] ;
+      if ~net.vars(in).precious
+        net.vars(in).value = [] ;
+      end
     end
 
     function backwardAdvanced(obj, layer)
@@ -34,6 +36,8 @@ classdef ReLU < dagnn.ElementWise
       net = obj.net ;
       in = layer.inputIndexes ;
       out = layer.outputIndexes ;
+
+      if isempty(net.vars(out).der), return ; end
 
       derInput = vl_nnrelu(net.vars(out).value, net.vars(out).der, obj.opts{:}) ;
 

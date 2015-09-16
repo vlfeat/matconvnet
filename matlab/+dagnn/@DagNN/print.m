@@ -7,27 +7,27 @@ function str = print(obj, inputSizes, varargin)
 %   {'input1nam', input1size, 'input2name', input2size, ...} prints
 %   information using the specified size for each of the listed inputs.
 %
-%   PRINT(OBj, ..., OPT, VAL, ...) allows specifying the following
-%   options:
+%   PRINT(___, 'OPT', VAL, ...) accepts the following options:
 %
-%   All:: false
+%   `All`:: false
 %      Display all the information below.
 %
-%   Functions:: true
-%      Whether to display the functions.
+%   `Layers`:: '*'
+%      Specify which layers to print. This can be either a list of
+%      indexes, a cell array of array names, or the string '*', meaning
+%      all layers.
 %
-%   Parameters:: true
-%      Whether to display the parameters.
+%   `Parameters`:: '*'
+%      Specify which parameters to print, similar to the option above.
 %
-%   Variables:: false
-%      Whether to display the variables.
+%   `Variables`:: []
+%      Specify which variables to print, similar to the option above.
 %
-%   Dependencies:: false
+%   `Dependencies`:: false
 %      Whether to display the dependency (geometric transformation)
-%      of each variables from each
-%      input.
+%      of each variables from each input.
 %
-%   Format:: 'ascii'
+%   `Format`:: 'ascii'
 %      Choose between 'ascii', 'latex', and 'csv'.
 %
 %   See also: DAGNN, DAGNN.GETVARSIZES().
@@ -42,9 +42,15 @@ opts.all = false ;
 opts.format = 'ascii' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.functions = true ;
-opts.parameters = true ;
-opts.variables = opts.all || nargin > 1 ;
+opts.layers = '*' ;
+opts.parameters = [] ;
+opts.variables = [] ;
+if opts.all || nargin > 1
+  opts.variables = '*' ;
+end
+if opts.all
+  opts.parameters = '*' ;
+end
 opts.memory = true ;
 opts.dependencies = opts.all ;
 opts.maxNumColumns = 18 ;
@@ -55,9 +61,9 @@ varSizes = obj.getVarSizes(inputSizes) ;
 paramSizes = cellfun(@size, {obj.params.value}, 'UniformOutput', false) ;
 str = {''} ;
 
-if opts.functions
+if ~isempty(opts.layers)
   table = {'func', '-', 'type', 'inputs', 'outputs', 'params', 'pad', 'stride'} ;
-  for l = 1:numel(obj.layers)
+  for l = select(obj, 'layers', opts.layers)
     layer = obj.layers(l) ;
     table{l+1,1} = layer.name ;
     table{l+1,2} = '-' ;
@@ -80,9 +86,9 @@ if opts.functions
   str{end+1} = sprintf('\n') ;
 end
 
-if opts.parameters
+if ~isempty(opts.parameters)
   table = {'param', '-', 'dims', 'mem', 'fanout'} ;
-  for v = 1:numel(obj.params)
+  for v = select(obj, 'params', opts.parameters)
     table{v+1,1} = obj.params(v).name ;
     table{v+1,2} = '-' ;
     table{v+1,3} = pdims(paramSizes{v}) ;
@@ -93,9 +99,9 @@ if opts.parameters
   str{end+1} = sprintf('\n') ;
 end
 
-if opts.variables
+if ~isempty(opts.variables)
   table = {'var', '-', 'dims', 'mem', 'fanin', 'fanout'} ;
-  for v = 1:numel(obj.vars)
+  for v = select(obj, 'vars', opts.variables)
     table{v+1,1} = obj.vars(v).name ;
     table{v+1,2} = '-' ;
     table{v+1,3} = pdims(varSizes{v}) ;
@@ -123,7 +129,7 @@ if opts.dependencies
   inputs = obj.getInputs() ;
   rfs = obj.getVarReceptiveFields(inputs) ;
   for i = 1:size(rfs,1)
-    table = {sprintf('rec. field ''%s''', inputs{i}), '-', 'size', 'stride', 'offset'} ;
+    table = {sprintf('rf in ''%s''', inputs{i}), '-', 'size', 'stride', 'offset'} ;
     for v = 1:size(rfs,2)
       table{v+1,1} = obj.vars(v).name ;
       table{v+1,2} = '-' ;
@@ -253,4 +259,23 @@ function m = getMem(sz)
 m = prod(sz) * 4 ;
 if isnan(m), m = 0 ; end
 end
+
+% -------------------------------------------------------------------------
+function sel = select(obj, type, pattern)
+% -------------------------------------------------------------------------
+if isnumeric(pattern)
+  sel = pattern ;
+else
+  if isstr(pattern)
+    if strcmp(pattern, '*')
+      sel = 1:numel(obj.(type)) ;
+      return ;
+    else
+      pattern = {pattern} ;
+    end
+  end
+  sel = find(cellfun(@(x) any(strcmp(x, pattern)), {obj.(type).name})) ;
+end
+end
+
 
