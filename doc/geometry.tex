@@ -51,20 +51,20 @@ In addition to computing the receptive field geometry, we are often interested i
    H' + S_h (H'' - 1) - P_h^- \leq H + P_h^+.
 \]
 Hence
-\[
-   H'' = \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S_h} \right\rfloor + 1.
-\]
+\begin{equation}\label{e:filtered-height}
+   H'' = \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S_h} \right\rfloor + 1.	
+\end{equation}
 
 % ------------------------------------------------------------------
 \section{Convolution transpose}\label{s:receptive-convolution-transpose}
 % ------------------------------------------------------------------
 
-The convolution transpose block is similar to a simple filter, but somewhat more complex. Recall that convolution transpose (Sect.\ref{s:impl-convolution-transpose}) is the transpose of the convolution operator, which in turn is a filter. Reasoning for a 1D slice, let $x_i$ be the input to the convolution transpose block and $y_{i''}$ its output. Furthermore let $U_h$, $C_h^-$, $C_h^+$ and $H'$ be the upsampling factor, top and bottom crops, and filter height, respectively.
+The convolution transpose block is similar to a simple filter, but somewhat more complex. Recall that convolution transpose (\autoref{s:impl-convolution-transpose}) is the transpose of the convolution operator, which in turn is a filter. Reasoning for a 1D slice, let $x_i$ be the input to the convolution transpose block and $y_{i''}$ its output. Furthermore let $U_h$, $C_h^-$, $C_h^+$ and $H'$ be the upsampling factor, top and bottom crops, and filter height, respectively.
 
-If we look at the convolution transpose backward, from the output to the input, the data dependencies are the same as for the convolution operator, studied in Sect.~\ref{s:receptive-simple-filters}. Hence there is an interaction between $x_i$ and $y_i$ only if
-\[
+If we look at the convolution transpose backward, from the output to the input (see also \autoref{f:convt}), the data dependencies are the same as for the convolution operator, studied in \autoref{s:receptive-simple-filters}. Hence there is an interaction between $x_i$ and $y_{i''}$ only if
+\begin{equation}\label{e:convt-bounds}
    1 + U_h(i - 1) - C_h^- \leq i'' \leq H' + U_h(i - 1) - C_h^-
-\]
+\end{equation}
 where cropping becomes padding and upsampling becomes downsampling. Turning this relation around, we find that
 \[
  \left\lceil \frac{i'' + C_h^- -H'}{S_h} \right\rceil + 1
@@ -80,6 +80,21 @@ Note that, due to rounding, it is not possible to express this set tightly in th
 \beta_h = \frac{2C_h^- - H' + 1}{2 U_h} + 1,
 \qquad
 \Delta_h = \frac{H' -1}{U_h} + 1.
+\]
+
+Next, we want to determine the height $H''$ of the output $\by$ of convolution transpose as a function of the heigh $H$ of the input $\bx$ and the other parameters. Swapping input and output in  \autoref{e:filtered-height} results in the constraint:
+\[
+H = 1+ \left\lfloor \frac{H'' - H' + C_h^- + C_h^+}{U_h} \right\rfloor.
+\]
+If $H$ is now given as input, it is not possible to recover $H''$ uniquely from this expression; instead, all the following values are possible
+\[
+   S_h (H-1) +H' -  C_h^- - C_h^+ \leq H'' < S_h H +H' -  C_h^- - C_h^+.
+\]
+This is due to the fact that due to the fact that $U_h$ acts as a downsampling factor in the standard convolution direction and some of the samples to the right of the convolution input $\by$ may be ignored by the filter (see also \autoref{f:conv} and \autoref{f:convt}).
+
+Since the height of $\by$ is then determined up to $S_h$ samples, and since the extra samples would be ignored by the computation and stay zero, we choose the tighter definition and set
+\[
+H'' =  U_h (H-1) +H' -  C_h^- - C_h^+.
 \]
 
 % ------------------------------------------------------------------

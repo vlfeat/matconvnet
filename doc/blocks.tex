@@ -14,13 +14,19 @@ The rest of the chapter describes the blocks implemented in \matconvnet, with a 
 \section{Convolution}\label{s:convolution}
 % ------------------------------------------------------------------
 
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=0.7\textwidth]{figures/svg/conv}
+	\caption{\textbf{Convolution.} The figure illustrates the process of filtering a 1D signal $\bx$ by a filter $f$ to obtain a signal $\by$. The filter has $H'=4$ elements and is applied with a stride of $S_h =2$ samples. The purple areas represented padding $P_-=2$ and $P_+=3$ which is zero-filled. Filters are applied in a sliding-window manner across the input signal. The samples of $\bx$ involved in the calculation of a sample of $\by$ are shown with arrow. Note that the rightmost sample of $\bx$  is never processed by any filter application due to the sampling step. While in this case the sample is in the padded region, this can happen also without padding.}\label{f:conv}
+\end{figure}
+
 The convolutional block is implemented by the function !vl_nnconv!. !y=vl_nnconv(x,f,b)! computes the convolution of the input map $\bx$ with a bank of $K$ multi-dimensional filters $\bff$ and biases $b$. Here
 \[
  \bx\in\real^{H \times W \times D}, \quad
  \bff\in\real^{H' \times W' \times D \times D''}, \quad
  \by\in\real^{H'' \times W'' \times D''}.
 \]
-Formally, the output  is given by
+The process of convolving a signal is illustrated in \autoref{f:conv} for a 1D slice. Formally, the output is given by
 \[
 y_{i''j''d''}
 =
@@ -46,21 +52,13 @@ f_{i'j'd} \times x_{S_h (i''-1)+i'-P_h^-, S_w(j''-1)+j' - P_w^-,d',d''}.
 \]
 In this expression, the array $\bx$ is implicitly extended with zeros as needed.
 
-\paragraph{Output size.} !vl_nnconv! computes only the ``valid'' part of the convolution; i.e. it requires each application of a filter to be fully contained in the input support. The height of the output array (the width following the same rule) is then
-\[
-  H'' = H - H' + 1.
-\]
-When padding is used, the input array is virtually extended with zeros, so the height of the output array is larger:
-\[
-  H'' = H - H' + 1 + P_h^- + P_h^+.
-\]
-When downsampling is used as well, this becomes
+\paragraph{Output size.} !vl_nnconv! computes only the ``valid'' part of the convolution; i.e. it requires each application of a filter to be fully contained in the input support.  The size of the output is computed in \autoref{s:receptive-simple-filters} and is given by:
 \[
   H'' = 1 + \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S_h} \right\rfloor.
 \]
-In general, the padded input must be at least as large as the filters: $H +P_h^- + P_h^+ \geq H'$.
+Note that the padded input must be at least as large as the filters: $H +P_h^- + P_h^+ \geq H'$, otherwise an error is thrown.
 
-\paragraph{Receptive field size and geometric transformations.} Very often it is useful to relate geometrically the indexes of the various array to the input data (usually images) in term of coordiante transformations and size of the receptive field (i.e. of the image region that affects an output). This is derived later, in \autoref{s:receptive}.
+\paragraph{Receptive field size and geometric transformations.} Very often it is useful to relate geometrically the indexes of the various array to the input data (usually images) in term of coordinate transformations and size of the receptive field (i.e. of the image region that affects an output). This is derived in \autoref{s:receptive-simple-filters}.
 
 \paragraph{Fully connected layers.} In other libraries, a \emph{fully connected blocks or layers} are linear functions where each output dimension depends on all the input dimensions. \matconvnet does not distinguishes between fully connected layers and convolutional blocks. Instead, the former is a special case of the latter obtained when the output map $\by$ has dimensions $W''=H''=1$. Internally, !vl_nnconv! handle this case more efficiently when possible.
 
@@ -75,7 +73,7 @@ An application of grouping is implementing the Krizhevsky and Hinton network~\ci
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=0.7\textwidth]{figures/svg/convt}
-	\caption{Convolution vs convolution transpose. The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The purple areas represented padding $P_=2$ and $P_+=3$ which is zero-filled. Filters are applied a sliding-window manner across the input signal.}\label{f:convt}
+	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied in a sliding-window, in a pattern that is the transpose of \autoref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represented crops $C_-=2$ and $C_+=3$ which are discarded.  The samples of $x$ involved in the calculation of a sample of $y$ are shown with arrow. Note that, differently from \autoref{f:conv}, there is not any samples to the right of $\by$ which is not involved in a convolution operation. This is because the width $H''$ of the output $\by$, which given $H'$ can be determined up to $U_h$ samples, is selected to be the smallest possible.}\label{f:convt}
 \end{figure}
 
 The \emph{convolution transpose} block (sometimes referred to as ``deconvolution'') is the transpose of the convolution block described in \autoref{s:convolution}. In \matconvnet, convolution transpose is  implemented by the function !vl_nnconvt!. 
@@ -86,7 +84,7 @@ In order to understand convolution transpose, let:
  \bff\in\real^{H' \times W' \times D \times D''}, \quad
  \by\in\real^{H'' \times W'' \times D''}, \quad
 \]
-be the input tensor, filters, and output tensors. Imagine operating in the reverse direction by using the filter bank $\bff$ to convolve the output $\by$ to obtain the input $\bx$, using the definitions given in~\autoref{s:convolution} for the convolution operator; since convolution is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$.
+be the input tensor, filters, and output tensors. Imagine operating in the reverse direction by using the filter bank $\bff$ to convolve the output $\by$ to obtain the input $\bx$, using the definitions given in~\autoref{s:convolution} for the convolution operator; since convolution is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$. This process is illustrated for a 1D slice in \autoref{f:convt}.
 
 There are two important applications of convolution transpose The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
 
@@ -115,15 +113,15 @@ m(k,S) = (k - 1) \bmod S,
 \qquad
 q(k,n) = \left\lfloor \frac{k-1}{S} \right\rfloor,
 \]
-$(S_h,S_w)$ are the vertical and horizontal \emph{input upsampling factors},  $(P_h^-,P_h^+,P_h^-,P_h^+)$ the \emph{output crops}, and $\bx$ and $\bff$ are zero-padded as needed in the calculation. Furthermore, given the input and filter heights, the output height is given by
+$(S_h,S_w)$ are the vertical and horizontal \emph{input upsampling factors},  $(P_h^-,P_h^+,P_h^-,P_h^+)$ the \emph{output crops}, and $\bx$ and $\bff$ are zero-padded as needed in the calculation. Note also that filter $k$ is stored as a slice $\bff_{:,:,k,:}$ of the 4D tensor $\bff$.
+
+The height of the output array $\by$ is given by
 \[
   H'' = S_h (H - 1) + H' -P^-_h - P^+_h.
 \]
-A similar formula holds true for the width.
+A similar formula holds true for the width. These formulas are derived in \autoref{s:receptive-convolution-transpose} along with expression for the receptive field of the operator.
 
-To gain some intuition on this expression, consider only the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where the index $i''$ is chose such that $S_h$ divides $i''-1$; according to~\eqref{e:convt}, this sample is obtained as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ (note that the order is reversed). The weights are the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ subsampled with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output sampled is obtained as a weighted combination of the same elements of the input $x$ that were used to compute $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
-
-Note also that filter $k$ is stored as a slice $\bff_{:,:,k,:}$ of the 4D tensor $\bff$.
+We now illustrate the action of convolution transpose in an example (see also \autoref{f:convt}).  Consider a 1D slice in the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where the index $i''$ is chose such that $S_h$ divides $i''-1$; according to~\eqref{e:convt}, this sample is obtained as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ (note that the order is reversed). The weights are the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ subsampled with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output sampled is obtained as a weighted combination of the same elements of the input $x$ that were used to compute $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
 
 % ------------------------------------------------------------------
 \section{Spatial pooling}\label{s:pooling}
@@ -167,7 +165,7 @@ See \autoref{s:impl-activation} for implementation details.
 % ------------------------------------------------------------------
 
 % ------------------------------------------------------------------
-\subsection{Cross-channel normalization}\label{s:ccnormalization}
+\subsection{Local response normalization (LRN)}\label{s:ccnormalization}
 % ------------------------------------------------------------------
 
 !vl_nnnormalize! implements a cross-channel normalization operator. Normalization applied independently at each spatial location and groups of channels to get:
