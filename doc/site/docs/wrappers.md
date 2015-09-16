@@ -110,7 +110,7 @@ ans =
         fanin: 0
        fanout: 1
      precious: 0
- 
+
 >> net.params(1)
 ans =
          name: 'filters'
@@ -217,8 +217,8 @@ p = net.getParamIndex('filters') ;
 dzdfilters = net.vars(p).der ;
 ```
 
-> **Empty values for variables.** Note that most intermediate variable
-> values and derivatives are aggressively discarded during the
-> computation in order to conserve memory. Set `net.conserveMemory` to
-> `false` to prevent this from happening, or make individual variables
-> precious (`net.vars(i).precious = true`).
+> **Remark: empty values of variables.** Note that most intermediate
+> variable values and derivatives are aggressively discarded during
+> the computation in order to conserve memory. Set
+> `net.conserveMemory` to `false` to prevent this from happening, or
+> make individual variables precious (`net.vars(i).precious = true`).

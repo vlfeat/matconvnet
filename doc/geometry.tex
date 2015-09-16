@@ -5,114 +5,138 @@
 This chapter looks at the geometry of the CNN input-output mapping.
 
 % ------------------------------------------------------------------
-\section{Receptive fields and transformations}\label{s:receptive}
+\section{Preliminaries}\label{s:preliminaries}
 % ------------------------------------------------------------------
 
-Very often it is interesting to map a convolutional operator back to image space. Due to various downsampling and padding operations, this is not entirely trivial and analysed in this section. Considering a 1D example will be enough; hence, consider an input signal $x_i$, a filter $f_{i'}$ and an output signal $y_{i''}$, where
-\[
-   1 - P_w^- \leq i \leq W + P_w^+,  \qquad 1 \leq i' \leq W'.
-\]
-where $P_w^-,P_w^+ \geq 0$ is the amount of padding applied to the input signal to the left and right respectively. The output $y_i$ is obtained by applying a filter of size $W'$ in the following range
-\[
-   - P_w^- + S (i'' - 1) + [1, W'] = [1 - P_w^- + S(i'' - 1), - P_w^- + S(i''-1) + W']
-\]
-where $S$ is the subsampling factor. For $i'' = 1$, the leftmost sample of this window falls at the leftmost sample of the padded input signal. The rightmost sample $W'' \geq i''$ of the output signal is obtained by guaranteeing that the filter window stays within the padded input signal:
-\[
-- P_w^- + S(i''-1) + W' \leq W + P_w^+
-\qquad\Rightarrow\qquad
-i'' \leq \frac{W - W' + P_w^- + P_w^+}{S} + 1
-\]
-Since $i''$ is an integer quantity, the maximum value is:
-\begin{equation}\label{e:width}
-W'' = 
-\left\lfloor \frac{W - W' + P_w^- + P_w^+}{S} \right\rfloor
-+ 1.
-\end{equation}
-Note that $W''$ is smaller than 1 if $W' > W + P_w^- + P_w^+$; in this case the filter $f_{i'}$ is wider than the padded input signal $x_i$ and the domain of $y_{i''}$ becomes empty (this generates an error in most MatConvNet functions).
+In this section we are interested in understanding how components in a CNN depend on components in the layers before it, and in particular on components of the input.  Since CNNs can incorporate blocks that perform complex operations, such as for example cropping their inputs based on data-dependent terms (e.g. Fast R-CNN), this information is generally available only at ``run time'' and cannot be uniquely determined given only the structure of the network. Furthermore, blocks can implement complex operations that are difficult to characterise in simple terms. Therefore, the analysis will be necessarily limited in scope.
 
-Now consider a sequence of convolutional operators. One starts from an input signal $x_0$ of width $W_0$ and applies a sequence of  operators of parameters
-$
-(P_{w1}^-,  P_{w1}^+, S_1, W'_1), 
-$
-$
-(P_{w2}^-,  P_{w2}^+, S_2, W'_2), 
-$
-$\dots,
-$
-$
-(P_{wL}^-,  P_{wL},^+ S_L, W'_L)
-$
-to obtain signals $x_1,x_2,\dots,x_L$ of width $W_1,W_2,\dots,W_L$ respectively. First, note that the widths of these signals are obtained from $W_0$ and the operator parameters by a recursive application of~\eqref{e:width}. Due to the flooring operation, unfortunately it does not seem possible to simplify significantly the resulting expression. However, disregarding this operation one obtains the approximate expression
-\[
-W_l \approx
-\frac{W_0}{\prod_{p=1}^l S_q}
--
-\sum_{p=1}^l
-\frac
-{W'_p - P_{wp}^- - P_{wp}^+  - S_{p}}
-{\prod_{q=p}^l S_q}.
-\]
-This expression is exact when $S_1 = S_2 =\dots = S_l =1$:
-\[
-W_l = W_0 - \sum_{p=1}^l (W'_p - P_{wp}^- - P_{wp}^+ - 1).
-\]
-Note in particular that without padding and filters $W_p' >1$ the widths decrease with depth. 
+We consider here blocks such as convolutions for which one can deterministically establish dependency chains between network components. We also assume that all the inputs and outputs $\bx$ are in the usual form of spatial maps, and therefore indexed as $x_{i,j,d,k}$ where $i,j$ are spatial coordinates.
 
+Consider a layer $\by = f(\bx)$. We are interested in establishing which components of $\bx$ influence which components of $\by$. We also assume that this relation can be expressed in terms of a sliding rectangular window field, called \emph{receptive field}. This means that the output component  $y_{i'', j''}$ depends only on the input components $x_{i,j}$ where $(i,j) \in \Omega(i'', j'') $ (note that feature channels are implicitly coalesced in this discussion). The set $\Omega(i'',j'')$ is a rectangle defined as follows:
+\begin{align}\label{e:receptive}
+     i &\in \alpha_h (i'' -1) + \beta_h + [- \frac{\Delta_h-1}{2}, \frac{\Delta_h-1}{2}] \\
+     j &\in \alpha_v (j'' -1) + \beta_v + [- \frac{\Delta_v-1}{2}, \frac{\Delta_v-1}{2}]
+\end{align}
+where $(\alpha_h,\alpha_v)$ is the \emph{stride}, $(\beta_h,\beta_v)$ the offset, and $(\Delta_h, \Delta_v)$ the \emph{receptive field size}.
 
-Next, we are interested in computing the samples $x_{0,i_0}$ of the input signal that affect a particular sample $x_{L,i_L}$ at the end of the chain (this we call the \emph{receptive field} of the operator). Suppose that at level $l$ we have determined that samples $i_l \in [I_l^-(i_L), I_l^+(i_L)]$ affect $x_{L,i_L}$ and compute the samples at the level below. These are given by the union of filter applications:
-\[
- \cup_{I_l^-(i_L) \leq i_l \leq I_l^+(i_L)} \left(-P_{wl}^- + S_l (i_l-1)  + [1, W_l'] \right).
-\]
-Hence we find the recurrences:
+% ------------------------------------------------------------------
+\section{Simple filters}\label{s:receptive-simple-filters}
+% ------------------------------------------------------------------
+
+We now compute the receptive field geometry $(\alpha_h,\alpha_v,\beta_h,\beta_v,\Delta_h,\Delta_v)$ for the most common operators, namely filters. We consider in particular \emph{simple filters} that are characterised by an integer size, stride, and padding.
+
+It suffices to reason in 1D.  Let $H'$ bet the vertical filter dimension, $S_h$ the subampling stride, and $P_h^-$ and $P_h^+$ the amount of zero padding applied to the top and the bottom of the input $\bx$. Here the value $y_{i'}$ depends on the samples:
 \begin{align*}
- I_{l-1}^-(i_L) &= - P_{wl}^- + S_l (I_l^-(i_L)-1) + 1,
+ x_i : i
+ &\in
+ [1, H'] + S_h (i'' - 1) - P_h^-
  \\
- I_{l-1}^+(i_L) &= - P_{wl}^- + S_l (I_l^+(i_L)-1) + W_l'.
-\end{align*}
-Given the base case $I_L^-(i_L) = I_L^+(i_L) = i_L$,  one gets:
-\begin{align*}
-I_{l}^-(i_L)
 &=
-1 
-+ \left(\prod_{p=l+1}^L S_p\right) (i_L - 1)
-- \sum_{p =l+1}^L  \left(\prod_{q=l+1}^{p-1} S_q\right)P_{wp}^-,
-\\
-I_{l}^-(i_L)
-&=
-1 
-+ \left(\prod_{p=l+1}^L S_p\right) (i_L - 1)
-+ \sum_{p = l+1}^L  \left(\prod_{q=l+1}^{p-1} S_q\right)(W_p' - 1 - P_{wp}^-).
+[-\frac{H'-1}{2}, \frac{H'-1}{2}] + S_h (i''-1) - P_h^- + \frac{H'+1}{2}.
 \end{align*}
-We can now compute several quantities of interest. First, the receptive field width on the image is:
+Hence
 \[
- \Delta 
- = I_0^+(i_L) - I_0^-(i_L) + 1
- = 1+ \sum_{p = 1}^L  \left(\prod_{q=1}^{p-1} S_q\right)(W_p' - 1).
+\alpha_h = S_h,
+\qquad
+\beta _h = \frac{H'+1}{2} - P_h^-,
+\qquad
+\Delta_h = H'.
 \]
-Second, the leftmost sample of the input signal $x_{0,i_0}$ affecting output sample $x_{l,i_L}$ is
-\[
-i_0(i_L)  =
-1 
-+ \left(\prod_{p=1}^L S_p\right) (i_L - 1)
-- \sum_{p =1}^L  \left(\prod_{q=1}^{p-1} S_q\right)P_{wp}^-
-\]
-Note that the effect of padding at different layers accumulates, resulting in an overall padding potentially larger than the padding $P_{w1}^-$ specified by the first operator (i.e. $i_0(1) \leq - P_{w1}^-$).
+A similar relation holds for the horizontal direction.
 
-Finally, it is interesting to reparametrise these coordinates as if the discrete signal were continuous and if (as it is usually the case) all the convolutional operators are ``centred''. For example, the operators could be filters with an odd size $W_l'$ equal to the delta function (e.g. for $W_l'=5$ then $f_l = (0,0,1,0,0)$). Let $u_L = i_L$ be the ``continuous'' version of index $i_L$, where each discrete sample corresponds, as per MATLAB's convention, to a tile of extent $u_L \in [-1/2,1/2] + i_L$ (hence $u_L$ is the centre coordinate of a sample). As before, $x_L(u_L)$ is obtained by applying an operator to the input signal $x_0$; the centre of the support of this operator falls at coordinate:
+Note that many blocks (e.g. max pooling, LNR, ReLU, most loss functions etc.) have a filter-like receptive field geometry. For example, ReLU can be considered a $1 \times 1$ filter, such that $H = S_h=1$ and $P_h^-=P_h^+ =0$. Note that in this case $\alpha_h=1$, $\beta_h=1$ and $\Delta_h=1$.
+
+In addition to computing the receptive field geometry, we are often interested in determining the sizes of the arrays $\bx$ and $\by$ throughout the architecture. In the case of filters, and once more reasoning for a 1D slice, we notice that $y_i''$ can be obtained for $i''=1,2,\dots,H''$ where $H''$ is the largest value of $i''$ before the receptive fields falls outside $\bx$ (including padding). If $H$ is the height of the input array $\bx$, we get the condition
 \[
-  u_0(u_L) = \alpha\, (u_L - 1) + \beta = i_0(u_L) + \frac{\Delta-1}{2} = \alpha\, (u_L - 1) + \beta.
+   H' + S_h (H'' - 1) - P_h^- \leq H + P_h^+.
 \]
 Hence
 \[
-\alpha = \prod_{p=1}^L S_p,
-\qquad
-\beta
- = 
-1
-+ 
-\sum_{p = 1}^L  \left(\prod_{q=1}^{p-1} S_q\right)
-\left(
-\frac{W_p' - 1}{2}  - P_{wp}^-
-\right).
+   H'' = \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S_h} \right\rfloor + 1.
 \]
-Note in particular that the offset is zero if $S_1 =\dots=S_L=1$ and $P_{wp}^- = (W_p'-1)/2$ as in this case the padding is just enough such that the leftmost application of each convolutional operator has the centre that falls on the first sample of the corresponding input signal.
+
+% ------------------------------------------------------------------
+\section{Convolution transpose}\label{s:receptive-convolution-transpose}
+% ------------------------------------------------------------------
+
+The convolution transpose block is similar to a simple filter, but somewhat more complex. Recall that convolution transpose (Sect.\ref{s:impl-convolution-transpose}) is the transpose of the convolution operator, which in turn is a filter. Reasoning for a 1D slice, let $x_i$ be the input to the convolution transpose block and $y_{i''}$ its output. Furthermore let $U_h$, $C_h^-$, $C_h^+$ and $H'$ be the upsampling factor, top and bottom crops, and filter height, respectively.
+
+If we look at the convolution transpose backward, from the output to the input, the data dependencies are the same as for the convolution operator, studied in Sect.~\ref{s:receptive-simple-filters}. Hence there is an interaction between $x_i$ and $y_i$ only if
+\[
+   1 + U_h(i - 1) - C_h^- \leq i'' \leq H' + U_h(i - 1) - C_h^-
+\]
+where cropping becomes padding and upsampling becomes downsampling. Turning this relation around, we find that
+\[
+ \left\lceil \frac{i'' + C_h^- -H'}{S_h} \right\rceil + 1
+ \leq
+ i
+ \leq
+ \left\lfloor \frac{i'' + C_h^- - 1}{S_h} \right\rfloor + 1 .
+\]
+Note that, due to rounding, it is not possible to express this set tightly in the form outlined above. We can however relax these two relations (hence obtaining a slightly larger receptive field) and conclude that
+\[
+\alpha_h = \frac{1}{U_h},
+\qquad
+\beta_h = \frac{2C_h^- - H' + 1}{2 U_h} + 1,
+\qquad
+\Delta_h = \frac{H' -1}{U_h} + 1.
+\]
+
+% ------------------------------------------------------------------
+\section{Composing receptive fields}\label{s:receptive-composing}
+% ------------------------------------------------------------------
+
+Suppose now to compose two layers $h = g \circ f$ with receptive fields $(\alpha_f, \beta_f, \Delta_f)$ and $(\alpha_g, \beta_g, \Delta_g)$ (once again we consider only a 1D slice in the vertical direction, the horizontal one being the same). The goal is to compute the receptive field of $h$.
+
+To do so, pick a sample $i_g$ in the domain of $g$. The first and last sample $i_f$ in the domain of $f$ to affect $i_g$ are given by:
+\[
+  i_f = \alpha_f (i_g- 1) + \beta_f \pm \frac{\Delta_f - 1}{2}.
+\]
+Likewise, the first and last sample $i_g$ to affect a given output sample $i_h$ are given by
+\[
+  i_g = \alpha_g (i_h- 1) + \beta_g \pm \frac{\Delta_g - 1}{2}.
+\]
+Substituting one relation into the other, we see that the first and last sample $i_f$ in the domain of $g \circ f$ to affect $i_h$ are:
+\begin{align*}\
+ i_f &= \alpha_f \left(\alpha_g (i_h- 1) + \beta_g \pm \frac{\Delta_g - 1}{2} - 1\right) + \beta_f \pm \frac{\Delta_f - 1}{2}	
+ \\
+&= \alpha_f\alpha_g (i_h-1)
+ + \alpha_f \beta_g - 1 + \beta_f
+ \pm \frac{\alpha_f (\Delta_g - 1) + \Delta_f -1}{2}
+\end{align*}
+We conclude that
+\[
+\alpha_h = \alpha_f \alpha_g,
+\qquad
+\beta_h =  \alpha_f (\beta_g - 1) + \beta_f,
+\qquad
+\Delta_h = \alpha_f (\Delta_g - 1) + \Delta_f
+\]
+
+% ------------------------------------------------------------------
+\section{Overlaying receptive fields}\label{s:receptive-overlying}
+% ------------------------------------------------------------------
+
+Consider now the combination $h(f(\bx_1), g(\bx_2))$ where the domain of $f$ and $g$ are the same. Given the rule above, it is possible to compute how each output sample $i_h$ depends on each input sample $i_f$ through the $f$ and on each input sample $i_g$ through $g$. Suppose that this gives receptive fields $(\alpha_{hf}, \beta_{hf}, \Delta_{hf})$ and $(\alpha_{hg}, \beta_{hg}, \Delta_{hg})$ respectively. Now assume that the domain of $f$ and $g$ coincide, i.e. $\bx = \bx_1 = \bx_2$. The goal is to determine the combined receptive field.
+
+This is only possible if, and only if, $\alpha = \alpha_{hg} = \alpha_{hf}$. Only in this case, in fact, it is possible to find a sliding window receptive field that tightly encloses the receptive field due to $g$ and $f$ at all points according to formulas~\eqref{e:receptive}. We say that these two receptive fields are \emph{compatbile}. The range of input samples $i = i_f = i_g$ that affect any output sample $i_h$ is then given by
+\begin{align*}
+	  i_\text{max}&=
+  \alpha (i_h- 1) + a, & a = \min
+  \left\{\beta_{hf}- \frac{\Delta_{hf} - 1}{2}, \beta_g - \frac{\Delta_{hg} - 1}{2}\right\},
+  \\
+  	  i_\text{min} &=
+  \alpha (i_h- 1) + b, & b = \max
+  \left\{\beta_{hf}+ \frac{\Delta_{hf} - 1}{2}, \beta_g + \frac{\Delta_{hg} - 1}{2}\right\}.
+\end{align*}
+We conclude that the combined receptive field is
+\[
+\alpha = \alpha_{hg} = \alpha_{hf},
+\qquad
+\beta = \frac{a+b}{2},
+\qquad
+\delta = b - a + 1.
+\]
+
+
+
