@@ -1,9 +1,13 @@
 function addLayer(obj, name, block, inputs, outputs, params)
-% OBJ.ADDLAYER(NAME, LAYER, INPUTS, OUTPUTS, PARAMS) adds the
-% specified layer to the network. NAME is a string with the layer
-% name, used as a unique indentifier. BLOCK is the object implementing
-% the layer, which should be a subclass of the Layer. INPUTS, OUTPUTS
-% are cell arrays of variable names, and PARAMS of parameter names.
+%ADDLAYER  Adds a layer to a DagNN
+%   ADDLAYER(NAME, LAYER, INPUTS, OUTPUTS, PARAMS) adds the
+%   specified layer to the network. NAME is a string with the layer
+%   name, used as a unique indentifier. BLOCK is the object
+%   implementing the layer, which should be a subclass of the
+%   Layer. INPUTS, OUTPUTS are cell arrays of variable names, and
+%   PARAMS of parameter names.
+%
+%   See Also REMOVELAYER().
 
 f = find(strcmp(name, {obj.layers.name})) ;
 if ~isempty(f), error('There is already a layer with name ''%s''.', name), end

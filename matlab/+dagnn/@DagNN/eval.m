@@ -1,5 +1,5 @@
 function eval(obj, inputs, derOutputs)
-% EVAL Evaluate the DAGNN
+%EVAL Evaluate the DAGNN
 %   EVAL(obj, inputs) evaluates the DaG for the specified input
 %   values. `inputs` is a cell array of the type `{'inputName',
 %   inputValue, ...}`. This call results in a forward pass through the

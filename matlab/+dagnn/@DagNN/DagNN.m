@@ -11,7 +11,7 @@ classdef DagNN < handle
 %   - `vars`: The network variables.
 %   - `params`: The network parameters.
 %   - `meta`: Additional information relative to the CNN (e.g. input
-%      image format specification).
+%     image format specification).
 %
 %   There are additional transient data members:
 %
@@ -36,12 +36,6 @@ classdef DagNN < handle
 %      This flag tells whether the DagNN resides in CPU or GPU
 %      memory. Use the `DagNN.move()` function to move the DagNN
 %      between devices.
-%
-%   The DagNN class exposes the following methods:
-%
-%   * `addLayer`: add a layer to the model.
-%   * `rmLayer`: remove a layer from the model.
-%   * `move`: move the network betwen CPU and GPU.
 
 % Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
@@ -85,7 +79,7 @@ classdef DagNN < handle
     %DAGNN  Initialize an empty DaG
     %   OBJ = DAGNN() initializes an empty DaG.
     %
-    %   See Also addLayer
+    %   See Also addLayer(), loadobj(), saveobj().
       obj.vars = struct(...
         'name', {}, ...
         'value', {}, ...
