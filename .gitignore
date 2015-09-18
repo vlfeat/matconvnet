@@ -24,3 +24,4 @@ doc/figures/*.idraw
 *.user
 *.sdf
 *.opensdf
+doc/figures/svg/*.idraw
