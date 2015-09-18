@@ -15,27 +15,33 @@ classdef DagNN < handle
 %
 %   There are additional transient data members:
 %
-%   `mode`:: [`normal`]
+%   `mode`:: `normal`
 %      This flag can either be `normal` or `test`. In the latter case,
 %      certain blocks switch to a test mode suitable for validation or
 %      evaluation as opposed to training. For instance, dropout
 %      becomes a pass-through block in `test` mode.
 %
-%   `accumulateParamDers`:: [`false`]
+%   `accumulateParamDers`:: `false`
 %      If this flag is set to `true`, then the derivatives of the
 %      network parameters are accumulated rather than rewritten the
 %      next time the derivatives are computed.
 %
-%   `conserveMemory`:: [`true`]
+%   `conserveMemory`:: `true`
 %      If this flag is set to `true`, the DagNN will discard
 %      intermediate variable values as soon as they are not needed
 %      anymore in the calculations. This is particularly important to
 %      save memory on GPUs.
 %
-%   `device`:: [`cpu`]
+%   `device`:: `cpu`
 %      This flag tells whether the DagNN resides in CPU or GPU
 %      memory. Use the `DagNN.move()` function to move the DagNN
 %      between devices.
+%
+%   The DagNN class exposes the following methods:
+%
+%   * `addLayer`: add a layer to the model.
+%   * `rmLayer`: remove a layer from the model.
+%   * `move`: move the network betwen CPU and GPU.
 
 % Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
@@ -102,6 +108,8 @@ classdef DagNN < handle
         'inputIndexes', {}, ...
         'outputIndexes', {}, ...
         'paramIndexes', {}, ...
+        'forwardTime', {[]}, ...
+        'backwardTime', {[]}, ...
         'block', {}) ;
     end
 
