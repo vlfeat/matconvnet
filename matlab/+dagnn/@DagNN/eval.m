@@ -70,8 +70,8 @@ obj.computingDerivative = nargin > 2 && ~isempty(derOutputs) ;
 % -------------------------------------------------------------------------
 
 % set the input values
-v = obj.getVarIndex(inputs{1:2:end}) ;
-[obj.vars.value] = deal(inputs{2:2:end}) ;
+v = obj.getVarIndex(inputs(1:2:end)) ;
+[obj.vars(v).value] = deal(inputs{2:2:end}) ;
 inputs = [] ;
 
 obj.numPendingVarRefs = [obj.vars.fanout] ;
