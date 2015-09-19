@@ -1,13 +1,35 @@
 % ------------------------------------------------------------------
-\chapter{Network wrappers and examples}\label{s:wrappers}
+\chapter{Wrappers and pre-trained models}\label{s:wrappers}
 % ------------------------------------------------------------------
 
-It is easy enough to combine the computational blocks of \autoref{s:blocks} in any network DAG by writing a corresponding MATLAB script. Nevertheless, \matconvnet provides a simple wrapper for the common case of a linear chain. This is implemented by the \verb!vl_simplenn! and \verb!vl_simplenn_move! functions.
+It is easy enough to combine the computational blocks of \autoref{s:blocks} ``manually''. However, it is usually much more convenient to use them through a \emph{wrapper} that can implement CNN architectures given a model specification. The available wrapper are briefly summarised in \autoref{s:wrappers-overview}.
+
+\matconvnet also comes with many pre-trained models for image classification (most of which are trained on the ImageNet ILSVRC challenge), image segmentation, text spotting, and face recognition. These are very simple to use, as illustrated in \autoref{s:pretrained}.
+
+% ------------------------------------------------------------------
+\section{Wrappers}\label{s:wrappers-overview}
+% ------------------------------------------------------------------
+
+\matconvnet provides two wrappers: SimpleNN for basic chains of blocks (\autoref{s:simplenn}) , and DagNN for more complex graphs. simple wrapper for the common case of a linear chain (\autoref{s:dagnn}).  
+
+% ------------------------------------------------------------------
+\subsection{SimpleNN}\label{s:simplenn}
+% ------------------------------------------------------------------
+
+The SimpleNN wrapper is suitable for networks consisting of linear chains of computational blocks.  It is largely implemented by the \verb!vl_simplenn! function (evaluation of the CNN and of its derivatives), with a few other support functions such as \verb!vl_simplenn_move! (moving the CNN between CPU and GPU) and \verb!vl_simplenn_display! (obtain and/or print information about the CNN).
 
 \verb!vl_simplenn! takes as input a structure \verb!net! representing the CNN as well as input \verb!x! and potentially output derivatives \verb!dzdy!, depending on the mode of operation. Please refer to the inline help of the \verb!vl_simplenn! function for details on the input and output formats. In fact, the implementation of \verb!vl_simplenn! is a good example of how the basic neural net building block can be used together and can serve as a basis for more complex implementations.
 
 % ------------------------------------------------------------------
-\section{Pre-trained models}
+\subsection{DagNN}\label{s:dagnn}
+% ------------------------------------------------------------------
+
+The DagNN wrapper is more complex that SimpleNN as it has to support arbitrary graph topologies. Its design is object oriented, with one class implementing each layer type. While this adds complexity, and makes the wrapper slightly slower for tiny CNN architectures (e.g. MNIST), it is in practice much more flexible and easier to extend.
+
+DagNN is implemented by the \verb!dagnn.DagNN! class (under the \verb!dagnn! namespace).
+
+% ------------------------------------------------------------------
+\section{Pre-trained models}\label{s:pretrained}
 % ------------------------------------------------------------------
 
 \verb!vl_simplenn! is easy to use with pre-trained models (see the homepage to download some). For example, the following code downloads a model pre-trained on the ImageNet data and applies it to one of MATLAB stock images:
