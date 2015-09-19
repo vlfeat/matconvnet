@@ -98,6 +98,20 @@
 		2D416C7A1B39E1DD0092638E /* vl_simplenn_display.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_simplenn_display.m; path = matlab/simplenn/vl_simplenn_display.m; sourceTree = "<group>"; };
 		2D416C7B1B39E1DD0092638E /* vl_simplenn_move.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_simplenn_move.m; path = matlab/simplenn/vl_simplenn_move.m; sourceTree = "<group>"; };
 		2D416C7C1B39E1DD0092638E /* vl_simplenn.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_simplenn.m; path = matlab/simplenn/vl_simplenn.m; sourceTree = "<group>"; };
+		2D433A0D1BAC276700D31E69 /* getVarReceptiveFields.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = getVarReceptiveFields.m; path = "matlab/+dagnn/@DagNN/getVarReceptiveFields.m"; sourceTree = "<group>"; };
+		2D433A0E1BAC276700D31E69 /* getVarSizes.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = getVarSizes.m; path = "matlab/+dagnn/@DagNN/getVarSizes.m"; sourceTree = "<group>"; };
+		2D433A0F1BAC276700D31E69 /* setLayerInputs.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = setLayerInputs.m; path = "matlab/+dagnn/@DagNN/setLayerInputs.m"; sourceTree = "<group>"; };
+		2D433A101BAC276700D31E69 /* setLayerOutputs.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = setLayerOutputs.m; path = "matlab/+dagnn/@DagNN/setLayerOutputs.m"; sourceTree = "<group>"; };
+		2D433A111BAC276700D31E69 /* setLayerParams.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = setLayerParams.m; path = "matlab/+dagnn/@DagNN/setLayerParams.m"; sourceTree = "<group>"; };
+		2D433A121BAC49F100D31E69 /* blocks.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = blocks.tex; path = doc/blocks.tex; sourceTree = "<group>"; };
+		2D433A131BAC49F100D31E69 /* fundamentals.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = fundamentals.tex; path = doc/fundamentals.tex; sourceTree = "<group>"; };
+		2D433A141BAC49F100D31E69 /* geometry.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = geometry.tex; path = doc/geometry.tex; sourceTree = "<group>"; };
+		2D433A151BAC49F100D31E69 /* impl.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = impl.tex; path = doc/impl.tex; sourceTree = "<group>"; };
+		2D433A161BAC49F100D31E69 /* intro.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = intro.tex; path = doc/intro.tex; sourceTree = "<group>"; };
+		2D433A171BAC49F100D31E69 /* wrappers.tex */ = {isa = PBXFileReference; lastKnownFileType = text; name = wrappers.tex; path = doc/wrappers.tex; sourceTree = "<group>"; };
+		2D433A181BAC4A6F00D31E69 /* quick.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = quick.md; sourceTree = "<group>"; };
+		2D433A191BAC4A6F00D31E69 /* wrappers.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = wrappers.md; sourceTree = "<group>"; };
+		2D433A1A1BAC4AEC00D31E69 /* vl_nnconcat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnconcat.m; path = matlab/vl_nnconcat.m; sourceTree = SOURCE_ROOT; };
 		2D479D091A88AF4300826D48 /* blashelper.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = blashelper.hpp; path = matlab/src/bits/impl/blashelper.hpp; sourceTree = "<group>"; };
 		2D479D0A1A88AF4300826D48 /* copy_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = copy_gpu.cu; path = matlab/src/bits/impl/copy_gpu.cu; sourceTree = "<group>"; };
 		2D479D0B1A88AF4300826D48 /* copy.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = copy.hpp; path = matlab/src/bits/impl/copy.hpp; sourceTree = "<group>"; };
@@ -144,7 +158,6 @@
 		2D6833131B66617100FA6D98 /* DagNN.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = DagNN.m; path = "matlab/+dagnn/@DagNN/DagNN.m"; sourceTree = "<group>"; };
 		2D6833141B66617100FA6D98 /* eval.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = eval.m; path = "matlab/+dagnn/@DagNN/eval.m"; sourceTree = "<group>"; };
 		2D6833151B66617100FA6D98 /* fromSimpleNN.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = fromSimpleNN.m; path = "matlab/+dagnn/@DagNN/fromSimpleNN.m"; sourceTree = "<group>"; };
-		2D6833161B66617100FA6D98 /* getVarGeometry.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = getVarGeometry.m; path = "matlab/+dagnn/@DagNN/getVarGeometry.m"; sourceTree = "<group>"; };
 		2D6833171B66617100FA6D98 /* initParams.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = initParams.m; path = "matlab/+dagnn/@DagNN/initParams.m"; sourceTree = "<group>"; };
 		2D6833181B66617100FA6D98 /* loadobj.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = loadobj.m; path = "matlab/+dagnn/@DagNN/loadobj.m"; sourceTree = "<group>"; };
 		2D6833191B66617100FA6D98 /* move.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = move.m; path = "matlab/+dagnn/@DagNN/move.m"; sourceTree = "<group>"; };
@@ -230,6 +243,15 @@
 		2DA349BA1A86C5210073185F /* nnsubsample.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnsubsample.cu; path = matlab/src/bits/nnsubsample.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DA349BB1A86C5210073185F /* nnsubsample.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnsubsample.hpp; path = matlab/src/bits/nnsubsample.hpp; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
+		2DBD1EE91BA244B0008E01BD /* cnn_cifar_init_nin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_cifar_init_nin.m; path = examples/cnn_cifar_init_nin.m; sourceTree = "<group>"; };
+		2DBD1EEA1BA244B0008E01BD /* cnn_cifar_init.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_cifar_init.m; path = examples/cnn_cifar_init.m; sourceTree = "<group>"; };
+		2DBD1EEB1BA244B0008E01BD /* cnn_imagenet_camdemo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_imagenet_camdemo.m; path = examples/cnn_imagenet_camdemo.m; sourceTree = "<group>"; };
+		2DBD1EEC1BA244B0008E01BD /* cnn_imagenet_googlenet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_imagenet_googlenet.m; path = examples/cnn_imagenet_googlenet.m; sourceTree = "<group>"; };
+		2DBD1EED1BA244B0008E01BD /* cnn_imagenet_init.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_imagenet_init.m; path = examples/cnn_imagenet_init.m; sourceTree = "<group>"; };
+		2DBD1EEE1BA244B0008E01BD /* cnn_mnist_dag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_mnist_dag.m; path = examples/cnn_mnist_dag.m; sourceTree = "<group>"; };
+		2DBD1EEF1BA244B0008E01BD /* cnn_mnist_experiments.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_mnist_experiments.m; path = examples/cnn_mnist_experiments.m; sourceTree = "<group>"; };
+		2DBD1EF01BA244B0008E01BD /* cnn_mnist_init.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_mnist_init.m; path = examples/cnn_mnist_init.m; sourceTree = "<group>"; };
+		2DBD1EF11BA244B0008E01BD /* cnn_train_dag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = cnn_train_dag.m; path = examples/cnn_train_dag.m; sourceTree = "<group>"; };
 		2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnloss.m; path = matlab/vl_nnloss.m; sourceTree = "<group>"; };
 		2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnrelu.m; path = matlab/vl_nnrelu.m; sourceTree = "<group>"; };
 		2DD3FACE18EC0E7B00053032 /* vl_nnsoftmax.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnsoftmax.m; path = matlab/vl_nnsoftmax.m; sourceTree = "<group>"; };
@@ -257,14 +279,23 @@
 		2D1ECF5719CDFFE600F4A122 /* examples */ = {
 			isa = PBXGroup;
 			children = (
+				2DBD1EE91BA244B0008E01BD /* cnn_cifar_init_nin.m */,
+				2DBD1EEA1BA244B0008E01BD /* cnn_cifar_init.m */,
 				2D1ECF5819CE000600F4A122 /* cnn_cifar.m */,
+				2DBD1EEB1BA244B0008E01BD /* cnn_imagenet_camdemo.m */,
 				2D1ECF5919CE000600F4A122 /* cnn_imagenet_evaluate.m */,
 				2D1ECF5A19CE000600F4A122 /* cnn_imagenet_get_batch.m */,
+				2DBD1EEC1BA244B0008E01BD /* cnn_imagenet_googlenet.m */,
+				2DBD1EED1BA244B0008E01BD /* cnn_imagenet_init.m */,
 				2D1ECF5B19CE000600F4A122 /* cnn_imagenet_minimal.m */,
 				2D1ECF5C19CE000600F4A122 /* cnn_imagenet_setup_data.m */,
 				2D1ECF5D19CE000600F4A122 /* cnn_imagenet_sync_labels.m */,
 				2D1ECF5E19CE000600F4A122 /* cnn_imagenet.m */,
+				2DBD1EEE1BA244B0008E01BD /* cnn_mnist_dag.m */,
+				2DBD1EEF1BA244B0008E01BD /* cnn_mnist_experiments.m */,
+				2DBD1EF01BA244B0008E01BD /* cnn_mnist_init.m */,
 				2D1ECF5F19CE000600F4A122 /* cnn_mnist.m */,
+				2DBD1EF11BA244B0008E01BD /* cnn_train_dag.m */,
 				2D1ECF6019CE000600F4A122 /* cnn_train.m */,
 			);
 			name = examples;
@@ -435,7 +466,8 @@
 				2D6833131B66617100FA6D98 /* DagNN.m */,
 				2D6833141B66617100FA6D98 /* eval.m */,
 				2D6833151B66617100FA6D98 /* fromSimpleNN.m */,
-				2D6833161B66617100FA6D98 /* getVarGeometry.m */,
+				2D433A0D1BAC276700D31E69 /* getVarReceptiveFields.m */,
+				2D433A0E1BAC276700D31E69 /* getVarSizes.m */,
 				2D6833171B66617100FA6D98 /* initParams.m */,
 				2D6833181B66617100FA6D98 /* loadobj.m */,
 				2D6833191B66617100FA6D98 /* move.m */,
@@ -444,6 +476,9 @@
 				2D68331C1B66617100FA6D98 /* removeLayer.m */,
 				2D68331D1B66617100FA6D98 /* reset.m */,
 				2D68331E1B66617100FA6D98 /* saveobj.m */,
+				2D433A0F1BAC276700D31E69 /* setLayerInputs.m */,
+				2D433A101BAC276700D31E69 /* setLayerOutputs.m */,
+				2D433A111BAC276700D31E69 /* setLayerParams.m */,
 			);
 			name = "@DagNN";
 			sourceTree = "<group>";
@@ -508,7 +543,9 @@
 				2D19E67B1AB3031200D4FF0C /* install-alt.md */,
 				2D708AB21A52F61A004E7D42 /* install.md */,
 				2D708AC81A52F61A004E7D42 /* pretrained.md */,
+				2D433A181BAC4A6F00D31E69 /* quick.md */,
 				2D708AC91A52F61A004E7D42 /* training.md */,
+				2D433A191BAC4A6F00D31E69 /* wrappers.md */,
 			);
 			name = docs;
 			path = doc/site/docs;
@@ -534,10 +571,16 @@
 		2D717F2219B3A2AB0028FE9E /* doc */ = {
 			isa = PBXGroup;
 			children = (
-				2D708AA81A52F60B004E7D42 /* site */,
-				2D6D042D196A896300022E96 /* README.md */,
-				2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */,
 				2D717F2019B3A2A50028FE9E /* references.bib */,
+				2D6D042D196A896300022E96 /* README.md */,
+				2D433A121BAC49F100D31E69 /* blocks.tex */,
+				2D433A131BAC49F100D31E69 /* fundamentals.tex */,
+				2D433A141BAC49F100D31E69 /* geometry.tex */,
+				2D433A151BAC49F100D31E69 /* impl.tex */,
+				2D433A161BAC49F100D31E69 /* intro.tex */,
+				2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */,
+				2D433A171BAC49F100D31E69 /* wrappers.tex */,
+				2D708AA81A52F60B004E7D42 /* site */,
 			);
 			name = doc;
 			sourceTree = "<group>";
@@ -552,6 +595,7 @@
 				2D19E6781AB2171800D4FF0C /* vl_compilenn.m */,
 				2D19E6791AB2171800D4FF0C /* vl_imreadjpeg.m */,
 				2D416C731B39E1C60092638E /* vl_nnbnorm.m */,
+				2D433A1A1BAC4AEC00D31E69 /* vl_nnconcat.m */,
 				2D375DBB18A7F790008A97EE /* vl_nnconv.m */,
 				2D416C741B39E1C60092638E /* vl_nnconvt.m */,
 				2D6D0425196A896300022E96 /* vl_nndropout.m */,
