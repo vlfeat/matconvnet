@@ -62,22 +62,17 @@ end
 %                                                        Train and validate
 % -------------------------------------------------------------------------
 
-for epoch=1:opts.numEpochs
+start = findLastCheckpoint(opts.expDir) ;
 
-  % fast-forward to last checkpoint
+for epoch=start+1:opts.numEpochs
+
   modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
   modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
-  if opts.continue
-    if exist(modelPath(epoch),'file')
-      if epoch == opts.numEpochs
-        [net, stats] = loadState(modelPath(epoch)) ;
-      end
-      continue ;
-    end
-    if epoch > 1
-      fprintf('resuming by loading epoch %d\n', epoch-1) ;
-      [net, stats] = loadState(modelPath(epoch-1)) ;
-    end
+
+  % fast-forward to last checkpoint
+  if start >= 1 && epoch == start+1
+    fprintf('resuming by loading epoch %d\n', start) ;
+    [net, stats] = loadState(modelPath(start)) ;
   end
 
   % train one epoch
@@ -323,3 +318,12 @@ function [net, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'stats') ;
 net = dagnn.DagNN.loadobj(net) ;
+
+
+% -------------------------------------------------------------------------
+function epoch = findLastCheckpoint(modelDir)
+% -------------------------------------------------------------------------
+list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
+tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
+epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
+epoch = max(epoch) ;
