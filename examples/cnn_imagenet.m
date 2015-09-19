@@ -93,6 +93,7 @@ end
 bopts.transformation = 'stretch' ;
 bopts.averageImage = rgbMean ;
 bopts.rgbVariance = 0.1*sqrt(d)*v' ;
+bopts.useGpu = numel(opts.train.gpus) > 0 ;
 
 switch lower(opts.networkType)
   case 'simplenn'
@@ -129,6 +130,9 @@ images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
                             'prefetch', nargout == 0) ;
 if nargout > 0
+  if opts.useGpu
+    im = gpuArray(im) ;
+  end
   inputs = {'input', im, 'label', imdb.images.label(batch)} ;
 end
 

@@ -42,15 +42,21 @@ net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
 %                                                                Train
 % --------------------------------------------------------------------
 
-info = cnn_train_dag(net, imdb, @getBatch, ...
+bopts.useGpu = numel(opts.train.gpus) >  0 ;
+
+info = cnn_train_dag(net, imdb, @(i,b) getBatch(bopts,i,b), ...
                      opts.train, ...
-                     'val', find(imdb.images.set == 3)) ;                    
+                     'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
-function inputs = getBatch(imdb, batch)
+function inputs = getBatch(opts, imdb, batch)
 % --------------------------------------------------------------------
-inputs = {'input', imdb.images.data(:,:,:,batch), ...
-          'label', imdb.images.labels(1,batch)} ;
+images = imdb.images.data(:,:,:,batch) ;
+labels = imdb.images.labels(1,batch) ;
+if numel(opts.useGpu) > 0
+  images = gpuArray(images) ;
+end
+inputs = {'input', images, 'label', labels} ;
 
 % --------------------------------------------------------------------
 function imdb = getMnistImdb(opts)
