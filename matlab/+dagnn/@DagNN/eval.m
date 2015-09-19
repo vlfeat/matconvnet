@@ -70,13 +70,8 @@ obj.computingDerivative = nargin > 2 && ~isempty(derOutputs) ;
 % -------------------------------------------------------------------------
 
 % set the input values
-for i = 1:2:numel(inputs)
-  v = obj.getVarIndex(inputs{i}) ;
-  switch obj.device
-    case 'cpu', obj.vars(v).value = gather(inputs{i+1}) ;
-    case 'gpu', obj.vars(v).value = gpuArray(inputs{i+1}) ;
-  end
-end
+v = obj.getVarIndex(inputs{1:2:end}) ;
+[obj.vars.value] = deal(inputs{2:2:end}) ;
 inputs = [] ;
 
 obj.numPendingVarRefs = [obj.vars.fanout] ;
