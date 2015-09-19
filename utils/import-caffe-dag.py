@@ -138,6 +138,19 @@ parser.add_argument('--no-remove-dropout',
                     dest='remove_dropout',
                     action='store_false',
                     help='Do not remove dropout layers')
+parser.add_argument('--remove-loss',
+                    dest='remove_loss',
+                    action='store_true',
+                    help='Remove loss layers')
+parser.add_argument('--no-remove-loss',
+                    dest='remove_loss',
+                    action='store_false',
+                    help='Do not remove loss layers')
+parser.add_argument('--append-softmax',
+                    dest='append_softmax',
+                    action='append',
+                    default=[],
+                    help='Add a softmax layer after the specified layer')
 parser.set_defaults(remove_dropout=True)
 args = parser.parse_args()
 
@@ -321,9 +334,9 @@ vars = {'data': data_size, 'label': [1,1,1]}
 params = {}
 
 # scan all layers in net_param
-vars_map = {}
-def rename(names):
-  return [vars_map[x] if vars_map.has_key(x) else x for x in names]
+from_var_redirect = {}
+def from_redirect(names):
+  return [from_var_redirect[x] if from_var_redirect.has_key(x) else x for x in names]
 
 def getopts(layer, name):
   if hasattr(layer, name):
@@ -345,15 +358,9 @@ for layer in layers:
   support = [1,1]
   pad = [0,0,0,0]
   stride = [1,1]
-  inputs = rename(layer.bottom)
-  outputs = rename(layer.top)
+  inputs = from_redirect(layer.bottom)
+  outputs = layer.top
   params = []
-
-  if len(inputs) == 1 and len(outputs) == 1:
-    if inputs[0] == outputs[0]:
-      print '  Layer {} performs in-place operation, separating'.format(layer.name)
-      vars_map[inputs[0]] = layer.name
-      outputs[0] = layer.name
 
   print '  Inputs:'
   for i in inputs:
@@ -410,6 +417,10 @@ for layer in layers:
   elif ltype == 'relu':
     if len(inputs) > 1: sys.exit('Invalid number of inputs')
     mtype = u'dagnn.ReLU'
+    if inputs[0] == outputs[0]:
+      print '  Separating in-place ReLU'
+      outputs[0] = outputs[0] + 'relu'
+      from_var_redirect[inputs[0]] = outputs[0]
     vars[outputs[0]] = vars[inputs[0]]
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -489,12 +500,12 @@ for layer in layers:
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'dropout':
     if len(inputs) > 1: sys.exit('Invalid number of inputs')
-    opts = getopts(layer, 'dropout_param')
     if args.remove_dropout:
       print '   Removing dropout layer, creating map {} -> {}'.format(outputs[0], inputs[0])
-      vars_map[outputs[0]] = inputs[0]
+      from_var_redirect[outputs[0]] = inputs[0]
       continue
 
+    opts = getopts(layer, 'dropout_param')
     mtype = u'dagnn.DropOut'
     mopts['rate'] = float(opts.dropout_ratio)
     vars[outputs[0]] = vars[inputs[0]]
@@ -507,8 +518,13 @@ for layer in layers:
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'softmax_loss':
+    if args.remove_loss:
+      print '   Removing loss layer, creating map {} -> {}'.format(outputs[0], inputs[0])
+      from_var_redirect[outputs[0]] = inputs[0]
+      continue
+
     mtype = u'dagnn.Loss'
-    mopts['loss'] = 'softmaxlog' ;
+    mopts['loss'] = 'softmaxlog'
     vars[outputs[0]] = vars[inputs[0]][0:2] + [1]
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -561,6 +577,45 @@ for layer in layers:
   mnet['params'] = np.append(mnet['params'], mparam)
 
 # --------------------------------------------------------------------
+#                                                       Append softmax
+# --------------------------------------------------------------------
+
+for i, name in enumerate(args.append_softmax):
+  # searh for a layer of the specified name
+  l = next((i for (i, l) in enumerate(layers) if l.name == name), None)
+  if l is None:
+    print 'Cannot append softmax to layer {} as no such layer could be found'.format(name)
+    sys.exit(1)
+
+  if len(args.append_softmax) > 1:
+    layerName = 'softmax' + (i + 1)
+    outputs= ['prediction' + (i + 1)]
+  else:
+    layerName = 'softmax'
+    outputs = ['prediction']
+  inputs = from_redirect(layers[l].top[0:1])
+
+  print 'Appending softmax layer \'{}\' after layer \'{}\''.format(layerName, name)
+  print '  Inputs:'
+  for i in inputs:
+    var = vars[i]
+    print '    {} [{} {} {}]'.format(i, var[0], var[1], var[2])
+  print '  Outputs:'
+  for o in outputs:
+    print '    {}'.format(o)
+
+  mlayer = np.empty((1,),dtype=mlayerdt)
+  mlayer['name'][0] = layerName
+  mlayer['type'][0] = u'dagnn.SoftMax'
+  mlayer['inputs'][0] = rowcell(inputs)
+  mlayer['outputs'][0] = rowcell(outputs)
+  mlayer['params'][0] = rowcell([])
+  mlayer['block'][0] = dict_to_struct_array({})
+  vars[outputs[0]] = vars[inputs[0]]
+
+  mnet['layers'] = np.append(mnet['layers'], mlayer)
+
+# --------------------------------------------------------------------
 #                                                        Normalization
 # --------------------------------------------------------------------
 
@@ -591,8 +646,12 @@ else:
 # --------------------------------------------------------------------
 
 meta = {'normalization': mkn}
-if synsets_wnid: meta['name'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
-if synsets_name: meta['description'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
+
+meta_classes = {}
+if synsets_wnid: meta_classes['name'] = np.array(synsets_wnid, dtype=np.object).reshape(1,-1)
+if synsets_name: meta_classes['description'] = np.array(synsets_name, dtype=np.object).reshape(1,-1)
+if meta_classes:
+  meta['classes'] = meta_classes
 if meta:
   mnet['meta'] = meta
 

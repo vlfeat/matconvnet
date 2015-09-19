@@ -56,9 +56,11 @@ then
             $converter \
                 --caffe-variant=caffe_0115 \
                 --preproc=caffe \
-		--no-remove-dropout \
+		--remove-dropout \
+                --remove-loss \
                 --average-image="$base/imagenet_mean.binaryproto" \
                 --synsets="$data/tmp/${synset[i]}/synset_words.txt" \
+                --append-softmax="cls3_fc" \
                 "$base/train_val_googlenet.prototxt" \
                 "$base/imagenet_googlenet.caffemodel" \
                 "$out"
