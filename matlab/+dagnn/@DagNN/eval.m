@@ -93,6 +93,7 @@ v = obj.getVarIndex(derOutputs(1:2:end)) ;
 derOutputs = [] ;
 
 obj.numPendingVarRefs = zeros(1, numel(obj.vars)) ;
+obj.numPendingParamRefs = zeros(1, numel(obj.params)) ;
 for l = fliplr(obj.executionOrder)
   time = tic ;
   obj.layers(l).block.backwardAdvanced(obj.layers(l)) ;

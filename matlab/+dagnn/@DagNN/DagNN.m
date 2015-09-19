@@ -62,6 +62,7 @@ classdef DagNN < handle
 
   properties (Transient, Access = {?dagnn.DagNN, ?dagnn.Layer}, Hidden = true)
     numPendingVarRefs
+    numPendingParamRefs
     computingDerivative = false
     executionOrder
   end
@@ -162,8 +163,9 @@ classdef DagNN < handle
     function l = getLayerIndex(obj, name)
     %GETLAYERINDEX Get the index of a layer
     %   INDEX = GETLAYERINDEX(obj, NAME) returns the index of the layer
-    %   NAME. NAME can also be a cell array of strings. If no layer with such a name is found, the value
-    %   NaN is returned for the index.
+    %   NAME. NAME can also be a cell array of strings. If no layer
+    %   with such a name is found, the value NaN is returned for the
+    %   index.
     %
     %   Variables can then be accessed as the `obj.layers(INDEX)`
     %   property of the DaG.
