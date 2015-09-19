@@ -25,7 +25,8 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > topologies. This release also adds GoogLeNet as a pre-trained model,
 > new building blocks such as [`vl_nnconcat`](mfiles/vl_nnconcat.md),
 > a rewritten loss function block [`vl_nnloss`](mfiles/vl_nnloss.md),
-> better documentation, and bugfixes.
+> better documentation, and bugfixes. A new **realtime demo** using
+> GoogLeNet, VGG-VD, or any other similar network.
 >
 > **New:** 1.0-beta13 adds a much faster version of batch
 > normalization and contains several bugfixes and minor improvements.
@@ -33,9 +34,6 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > **New:** MatConvNet used in planetary science research by the
 > University of Arizona (see the
 > [NVIDIA blog post](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/)).
->
-> **New:** 1.0-beta12 adds convolution transpose aka deconvolution
-> (see [`vl_nnconvt`](mfiles/vl_nnconvt)).
 
 *   **Obtaining MatConvNet**
     - Tarball for [version 1.0-beta14](download/matconvnet-1.0-beta14.tar.gz)
