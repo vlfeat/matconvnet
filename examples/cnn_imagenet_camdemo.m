@@ -18,14 +18,9 @@ net = load(sprintf('data/models/%s.mat', model)) ;
 
 if strcmp(model, 'imagenet-googlenet-dag')
   net = dagnn.DagNN.loadobj(net) ;
-  net.removeLayer('loss1') ;
-  net.removeLayer('loss2') ;
-  net.removeLayer('loss3') ;
-  net.addLayer('softmax', dagnn.SoftMax(), {'cls3_fc'}, {'prediction'}, {}) ;
-  net.mode = 'test' ;
   out = net.getVarIndex('prediction') ;
   normalization = net.meta.normalization ;
-  description = net.meta.description ;
+  description = net.meta.classes.description ;
   dag = true ;
 else
   normalization = net.normalization ;
