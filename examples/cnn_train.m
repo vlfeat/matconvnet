@@ -1,5 +1,5 @@
 function [net, info] = cnn_train(net, imdb, getBatch, varargin)
-% CNN_TRAIN   Demonstrates training a CNN
+%CNN_TRAIN  An example implementation of SGD for training CNNs
 %    CNN_TRAIN() is an example learner implementing stochastic
 %    gradient descent with momentum to train a CNN. It can be used
 %    with different datasets and tasks by providing a suitable
@@ -112,26 +112,19 @@ end
 %                                                        Train and validate
 % -------------------------------------------------------------------------
 
-for epoch=1:opts.numEpochs
-  learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
+modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
+modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
 
-  % fast-forward to last checkpoint
-  modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
-  modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
-  if opts.continue
-    if exist(modelPath(epoch),'file')
-      if epoch == opts.numEpochs
-        load(modelPath(epoch), 'net', 'info') ;
-      end
-      continue ;
-    end
-    if epoch > 1
-      fprintf('resuming by loading epoch %d\n', epoch-1) ;
-      load(modelPath(epoch-1), 'net', 'info') ;
-    end
-  end
+start = findLastCheckpoint(opts.expDir) ;
+if start >= 1
+  fprintf('resuming by loading epoch %d\n', start) ;
+  load(modelPath(start), 'net', 'info') ;
+end
+
+for epoch=start+1:opts.numEpochs
 
   % train one epoch and validate
+  learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   train = opts.train(randperm(numel(opts.train))) ; % shuffle
   val = opts.val ;
   if numGpus <= 1
@@ -419,3 +412,11 @@ for i=1:numel(net.layers)
     mmap.Data(labindex).(sprintf('l%d_%d',i,j)) = gather(res(i).dzdw{j}) ;
   end
 end
+
+% -------------------------------------------------------------------------
+function epoch = findLastCheckpoint(modelDir)
+% -------------------------------------------------------------------------
+list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
+tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
+epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
+epoch = max([epoch 0]) ;
