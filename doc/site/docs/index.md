@@ -5,6 +5,21 @@ Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Several
 example CNNs are included to classify and encode images.
 
+**Citing.** If you use MatConvNet in your work, please cite:
+"MatConvNet - Convolutional Neural Networks for MATLAB", A. Vedaldi
+and K. Lenc, *Proc. of the ACM Int. Conf. on Multimedia*, 2015. <span
+style="color:#428bca;"
+onclick="toggle_visibility('bibentry');">[BibTex]</span>
+
+<pre class="shy" id="bibentry">
+    @inproceedings{vedaldi15matconvnet,
+         author    = {A. Vedaldi and K. Lenc},
+         title     = {MatConvNet -- Convolutional Neural Networks for MATLAB},
+         book      = {Proceeding of the {ACM} Int. Conf. on Multimedia}
+         year      = {2015},
+    }
+</pre>
+
 > **New:** 1.0-beta14 adds a new object-oriented
 > [network wrapper `DagNN`](wrappers.md) supporting arbitrary network
 > topologies. This release also adds GoogLeNet as a pre-trained model,
@@ -45,14 +60,3 @@ example CNNs are included to classify and encode images.
     - [Changes](about/#changes)
     - [Developing the library](developers.md)
 
-**Citing.** If you use MatConvNet in your work, please cite:
-"MatConvNet - Convolutional Neural Networks for MATLAB", A. Vedaldi
-and K. Lenc, arXiv:1412.4564, 2014.
-
-    @article{arXiv:1412.4564,
-         author    = {A. Vedaldi and K. Lenc},
-         title     = {MatConvNet -- Convolutional Neural Networks for MATLAB},
-         journal   = {CoRR},
-         volume    = {abs/1412.4564},
-         year      = {2014},
-    }

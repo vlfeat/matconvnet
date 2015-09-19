@@ -1,14 +1,15 @@
-# CNN Wrappers
+# CNN wrappers
 
 At its core, MatConvNet consists of a
-[number of MATLAB functions](functions.md#blocks) implementing
-CNN building blocks. These are usually combined into complete CNNs by
+[number of MATLAB functions](functions.md#blocks) implementing CNN
+building blocks. These are usually combined into complete CNNs by
 using one of the two CNN wrappers. The first wrapper is
 [SimpleNN](#simplenn), most of which is implemented by the MATLAB
-function [`vl_simplenn`](mfiles/vl_simplenn.md). SimpleNN is suitable for
-networks whose topology is a linear chain of computational blocks. The
-second wrapper is [DagNN](#dagnn), which is implemented as the MATLAB
-class [`dagnn.DagNN`](mfiles/+dagnn/@DagNN/DagNN.md).
+function [`vl_simplenn`](mfiles/vl_simplenn.md). SimpleNN is suitable
+for networks that have a linear topology, i.e. a chain of
+computational blocks. The second wrapper is [DagNN](#dagnn), which is
+implemented as the MATLAB class
+[`dagnn.DagNN`](mfiles/+dagnn/@DagNN/DagNN.md).
 
 <a name="simplenn"></a>
 
@@ -16,7 +17,70 @@ class [`dagnn.DagNN`](mfiles/+dagnn/@DagNN/DagNN.md).
 
 The SimpleNN wrapper is implemented by the function
 [`vl_simplenn`](mfiles/vl_simplenn) and a
-[few others](functions.md#simplenn).
+[few others](functions.md#simplenn). This is a lightweight wrapper,
+suitable for CNN consistting of a simple chain of blocks.
+
+To start with SimpleNN, create a `net` structure, populating the
+cellarray `net.layers` with a list of layers. For example:
+
+```matlab
+net.layers{1} = struct(...
+    'name', 'conv1', ...
+    'type', 'conv', ...
+    'weights', {{randn(10,10,3,2,'single'), randn(2,1,'single')}}, ...
+    'pad', 0, ...
+    'stride', 1) ;
+net.layers{2} = struct(...
+    'name', 'relu1', ...
+    'type', 'relu') ;
+```
+
+Now the convolutional and ReLU layers will be executed in
+ sequence. The convolution has a bank of two 10x10x3
+ filters. Evaluation can be obtained as follows:
+
+```matlab
+data = randn(300, 500, 3, 5, 'single') ;
+res = vl_simplenn(net, data) ;
+```
+
+The structure `res` contains the result of the computation, with one
+entry for each variable in the architecture:
+
+```matlab
+>> res
+res =
+1x3 struct array with fields:
+
+    x
+    dzdx
+    dzdw
+    aux
+    time
+    backwardTime
+```
+
+Here `x` is the variable value, `dzdx` the derivative of the CNN with
+respect to `x`, `dzdw` the derivative of the CNN with respect to each
+of the block parameters, `aux` space for custom information (e.g. the
+mask in dropout layers), and `time` and `backwardTime` the time spen
+in the forward and backward pass.
+
+For example, `res(1).x` is the input of the CNN and `res(3).x` its
+output.
+
+The derivative of the CNN can be computed as follows:
+
+```matlab
+res = vl_simplenn(res, data, dzdy)
+```
+
+This performs both a forward and a backward pass. `dzdy` is a
+projection applied to the output value of the CNN (see the
+[PDF manual](../matconvnet-manual.pdf) to clarify this point). During
+traning, CNNs are often terminated by a block that computes a single
+scalar loss value (i.e. `res(end).x` is a scalar). In this case, one
+often picks `dzdy = 1`.
 
 <a name="dagnn"></a>
 

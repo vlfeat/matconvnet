@@ -38,3 +38,7 @@ font-family: "Lucida Console","Courier New",monospace;
 canvas {
   background-color: transparent;
 }
+
+.shy {
+  display: none ;
+}

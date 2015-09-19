@@ -16,7 +16,7 @@ There is no general training function as training depends on the
 dataset and problem. Look at the `examples` subdirectory for code
 showing how to train CNNs.
 
-<a name="core"/>
+<a name="core"></a>
 
 ## Building blocks
 
@@ -34,7 +34,7 @@ showing how to train CNNs.
 - [`vl_nnsoftmax`](mfiles/vl_nnsoftmax.md) Channel soft-max.
 - [`vl_nnsoftmaxloss`](mfiles/vl_nnsoftmaxloss.md) *Deprecated*
 
-<a name="simplenn"/>
+<a name="simplenn"></a>
 
 ## SimpleCNN wrapper
 
@@ -47,14 +47,14 @@ showing how to train CNNs.
 - [`vl_simplenn_move`](mfiles/vl_simplenn_move.md) Move the CNN
   between CPU and GPU.
 
-<a name="dagnn"/>
+<a name="dagnn"></a>
 
 ## DagNN wrapper
 
 - [`DagNN`](mfiles/+dagnn/@DagNN/DagNN.md) An object-oriented wrapper
   for CNN with complex topologies
 
-<a name="utility"/>
+<a name="utility"></a>
 
 ## Other functions
 

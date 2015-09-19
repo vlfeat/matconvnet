@@ -11,8 +11,8 @@ speed, downloading the CNN model may require some time.
 
 ```matlab
 % install and compile MatConvNet (needed once)
-untar('http://www.vlfeat.org/matconvnet/download/matconvnet-1.0-beta12.tar.gz') ;
-cd matconvnet-1.0-beta12
+untar('http://www.vlfeat.org/matconvnet/download/matconvnet-1.0-beta14.tar.gz') ;
+cd matconvnet-1.0-beta14
 run matlab/vl_compilenn
 
 % download a pre-trained CNN from the web (needed once)
@@ -28,7 +28,7 @@ net = load('imagenet-vgg-f.mat') ;
 
 % load and preprocess an image
 im = imread('peppers.png') ;
-im_ = single(im) ; % note: 255 range
+im_ = single(im) ; % note: 0-255 range
 im_ = imresize(im_, net.normalization.imageSize(1:2)) ;
 im_ = im_ - net.normalization.averageImage ;
 
@@ -45,3 +45,40 @@ net.classes.description{best}, best, bestScore)) ;
 
 In order to compile the GPU support and other advanced features, see
 the [installation instructions](install.md).
+
+<a id='quick-dag'></a>
+
+## Using DAG models
+
+The example above exemplifies using a model using the SimpleNN
+wrapper. More complex models use instead the DagNN wrapper. For
+example, to run GoogLeNet use:
+
+```matlab
+% download a pre-trained CNN from the web (needed once)
+urlwrite(...
+  'http://www.vlfeat.org/matconvnet/models/imagenet-googlenet-dag.mat', ...
+  'imagenet-googlenet-dag.mat') ;
+
+% load the pre-trained CNN
+net = dagnn.DagNN.loadobj(load('imagenet-googlenet-dag.mat')) ;
+
+% load and preprocess an image
+im = imread('peppers.png') ;
+im_ = single(im) ; % note: 0-255 range
+im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
+im_ = im_ - net.meta.normalization.averageImage ;
+
+% run the CNN
+net.eval({'input', im_}) ;
+
+% obtain the CNN otuput
+scores = net.vars(net.getVarIndex('prediction')).value ;
+scores = squeeze(gather(scores)) ;
+
+% show the classification results
+[bestScore, best] = max(scores) ;
+figure(1) ; clf ; imagesc(im) ;
+title(sprintf('%s (%d), score %.3f',...
+net.meta.classes.description{best}, best, bestScore)) ;
+```
