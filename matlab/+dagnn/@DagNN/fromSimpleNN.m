@@ -1,13 +1,52 @@
-function obj = fromSimpleNN(net)
+function obj = fromSimpleNN(net, varargin)
 % FROMSIMPLENN  Initialize a DagNN object from a SimpleNN network
-%   DAG = FROMSIMPLENN(NET) initializes a DAG neural network from the
-%   specified NET neural network.
+%   FROMSIMPLENN(NET) initializes the DagNN object from the
+%   specified CNN using the SimpleNN format.
+%
+%   SimpleNN objects are linear chains of computational layers. These
+%   layers echange information through variables and parameters that
+%   are not explicitly named.Hence, FROMSIMPLENN() uses a number of
+%   rules to assign such names automatically:
+%
+%   * From the input to the output of the CNN, variables are called
+%     `x0` (input of the first layer), `x1`, `x2`, .... In this
+%     manner `xi` is the outut of the i-th layer.
+%
+%   * Any loss layer requires two inputs, the second being a label.
+%     These are called `label` (for the first such layers), and then
+%     `label2`, `label3`,... for any other similar layer.
+%
+%   Additinoally, the option `CanonicalNames` the function can change
+%   the names of some variables to make them more convenient to
+%   use. With this option turned on:
+%
+%   * The network input is called `input` instead of `x0`.
+%
+%   * The output of each SoftMax layer is called `prob` (or `prob2`,
+%     ...).
+%
+%   * The output of each Loss layer is called `objective` (or `
+%     objective2`, ...).
+%
+%   * The input of each SoftMax or Loss layer of type *softmax log
+%     loss* is called `prediction` (or `prediction2`, ...). If a Loss
+%     layer immediately follows a SoftMax layer, then the rule above
+%     takes the precendence and the input name is not changed.
+%
+%   FROMSIMPLENN(___, 'OPT', VAL, ...) accepts the following options:
+%
+%   `CanonicalNames`:: false
+%      If `true` use the rules above to assign more meaningful
+%      names to some of the varibles.
 
 % Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+
+opts.canonicalNames = false ;
+opts = vl_argparse(opts, varargin) ;
 
 import dagnn.*
 
@@ -19,6 +58,9 @@ if isfield(net, 'normalization')
 end
 
 for l = 1:numel(net.layers)
+  inputs = {sprintf('x%d',l-1)} ;
+  outputs = {sprintf('x%d',l)} ;
+
   params = struct(...
         'name', {}, ...
         'value', {}, ...
@@ -34,7 +76,7 @@ for l = 1:numel(net.layers)
     case {'conv', 'convt'}
       if isfield(net.layers{l},'filters')
         sz = size(net.layers{l}.filters) ;
-        hasBias = ~isempty(net.layers{l}.biases) ;    
+        hasBias = ~isempty(net.layers{l}.biases) ;
         params(1).name = sprintf('%sf',name) ;
         params(1).value = net.layers{l}.filters ;
         if hasBias
@@ -124,6 +166,8 @@ for l = 1:numel(net.layers)
       block = SoftMax() ;
     case {'softmaxloss'}
       block = Loss('loss', 'softmaxlog') ;
+      % The loss has two inputs
+      inputs{2} = getNewVarName(obj, 'label') ;
     case {'bnorm'}
       block = BatchNorm() ;
       if isfield(net.layers{l},'filters')
@@ -147,27 +191,6 @@ for l = 1:numel(net.layers)
       end
     otherwise
       error([net.layers{l}.type ' is unsupported']) ;
-  end
-
-  if l < numel(net.layers) - 1
-    outputs = {sprintf('x%d',l)} ;
-  elseif l == numel(net.layers) - 1
-    outputs = {'prediction'} ;
-  else
-    name = 'loss' ;
-    outputs = {'objective'} ;
-  end
-
-  if l == 1
-    inputs = {'input'} ;
-  elseif  l == numel(net.layers)
-    if isa(block, 'dagnn.SoftMax')
-      inputs = {'prediction'} ;
-    else
-      inputs = {'prediction', 'label'} ;
-    end
-  else
-    inputs = {sprintf('x%d',l-1)} ;
   end
 
   obj.addLayer(...
@@ -201,4 +224,37 @@ for l = 1:numel(net.layers)
       obj.params(bindex).weightDecay = params(2).weightDecay ;
     end
   end
+end
+
+% --------------------------------------------------------------------
+% Rename variables to canonical names
+% --------------------------------------------------------------------
+
+if opts.canonicalNames
+  for l = 1:numel(obj.layers)
+    if l == 1
+      obj.renameVar(obj.layers(l).inputs{1}, 'input') ;
+    end
+    if isa(obj.layers(l).block, 'dagnn.SoftMax')
+      obj.renameVar(obj.layers(l).outputs{1}, getNewVarName(obj, 'prob')) ;
+      obj.renameVar(obj.layers(l).inputs{1}, getNewVarName(obj, 'prediction')) ;
+    end
+    if isa(obj.layers(l).block, 'dagnn.Loss')
+      obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
+      if isempty(regexp(obj.layers(l).inputs{1}, '^prob.*'))
+        obj.renameVar(obj.layers(l).inputs{1}, ...
+                      getNewVarName(obj, 'prediction')) ;
+      end
+    end
+  end
+end
+
+% --------------------------------------------------------------------
+function name = getNewVarName(obj, prefix)
+% --------------------------------------------------------------------
+t = 0 ;
+name = prefix ;
+while any(strcmp(name, {obj.vars.name}))
+  t = t + 1 ;
+  name = sprintf('%s%d', prefix, t) ;
 end

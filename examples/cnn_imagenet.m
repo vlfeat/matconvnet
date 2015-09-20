@@ -78,7 +78,7 @@ net.normalization.averageImage = rgbMean ;
 switch lower(opts.networkType)
   case 'simplenn'
   case 'dagnn'
-    net = dagnn.DagNN.fromSimpleNN(net) ;
+    net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
     net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
                  {'prediction','label'}, 'top1error') ;
   otherwise

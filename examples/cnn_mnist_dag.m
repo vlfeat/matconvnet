@@ -32,7 +32,7 @@ else
 end
 
 net = cnn_mnist_init('useBnorm', opts.useBnorm) ;
-net = dagnn.DagNN.fromSimpleNN(net) ;
+net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
 net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
              {'prediction','label'}, 'error') ;
 

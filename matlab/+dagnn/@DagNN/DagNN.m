@@ -128,6 +128,7 @@ classdef DagNN < handle
     setLayerInputs(obj, leyer, inputs)
     setLayerOutput(obj, layer, outputs)
     setLayerParams(obj, layer, params)
+    renameVar(obj, oldName, newName)
     rebuild(obj)
 
     % Process data with the DagNN
@@ -249,7 +250,7 @@ classdef DagNN < handle
   end
 
   methods (Static)
-    obj = fromSimpleNN(net)
+    obj = fromSimpleNN(net, varargin)
     obj = loadobj(s)
   end
 
