@@ -76,13 +76,13 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - layer.type = 'normalize'
 %     - layer.param: the normalization parameters.
 %
-%   Spatial normalization layer:
+%   Spatial normalization layer::
 %     This is similar to the layer above, but wraps VL_NNSPNORM():
 %
 %     - layer.type = 'spnorm'
 %     - layer.param: the normalization parameters.
 %
-%   Batch normalization layer:
+%   Batch normalization layer::
 %     This layer wraps VL_NNBNORM(). It has fields:
 %
 %     - layer.type = 'bnorm'
@@ -120,7 +120,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - layer.type = 'softmaxloss'
 %     - layer.class: the ground-truth class.
 %
-%   P-dist layer:
+%   P-dist layer::
 %     The pdist layer wraps VL_NNPDIST(). It has fields:
 %
 %     - layer.type = 'pdist'
