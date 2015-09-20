@@ -27,10 +27,10 @@ vl_nnsoftmaxloss.m \
 vl_nnspnorm.m \
 vl_rootnn.m \
 vl_setupnn.m \
-vl_simplenn.m \
-vl_simplenn_diagnose.m \
-vl_simplenn_display.m \
-vl_simplenn_move.m \
+simplenn/vl_simplenn.m \
+simplenn/vl_simplenn_diagnose.m \
+simplenn/vl_simplenn_display.m \
+simplenn/vl_simplenn_move.m \
 +dagnn/@DagNN/DagNN.m
 
 mfile_src=$(addprefix matlab/src/, $(mfiles))
@@ -71,6 +71,7 @@ doc-clean:
 doc-distclean:
 	rm -f doc/matconvnet-manual.pdf
 	rm -rf doc/site/site
+	rm -f $(mfile_doc)
 
 doc-info:
 	@echo "mds=$(mds)"
