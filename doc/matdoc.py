@@ -136,7 +136,10 @@ def render_S(tree, context):
     for n in tree.children: render_SL(n, context)
 
 def render_DH(tree, context):
-    print "%s**%s** [*%s*]" % (context, tree.description.strip(), tree.inner_text.strip())
+    if len(tree.inner_text.strip()) > 1:
+        print "%s**%s** [*%s*]" % (context, tree.description.strip(), tree.inner_text.strip())
+    else:
+        print "%s**%s**" % (context, tree.description.strip())
 
 def render_DI(tree, context):
     context.push(Frame("    ", "*   "))

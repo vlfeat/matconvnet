@@ -94,6 +94,9 @@ class BH (L): # bullet: a line of type '  * <inner_text>'
 class DH (L):  # description: a line of type ' <description>::<inner_text>'
     inner_text = None
     description = None
+    def __str__(self, indent = 0):
+        return "%s: '%s' :: '%s'" % (super(L, self).__str__(indent),
+                           self.description, self.inner_text)
 class SL (L): # section: '<#+><text>'
     section_level = 0
     inner_text = None
