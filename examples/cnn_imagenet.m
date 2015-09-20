@@ -15,7 +15,8 @@ opts.weightInitMethod = 'gaussian' ;
 
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
-opts.expDir = fullfile('data', sprintf('imagenet12-%s-%s', sfx, opts.networkType)) ;
+opts.expDir = fullfile('data', sprintf('imagenet12-%s-%s', ...
+                                       sfx, opts.networkType)) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;
@@ -93,14 +94,14 @@ end
 bopts.transformation = 'stretch' ;
 bopts.averageImage = rgbMean ;
 bopts.rgbVariance = 0.1*sqrt(d)*v' ;
-bopts.useGpu = numel(opts.train.gpus) > 0 ;
+useGpu = numel(opts.train.gpus) > 0 ;
 
 switch lower(opts.networkType)
   case 'simplenn'
     fn = getBatchSimpleNNWrapper(bopts) ;
     [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
   case 'dagnn'
-    fn = getBatchDagNNWrapper(bopts) ;
+    fn = getBatchDagNNWrapper(bopts, useGpu) ;
     opts.train = rmfield(opts.train, {'sync', 'cudnn'}) ;
     info = cnn_train_dag(net, imdb, fn, opts.train) ;
 end
@@ -119,18 +120,18 @@ im = cnn_imagenet_get_batch(images, opts, ...
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchDagNNWrapper(opts)
+function fn = getBatchDagNNWrapper(opts, useGpu)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatchDagNN(imdb,batch,opts) ;
+fn = @(imdb,batch) getBatchDagNN(imdb,batch,opts,useGpu) ;
 
 % -------------------------------------------------------------------------
-function inputs = getBatchDagNN(imdb, batch, opts)
+function inputs = getBatchDagNN(imdb, batch, opts, useGpu)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
                             'prefetch', nargout == 0) ;
 if nargout > 0
-  if opts.useGpu
+  if useGpu
     im = gpuArray(im) ;
   end
   inputs = {'input', im, 'label', imdb.images.label(batch)} ;
