@@ -17,3 +17,11 @@ MEX files are still not recognized, check that the directory
 `matlab/toolbox/mex` contains the missing files. If the files are
 there, there may be a problem with the way MEX files have been
 compiled.
+
+### Why files such as `vl_nnconv.m` do not contain any code?
+
+Functions such as `vl_nnconv`, `vl_nnpool`, `vl_nnbnorm` and many
+others are implemented MEX files. In this case, M files such as
+`vl_nnconv.m` contain only the function documentation. The code of the
+function is actually found in `matlab/src/vl_nnconv.cu` (a CUDA/C++
+source file) or similar.
