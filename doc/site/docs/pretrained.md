@@ -33,7 +33,7 @@ used in MatConvNet.
      Rabinovich*, CVPR, 2015,
      ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Szegedy_Going_Deeper_With_2015_CVPR_paper.pdf)).
 
-     - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat')
+     - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat)
        [DagNN format]
 
 -    VGG models from the
