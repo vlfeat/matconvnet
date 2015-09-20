@@ -1,5 +1,5 @@
 function renameVar(obj, oldName, newName)
-%RENAMEVAR Rename variables
+%RENAMEVAR Rename a variable
 %   RENAMEVAR(OLDNAME, NEWNAME) changes the name of the variable
 %   OLDNAME into NEWNAME. NEWNAME should not be the name of an
 %   existing variable.
