@@ -30,7 +30,11 @@ classdef Conv < dagnn.Filter
 
     function outputSizes = getOutputSizes(obj, inputSizes)
       outputSizes = getOutputSizes@dagnn.Filter(obj, inputSizes) ;
-      outputSizes{1}(3) = obj.size(4) ;
+      if length(obj.size) < 4
+          outputSizes{1}(3) = 1;
+      else
+        outputSizes{1}(3) = obj.size(4) ;
+      end
     end
 
     function params = initParams(obj)
