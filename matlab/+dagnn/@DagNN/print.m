@@ -30,6 +30,9 @@ function str = print(obj, inputSizes, varargin)
 %   `Format`:: 'ascii'
 %      Choose between 'ascii', 'latex', and 'csv'.
 %
+%   `MaxNumColumns`:: 18
+%      Maximum number of columns in each table.
+%
 %   See also: DAGNN, DAGNN.GETVARSIZES().
 
 if nargin > 1 && isstr(inputSizes)

@@ -50,7 +50,7 @@ end
 % -------------------------------------------------------------------------
 function rf = composeReceptiveFields(rf1, rf2)
 % -------------------------------------------------------------------------
-if isempty(rf1.size)
+if isempty(rf1.size) || isempty(rf2.size)
   rf.size = [] ;
   rf.stride = [] ;
   rf.offset = [] ;

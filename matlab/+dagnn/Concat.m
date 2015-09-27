@@ -15,7 +15,7 @@ classdef Concat < dagnn.ElementWise
     end
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
-      outputs{1} = vl_nnconcat(inputs, derOutputs{1}, 'inputSizes', obj.inputSizes) ;
+      derInputs = vl_nnconcat(inputs, obj.dim, derOutputs{1}, 'inputSizes', obj.inputSizes) ;
       derParams = {} ;
     end
 
