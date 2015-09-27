@@ -42,7 +42,7 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > [NVIDIA blog post](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/)).
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta14](download/matconvnet-1.0-beta14.tar.gz)
+    - Tarball for [version 1.0-beta15](download/matconvnet-1.0-beta15.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**
