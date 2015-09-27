@@ -25,7 +25,7 @@ where $(\alpha_h,\alpha_v)$ is the \emph{stride}, $(\beta_h,\beta_v)$ the offset
 
 We now compute the receptive field geometry $(\alpha_h,\alpha_v,\beta_h,\beta_v,\Delta_h,\Delta_v)$ for the most common operators, namely filters. We consider in particular \emph{simple filters} that are characterised by an integer size, stride, and padding.
 
-It suffices to reason in 1D.  Let $H'$ bet the vertical filter dimension, $S_h$ the subampling stride, and $P_h^-$ and $P_h^+$ the amount of zero padding applied to the top and the bottom of the input $\bx$. Here the value $y_{i'}$ depends on the samples:
+It suffices to reason in 1D.  Let $H'$ bet the vertical filter dimension, $S_h$ the subampling stride, and $P_h^-$ and $P_h^+$ the amount of zero padding applied to the top and the bottom of the input $\bx$. Here the value $y_{i''}$ depends on the samples:
 \begin{align*}
  x_i : i
  &\in
@@ -96,6 +96,52 @@ Since the height of $\by$ is then determined up to $S_h$ samples, and since the 
 \[
 H'' =  U_h (H-1) +H' -  C_h^- - C_h^+.
 \]
+
+% ------------------------------------------------------------------
+\section{Transposing receptive fields}\label{s:receptive-transposing}
+% ------------------------------------------------------------------
+
+Suppose we have determined that a later $\by = f(\bx)$ has a receptive field transformation $(\alpha_h,\beta_h,\Delta_h)$ (along one spatial slice). Now suppose we are given a block $\bx = g(\by)$ which is the ``transpose'' of $f$, just like the convolution transpose layer is the transpose of the convolution layer. By this, we mean that, if $y_{i''}$ depends on $x_{i}$ due to $f$, then $x_{i}$ depends on $y_{i''}$ due to $g$.
+
+Note that, by definition of receptive fields, $f$ relates the  inputs and outputs index pairs $(i,i'')$ given by \autoref{e:receptive}, which can be rewritten as
+\[
+- \frac{\Delta_h-1}{2} \leq  i - \alpha_h (i'' -1) - \beta_h \leq\frac{\Delta_h-1}{2}.
+\]
+A simple manipulation of this expression results in the equivalent expression:
+\[
+- \frac{(\Delta_h + \alpha_h - 1)/\alpha_h-1}{2} \leq  i'' - \frac{1}{\alpha_h} (i - 1) - \frac{1 + \alpha_h - \beta_h }{\alpha_h} \leq\frac{(\Delta_h + \alpha_h - 1)/\alpha_h-1}{2\alpha_h}.
+\]
+Hence, in the reverse direction, this corresponds to a RF transformation
+\[
+\hat \alpha_h = \frac{1}{\alpha_h},
+\qquad
+\hat \beta_h = \frac{1 + \alpha_h - \beta_h}{\alpha_h},
+\qquad
+\hat \Delta_h = \frac{\Delta_h + \alpha_h -1}{\alpha_h}.
+\]
+
+\begin{example}
+For convolution, we have found the parameters:
+\[
+\alpha_h = S_h,
+\qquad
+\beta_h = \frac{H'+1}{2} - P_h^-,
+\qquad
+\Delta_h = H'.
+\]
+Using the formulas just found, we can obtain the RF transformation for convolution transpose:
+\begin{align*}
+\hat \alpha_h &= \frac{1}{\alpha_h} = \frac{1}{S_h},
+\\
+\hat \beta_h &= \frac{1 + S_h - (H'+1)/2 + P_h^-}{S_h}
+= \frac{P_h^- -H'/2 +1/2}{S_h} + 1
+= \frac{2P_h^- -H' + 1}{S_h} + 1,
+\\
+\hat \Delta_h &= \frac{H' + S_h - 1}{S_h} = \frac{H' -1}{S_h} + 1.
+\end{align*}
+Hence we find again the formulas found in \autoref{s:receptive-convolution-transpose}.
+\end{example}
+
 
 % ------------------------------------------------------------------
 \section{Composing receptive fields}\label{s:receptive-composing}
