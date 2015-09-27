@@ -32,9 +32,9 @@ used in MatConvNet.
     *Jonathan Long, Evan Shelhamer and Trevor Darrell*, CVPR, 2015
     ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Long_Fully_Convolutional_Networks_2015_CVPR_paper.pdf)).
 
-    - [pascal-fcn32s-dag](models/imagenet-fcn32s-dag.mat)
-    - [pascal-fcn16s-dag](models/imagenet-fcn16s-dag.mat)
-    - [pascal-fcn8s-dag](models/imagenet-fcn8s-dag.mat)
+    - [pascal-fcn32s-dag](models/pascal-fcn32s-dag.mat)
+    - [pascal-fcn16s-dag](models/pascal-fcn16s-dag.mat)
+    - [pascal-fcn8s-dag](models/pascal-fcn8s-dag.mat)
 
 -   **GoogLeNet** model imported from the
     [Caffe version](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet)

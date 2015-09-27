@@ -53,10 +53,7 @@ fi
 if true
 then
     ins=(fcn-32s-pascal fcn-16s-pascal fcn-8s-pascal)
-    outs=(pascal-fcn-32s-dag pascal-fcn-16s-dag pascal-fcn-8s-dag)
-
-    #ins=(fcn-8s-pascal)
-    #outs=(pascal-fcn-8s-dag)
+    outs=(pascal-fcn32s-dag pascal-fcn16s-dag pascal-fcn8s-dag)
 
     for ((i=0;i<${#ins[@]};++i)); do
         in="$data/tmp/caffe/${ins[i]}"
