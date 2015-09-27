@@ -24,64 +24,64 @@ used in MatConvNet.
 
 ## Download the pretrained models
 
--    GoogLeNet model imported from the
-[Caffe version](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet) (DagNN format).
+-   **Fully-Convolutional Networks** (FCN) imported from the
+    [Caffe version](https://github.com/BVLC/caffe/wiki/Model-Zoo)
+    [*DagNN format*].
 
-     **Citation:** `Going Deeper with Convolutions', *Christian
-     Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed,
-     Dragomir Anguelov, Dumitru Erhan, Vincent Vanhoucke, Andrew
-     Rabinovich*, CVPR, 2015,
-     ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Szegedy_Going_Deeper_With_2015_CVPR_paper.pdf)).
+    > *Fully Convolutional Models for Semantic Segmentation',
+    *Jonathan Long, Evan Shelhamer and Trevor Darrell*, CVPR, 2015
+    ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Long_Fully_Convolutional_Networks_2015_CVPR_paper.pdf)).
 
-     - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat)
-       [DagNN format]
+    - [pascal-fcn32s-dag](models/imagenet-fcn32s-dag.mat)
+    - [pascal-fcn16s-dag](models/imagenet-fcn16s-dag.mat)
+    - [pascal-fcn8s-dag](models/imagenet-fcn8s-dag.mat)
 
--    VGG models from the
-     [Very Deep Convolutional Networks for Large-Scale Visual Recognition](http://www.robots.ox.ac.uk/~vgg/research/very_deep/)
-     project.
+-   **GoogLeNet** model imported from the
+    [Caffe version](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet)
+    [*DagNN format*].
 
-     **Citation:** `Very Deep Convolutional Networks for Large-Scale
-     Image Recognition', *Karen Simonyan and Andrew Zisserman,* arXiv
-     technical report, 2014, ([paper](http://arxiv.org/abs/1409.1556/)).
+    > `Going Deeper with Convolutions', *Christian Szegedy, Wei Liu,
+    Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir Anguelov,
+    Dumitru Erhan, Vincent Vanhoucke, Andrew Rabinovich*, CVPR, 2015
+    ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Szegedy_Going_Deeper_With_2015_CVPR_paper.pdf)).
 
-     - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat)
-     - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat)
+    - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat)
 
--    VGG models from the
-     [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
-     paper (v1.0.1).
+-   **VGG-VD** models from the
+    [Very Deep Convolutional Networks for Large-Scale Visual Recognition](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) project.
 
-     **Citation:** `Return of the Devil in the Details: Delving Deep
-     into Convolutional Networks', *Ken Chatfield, Karen Simonyan,
-     Andrea Vedaldi, and Andrew Zisserman,* BMVC 2014
-     ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
+    > `Very Deep Convolutional Networks for Large-Scale Image
+    Recognition', *Karen Simonyan and Andrew Zisserman,* arXiv
+    technical report, 2014,
+    ([paper](http://arxiv.org/abs/1409.1556/)).
 
-     - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
-     - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
-     - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
-     - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
-     - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
-     - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
+    - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat)
+    - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat)
 
--    Berkeley
-     [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
-     (version downloaded on September 2014).
+-   **VGG-S,M,F** models from the
+    [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
+    paper (v1.0.1).
 
-     **Citation:** Please see [Caffe homepage](http://caffe.berkeleyvision.org).
+    > `Return of the Devil in the Details: Delving Deep into
+    Convolutional Networks', *Ken Chatfield, Karen Simonyan, Andrea
+    Vedaldi, and Andrew Zisserman,* BMVC 2014
+    ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
 
-     - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
-     - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
+    - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
+    - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
+    - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
+    - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
+    - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
+    - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
 
--    GoogLeNet model from the
-     [Caffe zoo](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet). This
-     model uses the `DagNN` wrapper instead of `vl_simplenn`.
+-   **Berkeley**
+    [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
+    (version downloaded on September 2014).
 
-     **Citation:** `Going deeper with convolutions.' *C. Szegedy,
-     W. Liu, Y. Jia, P. Sermanet, S. Reed, D. Anguelov, D. Erhan,
-     V. Vanhoucke, and A. Rabinovich,* arXiv preprint,
-     (1409.4842v1-2), 2015.
+    > Citation: please see the [Caffe homepage](http://caffe.berkeleyvision.org).
 
-     - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat)
+    - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
+    - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
 
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:

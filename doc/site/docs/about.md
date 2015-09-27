@@ -23,6 +23,8 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta15 (September 2015). Supports for new `DagNN` blocks and
+    import script for the FCN models.
 -   1.0-beta14 (August 2015). New `DagNN` wrapper for networks with
     complex toplogies. GoogLeNet support. Rewritten `vl_nnloss` block
     with support for more loss functions. New blocks, better

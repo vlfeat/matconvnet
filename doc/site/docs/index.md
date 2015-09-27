@@ -20,13 +20,19 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
     }
 </pre>
 
+> **New:** 1.0-beta15 adds a few new layers to DagNN to support the
+> **Fully-Convolutonal Networks** (FCN) for image
+> segmentation. Pretrained models are
+> [also available here](pretrained.md).
+>
 > **New:** 1.0-beta14 adds a new object-oriented
 > [network wrapper `DagNN`](wrappers.md) supporting arbitrary network
 > topologies. This release also adds GoogLeNet as a pre-trained model,
 > new building blocks such as [`vl_nnconcat`](mfiles/vl_nnconcat.md),
 > a rewritten loss function block [`vl_nnloss`](mfiles/vl_nnloss.md),
-> better documentation, and bugfixes. A new **realtime demo** using
-> GoogLeNet, VGG-VD, or any other similar network.
+> better documentation, and bugfixes. A new **realtime demo** (see
+> `examples/cnn_imagenet_camdemo.m`) using GoogLeNet, VGG-VD, or any
+> other similar network.
 >
 > **New:** 1.0-beta13 adds a much faster version of batch
 > normalization and contains several bugfixes and minor improvements.
