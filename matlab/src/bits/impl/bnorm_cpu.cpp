@@ -1,9 +1,10 @@
 // @file   bnorm_cpu.cpp
 // @brief  Batch normalization implementation (CPU)
 // @author Sebastien Ehrhardt
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Sebastien Ehrhardt.
+Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -17,231 +18,314 @@ the terms of the BSD license (see the COPYING file).
 #include <cstdlib>
 #include <algorithm>
 #include <limits>
+#include <cassert>
 
 /* ---------------------------------------------------------------- */
-/*                                                    bnorm forward */
+/*          compute_moments, compute_ders, compute_ders_and_moments	*/
 /* ---------------------------------------------------------------- */
 
-/* 
- WH is the product of the data width and height
- mean[] and sigma[] must have a number of dimensions equal to depth
- */
+// Compute moments (means and sigmas) from the batch data
+// WH is the product of the data width and height
+// moments is a 2 x depth array with means and sigmas
+
 template<typename T> inline void
-computeMoments(T const * data,
-               T * mean,
-               T * sigma,
-               T epsilon,
-               int WH,
-               int depth,
-               int num)
+compute_moments(T * moments,
+                T const * data,
+                int WH,
+                int depth,
+                int num,
+                T epsilon)
 {
   int mass = WH * num ;
   for(int channel = 0; channel < depth; ++channel) {
     for(int element = 0; element < num; ++element) {
       for(int wh = 0; wh < WH; ++wh){
         T x = data[wh + channel*WH + element*(depth*WH)] ;
-        mean[channel] += x;
-        sigma[channel] += x * x;
+        moments[channel] += x ; // mean
+        moments[channel + depth] += x * x; // sigma
       }
     }
   }
   for(int i = 0; i < depth; ++i) {
-    mean[i] /= mass;
-    sigma[i] = sqrt(sigma[i]/mass - mean[i]*mean[i] + epsilon);
+    moments[i] /= mass;
+    moments[i + depth] = sqrt(moments[i + depth]/mass
+                              - moments[i]*moments[i] + epsilon);
   }
 }
 
+// this version assumes that moments is precomputed
 template<typename T> inline void
-batchNormalizeForward(T * output,
-                      T const* data,
-                      T const* mean,
-                      T const* sigma,
-                      T const* multipliers,
-                      T const* biases,
-                      int WH,
-                      int depth,
-                      int num)
+compute_ders(T * derMultipliers,
+             T * derBiases,
+             T const * moments,
+             T const * data,
+             T const * derOutput,
+             int WH, int depth, int num,
+             T epsilon)
 {
-  T f;
-  T b;
-  for(int channel = 0; channel < depth; ++channel) {
-    f = multipliers[channel] / sigma[channel];
-    b = biases[channel];
-    for(int element = 0; element < num; ++element) {
-      for(int wh = 0; wh < WH; ++wh){
-        int offset = wh + channel*WH + element * (depth*WH) ;
-        output[offset] = f * (data[offset]-mean[channel]) + b ;
-      }
-    }
-  }
-}
-
-template<typename T> static inline void
-bnorm_forward_cpu(T* output,
-                  T const* data,
-                  T const* multipliers,
-                  T const* biases,
-                  int width,
-                  int height,
-                  int depth,
-                  int num,
-                  T epsilon)
-{
-  // First Compute Mu and Sigma together
-  T * mean, * sigma;
-  mean = (T*)calloc(sizeof(T),depth);
-  sigma = (T*)calloc(sizeof(T),depth);
-  int WH = width*height;
-  computeMoments<T>(data, mean, sigma, epsilon, WH, depth, num);
-
-  // Batch Normalize
-  batchNormalizeForward<T>(output, data, mean, sigma, multipliers, biases, WH, depth, num);
-
-  // Delete intermediate variable
-  free(mean);
-  free(sigma);
-}
-
-template<> vl::Error
-vl::impl::bnorm_forward<vl::CPU, float>(Context& context,
-                                        float* output,
-                                        float const* data,
-                                        float const* multipliers,
-                                        float const* biases,
-                                        int height, int width,
-                                        int depth, int size,
-                                        float epsilon)
-{
-  bnorm_forward_cpu<float>(output, data,
-                           multipliers, biases,
-                           height, width,
-                           depth, size, epsilon) ;
-
-  return vlSuccess;
-}
-
-/* ---------------------------------------------------------------- */
-/*                                              bnorm backward      */
-/* ---------------------------------------------------------------- */
-
-template<typename T> inline void
-computeDer(T * derMultipliers,
-           T * derBiases,
-           T * muz,
-           T * mean,
-           T * sigma,
-           T const * data,
-           T const * derOutput,
-           int WH,
-           int depth,
-           int num,
-           T epsilon)
-{
-  int mass = WH*num;
   memset(derMultipliers, 0, sizeof(T) * depth) ;
   memset(derBiases, 0, sizeof(T) * depth) ;
   for(int channel = 0; channel < depth; ++channel){
     for(int element = 0; element < num; ++element ){
       for(int wh = 0; wh < WH; ++wh){
         int offset = wh + channel*WH + element * (WH*depth) ;
-        mean[channel] += data[offset] ;
-        sigma[channel] += data[offset] * data[offset];
         derMultipliers[channel] += derOutput[offset] * data[offset];
         derBiases[channel] += derOutput[offset];
       }
     }
   }
 
-  for(int i = 0; i < depth; ++i){
-    mean[i] /= mass;
-    sigma[i] = sqrt(sigma[i]/mass - mean[i]*mean[i]+epsilon);
-    derMultipliers[i] = (derMultipliers[i] - derBiases[i]*mean[i])/sigma[i];
-    muz[i] = derBiases[i]/mass;
+  T mass = WH*num;
+  for(int i = 0; i < depth; ++i) {
+    T mean = moments[i] ;
+    T sigma = moments[i + depth] ;
+    derMultipliers[i] = (derMultipliers[i] - mean*derBiases[i]) / sigma;
   }
 }
 
+template<typename T> inline void
+compute_ders_and_moments(T * derMultipliers,
+                         T * derBiases,
+                         T * moments,
+                         T const * data,
+                         T const * derOutput,
+                         int WH, int depth, int num,
+                         T epsilon)
+{
+  memset(derMultipliers, 0, sizeof(T) * depth) ;
+  memset(derBiases, 0, sizeof(T) * depth) ;
+  for(int channel = 0; channel < depth; ++channel){
+    for(int element = 0; element < num; ++element ){
+      for(int wh = 0; wh < WH; ++wh){
+        int offset = wh + channel*WH + element * (WH*depth) ;
+        moments[channel] += data[offset] ;
+        moments[channel + depth] += data[offset] * data[offset];
+        derMultipliers[channel] += derOutput[offset] * data[offset];
+        derBiases[channel] += derOutput[offset];
+      }
+    }
+  }
+
+  T mass = WH*num;
+  for(int i = 0; i < depth; ++i) {
+    T mean = moments[i] /= mass ;
+    T sigma = sqrt(moments[i + depth]/mass - mean*mean + epsilon);
+    moments[i] = mean ;
+    moments[i + depth] = sigma ;
+    derMultipliers[i] = (derMultipliers[i] - mean*derBiases[i]) / sigma;
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/*                                         batch_normalize_backward	*/
+/* ---------------------------------------------------------------- */
 
 template<typename T> inline void
-batchNormalizeBackward(T * derData,
-                       T * derMultipliers,
-                       T * muz,
-                       T const * data,
-                       T const * multipliers,
-                       T const * mean,
-                       T const * sigma,
-                       T const * derOutput,
-                       int WH,
-                       int depth,
-                       int num)
+batch_normalize_backward(T * derData,
+                         T const * moments,
+                         T const * data,
+                         T const * multipliers,
+                         T const * derMultipliers,
+                         T const * derBiases,
+                         T const * derOutput,
+                         int WH,
+                         int depth,
+                         int num)
 {
-  int mass = WH*num;
-  T G1, G2;
-  for(int channel =0; channel < depth; ++channel ) {
-    G1 = multipliers[channel]/sigma[channel];
-    G2 = derMultipliers[channel]/(mass*sigma[channel]);
+  T mass = WH*num;
+  for(int channel = 0; channel < depth; ++channel ) {
+    T mean = moments[channel] ;
+    T sigma = moments[channel + depth] ;
+
+    T muz = derBiases[channel]/mass;
+    T G1 = multipliers[channel]/sigma ;
+    T G2 = G1 * derMultipliers[channel]/(mass*sigma);
+
     for(int element = 0; element < num; ++element){
       for(int wh = 0; wh < WH; ++wh){
         int offset = wh + channel*WH + element * (WH*depth) ;
-        derData[offset] = G1 *
-        ((derOutput[offset] - muz[channel]) - G2 * (data[offset]-mean[channel]));
+        derData[offset] = G1 * (derOutput[offset] - muz) - G2 * (data[offset]-mean) ;
       }
     }
   }
 }
 
-template<typename T> static inline void
-bnorm_backward_cpu(T * derData,
-                   T * derMultipliers,
-                   T * derBiases,
-                   T const * data,
-                   T const * multipliers,
-                   T const * biases,
-                   T const * derOutput,
-                   int width,
-                   int height,
-                   int depth,
-                   int num,
-                   T epsilon)
-{
-  // First Compute Mu and Sigma together
-  T * mean, * sigma, * muz;
-  mean = (T*)calloc(sizeof(T),depth);
-  sigma = (T*)calloc(sizeof(T),depth);
-  muz = (T*)calloc(sizeof(T),depth);
-  int WH = width * height;
+/* ---------------------------------------------------------------- */
+/*                                                  bnorm functions */
+/* ---------------------------------------------------------------- */
 
-  // Compute derMultipliers and derBiases and Moments at the same time
-  computeDer<T>(derMultipliers, derBiases,
-                muz, mean, sigma,
-                data, derOutput,
-                WH, depth, num,
-                epsilon);
+namespace vl { namespace impl {
 
-  //Batch Normalize
-  batchNormalizeBackward<T>(derData, derMultipliers, muz,
-                            data, multipliers, mean, sigma, derOutput,
-                            WH, depth, num);
+  template<typename T>
+  struct bnorm<vl::CPU,T>
+  {
 
-  // Delete intermediate variable
-  free(mean);
-  free(sigma);
-}
+    /* ------------------------------------------------------------ */
+    /*                                                      forward */
+    /* ------------------------------------------------------------ */
 
-template<> vl::Error
-vl::impl::bnorm_backward<vl::CPU, float>(Context& context,
-                                         float* derData,
-                                         float* derMultipliers,
-                                         float* derBiases,
-                                         float const* data,
-                                         float const* multipliers,
-                                         float const* biases,
-                                         float const* derOutput,
-                                         int height, int width, int depth, int size,
-                                         float epsilon)
-{
-  bnorm_backward_cpu<float>(derData, derMultipliers,derBiases,
-                            data, multipliers, biases, derOutput,
-                            width, height, depth, size, epsilon);
-  return vlSuccess;
-}
+    static vl::Error
+    forward_given_moments(Context& context,
+                          T* output,
+                          T const* moments,
+                          T const* data,
+                          T const* multipliers,
+                          T const* biases,
+                          int height, int width, int depth, int num)
+    {
+      int WH = height * width ;
+      for(int channel = 0; channel < depth; ++channel) {
+        T mean = moments[channel] ;
+        T sigma = moments[channel + depth] ;
+        T bias = biases[channel];
+        T coefficient = multipliers[channel] / sigma ;
+
+        for(int element = 0; element < num; ++element) {
+          for(int wh = 0; wh < WH; ++wh){
+            int offset = wh + channel*WH + element * (depth*WH) ;
+            output[offset] = coefficient * (data[offset] - mean) + bias ;
+          }
+        }
+      }
+      return vlSuccess;
+    }
+
+    static vl::Error
+    forward(Context& context,
+            T* output,
+            T* moments,
+            T const* data,
+            T const* multipliers,
+            T const* biases,
+            int height, int width, int depth, int size,
+            T epsilon)
+    {
+      vl::Error error = vlSuccess ;
+      bool ownMoments = false ;
+      if (moments == NULL) {
+        moments = (T*)calloc(sizeof(T),2*depth);
+        if (!moments) {
+          error = vlErrorOutOfMemory ;
+          goto done ;
+        }
+        ownMoments = true ;
+      } else {
+        memset(moments, 0, sizeof(T) * 2*depth) ;
+      }
+      compute_moments<T>(moments,
+                         data, width*height, depth, size,
+                         epsilon) ;
+
+      error = bnorm<vl::CPU,T>::forward_given_moments
+      (context,
+       output,
+       moments, data,
+       multipliers, biases,
+       height, width, depth, size) ;
+
+      // Delete intermediate variable
+    done:
+      if (ownMoments)  { free(moments) ; }
+      return error ;
+    }
+
+    /*------------------------------------------------------------- */
+    /*                                                     backward */
+    /* ------------------------------------------------------------ */
+
+    static vl::Error
+    backward_given_moments(Context& context,
+                           T* derData,
+                           T* derMultipliers,
+                           T* derBiases,
+                           T const* moments,
+                           T const* data,
+                           T const* multipliers,
+                           T const* biases,
+                           T const* derOutput,
+                           int height, int width, int depth, int size,
+                           T epsilon)
+    {
+      vl::Error error = vlSuccess ;
+      T * muz;
+      int WH = width * height;
+
+      // Allocate muz
+      muz = (T*)calloc(sizeof(T),depth);
+      if (!muz) {
+        error = vlErrorOutOfMemory ;
+        goto done ;
+      }
+
+      // Compute derMultipliers, derBiases, muz, and moments
+      compute_ders<T>(derMultipliers, derBiases,
+                      moments, data, derOutput,
+                      WH, depth, size,
+                      epsilon);
+
+      // Compute derData
+      batch_normalize_backward<T>(derData,
+                                  moments, data, muz,
+                                  multipliers, derMultipliers, derOutput,
+                                  WH, depth, size);
+
+    done:;
+      if (muz) { free(muz) ; }
+      return error ;
+    }
+
+    static vl::Error
+    backward(Context& context,
+             T* derData,
+             T* derMultipliers,
+             T* derBiases,
+             T* moments,
+             T const* data,
+             T const* multipliers,
+             T const* biases,
+             T const* derOutput,
+             int height, int width, int depth, int size,
+             float epsilon)
+    {
+      vl::Error error = vlSuccess ;
+      T* muz = NULL ;
+      bool ownMoments = false ;
+      int WH = width * height;
+
+      // Allocate or reuse moments
+      if (moments == NULL) {
+        moments = (T*)calloc(sizeof(T),2*depth);
+        if (!moments) {
+          error = vlErrorOutOfMemory ;
+          goto done ;
+        }
+        ownMoments = true ;
+      } else {
+        memset(moments, 0, sizeof(T) * 2*depth) ;
+      }
+
+      // Compute derMultipliers, derBiases, and moments
+      compute_ders_and_moments<T>(derMultipliers, derBiases, moments,
+                                  data, derOutput,
+                                  WH, depth, size,
+                                  epsilon);
+
+      // Compute derData
+      batch_normalize_backward<T>(derData,
+                                  moments, data,
+                                  multipliers,
+                                  derMultipliers, derBiases, derOutput,
+                                  WH, depth, size);
+
+      // Delete intermediate variable
+    done:;
+      if (ownMoments) { free(moments) ; }
+      return error ;
+    }
+  } ;
+  
+} } // namespace vl::impl
+
+template struct vl::impl::bnorm<vl::CPU, float> ;
+
 

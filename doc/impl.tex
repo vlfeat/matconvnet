@@ -253,7 +253,25 @@ where
 \subsection{Batch normalization}\label{s:impl-bnorm}
 % ------------------------------------------------------------------
 
-The derivative of the input with respect to the network output is computed as follows:
+The derivative of the of the network output $z$ with respect to the multipliers $w_k$ and biases $b_k$ is given by
+\begin{align*}
+	\frac{dz}{dw_k} &= \sum_{i''j''k''t''}
+\frac{dz}{d y_{i''j''k''t''}} 
+\frac{d y_{i''j''k''t''}}{d w_k}
+=
+\sum_{i''j''t''}
+\frac{dz}{d y_{i''j''kt''}} 
+\frac{x_{i''j''kt''} - \mu_{k}}{\sqrt{\sigma_k^2 + \epsilon}},
+\\
+\frac{dz}{db_k} &= \sum_{i''j''k''t''}
+\frac{dz}{d y_{i''j''k''t''}} 
+\frac{d y_{i''j''k''t''}}{d w_k}
+=
+\sum_{i''j''t''}
+\frac{dz}{d y_{i''j''kt''}}.
+\end{align*}
+
+The derivative of the network output $z$ with respect to the block input $x$ is computed as follows:
 \[
 \frac{dz}{dx_{ijkt}} = \sum_{i''j''k''t''}
 \frac{dz}{d y_{i''j''k''t''}} 
@@ -323,14 +341,31 @@ i.e.
 \right)
 \\
 &-
-\frac{w_k}{\sigma^2_k + \epsilon}
+\frac{w_k}{\sqrt{\sigma^2_k + \epsilon}}
 \,
 \frac{x_{ijkt} - \mu_k}{\sqrt{\sigma^2_k + \epsilon}}
 \,
 \frac{1}{HWT}
 \sum_{i''j''kt''}
 \frac{dz}{d y_{i''j''kt''}} 
-\left(x_{i''j''kt''} - \mu_k\right).
+\frac{x_{i''j''kt''} - \mu_k}{\sqrt{\sigma^2_k + \epsilon}}
+\end{align*}
+We can identify some of these terms with the ones computed as derivatives of bnorm with respect to $w_k$ and $\mu_k$:
+\begin{align*}
+\frac{dz}{dx_{ijkt}}
+&=
+\frac{w_k}{\sqrt{\sigma^2_k + \epsilon}}
+\left(
+\frac{dz}{d y_{ijkt}} 
+-
+\frac{1}{HWT}
+\frac{dz}{d b_k} 
+-
+\frac{x_{ijkt} - \mu_k}{\sqrt{\sigma^2_k + \epsilon}}
+\,
+\frac{1}{HWT}
+\frac{dz}{dw_k}
+\right)
 \end{align*}
 
 % ------------------------------------------------------------------

@@ -15,16 +15,28 @@
 %   multiplicative and additive constant to scale each input
 %   channel. Note that statistics are computed across all feature maps
 %   in the batch packed in the 4D tensor X. Note also that the
-%   constant EPSILON is used to regularize the computation of sigma(k)
+%   constant EPSILON is used to regularize the computation of
+%   sigma(k).
 %
 %   [DZDX,DZDG,DZDB] = VL_NNBNORM(X,G,B,DZDY) computes the derviatives
 %   of the block projected onto DZDY. DZDX, DZDG, DZDB and DZDY have
 %   the same dimensions as X, G, B, and Y respectivey.
 %
+%   Optionally, [Y,MEAN,MOMENTS] = VL_NNBNORM(___) and
+%   [DZDX,DZDG,DZDB,MOMENTS] = VL_NNBNORM(___,DZDY) return the
+%   values of the vectors mu and sigma in the formulas above. Here,
+%   MOMENTS is a 2 x DEPTH array, stacking mu and sigma as rows.
+%
 %   VL_NNBNROM(..., 'Option', value) takes the following options:
 %
 %   `Epsilon`:: 1e-4
 %       Specify the EPSILON constant.
+%
+%   `Moments`:: not specified.
+%       The array MOMENTS with the values of mu and sigma to use
+%       instead of computing them according to the forumals
+%       above. This is useufl to disable batch normalization during
+%       testing.
 %
 %   See also: VL_NNNORMALIZE().
 

@@ -133,8 +133,16 @@ vl::MexTensor::MexTensor(MexContext & context)
 mxArray *
 vl::MexTensor::relinquish()
 {
-  isArrayOwner = false ;
-  return (mxArray*) array ;
+  if (isArrayOwner) {
+    isArrayOwner = false ;
+    return (mxArray*) array ;
+  } else {
+    // this is because we may be encapsulating an input argument
+    // and we may be trying to return it
+    // we should probably use the undocumented
+    // extern mxArray *mxCreateSharedDataCopy(const mxArray *pr);
+    return mxDuplicateArray(array) ;
+  }
 }
 
 void

@@ -1,13 +1,14 @@
 // @file vl_nnbnorm.cu
 // @brief Batch normalization MEX wrapper
 // @author Sebastien Ehrhardt
+// @author Andrea Vedaldi
 
 /*
-   Copyright (C) 2015 Sebastien Ehrhardt.
-   All rights reserved.
+Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi.
+All rights reserved.
 
-   This file is part of the VLFeat library and is made available under
-   the terms of the BSD license (see the COPYING file).
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
 */
 
 #include "bits/mexutils.h"
@@ -24,12 +25,14 @@
 enum {
   opt_verbose = 0,
   opt_epsilon,
+  opt_moments,
 } ;
 
 /* options */
 vlmxOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
-  {"Epsilon",	       1,   opt_epsilon           },
+  {"Epsilon",	         1,   opt_epsilon           },
+  {"Moments",          1,   opt_moments           },
   {0,                  0,   0                     }
 } ;
 
@@ -57,7 +60,10 @@ enum {
 } ;
 
 enum {
-  OUT_RESULT = 0, OUT_DERMULTIPLIERS, OUT_DERBIASES, OUT_END
+  OUT_RESULT = 0,
+  OUT_DERMULTIPLIERS,
+  OUT_DERBIASES,
+  OUT_END
 } ;
 
 void mexFunction(int nout, mxArray *out[],
@@ -70,6 +76,9 @@ void mexFunction(int nout, mxArray *out[],
   bool computeDerData = true ;
   bool computeDerMultipliers = true ;
   bool computeDerBiases = true ;
+  bool givenMomentsMode = false ;
+  bool returnMomentsMode = false ;
+  mxArray const* momentsArray ;
 
   int verbosity = 0 ;
   int opt ;
@@ -89,6 +98,7 @@ void mexFunction(int nout, mxArray *out[],
   } else {
     backMode = (nin >= 4) ;
   }
+  returnMomentsMode = backMode ? (nout > 3) : (nout > 1) ;
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
@@ -100,7 +110,13 @@ void mexFunction(int nout, mxArray *out[],
           mexErrMsgTxt("EPSILON is not a plain scalar.") ;
         }
         epsilon = (float)mxGetPr(optarg)[0] ;
-      default: break ;
+        break ;
+      case opt_moments:
+        momentsArray = optarg ;
+        givenMomentsMode = true ;
+        break ;
+      default:
+        break ;
     }
   }
 
@@ -108,11 +124,15 @@ void mexFunction(int nout, mxArray *out[],
   vl::MexTensor multipliers(context);
   vl::MexTensor biases(context);
   vl::MexTensor derOutput(context) ;
+  vl::MexTensor moments(context) ;
 
   data.init(in[IN_DATA]) ;
   multipliers.init(in[IN_MULTIPLIERS]) ;
   biases.init(in[IN_BIASES]) ;
   if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
+  if (givenMomentsMode) {
+    moments.init(momentsArray) ;
+  }
 
   /* Check for GPU/data class consistency */
   if (! vl::areCompatible(data, multipliers)) {
@@ -127,6 +147,10 @@ void mexFunction(int nout, mxArray *out[],
   if (backMode && (data.getGeometry() != derOutput.getGeometry())) {
     mexErrMsgTxt("DATA and DEROUTPUT do not have the same size.") ;
   }
+  if (givenMomentsMode && ! vl::areCompatible(data, moments))
+  {
+    mexErrMsgTxt("DATA and MOMENTS are not both CPU or GPU arrays.") ;
+  }
 
   /* Get the filter geometry */
   vl::TensorGeometry multipliersGeom(multipliers) ;
@@ -137,6 +161,12 @@ void mexFunction(int nout, mxArray *out[],
   if (biasesGeom.getHeight() != data.getDepth()) {
     mexErrMsgTxt("The BIASES size does not match the DATA depth.") ;
   }
+  if (givenMomentsMode) {
+    vl::TensorGeometry momentsGeom(moments) ;
+    if (momentsGeom.getNumElements() != 2*data.getDepth()) {
+      mexErrMsgTxt("The MOMENTS size does not match the DATA depth.") ;
+    }
+  }
 
   /* Create output buffers */
   vl::Device type = data.getMemoryType() ;
@@ -144,6 +174,11 @@ void mexFunction(int nout, mxArray *out[],
   vl::MexTensor derData(context) ;
   vl::MexTensor derMultipliers(context) ;
   vl::MexTensor derBiases(context) ;
+
+  if (returnMomentsMode & !givenMomentsMode) {
+    vl::TensorGeometry momentsGeom(data.getDepth(), 2, 1, 1) ;
+    moments.init(type, momentsGeom) ;
+  }
 
   if (!backMode) {
     output.init(type, data.getGeometry()) ;
@@ -160,7 +195,11 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnbnorm: mode %s; %s\n",  (data.getMemoryType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnbnorm: mode %s; %s; moments %s/%s\n",
+              (data.getMemoryType()==vl::GPU)?"gpu":"cpu",
+              backMode?"backward":"forward",
+              givenMomentsMode?"given":"computed",
+              returnMomentsMode?"returned":"discared") ;
     vl::print("vl_nnbnorm: data: ", data) ;
     vl::print("vl_nnbnorm: multipliers: ", multipliers) ;
     vl::print("vl_nnbnorm: biases: ", biases) ;
@@ -172,6 +211,7 @@ void mexFunction(int nout, mxArray *out[],
     } else {
       vl::print("vl_nnbnorm: output: ", output) ;
     }
+    if (moments) { vl::print("vl_nnbnorm: moments: ", moments) ; }
   }
 
   /* -------------------------------------------------------------- */
@@ -181,22 +221,46 @@ void mexFunction(int nout, mxArray *out[],
   vl::Error error ;
 
   if (!backMode) {
-    error = vl::nnbnorm_forward(context,
-                                output,
-                                data,
-                                multipliers,
-                                biases,
-                                epsilon) ;
+    if (!givenMomentsMode) {
+      error = vl::nnbnorm_forward(context,
+                                  output,
+                                  moments, // ok if null
+                                  data,
+                                  multipliers,
+                                  biases,
+                                  epsilon) ;
+    } else {
+      error = vl::nnbnorm_forward_given_moments(context,
+                                                output,
+                                                moments,
+                                                data,
+                                                multipliers,
+                                                biases) ;
+    }
   } else {
-    error = vl::nnbnorm_backward(context,
-                                 derData,
-                                 derMultipliers,
-                                 derBiases,
-                                 data,
-                                 multipliers,
-                                 biases,
-                                 derOutput,
-                                 epsilon);
+    if (!givenMomentsMode) {
+      error = vl::nnbnorm_backward(context,
+                                   derData,
+                                   derMultipliers,
+                                   derBiases,
+                                   moments,
+                                   data,
+                                   multipliers,
+                                   biases,
+                                   derOutput,
+                                   epsilon);
+    } else {
+      error = vl::nnbnorm_backward_given_moments(context,
+                                                 derData,
+                                                 derMultipliers,
+                                                 derBiases,
+                                                 moments,
+                                                 data,
+                                                 multipliers,
+                                                 biases,
+                                                 derOutput,
+                                                 epsilon) ;
+    }
   }
 
   /* -------------------------------------------------------------- */
@@ -206,11 +270,14 @@ void mexFunction(int nout, mxArray *out[],
   if (error != vl::vlSuccess) {
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
-  if (backMode) {
+  if (!backMode) {
+    out[OUT_RESULT] = output.relinquish() ;
+  } else {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERMULTIPLIERS] = (computeDerMultipliers)? derMultipliers.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERBIASES] = (computeDerBiases) ? derBiases.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-  } else {
-    out[OUT_RESULT] = output.relinquish() ;
+  }
+  if (moments) {
+    out[backMode ? 3 : 1] = moments.relinquish() ;
   }
 }
