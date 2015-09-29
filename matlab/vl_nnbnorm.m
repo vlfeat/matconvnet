@@ -4,38 +4,39 @@
 %
 %      Y(i,j,k,t) = G(k) * (X(i,j,k,t) - mu(k)) / sigma(k) + B(k)
 %
-%   where
+%  where:
 %
 %      mu(k) = mean_ijt X(i,j,k,t),
-%      sigma(k) = sqrt(sigma2(k) + EPSILON),
-%      sigma2(k) = mean_ijt (X(i,j,k,t) - mu(k))^2
+%      sigma2(k) = mean_ijt (X(i,j,k,t) - mu(k))^2,
+%      sigma(k) = sqrt(sigma2(k) + EPSILON)
 %
-%   are respectively the per-channel mean, standard deviation, and
-%   variance of the input and G(k) and B(k) define respectively a
-%   multiplicative and additive constant to scale each input
-%   channel. Note that statistics are computed across all feature maps
-%   in the batch packed in the 4D tensor X. Note also that the
-%   constant EPSILON is used to regularize the computation of
-%   sigma(k).
+%   are respectively the per-channel mean, variance, and standard
+%   deviation of a channel of the data X and G(k) and B(k) define
+%   respectively a multiplicative and additive constant to scale each
+%   data channel. Note that statistics are accumulated across all the
+%   items of the batch in the 4D tensor X (from which the name batch
+%   normalization). The constant EPSILON is used to regularize the
+%   computation of sigma(k) and avoid divisions by zero or very small
+%   numbers.
 %
 %   [DZDX,DZDG,DZDB] = VL_NNBNORM(X,G,B,DZDY) computes the derviatives
 %   of the block projected onto DZDY. DZDX, DZDG, DZDB and DZDY have
 %   the same dimensions as X, G, B, and Y respectivey.
 %
-%   Optionally, [Y,MEAN,MOMENTS] = VL_NNBNORM(___) and
-%   [DZDX,DZDG,DZDB,MOMENTS] = VL_NNBNORM(___,DZDY) return the
-%   values of the vectors mu and sigma in the formulas above. Here,
-%   MOMENTS is a 2 x DEPTH array, stacking mu and sigma as rows.
+%   Optionally, [Y,MEAN,MOMENTS] = VL_NNBNORM(...) and
+%   [DZDX,DZDG,DZDB,MOMENTS] = VL_NNBNORM(...,DZDY) return the values
+%   of the vectors mu and sigma in the formulas above. Here, MOMENTS
+%   is a 2 x DEPTH array, where the vectors mu and sigma are the rows.
 %
 %   VL_NNBNROM(..., 'Option', value) takes the following options:
 %
 %   `Epsilon`:: 1e-4
-%       Specify the EPSILON constant.
+%       Specifies the constant EPSILON in the formuals above.
 %
-%   `Moments`:: not specified.
-%       The array MOMENTS with the values of mu and sigma to use
-%       instead of computing them according to the forumals
-%       above. This is useufl to disable batch normalization during
+%   `Moments`:: unspecified
+%       Specifies an array MOMENTS with the values of mu and sigma to
+%       use instead of computing them according to the equations
+%       above. This is useful to disable batch normalization during
 %       testing.
 %
 %   See also: VL_NNNORMALIZE().
