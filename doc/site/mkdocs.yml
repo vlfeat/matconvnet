@@ -46,5 +46,6 @@ pages:
   - vl_rootnn: 'mfiles/vl_rootnn.md'
   - vl_setupnn: 'mfiles/vl_setupnn.md'
 
-- Developer notes: 'developers.md'
-- Compiling from the command line: 'install-alt.md'
+- Contributing:
+  - Developers notes: 'developers.md'
+  - Compiling from the command line: 'install-alt.md'

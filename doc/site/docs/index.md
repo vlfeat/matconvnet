@@ -23,7 +23,10 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > **New:** 1.0-beta15 adds a few new layers to DagNN to support the
 > **Fully-Convolutonal Networks** (FCN) for image
 > segmentation. Pretrained models are
-> [also available here](pretrained.md).
+> [also available here](pretrained.md). Batch normalization
+> ([`vl_nnbnorm`](mfiles/vl_nnbnorm.md)) has also been improved adding
+> features that will make it easier to remove the layer after training
+> a model.
 >
 > **New:** 1.0-beta14 adds a new object-oriented
 > [network wrapper `DagNN`](wrappers.md) supporting arbitrary network

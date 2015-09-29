@@ -1,4 +1,4 @@
-# Notes for developers
+# Developer notes
 
 ## Understand MatConvNet and contribute to it
 
