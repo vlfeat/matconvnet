@@ -719,7 +719,7 @@
 		2D375DB118A7F064008A97EE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = "Andrea Vedaldi";
 			};
 			buildConfigurationList = 2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconvnet" */;
@@ -808,6 +808,7 @@
 				DEBUG = YES;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
+				ENABLE_TESTABILITY = YES;
 				EXPORTED_SYMBOLS_FILE = "$(MATLABROOT)/extern/lib/maci64/mexFunction.map";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
