@@ -234,11 +234,13 @@ if args.average_image:
     average_image = avgim_data['mean_img']
   else:
     print 'Unsupported average image format {}'.format(avgim_ext)
-elif args.average_value:
+
+if args.average_value:
   rgb = make_tuple(args.average_value)
   print 'Using average image value', rgb
   # this will be resized later to a constant image
   average_image = np.array(rgb,dtype=float).reshape(1,1,3,order='F')
+  resize_average_image = False
 
 # --------------------------------------------------------------------
 #                                                        Load synseths
@@ -568,11 +570,12 @@ cmodel.display()
 #                                                        Normalization
 # --------------------------------------------------------------------
 
-if resize_average_image:
-  x = numpy.linspace(0, average_image.shape[1]-1, dataSize[0])
-  y = numpy.linspace(0, average_image.shape[0]-1, dataSize[1])
-  x, y = np.meshgrid(x, y, sparse=False, indexing='xy')
-  average_image = bilinear_interpolate(average_image, x, y)
+if average_image is not None:
+  if resize_average_image:
+    x = numpy.linspace(0, average_image.shape[1]-1, dataSize[0])
+    y = numpy.linspace(0, average_image.shape[0]-1, dataSize[1])
+    x, y = np.meshgrid(x, y, sparse=False, indexing='xy')
+    average_image = bilinear_interpolate(average_image, x, y)
 else:
   average_image = np.zeros((0,),dtype='float')
 

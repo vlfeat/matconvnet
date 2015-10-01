@@ -370,8 +370,9 @@ class CaffePooling(CaffeLayer):
         # is the correct one (it corresponds to the filters)
         self.padCorrected = self.pad
         for i in [0, 1]:
-            self.padCorrected[1 + i*2] += \
-                ceil((size[i] - ks[i])/float(stride[i]))*stride[i] + ks[i] - size[i]
+            self.padCorrected[1 + i*2] += min(
+                self.pad[1 + i*2] + self.stride[i] -1,
+                self.kernelSize[i] - 1)
         model.vars[self.outputs[0]].size = \
             getFilterOutputSize(size[0:2], ks, self.stride, self.padCorrected) + \
             size[2:4]

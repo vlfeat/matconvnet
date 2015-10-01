@@ -17,7 +17,7 @@ classdef Crop < dagnn.ElementWise
       cropu = obj.inputSizes{1}(2) - obj.inputSizes{2}(2) ;
       cropv1 = max(0, cropv - obj.crop(1)) ;
       cropu1 = max(0, cropu - obj.crop(2)) ;
-      crop = [cropv1, cropv - cropv1, cropu1, cropu - cropu1] ;
+      crop = [cropv - cropv1, cropv1, cropu - cropu1, cropu1] ;
     end
 
     function outputs = forward(obj, inputs, params)

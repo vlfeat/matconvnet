@@ -59,6 +59,7 @@ then
         in="$data/tmp/caffe/${ins[i]}"
         out="$data/models/${outs[i]}.mat"
         if test ! -e "$out" ; then
+            #PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=cpp \
             $converter \
                 --caffe-variant=caffe_6e3916 \
                 --preproc=fcn \
