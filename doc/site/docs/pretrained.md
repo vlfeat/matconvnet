@@ -22,7 +22,14 @@ used in MatConvNet.
 > 3.  These models are provided here for convenience, but please
 >     credit the original authors.
 
-## Download the pretrained models
+## Using the pretrained models
+
+In order to run, say, `imagenet-vgg-s` on a test image, start from the
+example code included in the [quickstart guide](quick.md).
+
+## Downloading the pre-trained models
+
+### Miscellaneous models
 
 -   **Fully-Convolutional Networks** (FCN) imported from the
     [Caffe version](https://github.com/BVLC/caffe/wiki/Model-Zoo)
@@ -35,6 +42,20 @@ used in MatConvNet.
     - [pascal-fcn32s-dag](models/pascal-fcn32s-dag.mat)
     - [pascal-fcn16s-dag](models/pascal-fcn16s-dag.mat)
     - [pascal-fcn8s-dag](models/pascal-fcn8s-dag.mat)
+
+    The performance measured on the PASCAL VOC 2011 validation data
+    subset used in the revised version of the paper above:
+
+    | Model   | mean IOU | mean pix. accuracy | pixel accuracy |
+    |---------|----------|--------------------|----------------|
+    | FNC-32s | 59.43    | 89.12              | 73.28          |
+    | FNC-16s | 62.35    | 90.02              | 75.74          |
+    | FNC-8s  | 62.69    | 90.33              | 75.86          |
+
+### ImageNet ILSVRC models
+
+These modesl arte trained to perform classification in the ImageNet
+ILSVRC challenge data:
 
 -   **GoogLeNet** model imported from the
     [Caffe version](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet)
@@ -86,7 +107,6 @@ used in MatConvNet.
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
-
 |               model|top-1 err.|top-5 err.|  images/s|
 |--------------------|----------|----------|----------|
 |           caffe-ref|      42.7|      19.8|     205.4|
@@ -107,8 +127,3 @@ depending on the network but also on how the data was preprocessed;
 for example, `caffe-ref` and `caffe-alex` should be as fast as
 `vgg-f`, but they are not since images were pre-processed in such a
 way that MATLAB had to call `imresize` for each input image.
-
-## Using the pretrained models
-
-In order to run, say, `imagenet-vgg-s` on a test image, start from the
-example code included in the [quickstart guide](quick.md).
