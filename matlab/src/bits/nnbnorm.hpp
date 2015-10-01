@@ -1,9 +1,10 @@
 // @file nnbnorm.hpp
 // @brief Batch normalizatoion block
 // @author Sebastien Ehrhardt
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Sebastien Ehrhardt.
+Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

@@ -431,7 +431,7 @@ __global__ void normalize_moments(T * moments,
 
 /* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
-/*                                                    compute_ders	*/
+/*                                                     compute_ders */
 /* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
@@ -671,7 +671,6 @@ __global__ void accumulate_ders_and_moments_finish(T * derMultipliers,
   }
 }
 
-//
 template<typename T>
 __global__ void normalize_ders_and_moments(T * derMultipliers,
                                            T * derBiases,
@@ -692,11 +691,11 @@ __global__ void normalize_ders_and_moments(T * derMultipliers,
 
 /* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
-/*                                                         forward	*/
+/*                                             forward and backward */
 /* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-// Call this like compute_moments, but it does not need a scratch sapce
+// Call this kernel like compute_moments, but it does not need a scratch sapce
 
 template<typename T>
 __global__ void batch_normalize_forward(T * outputData,
@@ -736,12 +735,6 @@ __global__ void batch_normalize_forward(T * outputData,
     plane += planeStride ;
   }
 }
-
-/* ---------------------------------------------------------------- */
-/* ---------------------------------------------------------------- */
-/*                                                         Backward */
-/* ---------------------------------------------------------------- */
-/* ---------------------------------------------------------------- */
 
 template<typename T>
 __global__ void batch_normalize_backward(T * derData,
@@ -791,7 +784,9 @@ __global__ void batch_normalize_backward(T * derData,
 }
 
 /* ---------------------------------------------------------------- */
-/*                                                  bnorm functions */
+/* ---------------------------------------------------------------- */
+/*                                                  bnorm interface */
+/* ---------------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
 namespace vl { namespace impl {
