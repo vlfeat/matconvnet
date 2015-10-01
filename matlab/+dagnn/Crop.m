@@ -1,7 +1,8 @@
 classdef Crop < dagnn.ElementWise
-%CROP  DagNN Cropping Layer
+%CROP DagNN cropping layer.
 %    This is a pecurial layer from FCN. It crops inputs{1} to
 %    match the size of inputs{2} (starting with a base crop amount).
+%    A future version
 
   properties
     crop = [0 0]

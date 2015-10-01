@@ -1,5 +1,5 @@
 function y = vl_nncrop(x, crop, dzdy, inputSize)
-%VL_NNCROP NN crop
+%VL_NNCROP CNN crop.
 %   Y = VL_NNCROP(X, CROP) crops the input X spatially. CROP specifies the
 %   amount of cropping as [TOP, BOTTOM, LEFT, RIGHT].
 %
@@ -10,8 +10,6 @@ function y = vl_nncrop(x, crop, dzdy, inputSize)
 %   DZDX = VL_NNCROP([], CROP, DZDY, INPUTSIZE) is an alternative to
 %   the previous call in which X is omitted and its size is passed as
 %   INPUTSIZE.
-%
-%   See Also: VL_NNCENTERCROP().
 
 % Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi.
 % All rights reserved.
