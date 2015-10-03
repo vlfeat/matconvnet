@@ -5,6 +5,7 @@ from numpy import array
 import scipy
 import scipy.io
 import scipy.misc
+import copy
 
 layers_type = {}
 layers_type[0]  = 'none'
@@ -156,6 +157,7 @@ class CaffeLayer(object):
 
     def display(self):
         print "Layer ", self.name
+        print "  Type: %s" % (self.__class__.__name__)
         print "  Inputs: %s" % (self.inputs,)
         print "  Outputs: %s" % (self.outputs,)
         print "  Params: %s" % (self.params,)
@@ -195,6 +197,24 @@ class CaffeReLU(CaffeElementWise):
     def toMatlab(self):
         mlayer = super(CaffeReLU, self).toMatlab()
         mlayer['type'] = u'dagnn.ReLU'
+        return mlayer
+
+class CaffeLRN(CaffeElementWise):
+    def __init__(self, name, inputs, outputs, local_size, kappa, alpha, beta):
+        super(CaffeLRN, self).__init__(name, inputs, outputs)
+        self.local_size = local_size
+        self.kappa = kappa
+        self.alpha = alpha
+        self.beta = beta
+
+    def toMatlab(self):
+        mlayer = super(CaffeLRN, self).toMatlab()
+        mlayer['type'] = u'dagnn.LRN'
+        mlayer['block'][0] = dictToMatlabStruct(
+            {'param': row([self.local_size,
+                           self.kappa,
+                           self.alpha / self.local_size,
+                           self.beta])})
         return mlayer
 
 class CaffeSoftMax(CaffeElementWise):
@@ -271,7 +291,7 @@ class CaffeConv(CaffeLayer):
     def transpose(self, model):
         self.kernelSize = reorder(self.kernelSize, [1,0])
         self.stride = reorder(self.stride, [1,0])
-        self.pad = reorder(self.pad, [1,0,3,2])
+        self.pad = reorder(self.pad, [2,3,0,1])
         print model.params[self.params[0]].value
         if model.params[self.params[0]].value.size > 0:
             print "Layer %s transposing filters" % self.name
@@ -291,6 +311,30 @@ class CaffeConv(CaffeLayer):
              'pad': row(self.pad),
              'stride': row(self.stride)})
         return mlayer
+
+
+# --------------------------------------------------------------------
+#                                                        Inner Product
+# --------------------------------------------------------------------
+
+# special case: inner product
+class CaffeInnerProduct(CaffeConv):
+    def __init__(self, name, inputs, outputs, bias_term, num_outputs):
+        ks = [None, None, None, num_outputs]
+        super(CaffeInnerProduct, self).__init__(name, inputs, outputs,
+                                                ks,
+                                                bias_term,
+                                                num_outputs, # n filters
+                                                1, # n groups
+                                                [1, 1], # stride
+                                                [0, 0, 0, 0]) # pad
+
+    def reshape(self, model):
+        if len(model.vars[self.inputs[0]].size) == 0: return
+        s = model.vars[self.inputs[0]].size
+        self.kernelSize = [s[0], s[1], s[2], self.numFilters]
+        print "inner prod size", self.kernelSize
+        super(CaffeInnerProduct, self).reshape(model)
 
 # --------------------------------------------------------------------
 #                                                        Deconvolution
@@ -319,7 +363,7 @@ class CaffeDeconvolution(CaffeConv):
     def transpose(self, model):
         self.kernelSize = reorder(self.kernelSize, [1,0])
         self.stride = reorder(self.stride, [1,0])
-        self.pad = reorder(self.pad, [1,0,3,2])
+        self.pad = reorder(self.pad, [2,3,0,1])
         if model.params[self.params[0]].value.size > 0:
             print "Layer %s transposing filters" % self.name
             param = model.params[self.params[0]]
@@ -368,14 +412,15 @@ class CaffePooling(CaffeLayer):
         stride = self.stride
         # MatConvNet uses a slighly different definition of padding, which we think
         # is the correct one (it corresponds to the filters)
-        self.padCorrected = self.pad
+        self.padCorrected =  copy.deepcopy(self.pad)
         for i in [0, 1]:
-            self.padCorrected[1 + i*2] += min(
-                self.pad[1 + i*2] + self.stride[i] -1,
+            self.padCorrected[1 + i*2] = min(
+                self.pad[1 + i*2] + self.stride[i] - 1,
                 self.kernelSize[i] - 1)
+        print "pooling corrections ks:", ks, self.stride, self.padCorrected
         model.vars[self.outputs[0]].size = \
             getFilterOutputSize(size[0:2], ks, self.stride, self.padCorrected) + \
-            size[2:4]
+            size[2:5]
 
     def getTransforms(self, model):
         return [[getFilterTransform(self.kernelSize, self.stride, self.pad)]]
@@ -383,7 +428,8 @@ class CaffePooling(CaffeLayer):
     def transpose(self, model):
         self.kernelSize = reorder(self.kernelSize, [1,0])
         self.stride = reorder(self.stride, [1,0])
-        self.pad = reorder(self.pad, [1,0,3,2])
+        self.pad = reorder(self.pad, [2,3,0,1])
+        self.padCorrected = reorder(self.padCorrected, [2,3,0,1])
 
     def toMatlab(self):
         mlayer = super(CaffePooling, self).toMatlab()
@@ -393,15 +439,6 @@ class CaffePooling(CaffeLayer):
              'stride': row(self.stride),
              'pad': row(self.padCorrected)})
         return mlayer
-
-class CaffeInnerProduct(CaffeLayer):
-    def __init__(self, name, inputs, outputs, paramValues):
-        super(CaffeInnerProduct, self).__init__(name, inputs, outputs)
-        self.params =  [name + x for x in ['f' 'b']]
-        self.paramValues = paramValues
-
-    def reshape(self):
-        assert(false) # we need to reshape the parameter arrays?
 
 # --------------------------------------------------------------------
 #                                                         Other Layers
@@ -418,8 +455,24 @@ class CaffeConcat(CaffeLayer):
     def toMatlab(self):
         mlayer = super(CaffeConcat, self).toMatlab()
         mlayer['type'][0] = u'dagnn.Concat'
-        mlayer['block'][0] = dictToMatlabStruct({'dim': float(self.concatDim)})
+        mlayer['block'][0] = dictToMatlabStruct({'dim': float(self.concatDim)+1})
         return mlayer
+
+    def reshape(self, model):
+        sizes = [model.vars[x].size for x in self.inputs]
+        osize = sizes[0]
+        for s in sizes:
+            for i in range(len(s)):
+                if self.concatDim == i:
+                    osize[i] = osize[i] + s[i]
+                else:
+                    if osize[i] != s[i]:
+                        print "Warning: concat layer: inconsistent input dimensions", sizes
+        model.vars[self.outputs[0]].size = osize
+
+    def display(self):
+        super(CaffeConcat, self).display()
+        print "  Concat Dim: ", self.concatDim
 
 class CaffeEltWise(CaffeElementWise):
     def __init__(self, name, inputs, outputs, operation, coeff, stableProdGrad):
