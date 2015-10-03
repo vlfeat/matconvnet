@@ -17,10 +17,11 @@ pushd `dirname $0` > /dev/null
 SCRIPTPATH=`pwd`
 popd > /dev/null
 
-converter="python $SCRIPTPATH/import-caffe-dag.py"
+#converter="python -m pdb $SCRIPTPATH/import-caffe-dag2.py"
+converter="python $SCRIPTPATH/import-caffe-dag2.py"
 data="$SCRIPTPATH/../data"
 
-mkdir -p "$data"/{tmp/caffe,googlenet,models}
+mkdir -pv "$data"/{tmp/caffe,tmp/googlenet,models}
 
 # --------------------------------------------------------------------
 # GoogLeNet
@@ -33,18 +34,20 @@ then
         cd "$data/tmp/caffe"
         wget -c -nc $CAFFE_URL/caffe_ilsvrc12.tar.gz
         tar xzvf caffe_ilsvrc12.tar.gz
+
         # deep models
         cd "$data/tmp/googlenet"
         wget -c -nc $GOOGLENET_PROTO_URL
         wget -c -nc $GOOGLENET_MODEL_URL
         wget -c -nc $GOOGLENET_MEAN_URL
+
+        # apply patch to proto file
+        patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
     )
 fi
 
 if true
 then
-    cd $SCRIPTPATH
-    patch -Np0 < googlenet_prototxt_patch.diff
     base="$data/tmp/googlenet"
     in=(imagenet_googlenet)
     out=(googlenet)
@@ -62,8 +65,8 @@ then
                 --synsets="$data/tmp/${synset[i]}/synset_words.txt" \
                 --append-softmax="cls3_fc" \
                 "$base/train_val_googlenet.prototxt" \
-                "$base/imagenet_googlenet.caffemodel" \
-                "$out"
+                "$out" \
+                --caffe-data="$base/imagenet_googlenet.caffemodel"
         else
             echo "$out exists"
         fi
