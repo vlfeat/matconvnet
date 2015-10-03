@@ -333,6 +333,16 @@ for layer in layers:
                                   [opts.pad] * 4)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype == 'innerproduct' or ltype == 'inner_product':
+    opts = getopts(layer, 'inner_product_param')
+    #assert(opts.axis == 1)
+    clayer = CaffeInnerProduct(layer.name,
+                               layer.bottom,
+                               layer.top,
+                               opts.bias_term,
+                               opts.num_output)
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'relu':
     clayer = CaffeReLU(layer.name,
                        layer.bottom,
@@ -355,7 +365,10 @@ for layer in layers:
     clayer = CaffeLRN(layer.name,
                       layer.bottom,
                       layer.top,
-                      [local_size, kappa, alpha/local_size, beta])
+                      local_size,
+                      kappa,
+                      alpha,
+                      beta)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'pool':
@@ -371,12 +384,6 @@ for layer in layers:
                           kernelSize,
                           [opts.stride]*2,
                           [opts.pad]*4)
-
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'innerproduct' or ltype == 'inner_product':
-    clayer = CaffeInnerProduct(layer.name,
-                               layer.bottom,
-                               layer.top)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'dropout':
@@ -404,7 +411,7 @@ for layer in layers:
     clayer = CaffeConcat(layer.name,
                          layer.bottom,
                          layer.top,
-                         opts.concat_dim)
+                         3 - opts.concat_dim) # todo: depreceted in recent Caffes
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'eltwise':
@@ -528,9 +535,9 @@ for layer in cmodel.layers.itervalues():
 if args.remove_dropout:
   layerNames = cmodel.layers.keys()
   for name in layerNames:
-    print "Removing dropout layer ", name
     layer = cmodel.layers[name]
     if type(layer) is CaffeDropout:
+      print "Removing dropout layer ", name
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 
@@ -538,17 +545,16 @@ if args.remove_dropout:
 if args.remove_dropout:
   layerNames = cmodel.layers.keys()
   for name in layerNames:
-    print "Removing loss layer ", name
     layer = cmodel.layers[name]
     if type(layer) is CaffeSoftMaxLoss:
+      print "Removing loss layer ", name
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 
 # Append softmax
 for i, name in enumerate(args.append_softmax):
   # search for the layer to append SoftMax to
-  l = cmodel.layers.index(name)
-  if l is None:
+  if not cmodel.layers.has_key(name):
     print 'Cannot append softmax to layer {} as no such layer could be found'.format(name)
     sys.exit(1)
 
@@ -561,8 +567,7 @@ for i, name in enumerate(args.append_softmax):
 
   cmodel.addLayer(CaffeSoftMax(layerName,
                                cmodel.layers[name].inputs[0:1],
-                               outputs,
-                               []))
+                               outputs))
 
 cmodel.display()
 
