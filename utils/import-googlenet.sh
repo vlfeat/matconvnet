@@ -7,6 +7,8 @@
 
 # TODO apply patch to prototxt which will resize the outputs of cls layers from 205 -> 1000 (maybe sed?)
 
+overwrite=yes
+
 CAFFE_URL=http://dl.caffe.berkeleyvision.org/
 GOOGLENET_PROTO_URL=http://vision.princeton.edu/pvt/GoogLeNet/ImageNet/train_val_googlenet.prototxt
 GOOGLENET_MODEL_URL=http://vision.princeton.edu/pvt/GoogLeNet/ImageNet/imagenet_googlenet.caffemodel
@@ -23,52 +25,40 @@ data="$SCRIPTPATH/../data"
 
 mkdir -pv "$data"/{tmp/caffe,tmp/googlenet,models}
 
+function get()
+{
+    "$SCRIPTPATH/get-file.sh" "$data/tmp/googlenet" "$1"
+}
+
 # --------------------------------------------------------------------
 # GoogLeNet
 # --------------------------------------------------------------------
 
-if true
+get "$CAFFE_URL/caffe_ilsvrc12.tar.gz"
+(cd "$data/tmp/googlenet" ; tar xzvf caffe_ilsvrc12.tar.gz)
+
+get "$GOOGLENET_PROTO_URL"
+get "$GOOGLENET_MODEL_URL"
+get "$GOOGLENET_MEAN_URL"
+
+(cd $"data/tmp/googlenet" ; patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff")
+
+base="$data/tmp/googlenet"
+out="$data/models/imagenet-googlenet-dag.mat"
+
+if test -f "$out" -a -z "$overwrite"
 then
-    (
-        # we need this for the synsets lits
-        cd "$data/tmp/caffe"
-        wget -c -nc $CAFFE_URL/caffe_ilsvrc12.tar.gz
-        tar xzvf caffe_ilsvrc12.tar.gz
-
-        # deep models
-        cd "$data/tmp/googlenet"
-        wget -c -nc $GOOGLENET_PROTO_URL
-        wget -c -nc $GOOGLENET_MODEL_URL
-        wget -c -nc $GOOGLENET_MEAN_URL
-
-        # apply patch to proto file
-        patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
-    )
-fi
-
-if true
-then
-    base="$data/tmp/googlenet"
-    in=(imagenet_googlenet)
-    out=(googlenet)
-    synset=(caffe)
-
-    for ((i=0;i<${#in[@]};++i)); do
-        out="$data/models/imagenet-${out[i]}-dag.mat"
-        if test ! -e "$out" ; then
-            $converter \
-                --caffe-variant=caffe_0115 \
-                --preproc=caffe \
-		--remove-dropout \
-                --remove-loss \
-                --average-image="$base/imagenet_mean.binaryproto" \
-                --synsets="$data/tmp/${synset[i]}/synset_words.txt" \
-                --append-softmax="cls3_fc" \
-                "$base/train_val_googlenet.prototxt" \
-                "$out" \
-                --caffe-data="$base/imagenet_googlenet.caffemodel"
-        else
-            echo "$out exists"
-        fi
-    done
+    echo "$out exists; skipping."
+else
+    $converter \
+        --caffe-variant=caffe_0115 \
+        --preproc=caffe \
+	--remove-dropout \
+        --remove-loss \
+        --append-softmax="cls3_fc" \
+        --synsets="$base/synset_words.txt" \
+        --average-image="$base/imagenet_mean.binaryproto" \
+        --caffe-data="$base/imagenet_googlenet.caffemodel" \
+        "$base/train_val_googlenet.prototxt" \
+        "$out"
 fi

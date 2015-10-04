@@ -7,7 +7,9 @@
 
 # TODO apply patch to prototxt which will resize the outputs of cls layers from 205 -> 1000 (maybe sed?)
 
-FCN32S_PROTO_URL=https://gist.github.com/longjon/ac410cad48a088710872/raw/fe76e342641ddb0defad95f6dc670ccc99c35a1f/fcn-32s-pascal-deploy.prototxt
+overwrite=yes
+
+FCN32S_PROTO_URL=https://gist.githubusercontent.com/longjon/ac410cad48a088710872/raw/fe76e342641ddb0defad95f6dc670ccc99c35a1f/fcn-32s-pascal-deploy.prototxt
 FCN16S_PROTO_URL=https://gist.githubusercontent.com/longjon/d24098e083bec05e456e/raw/dd455b2978b2943a51c37ec047a0f46121d18b56/fcn-16s-pascal-deploy.prototxt
 FCN8S_PROTO_URL=https://gist.githubusercontent.com/longjon/1bf3aa1e0b8e788d7e1d/raw/2711bb261ee4404faf2ddf5b9d0d2385ff3bcc3e/fcn-8s-pascal-deploy.prototxt
 FCNALEX_PROTO_URL=https://gist.githubusercontent.com/shelhamer/3f2c75f3c8c71357f24c/raw/ccd0d97662e03b83e62f26bf9d870209f20f3efc/train_val.prototxt
@@ -29,26 +31,24 @@ popd > /dev/null
 converter="python $SCRIPTPATH/import-caffe-dag2.py"
 data="$SCRIPTPATH/../data"
 
-mkdir -p "$data"/tmp/caffe
+mkdir -p "$data/tmp/fcn"
+
+function get()
+{
+    "$SCRIPTPATH/get-file.sh" "$data/tmp/fcn" "$1"
+}
+
 
 # --------------------------------------------------------------------
 # GoogLeNet
 # --------------------------------------------------------------------
 
-if true
-then
-    (
-        cd "$data/tmp/caffe"
-        wget -c -nc $FCN32S_MODEL_URL
-        wget -c -nc $FCN32S_PROTO_URL
-        wget -c -nc $FCN16S_MODEL_URL
-        wget -c -nc $FCN16S_PROTO_URL
-        wget -c -nc $FCN8S_MODEL_URL
-        wget -c -nc $FCN8S_PROTO_URL
-#        wget -c -nc $FCNALEX_MODEL_URL
-#        wget -c -nc $FCNALEX_PROTO_URL
-    )
-fi
+get $FCN32S_MODEL_URL
+get $FCN32S_PROTO_URL
+get $FCN16S_MODEL_URL
+get $FCN16S_PROTO_URL
+get $FCN8S_MODEL_URL
+get $FCN8S_PROTO_URL
 
 if true
 then
@@ -56,9 +56,12 @@ then
     outs=(pascal-fcn32s-dag pascal-fcn16s-dag pascal-fcn8s-dag)
 
     for ((i=0;i<${#ins[@]};++i)); do
-        in="$data/tmp/caffe/${ins[i]}"
+        in="$data/tmp/fcn/${ins[i]}"
         out="$data/models/${outs[i]}.mat"
-        if test ! -e "$out" ; then
+        if test -f "$out" -a -z "$overwrite"
+        then
+            echo "$out exists; skipping."
+        else
             #PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=cpp \
             $converter \
                 --caffe-variant=caffe_6e3916 \
@@ -70,9 +73,6 @@ then
                 --caffe-data="$in".caffemodel \
                 "$in"-deploy.prototxt \
                 "$out"
-
-        else
-            echo "$out exists"
         fi
     done
 fi
