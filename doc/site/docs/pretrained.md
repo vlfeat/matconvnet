@@ -60,7 +60,7 @@ example code included in the [quickstart guide](quick.md).
     > Zheng, Sadeep Jayasumana, Bernardino Romera-Paredes, Vibhav
     > Vineet, Zhizhong Su, Dalong Du, Chang Huang, and Philip
     > H. S. Torr*,
-    > ICCV 2015. ([paper](http://www.robots.ox.ac.uk/~szheng/papers/CRFasRNN.pdf)).
+    > ICCV 2015 ([paper](http://www.robots.ox.ac.uk/~szheng/papers/CRFasRNN.pdf)).
 
     - [pascal-fcn8s-tvg-dag](models/pascal-fcn8s-tvg-dag.mat)
 
