@@ -54,7 +54,7 @@ example code included in the [quickstart guide](quick.md).
     | FNC-8s  | RV-VOC11  | 62.69   | 90.33              | 75.86          |
 
 -   **Torr Vision Group FCN-8s**. This is the FCN-8s subcomponent of the
-    CRF-RNN network from the paper (see Table 1, row 2, column 2):
+    CRF-RNN network from the paper:
 
     > 'Conditional Random Fields as Recurrent Neural Networks' *Shuai
     > Zheng, Sadeep Jayasumana, Bernardino Romera-Paredes, Vibhav
@@ -67,8 +67,9 @@ example code included in the [quickstart guide](quick.md).
     While the CRF component is missing (it may come later to
     MatConvNet), this model still outperforms the FCN-8s network
     above, partially because it is trained with additonal data from
-    COCO. In the table below, RV-VOC12 is as described in the
-    'Conditional Random Fields' paper:
+    COCO. In the table below, the RV-VOC12 data is the subset of the
+    PASCAL VOC 12 data as described in the 'Conditional Random Fields'
+    paper:
 
     | Model      | Tes data  | mean IOU | mean pix. accuracy | pixel accuracy |
     |------------|-----------|----------|--------------------|----------------|
