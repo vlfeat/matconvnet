@@ -88,7 +88,7 @@ These modesl arte trained to perform classification in the ImageNet
 ILSVRC challenge data:
 
 -   **GoogLeNet** model imported from the
-    [Caffe version](https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet)
+    [Princeton version](http://vision.princeton.edu/pvt/GoogLeNet/)
     [*DagNN format*].
 
     > `Going Deeper with Convolutions', *Christian Szegedy, Wei Liu,
