@@ -72,16 +72,16 @@ More formally, if $H'$ is the pool size and $H$ the size of the signal, the last
   \right\rceil
   + 1.
 \]
-If there is padding, the same reasoning is used after applying the padding to the input image, resulting in
+If there is padding, the same logic applies after padding the input image, such that the output has height:
 \[
 H'' = \left\lceil 
   \frac{H - H' + P_h^- + P_h^+}{S_h}
   \right\rceil
   + 1.
 \]
-Note that in practice $P_h^- = P_h^+ = P_h$ since Caffe does not support asymmetric padding. This is the same formula as above, but with the ceil instead of floor operator.
+This is the same formula as above of filters, but with the ceil instead of floor operator. Note that in practice $P_h^- = P_h^+ = P_h$ since Caffe does not support asymmetric padding. 
 
-Unfortunately, it gets more complicated. Using the formula above, it can happen that the last padding application is completely outside the input image and Caffe tries to avoid that. This requires
+Unfortunately, it gets more complicated. Using the formula above, it can happen that the last padding application is completely outside the input image and Caffe tries to avoid it. This requires
 \begin{equation}\label{e:pooling-caffe-constr}
   S(i'' - 1) - P_h^- + 1 \big|_{i''= H''} \leq H
   \qquad
@@ -104,9 +104,7 @@ H'' = \left\lceil
   \right\rfloor
   +1.
  \end{align*}
-Hence if $P_h^+ +  S_h \leq H' $ then the second term is less than zero and \eqref{e:pooling-caffe-constr} is satisfied.
-
-In practice, Caffe and MatConvNet assume that $P_h^+, P_h^- \leq H' -1$, as otherwise the first filter application falls entirely in the padded region.  Hence, we can upper bound the second term:
+Hence if $P_h^+ +  S_h \leq H' $ then the second term is less than zero and \eqref{e:pooling-caffe-constr} is satisfied. In practice, Caffe assumes that $P_h^+, P_h^- \leq H' -1$, as otherwise the first filter application falls entirely in the padded region.  Hence, we can upper bound the second term:
 \[
 \frac{P^+_h + S_h - H'}{S_h}
 \leq
@@ -114,20 +112,20 @@ In practice, Caffe and MatConvNet assume that $P_h^+, P_h^- \leq H' -1$, as othe
 \leq
 1.
 \]
-We conclude that, for particular choices of $P_h^+ and S_h$, the formula above may violate constraint \eqref{e:pooling-caffe-constr} by at most one unit. Caffe has a special provision for that and lowers $H''$ by one when needed. Furthermore, we see that if $P_h^+=0$ \emph{and} $S_h \leq H'$ (which is often the case and may be assumed by Caffe), then the equation is also satisfied and Caffe skips the check.
+We conclude that, for any choices of $P_h^+$ and $S_h$ allowed by Caffe, the formula above may violate constraint \eqref{e:pooling-caffe-constr} by at most one unit. Caffe has a special provision for that and lowers $H''$ by one when needed. Furthermore, we see that if $P_h^+=0$ \emph{and} $S_h \leq H'$ (which is often the case and may be assumed by Caffe), then the equation is also satisfied and Caffe skips the check.
 
-Next, we find MatConvNet equivalents for these parameters. Assume that Caffe applies a symmetric padding $P_h$. Then in MatConvNet $P_h^-=P_h$ to align the left part of the process. To match Caffe, the last sample of the last filter application has to be on or to the right of the last Caffe-padded pixel:
+Next, we find MatConvNet equivalents for these parameters. Assume that Caffe applies a symmetric padding $P_h$. Then in MatConvNet $P_h^-=P_h$ to align the top part of the output signal. To match Caffe, the last sample of the last filter application has to be on or to the right of the last Caffe-padded pixel:
 \[
 \underbrace{
 S_h
 \left(
-\left\lfloor
 \underbrace
 {
+\left\lfloor
 \frac{H - H' + P_h^- + P_h^+}{S_h}  + 1 
+\right\rfloor
 }_{\text{MatConvNet rightmost pooling index}}
 - 1
-\right\rfloor
 \right)
 + H'
 }_{\text{MatConvNet rightmost pooled input sample}}
@@ -144,7 +142,7 @@ Rearranging
 \geq
 \frac{H - H' + 2P_h^{-}}{S_h}
 \]
-Using $\lfloor a/b \rfloor = \lceil (a - b + 1)/b \rceil \geq (a - b + 1)/b$ we get the \emph{equivalent} condition:
+Using $\lfloor a/b \rfloor = \lceil (a - b + 1)/b\rceil$ we get the \emph{equivalent} condition:
 \[
 \left\lceil 
 \frac{H - H' + 2P_h^-}{S_h} + \frac{P_h^+ - P_h^- - S_h + 1}{S_h}
@@ -156,7 +154,7 @@ Removing the ceil operator lower bounds the left-hand side of the equation and p
 \[
  P_h^+ \geq P_h^- + S_h - 1.
 \]
-As before, this may still be too much padding, causing the last pool window application to be entirely in the rightmost padded area. As noted, MatConvNet places the restriction $P_h^+ \leq H' -1$, so that
+As before, this may still be too much padding, causing the last pool window application to be entirely in the rightmost padded area. MatConvNet places the restriction $P_h^+ \leq H' -1$, so that
 \[
   P_h^+ = \min\{ P_h^- + S_h - 1 , H' - 1\}.
 \]
