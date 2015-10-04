@@ -35,7 +35,7 @@ example code included in the [quickstart guide](quick.md).
     [Caffe version](https://github.com/BVLC/caffe/wiki/Model-Zoo)
     [*DagNN format*].
 
-    > *Fully Convolutional Models for Semantic Segmentation',
+    > 'Fully Convolutional Models for Semantic Segmentation',
     *Jonathan Long, Evan Shelhamer and Trevor Darrell*, CVPR, 2015
     ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Long_Fully_Convolutional_Networks_2015_CVPR_paper.pdf)).
 
@@ -44,13 +44,43 @@ example code included in the [quickstart guide](quick.md).
     - [pascal-fcn8s-dag](models/pascal-fcn8s-dag.mat)
 
     The performance measured on the PASCAL VOC 2011 validation data
-    subset used in the revised version of the paper above:
+    subset used in the revised version of the paper above (dubbed
+    RV-VOC11):
 
-    | Model   | mean IOU | mean pix. accuracy | pixel accuracy |
-    |---------|----------|--------------------|----------------|
-    | FNC-32s | 59.43    | 89.12              | 73.28          |
-    | FNC-16s | 62.35    | 90.02              | 75.74          |
-    | FNC-8s  | 62.69    | 90.33              | 75.86          |
+    | Model   | Test data |Mean IOU | Mean pix. accuracy | Pixel accuracy |
+    |---------|-----------|---------|--------------------|----------------|
+    | FNC-32s | RV-VOC11  | 59.43   | 89.12              | 73.28          |
+    | FNC-16s | RV-VOC11  | 62.35   | 90.02              | 75.74          |
+    | FNC-8s  | RV-VOC11  | 62.69   | 90.33              | 75.86          |
+
+-   **Torr Vision Group FCN-8s**. This is the FCN-8s subcomponent of the
+    CRF-RNN network from the paper (see Table 1, row 2, column 2):
+
+    > 'Conditional Random Fields as Recurrent Neural Networks' *Shuai
+    > Zheng, Sadeep Jayasumana, Bernardino Romera-Paredes, Vibhav
+    > Vineet, Zhizhong Su, Dalong Du, Chang Huang, and Philip
+    > H. S. Torr*,
+    > ICCV 2015. ([paper](http://www.robots.ox.ac.uk/~szheng/papers/CRFasRNN.pdf)).
+
+    - [pascal-fcn8s-tvg-dag](models/pascal-fcn8s-tvg-dag.mat)
+
+    While the CRF component is missing (it may come later to
+    MatConvNet), this model still outperforms the FCN-8s network
+    above, partially because it is trained with additonal data from
+    COCO. In the table below, RV-VOC12 is as described in the
+    'Conditional Random Fields' paper:
+
+    | Model      | Tes data  | mean IOU | mean pix. accuracy | pixel accuracy |
+    |------------|-----------|----------|--------------------|----------------|
+    | FNC-8s-TVG | RV-VOC12  | 69.85    | 92.94              | 78.80          |
+
+    *TVG impementation note*: The model was obtained by first
+    fine-tuning the plain FCN-32s network (without the CRF-RNN part)
+    on COCO data, then building built an FCN-8s network with the
+    learnt weights, and finally training the CRF-RNN network
+    end-to-end using VOC 2012 training data only. The model available
+    here is the FCN-8s part of this network (without CRF-RNN, while
+    trained with 10 iterations CRF-RNN).
 
 ### ImageNet ILSVRC models
 
