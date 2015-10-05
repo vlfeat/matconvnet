@@ -66,7 +66,7 @@ example code included in the [quickstart guide](quick.md).
 
     While the CRF component is missing (it may come later to
     MatConvNet), this model still outperforms the FCN-8s network
-    above, partially because it is trained with additonal data from
+    above, partially because it is trained with additional data from
     COCO. In the table below, the RV-VOC12 data is the subset of the
     PASCAL VOC 12 data as described in the 'Conditional Random Fields'
     paper:
@@ -75,7 +75,7 @@ example code included in the [quickstart guide](quick.md).
     |------------|-----------|----------|--------------------|----------------|
     | FNC-8s-TVG | RV-VOC12  | 69.85    | 92.94              | 78.80          |
 
-    *TVG impementation note*: The model was obtained by first
+    *TVG implementation note*: The model was obtained by first
     fine-tuning the plain FCN-32s network (without the CRF-RNN part)
     on COCO data, then building built an FCN-8s network with the
     learnt weights, and finally training the CRF-RNN network
