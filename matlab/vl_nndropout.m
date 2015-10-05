@@ -11,8 +11,15 @@ function [y,mask] = vl_nndropout(x,varargin)
 %   be specified in order to compute the derivative consistently with
 %   the MASK randomly sampled in the forward pass. DZDX and DZDY have
 %   the same dimesnions as X and Y respectivey.
+%
+%   Note that in the original paper on dropout, at test time the
+%   network weights for the dropout layers are scaled down to
+%   compensate for having all the neurons active. In this
+%   implementation the dropout function itself already does this
+%   compensation during training. So at test time no alterations are
+%   required.
 
-% Copyright (C) 2014 Andrea Vedaldi.
+% Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
