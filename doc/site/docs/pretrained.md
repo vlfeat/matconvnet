@@ -31,7 +31,7 @@ example code included in the [quickstart guide](quick.md).
 
 ### Semantic segmentation
 
--   **Fully-Convolutional Networks** (FCN) training and evaluation demo
+-   **Fully-Convolutional Networks** (FCN) training and evaluation
     code is available
     [here](https://github.com/vlfeat/matconvnet-fcn).
 

@@ -20,6 +20,10 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
     }
 </pre>
 
+> **New:** Fully-Convolutional Networks (FCN) training and evaluation
+> code is available
+> [here](https://github.com/vlfeat/matconvnet-fcn).
+>
 > **New:** 1.0-beta15 adds a few new layers to DagNN to support the
 > **Fully-Convolutonal Networks** (FCN) for image
 > segmentation. Pretrained models are
@@ -37,9 +41,6 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > `examples/cnn_imagenet_camdemo.m`) using GoogLeNet, VGG-VD, or any
 > other similar network.
 >
-> **New:** 1.0-beta13 adds a much faster version of batch
-> normalization and contains several bugfixes and minor improvements.
->
 > **New:** MatConvNet used in planetary science research by the
 > University of Arizona (see the
 > [NVIDIA blog post](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/)).
@@ -56,7 +57,7 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 *   **Getting started**
     - [Quick start guide](quick.md)
     - [Installation instructions](install.md)
-    - [Using pre-trained models](pretrained.md)
+    - [Using pre-trained models](pretrained.md): VGG-VD, GoogLeNet, FCN, ...
     - [Training your own models](training.md)
     - [CNN wrappers: linear chains or DAGs](wrappers.md)
     - [Working with GPU accelerated code](gpu.md)
