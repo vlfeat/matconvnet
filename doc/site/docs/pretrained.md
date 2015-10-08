@@ -29,9 +29,13 @@ example code included in the [quickstart guide](quick.md).
 
 ## Downloading the pre-trained models
 
-### Miscellaneous models
+### Semantic segmentation
 
--   **Fully-Convolutional Networks** (FCN) imported from the
+-   **Fully-Convolutional Networks** (FCN) training and evaluation demo
+    code is available
+    [here](https://github.com/vlfeat/matconvnet-fcn).
+
+-   **BVLC FCN** (the original implementation) imported from the
     [Caffe version](https://github.com/BVLC/caffe/wiki/Model-Zoo)
     [*DagNN format*].
 
@@ -83,7 +87,7 @@ example code included in the [quickstart guide](quick.md).
     here is the FCN-8s part of this network (without CRF-RNN, while
     trained with 10 iterations CRF-RNN).
 
-### ImageNet ILSVRC models
+### ImageNet ILSVRC classification
 
 These modesl arte trained to perform classification in the ImageNet
 ILSVRC challenge data:
