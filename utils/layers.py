@@ -223,7 +223,7 @@ class CaffeSoftMax(CaffeElementWise):
 
     def toMatlab(self):
         mlayer = super(CaffeSoftMax, self).toMatlab()
-        mlayer['type'] = u'dagnn.SofMax'
+        mlayer['type'] = u'dagnn.SoftMax'
         return mlayer
 
 class CaffeSoftMaxLoss(CaffeElementWise):
