@@ -122,9 +122,9 @@ classdef Layer < handle
       % accumuate derivatives
       for i = 1:numel(in)
         v = in(i) ;
-        if net.numPendingVarRefs(v) == 0
+        if net.numPendingVarRefs(v) == 0 || isempty(net.vars(v).der)
           net.vars(v).der = derInputs{i} ;
-        else
+        elseif ~isempty(derInputs{i})
           net.vars(v).der = net.vars(v).der + derInputs{i} ;
         end
         net.numPendingVarRefs(v) = net.numPendingVarRefs(v) + 1 ;

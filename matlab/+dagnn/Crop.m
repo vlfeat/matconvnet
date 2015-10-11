@@ -29,7 +29,7 @@ classdef Crop < dagnn.ElementWise
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       adjCrop = obj.getAdaptedCrops() ;
-      derInputs{1} = vl_nncrop(inputs{1}, adjCrop, derOutputs{1}, obj.inputSize{1}) ;
+      derInputs{1} = vl_nncrop(inputs{1}, adjCrop, derOutputs{1}, obj.inputSizes{1}) ;
       derInputs{2} = [] ;
       derParams = {} ;
     end
@@ -41,7 +41,7 @@ classdef Crop < dagnn.ElementWise
     function outputSizes = getOutputSizes(obj, inputSizes)
       obj.inputSizes = inputSizes ;
       crop = obj.getAdaptedCrops() ;
-      outputSizes{1} = inputSizes{1} - [crop(1)+crop(2), crop(3)+crop(4), 0, 0]
+      outputSizes{1} = inputSizes{1} - [crop(1)+crop(2), crop(3)+crop(4), 0, 0] ;
     end
 
     function rfs = getReceptiveFields(obj)
