@@ -333,7 +333,16 @@ class CaffeInnerProduct(CaffeConv):
         if len(model.vars[self.inputs[0]].size) == 0: return
         s = model.vars[self.inputs[0]].size
         self.kernelSize = [s[0], s[1], s[2], self.numFilters]
-        print "inner prod size", self.kernelSize
+        print "Layer %s: inner product converted to filter bank of shape", self.kernelSize
+        if model.params[self.params[0]].value.size > 0:
+            print "Layer %s: reshaping inner product paramters into filter bank" % self.name
+            param = model.params[self.params[0]]
+            param.value = param.value.reshape(
+                size[0],
+                size[1],
+                size[2],
+                opts.num_output,
+                order='F')
         super(CaffeInnerProduct, self).reshape(model)
 
 # --------------------------------------------------------------------
@@ -417,7 +426,6 @@ class CaffePooling(CaffeLayer):
             self.padCorrected[1 + i*2] = min(
                 self.pad[1 + i*2] + self.stride[i] - 1,
                 self.kernelSize[i] - 1)
-        print "pooling corrections ks:", ks, self.stride, self.padCorrected
         model.vars[self.outputs[0]].size = \
             getFilterOutputSize(size[0:2], ks, self.stride, self.padCorrected) + \
             size[2:5]
