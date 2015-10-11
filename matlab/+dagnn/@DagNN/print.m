@@ -28,7 +28,10 @@ function str = print(obj, inputSizes, varargin)
 %      of each variables from each input.
 %
 %   `Format`:: 'ascii'
-%      Choose between 'ascii', 'latex', and 'csv'.
+%      Choose between `ascii`, `latex`, `csv`, and `dot`. The first three
+%      format print tables; the last one prints a graph in `dot` format.
+%      In the latter case, all variables and layers are included in the
+%      graph, regardless of the other parameters.
 %
 %   `MaxNumColumns`:: 18
 %      Maximum number of columns in each table.
@@ -63,6 +66,14 @@ if nargin == 1, inputSizes = {} ; end
 varSizes = obj.getVarSizes(inputSizes) ;
 paramSizes = cellfun(@size, {obj.params.value}, 'UniformOutput', false) ;
 str = {''} ;
+
+if strcmp(lower(opts.format),'dot')
+  str = printDot(obj, varSizes, paramSizes, opts) ;
+  if nargout == 0
+    displayDot(str) ;
+  end
+  return ;
+end
 
 if ~isempty(opts.layers)
   table = {'func', '-', 'type', 'inputs', 'outputs', 'params', 'pad', 'stride'} ;
@@ -281,4 +292,68 @@ else
 end
 end
 
+% -------------------------------------------------------------------------
+function str = printDot(net, varSizes, paramSizes, otps)
+% -------------------------------------------------------------------------
+str = {} ;
+str{end+1} = sprintf('digraph DagNN {\n\tfontsize=12\n') ;
 
+for v = 1:numel(net.vars)  
+  label=sprintf('{{%s} | {%s | %s }}', net.vars(v).name, pdims(varSizes{v}), pmem(4*prod(varSizes{v}))) ;  
+  str{end+1} = sprintf('\tvar_%s [label="%s" shape=Mrecord style=filled color=beige fontsize=12]\n', ...
+    net.vars(v).name, label) ;
+end
+
+for p = 1:numel(net.params)
+  label=sprintf('{{%s} | {%s | %s }}', net.params(p).name, pdims(paramSizes{p}), pmem(4*prod(paramSizes{p}))) ;  
+  str{end+1} = sprintf('\tpar_%s [label="%s" shape=Mrecord style=filled color=lightsteelblue fontsize=12]\n', ...
+    net.params(p).name, label) ;
+end
+
+for l = 1:numel(net.layers)
+  label = sprintf('{ %s | %s }', net.layers(l).name, class(net.layers(l).block)) ;
+  str{end+1} = sprintf('\t%s [label="%s" shape=record style="bold"]\n', ...
+    net.layers(l).name, label) ;
+  for i = 1:numel(net.layers(l).inputs)
+    str{end+1} = sprintf('\tvar_%s->%s []\n', ...
+      net.layers(l).inputs{i}, ...
+      net.layers(l).name) ;
+  end
+  for o = 1:numel(net.layers(l).outputs)
+    str{end+1} = sprintf('\t%s->var_%s []\n', ...
+      net.layers(l).name, ...
+      net.layers(l).outputs{o}) ;
+  end
+  for p = 1:numel(net.layers(l).params)
+    str{end+1} = sprintf('\tpar_%s->%s []\n', ...
+      net.layers(l).params{p}, ...
+      net.layers(l).name) ;
+  end
+end
+
+str{end+1} = sprintf('}\n') ;
+str = cat(2,str{:}) ;
+end
+
+% -------------------------------------------------------------------------
+function displayDot(str)
+% -------------------------------------------------------------------------
+%mwdot = fullfile(matlabroot, 'bin', computer('arch'), 'mwdot') ;
+dotexe = 'dot' ;
+
+in=[tempname '.dot'];
+out=[tempname '.pdf'];
+
+f = fopen(in,'w') ; fwrite(f, str) ; fclose(f) ;
+
+cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotexe, out, in) ;
+[status, result] = system(cmd) ;
+
+%f = fopen(out,'r') ; file=fread(f, 'char=>char')' ; fclose(f) ;
+switch computer
+  case 'MACI64'
+    system(sprintf('open "%s"', out)) ;
+  otherwise
+    printf('PDF figure saved at "%s"\n', out) ;
+end
+end
