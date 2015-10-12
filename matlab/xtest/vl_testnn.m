@@ -4,7 +4,6 @@ function vl_testnn(varargin)
 %   VL_TESTNN('gpu', true)
 %   VL_TESTNN('command', 'nnloss')
 
-
 opts.cpu = true ;
 opts.gpu = false ;
 opts.command = 'nn' ;
@@ -24,7 +23,8 @@ if opts.gpu & ~opts.cpu
 end
 
 % Run tests
-suite = matlab.unittest.TestSuite.fromFolder('matlab/xtest/suite/', sel) ;
+root = fileparts(mfilename('fullpath')) ;
+suite = matlab.unittest.TestSuite.fromFolder(fullfile(root, 'suite'), sel) ;
 runner = matlab.unittest.TestRunner.withTextOutput('Verbosity',3);
 if opts.break
   runner.addPlugin(matlab.unittest.plugins.StopOnFailuresPlugin) ;
