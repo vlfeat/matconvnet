@@ -566,7 +566,7 @@ for i, name in enumerate(args.append_softmax):
     outputs = ['prob']
 
   cmodel.addLayer(CaffeSoftMax(layerName,
-                               cmodel.layers[name].inputs[0:1],
+                               cmodel.layers[name].outputs[0:1],
                                outputs))
 
 cmodel.display()

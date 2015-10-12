@@ -266,6 +266,7 @@ class CaffeConv(CaffeLayer):
         self.filterDimension = None
         self.stride = stride
         self.pad = pad
+        self.display()
 
     def display(self):
         super(CaffeConv, self).display()
@@ -277,13 +278,13 @@ class CaffeConv(CaffeLayer):
         print "  Filter Dimension", self.filterDimension
 
     def reshape(self, model):
-        if len(model.vars[self.inputs[0]].size) == 0: return
-        model.vars[self.outputs[0]].size = \
-            getFilterOutputSize(model.vars[self.inputs[0]].size[0:2],
-                                self.kernelSize, self.stride, self.pad) + \
-            [self.numFilters, model.vars[self.inputs[0]].size[3]]
-        self.filterDimension = \
-            model.vars[self.inputs[0]].size[2] / self.numFilterGroups
+        varin = model.vars[self.inputs[0]]
+        varout = model.vars[self.outputs[0]]
+        if len(varin.size) == 0: return
+        varout.size = getFilterOutputSize(varin.size[0:2], \
+                                              self.kernelSize, self.stride, self.pad) + \
+                                              [self.numFilters, varin.size[3]]
+        self.filterDimension = varin.size[2] / self.numFilterGroups
 
     def getTransforms(self, model):
         return [[getFilterTransform(self.kernelSize, self.stride, self.pad)]]
@@ -292,7 +293,6 @@ class CaffeConv(CaffeLayer):
         self.kernelSize = reorder(self.kernelSize, [1,0])
         self.stride = reorder(self.stride, [1,0])
         self.pad = reorder(self.pad, [2,3,0,1])
-        print model.params[self.params[0]].value
         if model.params[self.params[0]].value.size > 0:
             print "Layer %s transposing filters" % self.name
             param = model.params[self.params[0]]
@@ -333,16 +333,11 @@ class CaffeInnerProduct(CaffeConv):
         if len(model.vars[self.inputs[0]].size) == 0: return
         s = model.vars[self.inputs[0]].size
         self.kernelSize = [s[0], s[1], s[2], self.numFilters]
-        print "Layer %s: inner product converted to filter bank of shape", self.kernelSize
-        if model.params[self.params[0]].value.size > 0:
-            print "Layer %s: reshaping inner product paramters into filter bank" % self.name
-            param = model.params[self.params[0]]
-            param.value = param.value.reshape(
-                size[0],
-                size[1],
-                size[2],
-                opts.num_output,
-                order='F')
+        print "Layer %s: inner product converted to filter bank of shape %s" % (self.name, self.kernelSize)
+        param = model.params[self.params[0]]
+        if param.value.size > 0:
+            print "Layer %s: reshaping inner product paramters of shape %s into a filter bank" % (self.name, param.value.shape)
+            param.value = param.value.reshape(self.kernelSize, order='F')
         super(CaffeInnerProduct, self).reshape(model)
 
 # --------------------------------------------------------------------
@@ -421,7 +416,7 @@ class CaffePooling(CaffeLayer):
         stride = self.stride
         # MatConvNet uses a slighly different definition of padding, which we think
         # is the correct one (it corresponds to the filters)
-        self.padCorrected =  copy.deepcopy(self.pad)
+        self.padCorrected = copy.deepcopy(self.pad)
         for i in [0, 1]:
             self.padCorrected[1 + i*2] = min(
                 self.pad[1 + i*2] + self.stride[i] - 1,
@@ -463,18 +458,19 @@ class CaffeConcat(CaffeLayer):
     def toMatlab(self):
         mlayer = super(CaffeConcat, self).toMatlab()
         mlayer['type'][0] = u'dagnn.Concat'
-        mlayer['block'][0] = dictToMatlabStruct({'dim': float(self.concatDim)+1})
+        mlayer['block'][0] = dictToMatlabStruct({'dim': float(self.concatDim) + 1})
         return mlayer
 
     def reshape(self, model):
         sizes = [model.vars[x].size for x in self.inputs]
-        osize = sizes[0]
-        for s in sizes:
-            for i in range(len(s)):
+        osize = copy.deepcopy(sizes[0])
+        osize[self.concatDim] = 0
+        for thisSize in sizes:
+            for i in range(len(thisSize)):
                 if self.concatDim == i:
-                    osize[i] = osize[i] + s[i]
+                    osize[i] = osize[i] + thisSize[i]
                 else:
-                    if osize[i] != s[i]:
+                    if osize[i] != thisSize[i]:
                         print "Warning: concat layer: inconsistent input dimensions", sizes
         model.vars[self.outputs[0]].size = osize
 
