@@ -298,14 +298,14 @@ function str = printDot(net, varSizes, paramSizes, otps)
 str = {} ;
 str{end+1} = sprintf('digraph DagNN {\n\tfontsize=12\n') ;
 
-for v = 1:numel(net.vars)  
-  label=sprintf('{{%s} | {%s | %s }}', net.vars(v).name, pdims(varSizes{v}), pmem(4*prod(varSizes{v}))) ;  
+for v = 1:numel(net.vars)
+  label=sprintf('{{%s} | {%s | %s }}', net.vars(v).name, pdims(varSizes{v}), pmem(4*prod(varSizes{v}))) ;
   str{end+1} = sprintf('\tvar_%s [label="%s" shape=Mrecord style=filled color=beige fontsize=12]\n', ...
     net.vars(v).name, label) ;
 end
 
 for p = 1:numel(net.params)
-  label=sprintf('{{%s} | {%s | %s }}', net.params(p).name, pdims(paramSizes{p}), pmem(4*prod(paramSizes{p}))) ;  
+  label=sprintf('{{%s} | {%s | %s }}', net.params(p).name, pdims(paramSizes{p}), pmem(4*prod(paramSizes{p}))) ;
   str{end+1} = sprintf('\tpar_%s [label="%s" shape=Mrecord style=filled color=lightsteelblue fontsize=12]\n', ...
     net.params(p).name, label) ;
 end
@@ -353,7 +353,9 @@ cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotexe, out, in) ;
 switch computer
   case 'MACI64'
     system(sprintf('open "%s"', out)) ;
+  case 'GLNXA64'
+    system(sprintf('display "%s"', out)) ;
   otherwise
-    printf('PDF figure saved at "%s"\n', out) ;
+    fprintf('PDF figure saved at "%s"\n', out) ;
 end
 end
