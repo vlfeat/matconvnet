@@ -73,7 +73,7 @@ im_ = im_ - net.meta.normalization.averageImage ;
 net.eval({'data', im_}) ;
 
 % obtain the CNN otuput
-scores = net.vars(net.getVarIndex('prediction')).value ;
+scores = net.vars(net.getVarIndex('prob')).value ;
 scores = squeeze(gather(scores)) ;
 
 % show the classification results

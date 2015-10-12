@@ -18,7 +18,7 @@ net = load(sprintf('data/models/%s.mat', model)) ;
 
 if strcmp(model, 'imagenet-googlenet-dag')
   net = dagnn.DagNN.loadobj(net) ;
-  out = net.getVarIndex('prediction') ;
+  out = net.getVarIndex('prob') ;
   normalization = net.meta.normalization ;
   description = net.meta.classes.description ;
   dag = true ;
