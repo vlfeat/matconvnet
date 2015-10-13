@@ -1,7 +1,10 @@
 # Pretrained models
 
 This section describes how pre-trained models can be downloaded and
-used in MatConvNet.
+used in MatConvNet. Using the pre-trained model is easy; just start
+from the example code included in the [quickstart guide](quick.md).
+
+[TOC]
 
 > **Remark:** The following CNN models may have been *imported from
 > other reference implementations* and are equivalent to the originals
@@ -22,14 +25,31 @@ used in MatConvNet.
 > 3.  These models are provided here for convenience, but please
 >     credit the original authors.
 
-## Using the pretrained models
+## Face recognition
 
-In order to run, say, `imagenet-vgg-s` on a test image, start from the
-example code included in the [quickstart guide](quick.md).
+These models are trained for face classification and verification.
 
-## Downloading the pre-trained models
+-   **VGG-Face**. The face classification and verification network from
+    the
+    [VGG project](http://www.robots.ox.ac.uk/~vgg/software/vgg_face/).
 
-### Semantic segmentation
+    > Deep face recognition, O. M. Parkhi and A. Vedaldi and
+    > A. Zisserman, Proceedings of the British Machine Vision
+    > Conference (BMVC), 2015
+    > ([paper](http://www.robots.ox.ac.uk/~vgg/publications/2015/Parkhi15/parkhi15.pdf)).
+
+    - [vgg-face](models/vgg-face.mat)
+
+    See the script `examples/cnn_vgg_face.m` for an example of using
+    VGG-Face in 'classifcation' mode. To use this for face
+    verification, extract the 4K dimensional features by removing the
+    last classification layer and normalize the resulting vector in L2
+    norm.
+
+## Semantic segmentation
+
+These models are trained for semantic image segmentation using the
+PASCAL VOC category definitions.
 
 -   **Fully-Convolutional Networks** (FCN) training and evaluation
     code is available
@@ -46,6 +66,10 @@ example code included in the [quickstart guide](quick.md).
     - [pascal-fcn32s-dag](models/pascal-fcn32s-dag.mat)
     - [pascal-fcn16s-dag](models/pascal-fcn16s-dag.mat)
     - [pascal-fcn8s-dag](models/pascal-fcn8s-dag.mat)
+
+    These networks are trained on the PASCAL VOC 2011 training and (in
+    part) validation data, using Berekely's extended annotations
+    ([SBD](http://www.cs.berkeley.edu/~bharath2/codes/SBD/download.html)).
 
     The performance measured on the PASCAL VOC 2011 validation data
     subset used in the revised version of the paper above (dubbed
@@ -68,6 +92,10 @@ example code included in the [quickstart guide](quick.md).
 
     - [pascal-fcn8s-tvg-dag](models/pascal-fcn8s-tvg-dag.mat)
 
+    These networks are trained on the PASCAL VOC 2011 training and (in
+    part) validation data, using Berekely's extended annotations, as
+    well as Microsoft COCO.
+
     While the CRF component is missing (it may come later to
     MatConvNet), this model still outperforms the FCN-8s network
     above, partially because it is trained with additional data from
@@ -87,10 +115,10 @@ example code included in the [quickstart guide](quick.md).
     here is the FCN-8s part of this network (without CRF-RNN, while
     trained with 10 iterations CRF-RNN).
 
-### ImageNet ILSVRC classification
+## ImageNet ILSVRC classification
 
-These modesl arte trained to perform classification in the ImageNet
-ILSVRC challenge data:
+These modesl are trained to perform classification in the ImageNet
+ILSVRC challenge data.
 
 -   **GoogLeNet** model imported from the
     [Princeton version](http://vision.princeton.edu/pvt/GoogLeNet/)
