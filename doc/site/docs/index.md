@@ -20,6 +20,8 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
     }
 </pre>
 
+> **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
+>
 > **New:** Fully-Convolutional Networks (FCN) training and evaluation
 > code is available
 > [here](https://github.com/vlfeat/matconvnet-fcn).
@@ -46,7 +48,7 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > [NVIDIA blog post](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/)).
 
 *   **Obtaining MatConvNet**
-    - Tarball for [version 1.0-beta15](download/matconvnet-1.0-beta15.tar.gz)
+    - Tarball for [version 1.0-beta16](download/matconvnet-1.0-beta16.tar.gz)
     - [GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 
 *   **Documentation**
