@@ -1,5 +1,5 @@
 function cnn_imagenet_googlenet()
-%CNN_IMAGENET_GOOGLENET  Deomonstrates running GoogLeNet
+%CNN_IMAGENET_GOOGLENET  Demonstrates how to use GoogLeNet
 
 run matlab/vl_setupnn
 modelPath = 'data/models/imagenet-googlenet-dag.mat' ;
@@ -11,14 +11,7 @@ if ~exist(modelPath)
     modelPath) ;
 end
 
-netData = load('data/models/imagenet-googlenet-dag.mat') ;
-net = dagnn.DagNN.loadobj(netData) ;
-clear netData ;
-
-net.removeLayer(net.layers(end).name) ;
-net.addLayer('softmax', dagnn.SoftMax(), ...
-             net.layers(end).outputs, {'prediction'}, {}) ;
-net.mode = 'test' ;
+net = dagnn.DagNN.loadobj(load(modelPath)) ;
 
 im = imread('peppers.png') ;
 im_ = single(im) ; % note: 255 range
