@@ -41,8 +41,19 @@ classdef Conv < dagnn.Filter
       end
     end
 
+    function set.size(obj, ksize)
+      % make sure that ksize has 4 dimensions
+      ksize = [ksize(:)' 1 1 1 1] ;
+      obj.size = ksize(1:4) ;
+    end
+
     function obj = Conv(varargin)
       obj.load(varargin) ;
+      % normalize field by implicitly calling setters defined in
+      % dagnn.Filter and here
+      obj.size = obj.size ;
+      obj.stride = obj.stride ;
+      obj.pad = obj.pad ;
     end
   end
 end
