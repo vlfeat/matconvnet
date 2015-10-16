@@ -51,8 +51,8 @@ In the simplest case, this graph reduces to a chain $(f_1,f_2,\dots,f_L)$. Let $
 \node (w2) [data, below of=f2] {$\bw_2$};
 \node (wL) [data, below of=fL] {$\bw_L$};
 \draw [to] (x0.east) -- (f1.west) {};
-\draw [to] (f1.east) -- node {$\bx_2$} (f2.west);
-\draw [to] (f2.east) -- node {$\bx_3$} (dots.west) {};
+\draw [to] (f1.east) -- node {$\bx_1$} (f2.west);
+\draw [to] (f2.east) -- node {$\bx_2$} (dots.west) {};
 \draw [to] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
 \draw [to] (fL.east) -- (xL.west) {};
 \draw [to] (w1.north) -- (f1.south) {};
@@ -150,8 +150,8 @@ In order to understand backpropagation, consider first a simple CNN terminating 
 \node (wL) [data, below of=fL] {$\bw_L$};
 \node (z) [data, right of=loss] {$z\in\real$};
 \draw [to] (x0.east) -- (f1.west) {};
-\draw [to] (f1.east) -- node {$\bx_2$} (f2.west);
-\draw [to] (f2.east) -- node {$\bx_3$} (dots.west) {};
+\draw [to] (f1.east) -- node {$\bx_1$} (f2.west);
+\draw [to] (f2.east) -- node {$\bx_2$} (dots.west) {};
 \draw [to] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
 \draw [to] (fL.east) -- node {$\bx_L$} (loss.west);
 \draw [to] (loss.east) -- (z) {};
