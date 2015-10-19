@@ -59,7 +59,12 @@ end
 net = cnn_imagenet_init('model', opts.modelType, ...
                         'batchNormalization', opts.batchNormalization, ...
                         'weightInitMethod', opts.weightInitMethod) ;
-bopts = net.normalization ;
+switch lower(opts.networkType)
+  case 'simplenn'
+    bopts = net.normalization ;
+  case 'dagnn'
+    bopts = net.meta.normalization ;
+end
 bopts.numThreads = opts.numFetchThreads ;
 
 % compute image statistics (mean, RGB covariances etc)
