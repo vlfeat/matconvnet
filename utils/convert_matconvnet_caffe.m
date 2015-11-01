@@ -31,18 +31,29 @@ function convert_matconvnet_caffe(net, base_output_filename, test_img)
 
 [~, name] = fileparts(base_output_filename);
 
+% pre-processing stuff
 if ismember(net.layers{end}.type, {'softmaxloss', 'weightedsoftmaxloss'})
     net.layers{end}.type = 'softmax';
 end
+
+dropout = false(size(net.layers));
 for idx = 1:length(net.layers)
+    % Add missing layer names
     if ~isfield(net.layers{idx}, 'name')
         net.layers{idx}.name = sprintf('layer%d', idx);
     end
-    if isfield(net.layers{idx}, 'filters')
-        % copy old filters,biases notation to weights
+    
+    % copy old filters,biases notation to weights
+    if isfield(net.layers{idx}, 'filters')        
         net.layers{idx}.weights = {net.layers{idx}.filters net.layers{idx}.biases};
     end
+    
+    % mark dropout layers for deletion (not needed at test time)
+    if isequal(net.layers{idx}.type, 'dropout')
+        dropout(idx) = true;
+    end    
 end
+net.layers(dropout) = []; % Remove dropout layers
 
 if isfield(net, 'normalization') && isfield(net.normalization, 'imageSize')
     im_size = net.normalization.imageSize; 
@@ -64,6 +75,8 @@ fprintf(fid, 'input_dim: 1\n');
 fprintf(fid, 'input_dim: %d\n', im_size(3));
 fprintf(fid, 'input_dim: %d\n', im_size(1));
 fprintf(fid, 'input_dim: %d\n\n', im_size(2));
+
+dummy_data = zeros(im_size, 'single'); % Keep track of data size at each layer;
 
 for idx = 1:length(net.layers)
     % write layers
@@ -108,6 +121,42 @@ for idx = 1:length(net.layers)
             
         case 'pool'            
             fprintf(fid, '  type: "Pooling"\n');
+            % Check padding compatability with caffe. See:
+            % http://www.vlfeat.org/matconvnet/matconvnet-manual.pdf
+            % for more details.
+            if ~isfield(net.layers{idx}, 'pad')
+                net.layers{idx}.pad = [0 0 0 0];
+            elseif length(net.layers{idx}.pad) == 1
+                net.layers{idx}.pad = repmat(net.layers{idx}.pad,1,4);
+            end
+            if ~isfield(net.layers{idx}, 'stride')
+                net.layers{idx}.stride = [1 1];
+            elseif length(net.layers{idx}.stride) == 1
+                net.layers{idx}.stride = repmat(net.layers{idx}.stride,1,2);
+            end
+            if length(net.layers{idx}.pool) == 1
+                net.layers{idx}.pool = repmat(net.layers{idx}.pool, 1, 2);
+            end
+            
+            support = net.layers{idx}.pool;
+            stride = net.layers{idx}.stride;
+            pad = net.layers{idx}.pad;
+            layer_input_size = size(dummy_data);           
+            compatability_pad_y = ceil((layer_input_size(1)-support(1)) / stride(1)) * stride(1) ...
+                + support(1) - layer_input_size(1);
+            compatability_pad_x = ceil((layer_input_size(2)-support(2)) / stride(2)) * stride(2) ...
+                + support(2) - layer_input_size(2);
+            
+            if pad(2) ~= pad(1) + compatability_pad_y || ...
+                    pad(4) ~= pad(3) + compatability_pad_x
+                % Padding is not compatible with Caffe
+                error(['Padding in pooling layer net.layers{%d} is not compatible with Caffe.\n' ...
+                    'For compatibility, change layer padding to:\n' ...
+                    'net.layers{%d}.pad = [%d %d %d %d];'], ...
+                    idx, idx, pad(1), pad(1)+compatability_pad_y, pad(3) , pad(3)+compatability_pad_x);
+            end
+
+            
             write_order(fid, net.layers, idx);
             fprintf(fid, '  pooling_param {\n'); 
             switch (net.layers{idx}.method)
@@ -137,9 +186,16 @@ for idx = 1:length(net.layers)
             
         case 'softmax'            
             fprintf(fid, '  type: "Softmax"\n');
-            write_order(fid, net.layers, idx);                
+            write_order(fid, net.layers, idx);    
+            
+        otherwise
+            error('Unknow layer type: %s', net.layers{idx}.type);
     end    
     fprintf(fid,'}\n\n');
+    
+    layer = struct('layers', {net.layers(idx)});
+    res = vl_simplenn(layer, dummy_data);
+    dummy_data = res(end).x;
 end
 fclose(fid);
 
