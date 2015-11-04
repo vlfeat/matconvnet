@@ -92,7 +92,7 @@ for idx = 1:length(net.layers)
         case 'conv'
             if size(net.layers{idx}.weights{1},1) > 1 || ...
                     size(net.layers{idx}.weights{1},2) > 1
-                % Convolution layer                
+                % Convolution layer
                 fprintf(fid, '  type: "Convolution"\n');
                 write_order(fid, net.layers, idx);
                 fprintf(fid, '  convolution_param {\n');
@@ -107,6 +107,13 @@ for idx = 1:length(net.layers)
                     end
                 end
                 write_pad(fid, net.layers{idx});
+                layer_input_size = size(dummy_data);
+                num_groups = layer_input_size(3) / size(net.layers{idx}.weights{1},3);
+                assert(mod(num_groups,1) == 0);
+                if num_groups > 1
+                    fprintf(fid, '    group: %d\n', num_groups);
+                end
+                
                 fprintf(fid, '  }\n');
             else
                 % Fully connected layer
