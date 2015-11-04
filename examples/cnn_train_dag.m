@@ -1,4 +1,4 @@
-function stats = cnn_train_dag(net, imdb, getBatch, varargin)
+function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 %CNN_TRAIN_DAG Demonstrates training a CNN using the DagNN wrapper
 %    CNN_TRAIN_DAG() is similar to CNN_TRAIN(), but works with
 %    the DagNN wrapper instead of the SimpleNN wrapper.
@@ -53,6 +53,7 @@ if numGpus > 1
   end
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
+b
   end
 elseif numGpus == 1
   gpuDevice(opts.gpus)
@@ -103,22 +104,29 @@ for epoch=start+1:opts.numEpochs
   end
 
   figure(1) ; clf ;
-  values = [] ;
-  leg = {} ;
-  for s = {'train', 'val'}
-    s = char(s) ;
-    for f = setdiff(fieldnames(stats.train)', {'num', 'time'})
+  plots = setdiff(...
+    cat(2,...
+        fieldnames(stats.train)', ...
+        fieldnames(stats.val)'), {'num', 'time'}) ;
+  for p = plots
+    p = char(p) ;
+    values = zeros(0, epoch) ;
+    leg = {} ;
+    for f = {'train', 'val'}
       f = char(f) ;
-      leg{end+1} = sprintf('%s (%s)', f, s) ;
-      tmp = [stats.(s).(f)] ;
-      values(end+1,:) = tmp(1,:)' ;
+      if isfield(stats.(f), p)
+        tmp = [stats.(f).(p)] ;
+        values(end+1,:) = tmp(1,:)' ;
+        leg{end+1} = f ;
+      end
     end
+    subplot(1,numel(plots),find(strcmp(p,plots))) ;
+    plot(1:epoch, values','o-') ;
+    xlabel('epoch') ;
+    ylabel(p) ;
+    legend(leg{:}) ;
+    grid on ;
   end
-  subplot(1,2,1) ; plot(1:epoch, values') ;
-  legend(leg{:}) ; xlabel('epoch') ; ylabel('metric') ;
-  subplot(1,2,2) ; semilogy(1:epoch, values') ;
-  legend(leg{:}) ; xlabel('epoch') ; ylabel('metric') ;
-  grid on ;
   drawnow ;
   print(1, modelFigPath, '-dpdf') ;
 end
@@ -145,7 +153,7 @@ else
 end
 
 stats.time = 0 ;
-stats.scores = [] ;
+stats.num = 0 ;
 subset = state.(mode) ;
 start = tic ;
 num = 0 ;
