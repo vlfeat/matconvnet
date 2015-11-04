@@ -57,10 +57,16 @@ net.layers(dropout) = []; % Remove dropout layers
 
 if isfield(net, 'normalization') && isfield(net.normalization, 'imageSize')
     im_size = net.normalization.imageSize; 
-elseif isfield(net, 'normalization') && isfield(net.normalization, 'averageImage')
-    im_size = size(net.normalization.averageImage);
 else
     error('Missing image size. Please set net.normalization.imageSize');
+end
+
+if isfield(net, 'normalization') && isfield(net.normalization, 'averageImage')
+    averageImage_size = size(net.normalization.averageImage);
+    if averageImage_size(1) == 1 && averageImage_size(2) == 1
+        % constant value, we'll duplicate it to im_size
+        net.normalization.averageImage = repmat(net.normalization.averageImage, im_size(1), im_size(2));
+    end
 end
 
 % Write prototxt file
@@ -223,7 +229,7 @@ for idx = 1:length(net.layers)
                 weights = squeeze(weights);
             end
             caffe_net.layers(layer_name).params(1).set_data(weights); % set weights
-            caffe_net.layers(layer_name).params(2).set_data(net.layers{idx}.weights{2}'); % set bias        
+            caffe_net.layers(layer_name).params(2).set_data(net.layers{idx}.weights{2}(:)); % set bias        
         case {'relu', 'normalize', 'pool', 'softmax'}
                 % No weights - nothing to do                
         otherwise
