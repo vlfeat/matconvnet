@@ -19,10 +19,10 @@ DEBUG ?=
 ARCH ?= maci64
 
 # Configure MATLAB
-MATLABROOT ?= /Applications/MATLAB_R2014b.app
+MATLABROOT ?= /Applications/MATLAB_R2015a.app
 
 # Configure CUDA and CuDNN. CUDAMETHOD can be either 'nvcc' or 'mex'.
-CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
+CUDAROOT ?= /Developer/NVIDIA/CUDA-6.5
 CUDNNROOT ?= $(CURDIR)/local/
 CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
@@ -36,8 +36,10 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 # Note that multiple CUDA Toolkits can be installed.
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
+#MATLABROOT ?= /Applications/MATLAB_R2015a.app
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-7.0
 #MATLABROOT ?= /Applications/MATLAB_R2015b.app
-#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.5
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-7.5
 
 # Maintenance
 NAME = matconvnet
@@ -98,13 +100,14 @@ endif
 
 # Mac OS X Intel
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
-MEXFLAGS_GPU += -L$(CUDAROOT)/lib
+comma:=,
+MEXLDFLAGS := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
+MEXLDFLAGS += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)",)
 ifeq ($(NVCCVER_LT_70),true)
-# if using an old version of CUDA
-MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS -stdlib=libstdc++'
-else
-MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS'
+MEXLDFLAGS += -stdlib=libstdc++
 endif
+MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
+MEXFLAGS_GPU  += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 IMAGELIB_DEFAULT = quartz
 endif
 

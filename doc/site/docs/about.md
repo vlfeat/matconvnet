@@ -23,6 +23,11 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta17 (November 2015).
+    * Mac OS X 10.11 support. Since setting `LD_LIBRARY_PATH` is not
+      supported under this OS due to security reasons, now MatConvNet
+      binaries hardcodes the location of the CUDA/cuDNN libraries as
+      needed. This also simplifies starting up MATLAB.
 -   1.0-beta16 (October 2015). Adds
     VGG-Face as a pretrained model. Bugfixes.
 -   1.0-beta15 (September 2015). Supports for new `DagNN` blocks and
