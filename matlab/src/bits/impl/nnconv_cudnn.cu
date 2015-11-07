@@ -25,7 +25,7 @@ using namespace vl ;
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
   error = context.setError(context.getCudaHelper().catchCudnnError(cudnnError, \
-     STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
+     STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__))) ; \
   goto done ; \
 } }
 
@@ -199,7 +199,9 @@ vl::impl::nnconv_forward_cudnn<float>(Context& context,
       float alpha = 1.0f ;
       float beta = 1.0f ;
       CHECK(cudnnAddTensor(handle,
+#if (CUDNN_VERSION < 4000)
                            CUDNN_ADD_SAME_C,
+#endif
                            &alpha,
                            biasesDesc, biases.getMemory() + biasesGrpOffset,
                            &beta,
@@ -214,7 +216,7 @@ done:
   if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
   if (biasesDescInitialized) { cudnnDestroyTensorDescriptor(biasesDesc) ; }
   if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-  return context.passError(error, "nnconv_forward_cudnn: ") ;
+  return context.passError(error, "nnconv_forward_cudnn") ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -245,6 +247,13 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
   bool filtersDescInitialized = false ;
   bool convDescInitialized = false ;
 
+#if (CUDNN_VERSION >= 4000)
+  cudnnConvolutionBwdFilterAlgo_t bwdFilterAlgo ;
+  cudnnConvolutionBwdDataAlgo_t bwdDataAlgo ;
+  void* workSpace = NULL ;
+  size_t workSpaceSize = 0 ;
+#endif
+
   ptrdiff_t numGroups = 1 ;
   ptrdiff_t numFiltersPerGroup = 0 ;
   ptrdiff_t filtersVolume = 0 ;
@@ -259,9 +268,10 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
   // Get CuDNN
   CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
 
-  // Get tensor descripotrs
+  // Get the dimensions of the tensrors involved
+  // If derData is specified (hence comptued as output), use this
+  // tensor as a basis to compute such dimensions, otherwise use derFilters.
 
-  // for derivative w.r.t. data
   if (derData) {
     assert(filters) ;
     numGroups = derData.getDepth() / filters.getDepth() ;
@@ -353,7 +363,67 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
                                      1,
                                      1)) ;
   }
-  
+
+#if (CUDNN_VERSION >= 4000)
+
+  if (derFilters) {
+    // Get filter derivatives algorithm
+    CHECK(cudnnGetConvolutionBackwardFilterAlgorithm
+          (handle,
+           dataDesc,
+           derOutputDesc,
+           convDesc,
+           filtersDesc,
+           CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
+           0,
+           &bwdFilterAlgo)) ;
+
+    // Get workspace size
+    size_t thisSize ;
+    CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize
+          (handle,
+           dataDesc,
+           derOutputDesc,
+           convDesc,
+           filtersDesc,
+           bwdFilterAlgo,
+           &thisSize)) ;
+    workSpaceSize = max(workSpaceSize, thisSize) ;
+  }
+
+  if (derData) {
+    // Get data derivatives
+    CHECK(cudnnGetConvolutionBackwardDataAlgorithm
+          (handle,
+           filtersDesc,
+           derOutputDesc,
+           convDesc,
+           dataDesc,
+           CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
+           0,
+           &bwdDataAlgo)) ;
+
+    size_t thisSize ;
+    CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize
+          (handle,
+           filtersDesc,
+           derOutputDesc,
+           convDesc,
+           dataDesc,
+           bwdDataAlgo,
+           &thisSize)) ;
+    workSpaceSize = max(workSpaceSize, thisSize) ;
+  }
+
+  // Get workspace
+  if (workSpaceSize > 0) {
+    workSpace = context.getWorkspace(vl::GPU, workSpaceSize) ;
+    if (workSpace == NULL) {
+      error = context.getLastError() ;
+      goto done ;
+    }
+  }
+#endif
 
   // Perform backward convolution for each filter group
   for (int g = 0  ; g < numGroups ; ++g) {
@@ -371,31 +441,60 @@ vl::impl::nnconv_backward_cudnn<float>(Context& context,
        &beta,
        derBiasesDesc, derBiases.getMemory() + derBiasesGrpOffset)) ;
     }
+
     if (derFilters) {
       ptrdiff_t dataGrpOffset = (data.getHeight() * data.getWidth() * derFilters.getDepth()) *  g ;
       float alpha = 1 ;
       float beta = 0 ;
+#if (CUDNN_VERSION >= 4000)
       CHECK(cudnnConvolutionBackwardFilter
-      (handle,
-       &alpha,
-       dataDesc, data.getMemory() + dataGrpOffset,
-       derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
-       convDesc,
-       &beta,
-       filtersDesc, derFilters.getMemory() + filtersGrpOffset)) ;
+            (handle,
+             &alpha,
+             dataDesc, data.getMemory() + dataGrpOffset,
+             derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
+             convDesc,
+             bwdFilterAlgo,
+             workSpace, workSpaceSize,
+             &beta,
+             filtersDesc, derFilters.getMemory() + filtersGrpOffset)) ;
+#else
+      CHECK(cudnnConvolutionBackwardFilter
+            (handle,
+             &alpha,
+             dataDesc, data.getMemory() + dataGrpOffset,
+             derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
+             convDesc,
+             &beta,
+             filtersDesc, derFilters.getMemory() + filtersGrpOffset)) ;
+#endif
     }
+    
     if (derData) {
       ptrdiff_t dataGrpOffset = (derData.getHeight() * derData.getWidth() * filters.getDepth()) *  g ;
       float alpha = 1 ;
       float beta = 0 ;
+
+#if (CUDNN_VERSION >= 4000)
       CHECK(cudnnConvolutionBackwardData
-      (handle,
-       &alpha,
-       filtersDesc, filters.getMemory() + filtersGrpOffset,
-       derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
-       convDesc,
-       &beta,
-       dataDesc, derData.getMemory() + dataGrpOffset)) ;
+            (handle,
+             &alpha,
+             filtersDesc, filters.getMemory() + filtersGrpOffset,
+             derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
+             convDesc,
+             bwdDataAlgo,
+             workSpace, workSpaceSize,
+             &beta,
+             dataDesc, derData.getMemory() + dataGrpOffset)) ;
+#else
+      CHECK(cudnnConvolutionBackwardData
+            (handle,
+             &alpha,
+             filtersDesc, filters.getMemory() + filtersGrpOffset,
+             derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
+             convDesc,
+             &beta,
+             dataDesc, derData.getMemory() + dataGrpOffset)) ;
+#endif
     }
   }
 
@@ -405,6 +504,6 @@ done:
   if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
   if (derBiasesDescInitialized) { cudnnDestroyTensorDescriptor(derBiasesDesc) ; }
   if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-  return context.passError(error, "nnconv_backward_cudnn: ") ;
+  return context.passError(error, "nnconv_backward_cudnn") ;
 }
 
