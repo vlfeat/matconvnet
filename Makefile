@@ -61,7 +61,7 @@ MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
 MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
 MEXFLAGS = -cxx -largeArrayDims -lmwblas \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
-$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),)
+$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
 SHELL = /bin/bash # sh not good enough
 
@@ -75,7 +75,7 @@ NVCCVER_LT_70 = $(shell test $(NVCCVER) -lt 070000 && echo true)
 NVCCFLAGS = \
 -gencode=arch=compute_30,code=\"sm_30,compute_30\" \
 -DENABLE_GPU \
-$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),) \
+$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 -Xcompiler -fPIC
@@ -102,19 +102,19 @@ endif
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 comma:=,
 MEXLDFLAGS := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
-MEXLDFLAGS += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)",)
+MEXLDFLAGS += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib",)
 ifeq ($(NVCCVER_LT_70),true)
 MEXLDFLAGS += -stdlib=libstdc++
 endif
-MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
-MEXFLAGS_GPU  += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
+MEXFLAGS_NVCC += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
+MEXFLAGS_GPU  += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 IMAGELIB_DEFAULT = quartz
 endif
 
 # Linux
 ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
-MEXFLAGS_GPU += -L$(CUDAROOT)/lib64
-MEXFLAGS_NVCC += -L$(CUDAROOT)/lib64
+MEXFLAGS_NVCC += -L"$(CUDAROOT)/lib64" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64",)
+MEXFLAGS_GPU  += -L"$(CUDAROOT)/lib64" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64",)
 IMAGELIB_DEFAULT = libjpeg
 MEXFLAGS += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops'
 NVCCFLAGS += -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops
@@ -133,8 +133,8 @@ ifdef ENABLE_IMREADJPEG
 MEXFLAGS += $(IMAGELIB_CFLAGS) $(IMAGELIB_LDFLAGS)
 endif
 
-MEXFLAGS_GPU += -lcublas -lcudart $(if $(ENABLE_CUDNN),-L$(CUDNNROOT) -lcudnn,)
-MEXFLAGS_NVCC += -lcublas -lcudart $(if $(ENABLE_CUDNN),-L$(CUDNNROOT) -lcudnn,)
+MEXFLAGS_GPU += -lcublas -lcudart $(if $(ENABLE_CUDNN),-lcudnn,)
+MEXFLAGS_NVCC += -lcublas -lcudart $(if $(ENABLE_CUDNN),-lcudnn,)
 
 # --------------------------------------------------------------------
 #                                                      Build MEX files

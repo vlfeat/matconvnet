@@ -28,6 +28,12 @@ here.
       supported under this OS due to security reasons, now MatConvNet
       binaries hardcodes the location of the CUDA/cuDNN libraries as
       needed. This also simplifies starting up MATLAB.
+
+    * This version changes slightly how cuDNN is configured; the cuDNN
+      root directory is assumed to contain two subdirectories `lib`
+      and `include` instead of the binary and include files
+      directly. This matches how cuDNN is now distributed.
+
 -   1.0-beta16 (October 2015). Adds
     VGG-Face as a pretrained model. Bugfixes.
 -   1.0-beta15 (September 2015). Supports for new `DagNN` blocks and
