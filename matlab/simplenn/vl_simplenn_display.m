@@ -31,6 +31,12 @@ opts.maxNumColumns = 18 ;
 opts.format = 'ascii' ;
 opts = vl_argparse(opts, varargin) ;
 
+if isempty(opts.inputSize)
+  if isfield(net, 'meta') && isfield(net.meta, 'inputSize')
+    opts.inputSize = net.meta.inputSize ;
+  end
+end
+
 fields={'layer', 'type', 'name', '-', ...
         'support', 'filtd', 'nfilt', 'stride', 'pad', '-', ...
         'rfsize', 'rfoffset', 'rfstride', '-', ...
