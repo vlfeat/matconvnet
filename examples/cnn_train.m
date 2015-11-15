@@ -206,7 +206,7 @@ err(1,1) = sum(sum(sum(mass .* error(:,:,1,:)))) ;
 err(2,1) = sum(sum(sum(mass .* min(error(:,:,1:5,:),[],3)))) ;
 
 % -------------------------------------------------------------------------
-function err = error_binaryclass(opts, labels, res)
+function err = error_binary(opts, labels, res)
 % -------------------------------------------------------------------------
 predictions = gather(res(end-1).x) ;
 error = bsxfun(@times, predictions, labels) < 0 ;
