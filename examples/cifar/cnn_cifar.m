@@ -9,26 +9,15 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 opts.modelType = 'lenet' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-switch opts.modelType
-  case 'lenet'
-    opts.train.learningRate = [0.05*ones(1,15) 0.005*ones(1,10) 0.0005*ones(1,5)] ;
-    opts.train.weightDecay = 0.0001 ;
-  case 'nin'
-    opts.train.learningRate = [0.5*ones(1,30) 0.1*ones(1,10) 0.02*ones(1,10)] ;
-    opts.train.weightDecay = 0.0005 ;
-  otherwise
-    error('Unknown model type %s', opts.modelType) ;
-end
 opts.expDir = fullfile('data', sprintf('cifar-%s', opts.modelType)) ;
-[opts, varargin] = vl_argparse(opts, varargin) ;
-
-opts.train.numEpochs = numel(opts.train.learningRate) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.dataDir = fullfile('data','cifar') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.whitenData = true ;
 opts.contrastNormalization = true ;
+opts.train.learningRate = [] ;
+opts.train.numEpochs = [] ;
 opts.train.batchSize = 100 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
@@ -40,7 +29,9 @@ opts = vl_argparse(opts, varargin) ;
 % --------------------------------------------------------------------
 
 switch opts.modelType
-  case 'lenet', net = cnn_cifar_init(opts) ;
+  case 'lenet',     
+    net = cnn_cifar_init('modelType', opts.modelType) ;
+    %net_ = cnn_cifar_init_old(opts) ;    
   case 'nin',   net = cnn_cifar_init_nin(opts) ;
 end
 
@@ -50,6 +41,14 @@ else
   imdb = getCifarImdb(opts) ;
   mkdir(opts.expDir) ;
   save(opts.imdbPath, '-struct', 'imdb') ;
+end
+
+if isempty(opts.train.learningRate)
+  opts.train.learningRate = net.meta.recipe.learningRate ;
+end
+
+if isempty(opts.train.numEpochs)
+  opts.train.numEpochs = numel(opts.train.learningRate) ;
 end
 
 % --------------------------------------------------------------------
