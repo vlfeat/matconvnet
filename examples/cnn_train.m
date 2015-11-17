@@ -50,6 +50,8 @@ if isnan(opts.train), opts.train = [] ; end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
+vl_simplenn_display(net, 'batchSize', opts.batchSize) ;
+
 evaluateMode = isempty(opts.train) ;
 
 if ~evaluateMode
