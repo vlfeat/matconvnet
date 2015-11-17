@@ -52,10 +52,10 @@ import dagnn.*
 
 obj = DagNN() ;
 net = vl_simplenn_move(net, 'cpu') ;
+net = vl_simplenn_tidy(net) ;
 
-if isfield(net, 'normalization')
-  obj.meta.normalization = net.normalization ;
-end
+% copy meta-information as is
+obj.meta = net.meta ;
 
 for l = 1:numel(net.layers)
   inputs = {sprintf('x%d',l-1)} ;
@@ -74,24 +74,13 @@ for l = 1:numel(net.layers)
 
   switch net.layers{l}.type
     case {'conv', 'convt'}
-      if isfield(net.layers{l},'filters')
-        sz = size(net.layers{l}.filters) ;
-        hasBias = ~isempty(net.layers{l}.biases) ;
-        params(1).name = sprintf('%sf',name) ;
-        params(1).value = net.layers{l}.filters ;
-        if hasBias
-          params(2).name = sprintf('%sb',name) ;
-          params(2).value = net.layers{l}.biases ;
-        end
-      else
-        sz = size(net.layers{l}.weights{1}) ;
-        hasBias = ~isempty(net.layers{l}.weights{2}) ;
-        params(1).name = sprintf('%sf',name) ;
-        params(1).value = net.layers{l}.weights{1} ;
-        if hasBias
-          params(2).name = sprintf('%sb',name) ;
-          params(2).value = net.layers{l}.weights{2} ;
-        end
+      sz = size(net.layers{l}.weights{1}) ;
+      hasBias = ~isempty(net.layers{l}.weights{2}) ;
+      params(1).name = sprintf('%sf',name) ;
+      params(1).value = net.layers{l}.weights{1} ;
+      if hasBias
+        params(2).name = sprintf('%sb',name) ;
+        params(2).value = net.layers{l}.weights{2} ;
       end
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
@@ -158,7 +147,9 @@ for l = 1:numel(net.layers)
       end
     case {'relu'}
       lopts = {} ;
-      if isfield(net.layers{l}, 'leak'), lopts = {'leak', net.layers{l}} ; end
+      if isfield(net.layers{l}, 'leak')
+        lopts = {'leak', net.layers{l}.leak} ;
+      end
       block = ReLU('opts', lopts) ;
     case {'sigmoid'}
       block = Sigmoid() ;
@@ -170,17 +161,10 @@ for l = 1:numel(net.layers)
       inputs{2} = getNewVarName(obj, 'label') ;
     case {'bnorm'}
       block = BatchNorm() ;
-      if isfield(net.layers{l},'filters')
-        params(1).name = sprintf('%sm',name) ;
-        params(1).value = net.layers{l}.filters ;
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.biases ;
-      else
-        params(1).name = sprintf('%sm',name) ;
-        params(1).value = net.layers{l}.weights{1} ;
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.weights{2} ;
-      end
+      params(1).name = sprintf('%sm',name) ;
+      params(1).value = net.layers{l}.weights{1} ;
+      params(2).name = sprintf('%sb',name) ;
+      params(2).value = net.layers{l}.weights{2} ;
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
         params(2).learningRate = net.layers{l}.learningRate(2) ;
