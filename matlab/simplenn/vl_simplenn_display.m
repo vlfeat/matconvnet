@@ -26,16 +26,31 @@ function [info, str] = vl_simplenn_display(net, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.inputSize = [] ;
-opts.batchSize = 1 ;
+opts.batchSize = [] ;
 opts.maxNumColumns = 18 ;
 opts.format = 'ascii' ;
 opts = vl_argparse(opts, varargin) ;
 
+% determine input size, using first the option, then net.meta.inputSize, 
+% and eventually net.meta.normalization.imageSize, if any
 if isempty(opts.inputSize)
-  if isfield(net, 'meta') && isfield(net.meta, 'inputSize')
-    opts.inputSize = net.meta.inputSize ;
-  end
+  tmp = [] ;
+  opts.inputSize = [NaN;NaN;NaN;1] ;
+  if isfield(net, 'meta')
+    if isfield(net.meta, 'inputSize')
+      tmp =  net.meta.inputSize(:) ;
+    elseif isfield(net.meta, 'normalization') && ...
+        isfield(net.meta.normalization, 'imageSize')
+      tmp = net.meta.normalization.imageSize ;
+    end
+    opts.inputSize(1:numel(tmp)) = tmp(:) ;
+  end  
 end
+
+if ~isempty(opts.batchSize)
+  opts.inputSize(4) = opts.batchSize ;
+end
+
 
 fields={'layer', 'type', 'name', '-', ...
         'support', 'filtd', 'nfilt', 'stride', 'pad', '-', ...
@@ -79,15 +94,8 @@ for l = 1:numel(net.layers)
   info.receptiveFieldStride = cumprod(info.stride,2) ;
 end
 
-
 % get the dimensions of the data
-if ~isempty(opts.inputSize) ;
-  info.dataSize(1:4,1) = opts.inputSize(:) ;
-elseif isfield(net, 'normalization') && isfield(net.normalization, 'imageSize')
-  info.dataSize(1:4,1) = [net.normalization.imageSize(:) ; opts.batchSize] ;
-else
-  info.dataSize(1:4,1) = [NaN NaN NaN opts.batchSize] ;
-end
+info.dataSize(1:4,1) = opts.inputSize(:) ;
 for l = 1:numel(net.layers)
   ly = net.layers{l} ;
   if strcmp(ly.type, 'custom') && isfield(ly, 'getForwardSize')
