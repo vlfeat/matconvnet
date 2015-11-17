@@ -10,6 +10,7 @@ opts.expDir = fullfile('data','mnist-baseline') ;
 opts.dataDir = 'data/mnist' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.useBatchNorm = false ;
+opts.networkType = 'simplenn' ;
 opts.train = struct() ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
@@ -17,7 +18,8 @@ opts.train = struct() ;
 %                                                         Prepare data
 % --------------------------------------------------------------------
 
-net = cnn_mnist_init('useBatchNorm', opts.useBatchNorm) ;
+net = cnn_mnist_init('useBatchNorm', opts.useBatchNorm, ...
+                     'networkType', opts.networkType) ;
 
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;

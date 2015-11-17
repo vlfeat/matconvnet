@@ -235,10 +235,10 @@ end
 % validation mode if learning rate is zero
 training = learningRate > 0 ;
 if training
-  mode = 'training' ;
+  mode = 'train' ;
   evalMode = 'normal' ;
 else
-  mode = 'validation' ;
+  mode = 'val' ;
   evalMode = 'test' ;
 end
 if nargout > 2, mpiprofile on ; end
@@ -255,7 +255,7 @@ stats = [] ;
 start = tic ;
 
 for t=1:opts.batchSize:numel(subset)
-  fprintf('%s: epoch %02d: batch %3d/%3d: ', mode, epoch, ...
+  fprintf('%s: epoch %02d: %3d/%3d: ', mode, epoch, ...
           fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
   numDone = 0 ;

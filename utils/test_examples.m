@@ -10,7 +10,7 @@ num = 1 ;
 
 exps = {} ;
 for networkType = {'dagnn', 'simplenn'}
-  for index = 4
+  for index = 1:4
     clear ex ;
     ex.trainOpts = trainOpts ;
     ex.networkType = char(networkType) ;
