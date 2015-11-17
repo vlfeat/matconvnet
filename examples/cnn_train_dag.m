@@ -53,7 +53,6 @@ if numGpus > 1
   end
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
-b
   end
 elseif numGpus == 1
   gpuDevice(opts.gpus)
@@ -183,9 +182,11 @@ for t=1:opts.batchSize:numel(subset)
     end
 
     if strcmp(mode, 'train')
+      net.mode = 'normal' ;
       net.accumulateParamDers = (s ~= 1) ;
       net.eval(inputs, opts.derOutputs) ;
     else
+      net.mode = 'test' ;
       net.eval(inputs) ;
     end
   end
@@ -226,23 +227,40 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
-for i=1:numel(net.params)
-  thisDecay = opts.weightDecay * net.params(i).weightDecay ;
-  thisLR = state.learningRate * net.params(i).learningRate ;
+for p=1:numel(net.params)
 
+  % bring in gradients from other GPUs if any
   if ~isempty(mmap)
-    tmp = zeros(size(mmap.Data(labindex).(net.params(i).name)), 'single') ;
-    for g = setdiff(1:numel(mmap.Data), labindex)
-      tmp = tmp + mmap.Data(g).(net.params(i).name) ;
+    numGpus = numel(mmap.Data) ;
+    tmp = zeros(size(mmap.Data(labindex).(net.params(p).name)), 'single') ;
+    for g = setdiff(1:numGpus, labindex)
+      tmp = tmp + mmap.Data(g).(net.params(p).name) ;
     end
-    net.params(i).der = net.params(i).der + tmp ;
+    net.params(p).der = net.params(p).der + tmp ;
+  else
+    numGpus = 1 ;
   end
 
-  state.momentum{i} = opts.momentum * state.momentum{i} ...
-    - thisDecay * net.params(i).value ...
-    - (1 / batchSize) * net.params(i).der ;
-
-  net.params(i).value = net.params(i).value + thisLR * state.momentum{i} ;
+  switch net.params(p).trainMethod
+    case 'gradient'
+      thisDecay = opts.weightDecay * net.params(p).weightDecay ;
+      thisLR = state.learningRate * net.params(p).learningRate ;
+      state.momentum{p} = opts.momentum * state.momentum{p} ...
+        - thisDecay * net.params(p).value ...
+        - (1 / batchSize) * net.params(p).der ;      
+      net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
+      
+    case 'average' % mainly for batch normalization
+      thisLR = net.params(p).learningRate ;
+      net.params(p).der = net.params(p).der / numGpus ;
+      net.params(p).value = thisLR * net.params(p).value + ...
+        (1 - thisLR) * net.params(p).der ;
+      
+    case 'otherwise'
+      error('Unknown training method ''%s'' for parameter ''%s''.', ...
+        net.params(p).trainMethod, ...
+        net.params(p).name) ;
+  end
 end
 
 % -------------------------------------------------------------------------
