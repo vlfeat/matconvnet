@@ -8,6 +8,7 @@ opts.weightDecay = 1 ;
 opts.weightInitMethod = 'gaussian' ;
 opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
+opts.networkType = 'simplenn' ;
 opts = vl_argparse(opts, varargin) ;
 
 % Define layers
@@ -15,21 +16,27 @@ switch opts.model
   case 'alexnet'
     net.normalization.imageSize = [227, 227, 3] ;
     net = alexnet(net, opts) ;
+    bs = 256 ;
   case 'vgg-f'
     net.normalization.imageSize = [224, 224, 3] ;
     net = vgg_f(net, opts) ;
+    bs = 256 ;
   case 'vgg-m'
     net.normalization.imageSize = [224, 224, 3] ;
     net = vgg_m(net, opts) ;
+    bs = 256 ;
   case 'vgg-s'
     net.normalization.imageSize = [224, 224, 3] ;
     net = vgg_s(net, opts) ;
+    bs = 128 ;      
   case 'vgg-vd-16'
     net.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
+    bs = 32 ;
   case 'vgg-vd-19'
     net.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
+    bs = 24 ;
   otherwise
     error('Unknown model ''%s''', opts.model) ;
 end
@@ -41,11 +48,34 @@ switch lower(opts.weightInitMethod)
 end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
-net.normalization.border = 256 - net.normalization.imageSize(1:2) ;
-net.normalization.interpolation = 'bicubic' ;
-net.normalization.averageImage = [] ;
-net.normalization.keepAspect = true ;
+% Meta parameters
+net.meta.inputSize = net.meta.normalization.imageSize ;
+net.meta.normalization.border = 256 - net.normalization.imageSize(1:2) ;
+net.meta.normalization.interpolation = 'bicubic' ;
+net.meta.normalization.averageImage = [] ;
+net.meta.normalization.keepAspect = true ;
+
+if ~opts.batchNormalization
+  net.meta.trainOpts.learningRate = logspace(-2, -4, 60) ;
+else
+  net.meta.trainOpts.learningRate = logspace(-1, -4, 20) ;
+end
+
+% Fill in default values
+net = vl_simplenn_tidy(net) ;
  
+% Switch to DagNN if requested
+switch lower(opts.networkType)
+  case 'simplenn'
+    % done
+  case 'dagnn'
+    net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
+    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
+             {'prediction','label'}, 'error') ;
+  otherwise
+    assert(false) ;
+end
+
 % --------------------------------------------------------------------
 function net = add_block(net, opts, id, h, w, in, out, stride, pad, init_bias)
 % --------------------------------------------------------------------

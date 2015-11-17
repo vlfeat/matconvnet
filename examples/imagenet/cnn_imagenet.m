@@ -1,7 +1,7 @@
 function cnn_imagenet(varargin)
-% CNN_IMAGENET   Demonstrates training a CNN on ImageNet
-%   This demo demonstrates training the AlexNet, VGG-F, VGG-S, VGG-M,
-%   VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
+%CNN_IMAGENET   Demonstrates training a CNN on ImageNet
+%  This demo demonstrates training the AlexNet, VGG-F, VGG-S, VGG-M,
+%  VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
@@ -15,6 +15,7 @@ opts.weightInitMethod = 'gaussian' ;
 
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
+sfx = [sfx '-' opts.networkType] ;
 opts.expDir = fullfile('data', sprintf('imagenet12-%s-%s', ...
                                        sfx, opts.networkType)) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
@@ -22,43 +23,20 @@ opts.expDir = fullfile('data', sprintf('imagenet12-%s-%s', ...
 opts.numFetchThreads = 12 ;
 opts.lite = false ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.train.batchSize = 256 ;
-opts.train.numSubBatches = 1 ;
-opts.train.continue = true ;
-opts.train.gpus = [] ;
-opts.train.prefetch = true ;
-opts.train.sync = false ;
-opts.train.cudnn = true ;
-opts.train.expDir = opts.expDir ;
-if ~opts.batchNormalization
-  opts.train.learningRate = logspace(-2, -4, 60) ;
-else
-  opts.train.learningRate = logspace(-1, -4, 20) ;
-end
+opts.train = struct([]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.train.numEpochs = numel(opts.train.learningRate) ;
 opts = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
-%                                                   Database initialization
-% -------------------------------------------------------------------------
-
-if exist(opts.imdbPath)
-  imdb = load(opts.imdbPath) ;
-else
-  imdb = cnn_imagenet_setup_data('dataDir', opts.dataDir, 'lite', opts.lite) ;
-  mkdir(opts.expDir) ;
-  save(opts.imdbPath, '-struct', 'imdb') ;
-end
-
-% -------------------------------------------------------------------------
-%                                                    Network initialization
+%                                                            Prepare model
 % -------------------------------------------------------------------------
 
 net = cnn_imagenet_init('model', opts.modelType, ...
                         'batchNormalization', opts.batchNormalization, ...
-                        'weightInitMethod', opts.weightInitMethod) ;
+                        'weightInitMethod', opts.weightInitMethod, ...
+                        'networkType', opts.networkType) ;
 bopts = net.normalization ;
 bopts.numThreads = opts.numFetchThreads ;
 
@@ -71,10 +49,14 @@ else
   save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 end
 
-% One can use the average RGB value, or use a different average for
-% each pixel
-%net.normalization.averageImage = averageImage ;
-net.normalization.averageImage = rgbMean ;
+% Mean subtraction (use either an image or a color)
+%net.meta.normalization.averageImage = averageImage ;
+net.meta.normalization.averageImage = rgbMean ;
+
+% Data augmentation
+[v,d] = eig(rgbCovariance) ;
+net.meta.augmentation.rgbVariance = 0.1*sqrt(d)*v' ;
+net.meta.augmentation.transformation = 'stretch' ;
 
 switch lower(opts.networkType)
   case 'simplenn'
@@ -87,8 +69,40 @@ switch lower(opts.networkType)
 end
 
 % -------------------------------------------------------------------------
+%                                                              Prepare data
+% -------------------------------------------------------------------------
+
+if exist(opts.imdbPath)
+  imdb = load(opts.imdbPath) ;
+else
+  imdb = cnn_imagenet_setup_data('dataDir', opts.dataDir, 'lite', opts.lite) ;
+  mkdir(opts.expDir) ;
+  save(opts.imdbPath, '-struct', 'imdb') ;
+end
+
+net.meta.classes.name = imdb.classes.name ;
+net.meta.classes.description = imdb.classes.description ;
+
+% -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
+
+switch opts.networkType
+  case 'simplenn', trainfn = @cnn_train ;
+  case 'dagnn', trainfn = @cnn_train_dag ;
+end
+
+batchfn = getBatch(...
+  opts, ...
+  net.meta.normalization, ...
+  net.meta.augmentatin) ;
+
+[net, info] = trainfn(net, imdb, batchfn, ...
+  'expDir', opts.expDir, ...
+  net.meta.trainOpts, ...
+  opts.train, ...
+  'val', find(imdb.images.set == 3)) ;
+
 
 [v,d] = eig(rgbCovariance) ;
 bopts.transformation = 'stretch' ;
@@ -96,23 +110,23 @@ bopts.averageImage = rgbMean ;
 bopts.rgbVariance = 0.1*sqrt(d)*v' ;
 useGpu = numel(opts.train.gpus) > 0 ;
 
+% -------------------------------------------------------------------------
+function fn = getBatch(opts, normalization, augmentation)
+% -------------------------------------------------------------------------
+bopts.numGpus =numel(opts.train.gpus) ;
+bopts.averageImage = normalization.averageImage ;
+bopts.rgbVariance = augmentation.rgbVariance ;
+bopts.transformation = augmentation.transformation ;
+
 switch lower(opts.networkType)
   case 'simplenn'
-    fn = getBatchSimpleNNWrapper(bopts) ;
-    [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
+    fn = @(x,y) getSimpleNNBatch(bopts,x,y) ;
   case 'dagnn'
-    fn = getBatchDagNNWrapper(bopts, useGpu) ;
-    opts.train = rmfield(opts.train, {'sync', 'cudnn'}) ;
-    info = cnn_train_dag(net, imdb, fn, opts.train) ;
+    fn = @(x,y) getDagNNBatch(bopts,x,y) ;
 end
 
 % -------------------------------------------------------------------------
-function fn = getBatchSimpleNNWrapper(opts)
-% -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatchSimpleNN(imdb,batch,opts) ;
-
-% -------------------------------------------------------------------------
-function [im,labels] = getBatchSimpleNN(imdb, batch, opts)
+function [im,labels] = getSimpleNNBatch(opts, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
@@ -120,12 +134,7 @@ im = cnn_imagenet_get_batch(images, opts, ...
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
-function fn = getBatchDagNNWrapper(opts, useGpu)
-% -------------------------------------------------------------------------
-fn = @(imdb,batch) getBatchDagNN(imdb,batch,opts,useGpu) ;
-
-% -------------------------------------------------------------------------
-function inputs = getBatchDagNN(imdb, batch, opts, useGpu)
+function inputs = getDagNNBatch(opts, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
