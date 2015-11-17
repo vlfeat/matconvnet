@@ -5,8 +5,10 @@ function [opts, args] = vl_argparse(opts, args, varargin)
 %   VALN}. The function produces an error if an unknown parameter name
 %   is passed on.
 %
-%   Values that are structures are copied recursively. This behaviour
-%   can be suppressed by using VL_ARGPARSE(OPTS, ARGS, 'nonrecursive').
+%   Values that are structures are processed recursively. This behaviour
+%   can be suppressed by using VL_ARGPARSE(OPTS, ARGS, 'nonrecursive'),
+%   in which case these values are copied directly. A direct copy occurrs
+%   also if the value in OPTS is a structure with no fields.
 %
 %   Any of the PAR, VAL pairs can be replaced by a structure; in this
 %   case, the fields of the structure are used as paramaters and the
@@ -82,7 +84,7 @@ for i = 1:numel(params)
     field = findfield(opts, field) ;
   end
   if ~isempty(field)
-    if isstruct(values{i}) & recursive
+    if isstruct(values{i}) && recursive && numel(fieldnames(opts.(field))) > 0
       if ~isstruct(opts.(field))
         error('The value specified for the parameter ''%s'' is a structure, but this parameter is not defined as a structure in OPTS.',field) ;
       end
