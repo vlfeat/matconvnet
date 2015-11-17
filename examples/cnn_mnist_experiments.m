@@ -1,5 +1,7 @@
 %% Experiment with the cnn_mnist_fc_bnorm
 
+clear
+
 [net_bn, info_bn] = cnn_mnist(...
   'expDir', 'data/mnist-bnorm', 'useBnorm', true);
 
