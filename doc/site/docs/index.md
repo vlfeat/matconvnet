@@ -20,6 +20,11 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
     }
 </pre>
 
+> **New:** 1.0-beta17 tidies up the library in many ways. It also
+> improves how batch normalization is handled. Please check carefully
+> the [changes](about.md#changes) to see if any of this might impact
+> your workflow.
+>
 > **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
 >
 > **New:** Fully-Convolutional Networks (FCN) training and evaluation
