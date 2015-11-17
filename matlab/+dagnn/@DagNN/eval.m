@@ -65,12 +65,19 @@ function eval(obj, inputs, derOutputs)
 
 obj.computingDerivative = nargin > 2 && ~isempty(derOutputs) ;
 
+if ~iscell(inputs), error('INPUTS is not a cell array.') ; end
+if obj.computingDerivative && ~iscell(derOutputs), error('DEROUTPUTS is not a cell array.') ; end
+
 % -------------------------------------------------------------------------
 % Forward pass
 % -------------------------------------------------------------------------
 
 % set the input values
 v = obj.getVarIndex(inputs(1:2:end)) ;
+if any(isnan(v))
+  broken = find(isnan(v)) ;
+  error('No variable of name ''%s'' could be found in the DAG.', inputs{2*broken(1)-1}) ;
+end
 [obj.vars(v).value] = deal(inputs{2:2:end}) ;
 inputs = [] ;
 
