@@ -4,7 +4,7 @@ function [net, info] = cnn_cifar(varargin)
 %    Network (NIN). Use the 'modelType' option to choose one.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
-  '..', 'matlab', 'vl_setupnn.m')) ;
+  '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.modelType = 'lenet' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
