@@ -27,6 +27,8 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
+net.meta.classes.name = arrayfun(@(x)sprintf('%d',x),1:10,'UniformOutput',false) ;
+
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
