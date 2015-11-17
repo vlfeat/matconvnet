@@ -16,12 +16,8 @@ opts.dataDir = fullfile('data','cifar') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.whitenData = true ;
 opts.contrastNormalization = true ;
-opts.train.learningRate = [] ;
-opts.train.numEpochs = [] ;
-opts.train.batchSize = 100 ;
-opts.train.continue = true ;
-opts.train.gpus = [] ;
-opts.train.expDir = opts.expDir ;
+opts.networkType = 'simplenn' ;
+opts.train = struct() ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
@@ -29,10 +25,12 @@ opts = vl_argparse(opts, varargin) ;
 % --------------------------------------------------------------------
 
 switch opts.modelType
-  case 'lenet',     
-    net = cnn_cifar_init('modelType', opts.modelType) ;
-    %net_ = cnn_cifar_init_old(opts) ;    
-  case 'nin',   net = cnn_cifar_init_nin(opts) ;
+  case 'lenet'
+    net = cnn_cifar_init('networkType', opts.networkType) ;
+  case 'nin'
+    net = cnn_cifar_init_nin('networkType', opts.networkType) ;
+  otherwise
+    error('Unknown model type ''%s''.', opts.modelType) ;
 end
 
 if exist(opts.imdbPath, 'file')
@@ -43,21 +41,15 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
-if isempty(opts.train.learningRate)
-  opts.train.learningRate = net.meta.recipe.learningRate ;
-end
-
-if isempty(opts.train.numEpochs)
-  opts.train.numEpochs = numel(opts.train.learningRate) ;
-end
-
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
 
 [net, info] = cnn_train(net, imdb, @getBatch, ...
-    opts.train, ...
-    'val', find(imdb.images.set == 3)) ;
+  'expDir', opts.expDir, ...
+  net.meta.trainOpts, ...
+  opts.train, ...
+  'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
 function [im, labels] = getBatch(imdb, batch)

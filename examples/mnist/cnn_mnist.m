@@ -7,20 +7,18 @@ run(fullfile(fileparts(mfilename('fullpath')),...
 opts.expDir = fullfile('data','mnist-baseline') ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.dataDir = fullfile('data','mnist') ;
+opts.dataDir = 'data/mnist' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.useBnorm = false ;
-opts.train.batchSize = 100 ;
-opts.train.numEpochs = 20 ;
-opts.train.continue = true ;
-opts.train.gpus = [] ;
-opts.train.learningRate = 0.001 ;
-opts.train.expDir = opts.expDir ;
-opts = vl_argparse(opts, varargin) ;
+opts.useBatchNorm = false ;
+opts.train = struct() ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
 %                                                         Prepare data
 % --------------------------------------------------------------------
+
+net = cnn_mnist_init('useBatchNorm', opts.useBatchNorm) ;
+
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
 else
@@ -29,18 +27,20 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
-net = cnn_mnist_init('useBnorm', opts.useBnorm) ;
-
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
+
 [net, info] = cnn_train(net, imdb, @getBatch, ...
+    'expDir', opts.expDir, ...
+    net.meta.trainOpts, ...
     opts.train, ...
     'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
 function [im, labels] = getBatch(imdb, batch)
 % --------------------------------------------------------------------
+
 im = imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
 
