@@ -54,11 +54,14 @@ net.meta.trainOpts.batchSize = 100 ;
 % Fill in defaul values
 net = vl_simplenn_tidy(net) ;
 
+% Switch to DagNN if requested
 switch lower(opts.networkType)
   case 'simplenn'
     % done
   case 'dagnn'
-    net = dagnn.DagNN.fromSimpleNN(net) ;
+    net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
+    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
+             {'prediction','label'}, 'error') ;
   otherwise
     assert(false) ;
 end

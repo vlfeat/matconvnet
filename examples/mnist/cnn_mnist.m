@@ -33,18 +33,43 @@ net.meta.classes.name = arrayfun(@(x)sprintf('%d',x),1:10,'UniformOutput',false)
 %                                                                Train
 % --------------------------------------------------------------------
 
-[net, info] = cnn_train(net, imdb, @getBatch, ...
-    'expDir', opts.expDir, ...
-    net.meta.trainOpts, ...
-    opts.train, ...
-    'val', find(imdb.images.set == 3)) ;
+switch opts.networkType
+  case 'simplenn', trainfn = @cnn_train ;
+  case 'dagnn', trainfn = @cnn_train_dag ;
+end
+
+[net, info] = trainfn(net, imdb, getBatch(opts), ...
+  'expDir', opts.expDir, ...
+  net.meta.trainOpts, ...
+  opts.train, ...
+  'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
-function [im, labels] = getBatch(imdb, batch)
+function fn = getBatch(opts)
 % --------------------------------------------------------------------
+switch lower(opts.networkType)
+  case 'simplenn'
+    fn = @(x,y) getSimpleNNBatch(x,y) ;
+  case 'dagnn'
+    bopts = struct('numGpus', numel(opts.train.gpus)) ;
+    fn = @(x,y) getDagNNBatch(bopts,x,y) ;
+end
 
-im = imdb.images.data(:,:,:,batch) ;
+% --------------------------------------------------------------------
+function [images, labels] = getSimpleNNBatch(imdb, batch)
+% --------------------------------------------------------------------
+images = imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
+
+% --------------------------------------------------------------------
+function inputs = getDagNNBatch(opts, imdb, batch)
+% --------------------------------------------------------------------
+images = imdb.images.data(:,:,:,batch) ;
+labels = imdb.images.labels(1,batch) ;
+if opts.numGpus > 0
+  images = gpuArray(images)
+end
+inputs = {'input', images, 'label', labels} ;
 
 % --------------------------------------------------------------------
 function imdb = getMnistImdb(opts)
