@@ -1,4 +1,4 @@
-function net = vl_simplenn_tidy(net)
+function tnet = vl_simplenn_tidy(net)
 %VL_SIMPLENN_TIDY  Fix an incomplete or outdated SimpleNN neural network.
 %   NET = VL_SIMPLENN_TIDY(NET) takes the NET object and upgrades
 %   it to the current version of MatConvNet. This is necessary in
@@ -16,46 +16,48 @@ function net = vl_simplenn_tidy(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-% move meta information in net.meta subfield
+tnet = struct('layers', {{}}, 'meta', struct([])) ;
+
+% copy meta information in net.meta subfield
 if isfield(net, 'classes')
-  net.meta.classes = net.classes ;
-  net = rmfield(net, 'classes') ;
+  tnet.meta.classes = net.classes ;
 end
 
 if isfield(net, 'normalization')
-  net.meta.normalization = net.normalization ;
-  net = rmfield(net, 'normalization') ;
+  tnet.meta.normalization = net.normalization ;
 end
 
-% rename filers, biases into weights{...}
+if isfield(net, 'meta')
+  tnet.meta = net.meta ;
+end
+
+% copy layers
 for l = 1:numel(net.layers)
-  switch net.layers{l}.type
+  layer = net.layers{l} ;
+  
+  % check weights format
+  switch layer.type
     case {'conv', 'convt', 'bnorm'}
-      if ~isfield(net.layers{l}, 'weights')
-        net.layers{l}.weights = {...
-          net.layers{l}.filters, ...
-          net.layers{l}.biases} ;
-        net.layers{l} = rmfield(net.layers{l}, 'filters') ;
-        net.layers{l} = rmfield(net.layers{l}, 'biases') ;
+      if ~isfield(layer, 'weights')
+        layer.weights = {...
+          layer.filters, ...
+          layer.biases} ;
+        layer = rmfield(layer, 'filters') ;
+        layer = rmfield(layer, 'biases') ;
       end
   end
-end
-
-% add moments to batch normalization if none is provided
-for l = 1:numel(net.layers)
-  if strcmp(net.layers{l}.type, 'bnorm')
-    if numel(net.layers{l}.weights) < 3
-      net.layers{l}.weights{3} = ....
-        zeros(numel(net.layers{l}.weights{1}),2,'single') ;
+  
+  % check that weights inlcude moments in batch normalization
+  if strcmp(layer.type, 'bnorm')
+    if numel(layer.weights) < 3
+      layer.weights{3} = ....
+        zeros(numel(layer.weights{1}),2,'single') ;
     end
   end
-end
-
-% add default values for missing fields in layers
-for l = 1:numel(net.layers)
-  defaults = {} ;
-  switch net.layers{l}.type
-    case 'conv'
+  
+  % fill in missing values
+  switch layer.type
+    case {'conv', 'pool'}
       defaults = {...
         'pad', 0, ...
         'stride', 1} ;
@@ -72,8 +74,11 @@ for l = 1:numel(net.layers)
   end
 
   for i = 1:2:numel(defaults)
-    if ~isfield(net.layers{l}, defaults{i})
-      net.layers{l}.(defaults{i}) = defaults{i+1} ;
+    if ~isfield(layer, defaults{i})
+      layer.(defaults{i}) = defaults{i+1} ;
     end
   end
+  
+  % save back
+  tnet.layers{l} = layer ;
 end
