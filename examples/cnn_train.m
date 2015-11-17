@@ -232,7 +232,13 @@ end
 
 % validation mode if learning rate is zero
 training = learningRate > 0 ;
-if training, mode = 'training' ; else, mode = 'validation' ; end
+if training
+  mode = 'training' ;
+  evalMode = 'normal' ;
+else
+  mode = 'validation' ;
+  evalMode = 'test' ;
+end
 if nargout > 2, mpiprofile on ; end
 
 numGpus = numel(opts.gpus) ;
@@ -274,12 +280,12 @@ for t=1:opts.batchSize:numel(subset)
       im = gpuArray(im) ;
     end
 
-    % evaluate CNN
+    % evaluate the CNN
     net.layers{end}.class = labels ;
     if training, dzdy = one; else, dzdy = [] ; end
     res = vl_simplenn(net, im, dzdy, res, ...
                       'accumulate', s ~= 1, ...
-                      'disableDropout', ~training, ...
+                      'mode', evalMode, ...
                       'conserveMemory', opts.conserveMemory, ...
                       'backPropDepth', opts.backPropDepth, ...
                       'sync', opts.sync, ...
@@ -342,42 +348,41 @@ end
 % -------------------------------------------------------------------------
 function [net,res] = accumulate_gradients(opts, lr, batchSize, net, res, mmap)
 % -------------------------------------------------------------------------
+if nargin >= 6
+  numGpus = numel(mmap.Data) ;
+else
+  numGpus = 1 ;
+end
+
 for l=numel(net.layers):-1:1
   for j=1:numel(res(l).dzdw)
-    thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
-    thisLR = lr * net.layers{l}.learningRate(j) ;
 
-    % accumualte from multiple labs (GPUs) if needed
-    if nargin >= 6
+    % accumualte gradients from multiple labs (GPUs) if needed
+    if numGpus > 1
       tag = sprintf('l%d_%d',l,j) ;
       tmp = zeros(size(mmap.Data(labindex).(tag)), 'single') ;
-      for g = setdiff(1:numel(mmap.Data), labindex)
+      for g = setdiff(1:numGpus, labindex)
         tmp = tmp + mmap.Data(g).(tag) ;
       end
       res(l).dzdw{j} = res(l).dzdw{j} + tmp ;
     end
 
-    if isfield(net.layers{l}, 'weights')
+    if j == 3 && strcmp(net.layers{l}.type, 'bnorm')
+      % special case for learning bnorm moments
+      thisLR = net.layers{l}.learningRate(j) ;
+      net.layers{l}.weights{j} = ...
+        (1-thisLR) * net.layers{l}.weights{j} + ...
+        (thisLR/batchSize) * res(l).dzdw{j} ;
+    else
+      % standard gradient training
+      thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
+      thisLR = lr * net.layers{l}.learningRate(j) ;
       net.layers{l}.momentum{j} = ...
         opts.momentum * net.layers{l}.momentum{j} ...
         - thisDecay * net.layers{l}.weights{j} ...
         - (1 / batchSize) * res(l).dzdw{j} ;
-      net.layers{l}.weights{j} = net.layers{l}.weights{j} + thisLR * net.layers{l}.momentum{j} ;
-    else
-      % Legacy code: to be removed
-      if j == 1
-        net.layers{l}.momentum{j} = ...
-          opts.momentum * net.layers{l}.momentum{j} ...
-          - thisDecay * net.layers{l}.filters ...
-          - (1 / batchSize) * res(l).dzdw{j} ;
-        net.layers{l}.filters = net.layers{l}.filters + thisLR * net.layers{l}.momentum{j} ;
-      else
-        net.layers{l}.momentum{j} = ...
-          opts.momentum * net.layers{l}.momentum{j} ...
-          - thisDecay * net.layers{l}.biases ...
-          - (1 / batchSize) * res(l).dzdw{j} ;
-        net.layers{l}.biases = net.layers{l}.biases + thisLR * net.layers{l}.momentum{j} ;
-      end
+      net.layers{l}.weights{j} = net.layers{l}.weights{j} + ...
+        thisLR * net.layers{l}.momentum{j} ;
     end
   end
 end

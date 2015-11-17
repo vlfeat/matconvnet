@@ -6,8 +6,6 @@
 [net_fc, info_fc] = cnn_mnist(...
   'expDir', 'data/mnist-baseline', 'useBnorm', false);
 
-
-%%
 figure(1) ; clf ;
 subplot(1,2,1) ;
 semilogy(info_fc.val.objective, 'k') ; hold on ;

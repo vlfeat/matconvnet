@@ -2,7 +2,7 @@ function [net, info] = cnn_mnist_dag(varargin)
 % CNN_MNIST  Demonstrated MatConNet on MNIST using DAG
 
 run(fullfile(fileparts(mfilename('fullpath')),...
-  '..', 'matlab', 'vl_setupnn.m')) ;
+  '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.expDir = fullfile('data','mnist-baseline-dag') ;
 [opts, varargin] = vl_argparse(opts, varargin) ;

@@ -2,7 +2,7 @@ function [net, info] = cnn_mnist(varargin)
 % CNN_MNIST  Demonstrated MatConNet on MNIST
 
 run(fullfile(fileparts(mfilename('fullpath')),...
-  '..', 'matlab', 'vl_setupnn.m')) ;
+  '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.expDir = fullfile('data','mnist-baseline') ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
@@ -21,7 +21,6 @@ opts = vl_argparse(opts, varargin) ;
 % --------------------------------------------------------------------
 %                                                         Prepare data
 % --------------------------------------------------------------------
-
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
 else
@@ -35,7 +34,6 @@ net = cnn_mnist_init('useBnorm', opts.useBnorm) ;
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
-
 [net, info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
     'val', find(imdb.images.set == 3)) ;

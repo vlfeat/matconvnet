@@ -1,5 +1,20 @@
-function net = vl_simplenn_check(net)
-%VL_SIMPLENN_CHECK  Fix incomplete or outdated NET structure
+function net = vl_simplenn_tidy(net)
+%VL_SIMPLENN_TIDY  Fix an incomplete or outdated SimpleNN neural network.
+%   NET = VL_SIMPLENN_TIDY(NET) takes the NET object and upgrades
+%   it to the current version of MatConvNet. This is necessary in
+%   order to allow MatConvNet to evolve, while maintaining the NET
+%   objects clean.
+%
+%   The function is also generally useful to fill in missing default
+%   values in NET.
+%
+%   See also: VL_SIMPLENN().
+
+% Copyright (C) 2014-15 Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
 % move meta information in net.meta subfield
 if isfield(net, 'classes')
@@ -26,7 +41,17 @@ for l = 1:numel(net.layers)
   end
 end
 
-% add default values for missing fields
+% add moments to batch normalization if none is provided
+for l = 1:numel(net.layers)
+  if strcmp(net.layers{l}.type, 'bnorm')
+    if numel(net.layers{l}.weights) < 3
+      net.layers{l}.weights{3} = ....
+        zeros(numel(net.layers{l}.weights{1}),2,'single') ;
+    end
+  end
+end
+
+% add default values for missing fields in layers
 for l = 1:numel(net.layers)
   defaults = {} ;
   switch net.layers{l}.type
@@ -34,23 +59,21 @@ for l = 1:numel(net.layers)
       defaults = {...
         'pad', 0, ...
         'stride', 1} ;
-      
+
     case 'convt'
       defaults = {...
         'crop', 0, ...
         'upsample', 1, ...
         'numGroups', 1} ;
-      
+
     case 'relu'
       defaults = {...
         'leak', 0} ;
   end
-  
+
   for i = 1:2:numel(defaults)
     if ~isfield(net.layers{l}, defaults{i})
       net.layers{l}.(defaults{i}) = defaults{i+1} ;
     end
   end
 end
-
-

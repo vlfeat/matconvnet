@@ -34,6 +34,25 @@ here.
       and `include` instead of the binary and include files
       directly. This matches how cuDNN is now distributed.
 
+    * This version changes slightly how SimpleNN objects should be
+      handled. Use the `vl_simplenn_tidy()` to upgrade objects to the
+      latest version of MatConvNet as well as to fill in missing
+      default values.
+
+    * This version changes how batch normalization is handled. Now the
+      average moments are learned together with the other parameters.
+      The net result is that batch normalization is easy to bypass at
+      test time (and implicitly done in validation, just like
+      dropout).
+
+    * The `disableDropout` parameter of `vl_simplenn` has been
+      replaced by a more generic `mode` option that allows running in
+      either normal mode or test mode. In the latter case, both
+      dropout and batch normalization are bypassed. This is the same
+      behaviour of `DagNN.mode`.
+
+    * Examples have been re-organized in subdirectories.
+
 -   1.0-beta16 (October 2015). Adds
     VGG-Face as a pretrained model. Bugfixes.
 -   1.0-beta15 (September 2015). Supports for new `DagNN` blocks and

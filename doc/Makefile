@@ -29,6 +29,7 @@ vl_rootnn.m \
 vl_setupnn.m \
 simplenn/vl_simplenn.m \
 simplenn/vl_simplenn_diagnose.m \
+simplenn/vl_simplenn_tidy.m \
 simplenn/vl_simplenn_display.m \
 simplenn/vl_simplenn_move.m \
 +dagnn/@DagNN/DagNN.m

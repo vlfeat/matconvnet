@@ -1,23 +1,23 @@
 function [info, str] = vl_simplenn_display(net, varargin)
-% VL_SIMPLENN_DISPLAY  Simple CNN statistics
-%    VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
+%VL_SIMPLENN_DISPLAY  Simple CNN statistics.
+%   VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
 %
-%    INFO=VL_SIMPLENN_DISPLAY(NET) returns instead a structure INFO
-%    with several statistics for each layer of the network NET.
+%   INFO=VL_SIMPLENN_DISPLAY(NET) returns instead a structure INFO
+%   with several statistics for each layer of the network NET.
 %
-%    The function accepts the following options:
+%   The function accepts the following options:
 %
-%    `inputSize`:: heuristically set
-%       Specifies the size of the input tensor X that will be passed
-%       to the network. This is used in order to estiamte the memory
-%       required to process the network. If not specified,
-%       VL_SIMPLENN_DISPLAY uses the value in
-%       NET.NORMALIZATION.IMAGESIZE assuming a batch size of one
-%       image, unless otherwise specified by the `batchSize` option.
+%   `inputSize`:: heuristically set
+%      Specifies the size of the input tensor X that will be passed
+%      to the network. This is used in order to estiamte the memory
+%      required to process the network. If not specified,
+%      VL_SIMPLENN_DISPLAY uses the value in
+%      NET.NORMALIZATION.IMAGESIZE assuming a batch size of one
+%      image, unless otherwise specified by the `batchSize` option.
 %
-%    `batchSize`:: 1
-%       Specifies the number of data points in a batch in estimating
-%       the memory consumption (see `inputSize`).
+%   `batchSize`:: 1
+%      Specifies the number of data points in a batch in estimating
+%      the memory consumption (see `inputSize`).
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
