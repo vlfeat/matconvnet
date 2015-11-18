@@ -123,6 +123,10 @@ parser.add_argument('--append-softmax',
                     action='append',
                     default=[],
                     help='Add a softmax layer after the specified layer')
+parser.add_argument('--output-format',
+                    dest='output_format',
+                    default='dagnn',
+                    help='Either ''dagnn'' or ''simplenn''')
 
 parser.set_defaults(transpose=True)
 parser.set_defaults(remove_dropout=False)
@@ -141,7 +145,7 @@ elif args.caffe_variant == 'caffe_0115':
 elif args.caffe_variant == 'caffe_6e3916':
   import proto.caffe_6e3916_pb2 as caffe_pb2
 elif args.caffe_variant == '?':
-  print 'Supported variants: caffe, cafe-old, vgg-caffe'
+  print 'Supported variants: caffe, cafe-old, caffe_0115, caffe_6e3916, vgg-caffe'
   sys.exit(0)
 else:
   print 'Unknown Caffe variant', args.caffe_variant
@@ -243,7 +247,7 @@ if args.average_value:
   resize_average_image = False
 
 # --------------------------------------------------------------------
-#                                                        Load synseths
+#                                      Load ImageNet synseths (if any)
 # --------------------------------------------------------------------
 
 synsets_wnid=None
@@ -268,7 +272,7 @@ if args.class_names:
 # --------------------------------------------------------------------
 
 # Caffe stores the network structure and data into two different files
-# We load them both and merge into a single MATLAB structure
+# We load them both and merge them into a single MATLAB structure
 
 net=caffe_pb2.NetParameter()
 data=caffe_pb2.NetParameter()
@@ -436,6 +440,7 @@ for layer in layers:
     print 'Warning: unknown layer type', ltype
     continue
 
+  clayer.model = cmodel
   cmodel.addLayer(clayer)
 
   # Fill parameters
@@ -616,23 +621,43 @@ mclasses = dictToMatlabStruct({'name': mclassnames,
 #                                                    Convert to MATLAB
 # --------------------------------------------------------------------
 
+# net.meta
 mmeta = dictToMatlabStruct({'normalization': mnormalization,
                             'classes': mclasses})
 
-# This one should not be turned into a NumPy object as it has to be saved
-mnet = {'layers': np.empty(shape=[0,], dtype=mlayerdt),
-        'params': np.empty(shape=[0,], dtype=mparamdt),
-        'meta': mmeta}
+if args.output_format == 'dagnn':
 
-for layer in cmodel.layers.itervalues():
-  mnet['layers'] = np.append(mnet['layers'], layer.toMatlab(), axis=0)
+  # This object should stay a dictionary and not a NumPy array due to
+  # how NumPy saves to MATLAB
 
-for param in cmodel.params.itervalues():
-  mnet['params'] = np.append(mnet['params'], param.toMatlab(), axis=0)
+  mnet = {'layers': np.empty(shape=[0,], dtype=mlayerdt),
+          'params': np.empty(shape=[0,], dtype=mparamdt),
+          'meta': mmeta}
 
-# to row
-mnet['layers'] = mnet['layers'].reshape(1,-1)
-mnet['params'] = mnet['params'].reshape(1,-1)
+  for layer in cmodel.layers.itervalues():
+    mnet['layers'] = np.append(mnet['layers'], layer.toMatlab(), axis=0)
+
+  for param in cmodel.params.itervalues():
+    mnet['params'] = np.append(mnet['params'], param.toMatlab(), axis=0)
+
+  # to row
+  mnet['layers'] = mnet['layers'].reshape(1,-1)
+  mnet['params'] = mnet['params'].reshape(1,-1)
+
+elif args.output_format == 'simplenn':
+
+  # This object should stay a dictionary and not a NumPy array due to
+  # how NumPy saves to MATLAB
+
+  mnet = {'layers': np.empty(shape=[0,], dtype=np.object),
+          'meta': mmeta}
+
+  for layer in cmodel.layers.itervalues():
+    mnet['layers'] = np.append(mnet['layers'], np.object)
+    mnet['layers'][-1] = dictToMatlabStruct(layer.toMatlabSimpleNN())
+
+  # to row
+  mnet['layers'] = mnet['layers'].reshape(1,-1)
 
 # --------------------------------------------------------------------
 #                                                          Save output
