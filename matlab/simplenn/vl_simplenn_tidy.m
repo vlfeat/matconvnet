@@ -16,7 +16,7 @@ function tnet = vl_simplenn_tidy(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-tnet = struct('layers', {{}}, 'meta', struct([])) ;
+tnet = struct('layers', {{}}, 'meta', struct()) ;
 
 % copy meta information in net.meta subfield
 if isfield(net, 'classes')
@@ -34,7 +34,7 @@ end
 % copy layers
 for l = 1:numel(net.layers)
   layer = net.layers{l} ;
-  
+
   % check weights format
   switch layer.type
     case {'conv', 'convt', 'bnorm'}
@@ -46,7 +46,7 @@ for l = 1:numel(net.layers)
         layer = rmfield(layer, 'biases') ;
       end
   end
-  
+
   % check that weights inlcude moments in batch normalization
   if strcmp(layer.type, 'bnorm')
     if numel(layer.weights) < 3
@@ -54,7 +54,7 @@ for l = 1:numel(net.layers)
         zeros(numel(layer.weights{1}),2,'single') ;
     end
   end
-  
+
   % fill in missing values
   switch layer.type
     case {'conv', 'pool'}
@@ -78,7 +78,7 @@ for l = 1:numel(net.layers)
       layer.(defaults{i}) = defaults{i+1} ;
     end
   end
-  
+
   % save back
   tnet.layers{l} = layer ;
 end

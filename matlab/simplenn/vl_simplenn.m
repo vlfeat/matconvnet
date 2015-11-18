@@ -277,7 +277,7 @@ for i=1:n
         'method', l.method, ...
         cudnn{:}) ;
 
-    case 'normalize'
+    case {'normalize', 'lrn'}
       res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
 
     case 'softmax'
@@ -375,7 +375,8 @@ if doder
                                 'pad', l.pad, 'stride', l.stride, ...
                                 'method', l.method, ...
                                 cudnn{:}) ;
-      case 'normalize'
+
+      case {'normalize', 'lrn'}
         res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
 
       case 'softmax'
