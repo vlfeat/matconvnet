@@ -222,12 +222,14 @@ class CaffeReLU(CaffeElementWise):
     def toMatlab(self):
         mlayer = super(CaffeReLU, self).toMatlab()
         mlayer['type'][0] = u'dagnn.ReLU'
+        mlayer['leak'][0] = float(0.0)
         # todo: leak factor
         return mlayer
 
     def toMatlabSimpleNN(self):
         mlayer = super(CaffeReLU, self).toMatlabSimpleNN()
         mlayer['type'] = u'relu'
+        mlayer['leak'] = float(0.0)
         return mlayer
 
 class CaffeLRN(CaffeElementWise):
@@ -250,7 +252,7 @@ class CaffeLRN(CaffeElementWise):
 
     def toMatlabSimpleNN(self):
         mlayer = super(CaffeLRN, self).toMatlabSimpleNN()
-        mlayer['type'] = u'normalization'
+        mlayer['type'] = u'lrn'
         mlayer['param'] = row([self.local_size,
                                self.kappa,
                                self.alpha / self.local_size,
@@ -296,7 +298,7 @@ class CaffeDropout(CaffeElementWise):
         mlayer['block'][0] = dictToMatlabStruct({'rate': float(self.ratio)})
         return mlayer
 
-    def toMatlab(self):
+    def toMatlabSimpleNN(self):
         mlayer = super(CaffeDropout, self).toMatlabSimpleNN()
         mlayer['type'] = u'dropout'
         mlayer['rate'] = float(self.ratio)
@@ -518,7 +520,8 @@ class CaffePooling(CaffeLayer):
         mlayer = super(CaffePooling, self).toMatlab()
         mlayer['type'][0] = u'dagnn.Pooling'
         mlayer['block'][0] = dictToMatlabStruct(
-            {'poolSize': row(self.kernelSize),
+            {'method': self.method,
+             'poolSize': row(self.kernelSize),
              'stride': row(self.stride),
              'pad': row(self.padCorrected)})
         return mlayer
@@ -526,6 +529,7 @@ class CaffePooling(CaffeLayer):
     def toMatlabSimpleNN(self):
         mlayer = super(CaffePooling, self).toMatlabSimpleNN()
         mlayer['type'] = u'pool'
+        mlayer['method'] = self.method
         mlayer['pool'] = row(self.kernelSize)
         mlayer['stride'] = row(self.stride)
         mlayer['pad'] = row(self.padCorrected)

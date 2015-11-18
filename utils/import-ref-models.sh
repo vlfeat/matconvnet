@@ -22,7 +22,7 @@ converter="python $SCRIPTPATH/import-caffe-dag.py"
 data="$SCRIPTPATH/../data"
 
 mkdir -p "$data"/{tmp/vgg,tmp/caffe,models}
-overwrite=yes
+overwrite=no
 
 # --------------------------------------------------------------------
 # VGG Very Deep
@@ -45,6 +45,10 @@ fi
 
 if true
 then
+    # Remark: the VD models want the `caffe` format, not the
+    # `vgg-caffe` as for the Devil's models below. Preprocessing is
+    # `vgg-caffe` in both cases, however.
+
     base="$data/tmp/vgg/"
     in=(VGG_ILSVRC_19_layers VGG_ILSVRC_16_layers)
     out=(verydeep-19 verydeep-16)
@@ -99,10 +103,11 @@ then
         if test ! -e "$out" -o "$overwrite" = yes ; then
             $converter \
                 --output-format=simplenn \
-                --caffe-variant=caffe \
+                --caffe-variant=vgg-caffe \
                 --preproc=vgg-caffe \
 	        --remove-dropout \
                 --remove-loss \
+                --color-format=rgb \
                 --synsets="$data/tmp/${synset[i]}/synset_words.txt" \
                 --average-image="$base/mean.mat" \
                 --caffe-data="$base/${in[i]}/model" \

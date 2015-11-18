@@ -56,8 +56,8 @@ else
 	--remove-dropout \
         --remove-loss \
         --append-softmax="cls3_fc" \
-        --synsets="$base/synset_words.txt" \
         --average-image="$base/imagenet_mean.binaryproto" \
+        --synsets="$base/synset_words.txt" \
         --caffe-data="$base/imagenet_googlenet.caffemodel" \
         "$base/train_val_googlenet.prototxt" \
         "$out"
