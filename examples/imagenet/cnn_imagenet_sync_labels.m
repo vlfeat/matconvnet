@@ -4,7 +4,7 @@ function imdb = cnn_imagenet_sync_labels(imdb, net)
 %    This function matches classes by name and reorder the labels
 %    in IMDB to match NET.
 
-[~,perm] = ismember(imdb.classes.name, net.classes.name);
+[~,perm] = ismember(imdb.classes.name, net.meta.classes.name);
 assert(all(perm ~= 0));
 
 imdb.classes.description = imdb.classes.description(perm) ;
