@@ -4,7 +4,7 @@ function cnn_imagenet(varargin)
 %  VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
-  '..', 'matlab', 'vl_setupnn.m')) ;
+  '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.dataDir = fullfile('data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
@@ -26,9 +26,6 @@ opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train = struct([]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.train.numEpochs = numel(opts.train.learningRate) ;
-opts = vl_argparse(opts, varargin) ;
-
 % -------------------------------------------------------------------------
 %                                                            Prepare model
 % -------------------------------------------------------------------------
@@ -37,36 +34,6 @@ net = cnn_imagenet_init('model', opts.modelType, ...
                         'batchNormalization', opts.batchNormalization, ...
                         'weightInitMethod', opts.weightInitMethod, ...
                         'networkType', opts.networkType) ;
-bopts = net.normalization ;
-bopts.numThreads = opts.numFetchThreads ;
-
-% compute image statistics (mean, RGB covariances etc)
-imageStatsPath = fullfile(opts.expDir, 'imageStats.mat') ;
-if exist(imageStatsPath)
-  load(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
-else
-  [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, bopts) ;
-  save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
-end
-
-% Mean subtraction (use either an image or a color)
-%net.meta.normalization.averageImage = averageImage ;
-net.meta.normalization.averageImage = rgbMean ;
-
-% Data augmentation
-[v,d] = eig(rgbCovariance) ;
-net.meta.augmentation.rgbVariance = 0.1*sqrt(d)*v' ;
-net.meta.augmentation.transformation = 'stretch' ;
-
-switch lower(opts.networkType)
-  case 'simplenn'
-  case 'dagnn'
-    net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
-    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
-                 {'prediction','label'}, 'top1error') ;
-  otherwise
-    error('Unknown netowrk type ''%s''.', opts.networkType) ;
-end
 
 % -------------------------------------------------------------------------
 %                                                              Prepare data
@@ -80,8 +47,27 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
+% Set the class names in the network
 net.meta.classes.name = imdb.classes.name ;
 net.meta.classes.description = imdb.classes.description ;
+
+% Compute image statistics (mean, RGB covariances, etc.)
+imageStatsPath = fullfile(opts.expDir, 'imageStats.mat') ;
+if exist(imageStatsPath)
+  load(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
+else
+  [averageImage, rgbMean, rgbCovariance] = getImageStats(opts, net.meta, imdb) ;
+  save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
+end
+
+% Set the image average (use either an image or a color)
+%net.meta.normalization.averageImage = averageImage ;
+net.meta.normalization.averageImage = rgbMean ;
+
+% Set data augmentation statistics
+[v,d] = eig(rgbCovariance) ;
+net.meta.augmentation.rgbVariance = 0.1*sqrt(d)*v' ;
+clear v d ;
 
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
@@ -92,37 +78,28 @@ switch opts.networkType
   case 'dagnn', trainfn = @cnn_train_dag ;
 end
 
-batchfn = getBatch(...
-  opts, ...
-  net.meta.normalization, ...
-  net.meta.augmentatin) ;
-
-[net, info] = trainfn(net, imdb, batchfn, ...
+[net, info] = trainfn(net, imdb, getBatchFn(opts, net.meta), ...
   'expDir', opts.expDir, ...
   net.meta.trainOpts, ...
   opts.train, ...
   'val', find(imdb.images.set == 3)) ;
 
-
-[v,d] = eig(rgbCovariance) ;
-bopts.transformation = 'stretch' ;
-bopts.averageImage = rgbMean ;
-bopts.rgbVariance = 0.1*sqrt(d)*v' ;
+% -------------------------------------------------------------------------
+function fn = getBatchFn(opts, meta)
+% -------------------------------------------------------------------------
 useGpu = numel(opts.train.gpus) > 0 ;
 
-% -------------------------------------------------------------------------
-function fn = getBatch(opts, normalization, augmentation)
-% -------------------------------------------------------------------------
-bopts.numGpus =numel(opts.train.gpus) ;
-bopts.averageImage = normalization.averageImage ;
-bopts.rgbVariance = augmentation.rgbVariance ;
-bopts.transformation = augmentation.transformation ;
+bopts.numThreads = opts.numFetchThreads ;
+bopts.imageSize = meta.normalization.imageSize ;
+bopts.averageImage = meta.normalization.averageImage ;
+bopts.rgbVariance = meta.augmentation.rgbVariance ;
+bopts.transformation = meta.augmentation.transformation ;
 
 switch lower(opts.networkType)
   case 'simplenn'
     fn = @(x,y) getSimpleNNBatch(bopts,x,y) ;
   case 'dagnn'
-    fn = @(x,y) getDagNNBatch(bopts,x,y) ;
+    fn = @(x,y) getDagNNBatch(bopts,useGpu,x,y) ;
 end
 
 % -------------------------------------------------------------------------
@@ -134,7 +111,7 @@ im = cnn_imagenet_get_batch(images, opts, ...
 labels = imdb.images.label(batch) ;
 
 % -------------------------------------------------------------------------
-function inputs = getDagNNBatch(opts, imdb, batch)
+function inputs = getDagNNBatch(opts, useGpu, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
 im = cnn_imagenet_get_batch(images, opts, ...
@@ -147,12 +124,14 @@ if nargout > 0
 end
 
 % -------------------------------------------------------------------------
-function [averageImage, rgbMean, rgbCovariance] = getImageStats(imdb, opts)
+function [averageImage, rgbMean, rgbCovariance] = getImageStats(opts, meta, imdb)
 % -------------------------------------------------------------------------
 train = find(imdb.images.set == 1) ;
 train = train(1: 101: end);
 bs = 256 ;
-fn = getBatchSimpleNNWrapper(opts) ;
+opts.networkType = 'simplenn' ;
+fn = getBatchFn(opts, meta) ;
+
 for t=1:bs:numel(train)
   batch_time = tic ;
   batch = train(t:min(t+bs-1, numel(train))) ;

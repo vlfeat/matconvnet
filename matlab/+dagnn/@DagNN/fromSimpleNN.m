@@ -165,9 +165,12 @@ for l = 1:numel(net.layers)
       params(1).value = net.layers{l}.weights{1} ;
       params(2).name = sprintf('%sb',name) ;
       params(2).value = net.layers{l}.weights{2} ;
+      params(3).name = sprintf('%sx',name) ;
+      params(3).value = net.layers{l}.weights{3} ;
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
         params(2).learningRate = net.layers{l}.learningRate(2) ;
+        params(3).learningRate = net.layers{l}.learningRate(3) ;
       end
       if isfield(net.layers{l},'weightDecay')
         params(1).weightDecay = net.layers{l}.weightDecay(1) ;
@@ -184,28 +187,16 @@ for l = 1:numel(net.layers)
     outputs, ...
     {params.name}) ;
 
-  if ~isempty(params)
-    findex = obj.getParamIndex(params(1).name) ;
-    bindex = obj.getParamIndex(params(2).name) ;
-
-    % if empty, keep default values
-    if ~isempty(params(1).value)
-      obj.params(findex).value = params(1).value ;
+  for p = 1:numel(params)
+    pindex = obj.getParamIndex(params(p).name) ;
+    if ~isempty(params(p).value)
+      obj.params(pindex).value = params(p).value ;
     end
-    if ~isempty(params(2).value)
-      obj.params(bindex).value = params(2).value ;
+    if ~isempty(params(p).learningRate)
+      obj.params(pindex).learningRate = params(p).learningRate ;
     end
-    if ~isempty(params(1).learningRate)
-      obj.params(findex).learningRate = params(1).learningRate ;
-    end
-    if ~isempty(params(2).learningRate)
-      obj.params(bindex).learningRate = params(2).learningRate ;
-    end
-    if ~isempty(params(1).weightDecay)
-      obj.params(findex).weightDecay = params(1).weightDecay ;
-    end
-    if ~isempty(params(2).weightDecay)
-      obj.params(bindex).weightDecay = params(2).weightDecay ;
+    if ~isempty(params(p).weightDecay)
+      obj.params(pindex).weightDecay = params(p).weightDecay ;
     end
   end
 end

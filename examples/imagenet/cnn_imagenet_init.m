@@ -14,27 +14,27 @@ opts = vl_argparse(opts, varargin) ;
 % Define layers
 switch opts.model
   case 'alexnet'
-    net.normalization.imageSize = [227, 227, 3] ;
+    net.meta.normalization.imageSize = [227, 227, 3] ;
     net = alexnet(net, opts) ;
     bs = 256 ;
   case 'vgg-f'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_f(net, opts) ;
     bs = 256 ;
   case 'vgg-m'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_m(net, opts) ;
     bs = 256 ;
   case 'vgg-s'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_s(net, opts) ;
-    bs = 128 ;      
+    bs = 128 ;
   case 'vgg-vd-16'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
     bs = 32 ;
   case 'vgg-vd-19'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
     bs = 24 ;
   otherwise
@@ -50,20 +50,26 @@ net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 % Meta parameters
 net.meta.inputSize = net.meta.normalization.imageSize ;
-net.meta.normalization.border = 256 - net.normalization.imageSize(1:2) ;
+net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
 net.meta.normalization.interpolation = 'bicubic' ;
 net.meta.normalization.averageImage = [] ;
 net.meta.normalization.keepAspect = true ;
+net.meta.augmentation.rgbVariance = zeros(0,3) ;
+net.meta.augmentation.transformation = 'stretch' ;
 
 if ~opts.batchNormalization
-  net.meta.trainOpts.learningRate = logspace(-2, -4, 60) ;
+  lr = logspace(-2, -4, 60) ;
 else
-  net.meta.trainOpts.learningRate = logspace(-1, -4, 20) ;
+  lr = logspace(-1, -4, 20) ;
 end
+
+net.meta.trainOpts.learningRate = lr ;
+net.meta.trainOpts.batchSize = bs ;
+net.meta.trainOpts.weightDecay = 0.0005 ;
 
 % Fill in default values
 net = vl_simplenn_tidy(net) ;
- 
+
 % Switch to DagNN if requested
 switch lower(opts.networkType)
   case 'simplenn'
@@ -94,8 +100,8 @@ net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ..
                            'weightDecay', [opts.weightDecay 0]) ;
 if opts.batchNormalization
   net.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%d',id), ...
-                             'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single')}}, ...
-                             'learningRate', [2 1], ...
+                             'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single'), zeros(out, 2, 'single')}}, ...
+                             'learningRate', [2 1 0.05], ...
                              'weightDecay', [0 0]) ;
 end
 net.layers{end+1} = struct('type', 'relu', 'name', sprintf('relu%s',id)) ;
