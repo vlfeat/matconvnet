@@ -247,15 +247,15 @@ for p=1:numel(net.params)
       thisLR = state.learningRate * net.params(p).learningRate ;
       state.momentum{p} = opts.momentum * state.momentum{p} ...
         - thisDecay * net.params(p).value ...
-        - (1 / batchSize) * net.params(p).der ;      
+        - (1 / batchSize) * net.params(p).der ;
       net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
-      
+
     case 'average' % mainly for batch normalization
       thisLR = net.params(p).learningRate ;
       net.params(p).der = net.params(p).der / numGpus ;
       net.params(p).value = thisLR * net.params(p).value + ...
         (1 - thisLR) * net.params(p).der ;
-      
+
     case 'otherwise'
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
         net.params(p).trainMethod, ...
