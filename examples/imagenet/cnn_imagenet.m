@@ -16,8 +16,7 @@ opts.weightInitMethod = 'gaussian' ;
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
 sfx = [sfx '-' opts.networkType] ;
-opts.expDir = fullfile('data', sprintf('imagenet12-%s-%s', ...
-                                       sfx, opts.networkType)) ;
+opts.expDir = fullfile('data', ['imagenet12-' sfx]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;

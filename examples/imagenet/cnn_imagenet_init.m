@@ -80,7 +80,7 @@ switch lower(opts.networkType)
                  {'prediction','label'}, 'top1err') ;
     net.addLayer('top5err', dagnn.Loss('loss', 'topkerror', ...
                                        'opts', {'topK',5}), ...
-                 {predVar,'label'}, 'top5err') ;
+                 {'prediction','label'}, 'top5err') ;
   otherwise
     assert(false) ;
 end
