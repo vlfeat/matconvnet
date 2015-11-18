@@ -43,7 +43,7 @@ isDag = isfield(net, 'vars') ;
 if ~isDag
   net.classes = imdb.classes ;
   net.layers{end}.type = 'softmaxloss' ; % softmax -> softmaxloss
-  net.normalization.border = [256 256] - net.normalization.imageSize(1:2) ;
+  net.meta.normalization.border = [256 256] - net.meta.normalization.imageSize(1:2) ;
   vl_simplenn_display(net, 'batchSize', opts.train.batchSize) ;
 
   % Synchronize label indexes between the model and the image database

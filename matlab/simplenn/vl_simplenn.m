@@ -1,5 +1,5 @@
 function res = vl_simplenn(net, x, dzdy, res, varargin)
-%VL_SIMPLENN  Evaluate a SimpleNN neural network.
+%VL_SIMPLENN  Evaluate a SimpleNN network.
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
 %   derivative on data X and output derivative DZDY.

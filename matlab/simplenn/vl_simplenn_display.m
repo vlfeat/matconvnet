@@ -1,23 +1,38 @@
 function [info, str] = vl_simplenn_display(net, varargin)
-%VL_SIMPLENN_DISPLAY  Simple CNN statistics.
+%VL_SIMPLENN_DISPLAY  Display the structure of a SimpleNN network.
 %   VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
 %
-%   INFO=VL_SIMPLENN_DISPLAY(NET) returns instead a structure INFO
+%   INFO = VL_SIMPLENN_DISPLAY(NET) returns instead a structure INFO
 %   with several statistics for each layer of the network NET.
+%
+%   [INFO, STR] = VL_SIMPLENN_DISPLAY(...) returns also a string STR
+%   with the text that would otherwise be printed.
 %
 %   The function accepts the following options:
 %
-%   `inputSize`:: heuristically set
-%      Specifies the size of the input tensor X that will be passed
-%      to the network. This is used in order to estiamte the memory
-%      required to process the network. If not specified,
-%      VL_SIMPLENN_DISPLAY uses the value in
-%      NET.NORMALIZATION.IMAGESIZE assuming a batch size of one
-%      image, unless otherwise specified by the `batchSize` option.
+%   `inputSize`:: auto
+%      Specifies the size of the input tensor X that will be passed to
+%      the network as input. This information is used in order to
+%      estiamte the memory required to process the network. When this
+%      option is not used, VL_SIMPLENN_DISPLAY() tires to use values
+%      in the NET structure to guess the input size:
+%      NET.META.INPUTSIZE and NET.META.NORMALIZATION.IMAGESIZE
+%      (assuming a batch size of one image, unless otherwise specified
+%      by the `batchSize` option).
 %
-%   `batchSize`:: 1
+%   `batchSize`:: []
 %      Specifies the number of data points in a batch in estimating
-%      the memory consumption (see `inputSize`).
+%      the memory consumption, overriding the last dimension of
+%      `inputSize`.
+%
+%   `maxNumColumns`:: 18
+%      Maximum number of columns in a table. Wider tables are broken
+%      into multiple smaller ones.
+%
+%   `format`:: `'ascii'`
+%      One of `'ascii'`, `'latex'`, or `'csv'`.
+%
+%   See also: VL_SIMPLENN().
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.

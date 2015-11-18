@@ -23,7 +23,8 @@ onclick="toggle_visibility('bibentry');">[BibTex]</span>
 > **New:** 1.0-beta17 tidies up the library in many ways. It also
 > improves how batch normalization is handled. Please check carefully
 > the [changes](about.md#changes) to see if any of this might impact
-> your workflow.
+> your workflow. In particular, check out the [`vl_simplenn_tidy`](mfiles/simplenn/vl_simplenn_tidy.md) function
+> to bring old models up to date.
 >
 > **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
 >

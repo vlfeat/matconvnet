@@ -1,5 +1,5 @@
 function tnet = vl_simplenn_tidy(net)
-%VL_SIMPLENN_TIDY  Fix an incomplete or outdated SimpleNN neural network.
+%VL_SIMPLENN_TIDY  Fix an incomplete or outdated SimpleNN network.
 %   NET = VL_SIMPLENN_TIDY(NET) takes the NET object and upgrades
 %   it to the current version of MatConvNet. This is necessary in
 %   order to allow MatConvNet to evolve, while maintaining the NET
