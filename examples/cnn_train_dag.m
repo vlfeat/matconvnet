@@ -122,7 +122,7 @@ for epoch=start+1:opts.numEpochs
     subplot(1,numel(plots),find(strcmp(p,plots))) ;
     plot(1:epoch, values','o-') ;
     xlabel('epoch') ;
-    ylabel(p) ;
+    title(p) ;
     legend(leg{:}) ;
     grid on ;
   end

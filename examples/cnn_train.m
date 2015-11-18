@@ -101,10 +101,10 @@ if isstr(opts.errorFunction)
       opts.errorFunction = @error_none ;
     case 'multiclass'
       opts.errorFunction = @error_multiclass ;
-      if isempty(opts.errorLabels), opts.errorLabels = {'top1e', 'top5e'} ; end
+      if isempty(opts.errorLabels), opts.errorLabels = {'top1err', 'top5err'} ; end
     case 'binary'
       opts.errorFunction = @error_binary ;
-      if isempty(opts.errorLabels), opts.errorLabels = {'bine'} ; end
+      if isempty(opts.errorLabels), opts.errorLabels = {'binerr'} ; end
     otherwise
       error('Uknown error function ''%s''', opts.errorFunction) ;
   end
