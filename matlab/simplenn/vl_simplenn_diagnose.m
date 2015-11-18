@@ -1,5 +1,5 @@
 function vl_simplenn_diagnose(net, res)
-%VL_SIMPLENN_DIAGNOSE  Plot diagnostic information.
+%VL_SIMPLENN_DIAGNOSE  Plot diagnostic information on a SimpleNN network.
 %   VL_SIMPLENN_DIAGNOSE(NET, RES) plots in the current window
 %   the average, maximum, and miminum element for all the filters
 %   and biases in the network NET. If RES is also provided, it will

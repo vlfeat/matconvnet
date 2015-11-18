@@ -42,8 +42,8 @@ net = load('imagenet-vgg-f.mat') ;
 
 % load and preprocess an image
 im = imread('peppers.png') ;
-im_ = imresize(single(im), net.normalization.imageSize(1:2)) ;
-im_ = im_ - net.normalization.averageImage ;
+im_ = imresize(single(im), net.meta.normalization.imageSize(1:2)) ;
+im_ = im_ - net.meta.normalization.averageImage ;
 
 % run the CNN
 res = vl_simplenn(net, im_) ;

@@ -1,5 +1,5 @@
 function net = vl_simplenn_move(net, destination)
-%VL_SIMPLENN_MOVE  Move a SimpleNN neural network between CPU and GPU.
+%VL_SIMPLENN_MOVE  Move a SimpleNN network between CPU and GPU.
 %   NET = VL_SIMPLENN_MOVE(NET, 'gpu') moves the network to the
 %   current GPU device. NET = VL_SIMPLENN_MOVE(NET, 'cpu') moves the
 %   network to the CPU.
