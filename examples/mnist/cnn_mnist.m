@@ -69,7 +69,7 @@ function inputs = getDagNNBatch(opts, imdb, batch)
 images = imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
 if opts.numGpus > 0
-  images = gpuArray(images)
+  images = gpuArray(images) ;
 end
 inputs = {'input', images, 'label', labels} ;
 

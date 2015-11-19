@@ -66,9 +66,10 @@ net.layers{end+1} = struct('type', 'softmaxloss') ;
 
 % Meta parameters
 net.meta.inputSize = [32 32 3] ;
-net.meta.trainOpts.learningRate = [0.05*ones(1,15) 0.005*ones(1,10) 0.0005*ones(1,5)] ;
+net.meta.trainOpts.learningRate = [0.05*ones(1,30) 0.005*ones(1,10) 0.0005*ones(1,5)] ;
 net.meta.trainOpts.weightDecay = 0.0001 ;
 net.meta.trainOpts.batchSize = 100 ;
+net.meta.trainOpts.numEpochs = numel(net.meta.trainOpts.learningRate) ;
 
 % Fill in default values
 net = vl_simplenn_tidy(net) ;
