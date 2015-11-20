@@ -64,6 +64,7 @@ else
 end
 
 net.meta.trainOpts.learningRate = lr ;
+net.meta.trainOpts.numEpochs = numel(lr) ;
 net.meta.trainOpts.batchSize = bs ;
 net.meta.trainOpts.weightDecay = 0.0005 ;
 

@@ -69,7 +69,7 @@ net.meta.augmentation.rgbVariance = 0.1*sqrt(d)*v' ;
 clear v d ;
 
 % -------------------------------------------------------------------------
-%                                               Stochastic gradient descent
+%                                                                     Learn
 % -------------------------------------------------------------------------
 
 switch opts.networkType
@@ -78,6 +78,7 @@ switch opts.networkType
 end
 
 [net, info] = trainfn(net, imdb, getBatchFn(opts, net.meta), ...
+                      'expDir', opts.expDir, ...
                       net.meta.trainOpts, ...
                       opts.train) ;
 
@@ -88,6 +89,7 @@ useGpu = numel(opts.train.gpus) > 0 ;
 
 bopts.numThreads = opts.numFetchThreads ;
 bopts.imageSize = meta.normalization.imageSize ;
+bopts.border = meta.normalization.border ;
 bopts.averageImage = meta.normalization.averageImage ;
 bopts.rgbVariance = meta.augmentation.rgbVariance ;
 bopts.transformation = meta.augmentation.transformation ;
