@@ -481,11 +481,14 @@ if len(net.input_dim) > 0:
               net.input_dim[1],
               1]
 else:
-  layer = find(layers, 'data')
-  dataSize = [layer.transform_param.crop_size,
-              layer.transform_param.crop_size,
-              3,
-              1]
+  layer = find(net.layers, 'data')
+  if layer is None:
+    print "Warning: could not determine the input data size"
+  else:
+    dataSize = [layer.transform_param.crop_size,
+                layer.transform_param.crop_size,
+                3,
+                1]
 
 dataVarName = 'data'
 if not cmodel.vars.has_key('data'):

@@ -222,7 +222,8 @@ class CaffeReLU(CaffeElementWise):
     def toMatlab(self):
         mlayer = super(CaffeReLU, self).toMatlab()
         mlayer['type'][0] = u'dagnn.ReLU'
-        mlayer['leak'][0] = float(0.0)
+        mlayer['block'][0] = dictToMatlabStruct(
+            {'leak': float(0.0) })
         # todo: leak factor
         return mlayer
 

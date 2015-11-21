@@ -41,7 +41,14 @@ get "$GOOGLENET_PROTO_URL"
 get "$GOOGLENET_MODEL_URL"
 get "$GOOGLENET_MEAN_URL"
 
-(cd $"data/tmp/googlenet" ; patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff")
+(
+    cd $"data/tmp/googlenet" ;
+    patch -Np0 --dry-run < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
+    if [ $? -eq 0 ];
+    then
+        patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
+    fi
+)
 
 base="$data/tmp/googlenet"
 out="$data/models/imagenet-googlenet-dag.mat"
