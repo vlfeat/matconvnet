@@ -5,7 +5,7 @@ MatConvNet includes several MATLAB functions organized as follows:
 - [Building blocks](#core). These functions implement the CNN
   computational blocks that can be combined either manually or using
   one of the provided wrappers to construct CNNs.
-  - [SimpleCNN wrapper](#simplenn). SimpleNN is a lightweight wrapper
+- [SimpleCNN wrapper](#simplenn). SimpleNN is a lightweight wrapper
   implementing CNNs that are linear chains of computational blocks.
 - [DagNN wrapper](#dagnn). DagNN is an object-oriented wrapper
   supporting more complex network topologies.

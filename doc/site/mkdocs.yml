@@ -1,8 +1,8 @@
 site_name: MatConvNet
 markdown_extensions: ['extra', 'mathjax', 'toc']
-theme: bootstrap
+theme_dir: theme
 
-extra_css: ['css/tables.css', 'css/fixes.css']
+extra_css: ['css/fixes.css']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js', 'js/toggle.js']
 
 repo_url: https://github.com/vlfeat/matconvnet

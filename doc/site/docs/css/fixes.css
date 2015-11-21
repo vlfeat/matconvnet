@@ -1,15 +1,28 @@
+.shy { display: none ; }
 h1 { font-size: 1.7em ; }
 h2 { font-size: 1.5em ; }
 h3 { font-size: 1.2em ; }
 
+.menuicon {
+    display:inline-block;
+    width: 50px;
+    height: 50px;
+    text-align: center ;
+    vertical-align: middle;
+    color: #aaa ;
+    margin-right: 10px ;
+}
+.menuicon > span {
+    line-height: 50px ;
+}
+
 /* Prevent blockquotes to be giant-sized, restyle */
-blockquote p {
-font-size: inherit;
-font-style: italic;
-}
 blockquote {
-border: 1px solid gray;
+    font-size: inherit ! important ;
+    border: 1px solid gray;
 }
+
+/*
 
 /* Have a space after ul */
 ul ul, ol ul, ul ol, ol ol {
@@ -42,7 +55,4 @@ font-family: "Lucida Console","Courier New",monospace;
 canvas {
   background-color: transparent;
 }
-
-.shy {
-  display: none ;
-}
+*/
