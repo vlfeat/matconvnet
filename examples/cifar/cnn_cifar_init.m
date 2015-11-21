@@ -73,7 +73,7 @@ net.meta.trainOpts.numEpochs = numel(net.meta.trainOpts.learningRate) ;
 
 % Fill in default values
 net = vl_simplenn_tidy(net) ;
- 
+
 % Switch to DagNN if requested
 switch lower(opts.networkType)
   case 'simplenn'

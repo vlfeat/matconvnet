@@ -24,7 +24,7 @@ switch opts.model
   case 'vgg-m'
     net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_m(net, opts) ;
-    bs = 256 ;
+    bs = 196 ;
   case 'vgg-s'
     net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_s(net, opts) ;

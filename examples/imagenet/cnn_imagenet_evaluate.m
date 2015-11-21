@@ -81,6 +81,9 @@ if isDag
   if ~isnan(v)
     net.renameVar('data', 'input') ;
   end
+
+  % Swtich to test mode
+  net.mode = 'test' ;
 else
   opts.networkType = 'simplenn' ;
   net = vl_simplenn_tidy(net) ;
