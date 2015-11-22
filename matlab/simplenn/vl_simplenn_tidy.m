@@ -68,9 +68,23 @@ for l = 1:numel(net.layers)
         'upsample', 1, ...
         'numGroups', 1} ;
 
+    case {'pool'}
+      defaults = {...
+        'method', 'max', ...
+        'pad', 0, ...
+        'stride', 1} ;
+
     case 'relu'
       defaults = {...
         'leak', 0} ;
+
+    case 'dropout'
+      defaults = {...
+        'rate', 0.5} ;
+
+    case {'normalize', 'lrn'}
+      defaults = {...
+        'param', [5 1 0.0001/5 0.75]} ;
   end
 
   for i = 1:2:numel(defaults)

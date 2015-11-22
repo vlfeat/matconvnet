@@ -1,7 +1,7 @@
 classdef ReLU < dagnn.ElementWise
   properties
     useShortCircuit = true
-    opts = {}
+    leak = 0
   end
 
   methods
@@ -10,7 +10,8 @@ classdef ReLU < dagnn.ElementWise
     end
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
-      derInputs{1} = vl_nnrelu(inputs{1}, derOutputs{1}, obj.opts{:}) ;
+      derInputs{1} = vl_nnrelu(inputs{1}, derOutputs{1}, ...
+                               'leak', obj.leak) ;
       derParams = {} ;
     end
 
@@ -22,7 +23,8 @@ classdef ReLU < dagnn.ElementWise
       net = obj.net ;
       in = layer.inputIndexes ;
       out = layer.outputIndexes ;
-      net.vars(out).value = vl_nnrelu(net.vars(in).value, [], obj.opts{:}) ;
+      net.vars(out).value = vl_nnrelu(net.vars(in).value, [], ...
+                                      'leak', obj.leak) ;
       if ~net.vars(in).precious
         net.vars(in).value = [] ;
       end
@@ -39,7 +41,8 @@ classdef ReLU < dagnn.ElementWise
 
       if isempty(net.vars(out).der), return ; end
 
-      derInput = vl_nnrelu(net.vars(out).value, net.vars(out).der, obj.opts{:}) ;
+      derInput = vl_nnrelu(net.vars(out).value, net.vars(out).der, ...
+                           'leak', obj.leak) ;
 
       if ~net.vars(out).precious
         net.vars(out).der = [] ;

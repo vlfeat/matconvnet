@@ -98,67 +98,47 @@ for l = 1:numel(net.layers)
         case 'conv'
           block = Conv() ;
           block.size = sz ;
-          if isfield(net.layers{l},'pad')
-            block.pad = net.layers{l}.pad ;
-          end
-          if isfield(net.layers{l},'stride')
-            block.stride = net.layers{l}.stride ;
-          end
+          block.pad = net.layers{l}.pad ;
+          block.stride = net.layers{l}.stride ;
         case 'convt'
           block = ConvTranspose() ;
           block.size = sz ;
-          if isfield(net.layers{l},'upsample')
-            block.upsample = net.layers{l}.upsample ;
-          end
-          if isfield(net.layers{l},'crop')
-            block.crop = net.layers{l}.crop ;
-          end
-          if isfield(net.layers{l},'numGroups')
-            block.numGroups = net.layers{l}.numGroups ;
-          end
+          block.upsample = net.layers{l}.upsample ;
+          block.crop = net.layers{l}.crop ;
+          block.numGroups = net.layers{l}.numGroups ;
       end
       block.hasBias = hasBias ;
+
     case 'pool'
       block = Pooling() ;
-      if isfield(net.layers{l},'method')
-        block.method = net.layers{l}.method ;
-      end
-      if isfield(net.layers{l},'pool')
-        block.poolSize = net.layers{l}.pool ;
-      end
-      if isfield(net.layers{l},'pad')
-        block.pad = net.layers{l}.pad ;
-      end
-      if isfield(net.layers{l},'stride')
-        block.stride = net.layers{l}.stride ;
-      end
+      block.method = net.layers{l}.method ;
+      block.poolSize = net.layers{l}.pool ;
+      block.pad = net.layers{l}.pad ;
+      block.stride = net.layers{l}.stride ;
+
     case {'normalize'}
       block = LRN() ;
-      if isfield(net.layers{l},'param')
-        block.param = net.layers{l}.param ;
-      end
+      block.param = net.layers{l}.param ;
+
     case {'dropout'}
       block = DropOut() ;
-      if isfield(net.layers{l},'rate')
-        block.rate = net.layers{l}.rate ;
-      end
-      if isfield(net.layers{l},'frozen')
-        block.frozen = net.layers{l}.frozen ;
-      end
+      block.rate = net.layers{l}.rate ;
+
     case {'relu'}
-      lopts = {} ;
-      if isfield(net.layers{l}, 'leak')
-        lopts = {'leak', net.layers{l}.leak} ;
-      end
-      block = ReLU('opts', lopts) ;
+      block = ReLU() ;
+      block.leak = net.layers{l}.leak ;
+
     case {'sigmoid'}
       block = Sigmoid() ;
+
     case {'softmax'}
       block = SoftMax() ;
+
     case {'softmaxloss'}
       block = Loss('loss', 'softmaxlog') ;
       % The loss has two inputs
       inputs{2} = getNewVarName(obj, 'label') ;
+
     case {'bnorm'}
       block = BatchNorm() ;
       params(1).name = sprintf('%sm',name) ;
@@ -175,7 +155,9 @@ for l = 1:numel(net.layers)
       if isfield(net.layers{l},'weightDecay')
         params(1).weightDecay = net.layers{l}.weightDecay(1) ;
         params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+        params(2).weightDecay = 0 ;
       end
+
     otherwise
       error([net.layers{l}.type ' is unsupported']) ;
   end
