@@ -279,7 +279,7 @@ end
 if opts.enableGpu, flags.cc{end+1} = '-DENABLE_GPU' ; end
 if opts.enableCudnn,
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
-  flags.cc{end+1} = ['-I' opts.cudnnRoot] ;
+  flags.cc{end+1} = ['-I"' opts.cudnnRoot, '"'] ;
 end
 flags.link{end+1} = '-lmwblas' ;
 switch arch
@@ -304,7 +304,7 @@ if opts.enableGpu
       flags.link{end+1} = '-lgpu' ;
   end
   if opts.enableCudnn
-    flags.link{end+1} = ['-L' opts.cudnnRoot] ;
+    flags.link{end+1} = ['-L"' opts.cudnnRoot, '"'] ;
     flags.link{end+1} = '-lcudnn' ;
   end
 end
