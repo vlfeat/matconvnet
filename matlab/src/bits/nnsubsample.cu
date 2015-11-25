@@ -48,7 +48,7 @@ nnsubsample_forward_impl(Context& context,
     ptrdiff_t dataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
     ptrdiff_t outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
     error = vl::impl::subsample_forward<arch,type>(context,
-                                           output.getMemory() + outputOffset,
+                                                   output.getMemory() + outputOffset,
                                                    data.getMemory() + dataOffset,
                                                    data.getHeight(), data.getWidth(), data.getDepth(),
                                                    strideY, strideX,

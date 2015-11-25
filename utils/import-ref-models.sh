@@ -141,7 +141,7 @@ then
 
     out=$data/models/imagenet-caffe-ref.mat
     test ! -e "$out" && \
-    python utils/import-caffe.py \
+    $converter \
         --caffe-variant=caffe \
         --preproc=caffe \
         --average-image="$base/imagenet_mean.binaryproto" \

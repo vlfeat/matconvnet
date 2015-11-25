@@ -15,3 +15,13 @@ matconvnet-*.tar.gz
 local
 doc/site/docs/mfiles
 doc/site/site
+
+doc/figures/svg/*.pdf
+doc/figures/*.idraw
+
+# Visual C
+*.suo
+*.user
+*.sdf
+*.opensdf
+doc/figures/svg/*.idraw

@@ -381,6 +381,10 @@ vl::index_t vl::TensorGeometry::getWidth() const { return width ; }
 vl::index_t vl::TensorGeometry::getDepth() const { return depth ; }
 vl::index_t vl::TensorGeometry::getSize() const { return size ; }
 vl::index_t vl::TensorGeometry::getNumElements() const { return height*width*depth*size ; }
+void vl::TensorGeometry::setHeight(index_t x) { height = x ; }
+void vl::TensorGeometry::setWidth(index_t x) { width = x ; }
+void vl::TensorGeometry::setDepth(index_t x) { depth = x ; }
+void vl::TensorGeometry::setSize(index_t x) { size = x ; }
 bool vl::TensorGeometry::isEmpty() const { return getNumElements() == 0 ; }
 
 /* -------------------------------------------------------------------
@@ -403,6 +407,7 @@ TensorGeometry vl::Tensor::getGeometry() const
 }
 
 float * vl::Tensor::getMemory() { return memory ; }
+void vl::Tensor::setMemory(float * x) { memory = x ; }
 vl::Device vl::Tensor::getMemoryType() const { return memoryType ; }
 bool vl::Tensor::isNull() const { return memory == NULL ; }
 vl::Tensor::operator bool() const { return !isNull() ; }

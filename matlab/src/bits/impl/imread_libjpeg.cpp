@@ -69,7 +69,7 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   int row_stride ;
   const int blockSize = 32 ;
   char unsigned * pixels = NULL ;
-  JSAMPARRAY scanlines ;
+  JSAMPARRAY scanlines = NULL ;
   bool requiresAbort = false ;
 
   /* initialize the image as null */

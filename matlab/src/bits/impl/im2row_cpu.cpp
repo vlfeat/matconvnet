@@ -22,7 +22,7 @@ using namespace vl::impl ;
 
 static inline int floor_divide(int a, int b) {
   if (a >= 0) return a/b;
-  else return (a-b+1)/b;
+  else return (a - b + 1)/b;
 }
 
 static inline int ceil_divide(int a, int b) {
@@ -93,47 +93,51 @@ im2row_cpu(T* stacked,
      y_data(y) = y * strideY + v - padTop,   0 <= y < numPatchesY
      z_data(z) = z.
 
-     Here (x,y) are the spatial indexes of the output patches. Depedning
+     Here (x,y) are the spatial indexes of the output patches. Depending
      on the padding, some of these values will read pixels outised
-     the input image, which should default to 0. In particular this happens
-     if
+     the input image, which should default to 0. In particular, x lands
+     on a x_data(x) within the image if x0 <= x < x1 where:
 
-     x_data(x) < 0 <=> x < (padLeft - u) / stride
-     <=> x < ceil((padLeft - u) / stride)
-     x_data(x) >= width <=> x >= (width + padLeft - u) / stride
-     <=> x >= ceil((width + padLeft - u) / stride)
+     x_data(x) >= 0 <=> x >= (padLeft - u) / stride
+                    <=> x >= ceil((padLeft - u) / stride) = x0
+     x_data(x) <= width-1 <=> x <= (width-1 + padLeft - u) / stride
+                          <=> x <= floor((width-1 + padLeft - u) / stride)
+                          <=> x <  floor((width-1 + padLeft - u) / stride) + 1 = x1
 
-     and the same for y.
+     and the same for y. Note that, while usually x0 <= x1, there are
+     special cases for which x1 < x0. This is accounted for in the loops
+     below.
      */
 
-    int x0 = static_max(0, ceil_divide(padLeft - u, strideX)) ;
-    int y0 = static_max(0, ceil_divide(padTop - v, strideY)) ;
-    int x1 = static_min(numPatchesX,  ceil_divide(width + padLeft - u, strideX)) ;
-    int y1 = static_min(numPatchesY, ceil_divide(height + padTop - v, strideY)) ;
+    int x0 = static_min(numPatchesX, ceil_divide(padLeft - u, strideX)) ;
+    int y0 = static_min(numPatchesY, ceil_divide(padTop - v, strideY)) ;
+    int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u, strideX) + 1) ;
+    int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v, strideY) + 1) ;
+    int x ;
+    int y ;
 
-    for (int y = 0 ; y < y0 ; ++y) {
-      for (int x = 0 ; x < numPatchesX ; ++x) {
+    for (y = 0 ; y < y0 ; ++y) {
+      for (x = 0 ; x < numPatchesX ; ++x) {
         *stacked++ = 0 ;
       }
     }
-    for (int y = y0 ; y < y1 ; ++y) {
-      int y_data = y * strideY + v - padTop ;
-      int x_data = x0 * strideX + u - padLeft ;
-      T const * b = data + (z * height + y_data) * width + x_data ;
-
-      for (int x = 0 ; x < x0 ; ++x) {
+    for ( ; y < y1 ; ++y) {
+      for (x = 0 ; x < x0 ; ++x) {
         *stacked++ = 0 ;
       }
-      for (int x = x0 ; x < x1 ; ++x) {
+      int y_data = y * strideY + v - padTop ;
+      int x_data = x * strideX + u - padLeft ;
+      T const * b = data + (z * height + y_data) * width + x_data ;
+      for ( ; x < x1 ; ++x) {
         *stacked++ = *b ;
         b += strideX ;
       }
-      for (int x = x1 ; x < numPatchesX ; ++x) {
+      for ( ; x < numPatchesX ; ++x) {
         *stacked++ = 0 ;
       }
     }
-    for (int y = y1 ; y < numPatchesY ; ++y) {
-      for (int x = 0 ; x < numPatchesX ; ++x) {
+    for ( ; y < numPatchesY ; ++y) {
+      for (x = 0 ; x < numPatchesX ; ++x) {
         *stacked++ = 0 ;
       }
     }
@@ -186,7 +190,7 @@ row2im_cpu(T* data,
 
   /*
    Do the converse of im2col, still scanning rows of the stacked image.
-   See comments of im2col for an explanation of the algorithms.
+   See comments of im2col for an explanation of the algorithm.
    */
   for (int row = 0; row < numRows ; ++row) {
     int u = row ;
@@ -195,24 +199,28 @@ row2im_cpu(T* data,
     u %= windowWidth ;
     v %= windowHeight ;
 
-    int x0 = static_max(0, ceil_divide(padLeft - u, strideX)) ;
-    int y0 = static_max(0, ceil_divide(padTop - v, strideY)) ;
-    int x1 = static_min(numPatchesX, ceil_divide(width + padLeft - u, strideX)) ;
-    int y1 = static_min(numPatchesY, ceil_divide(height + padTop - v, strideY)) ;
+    int x0 = static_min(numPatchesX, ceil_divide(padLeft - u, strideX)) ;
+    int y0 = static_min(numPatchesY, ceil_divide(padTop - v, strideY)) ;
+    int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u, strideX) + 1) ;
+    int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v, strideY) + 1) ;
+    int x ;
+    int y ;
 
-    stacked += numPatchesX * y0 ;
-    for (int y = y0 ; y < y1 ; ++y) {
+    y = static_max(0, y0) ;
+    stacked += numPatchesX * static_max(y, 0) ;
+    for ( ; y < y1 ; ++y) {
+      x = static_max(0, x0) ;
       int y_data = y * strideY + v - padTop ;
-      int x_data = x0 * strideX + u - padLeft ;
+      int x_data = x * strideX + u - padLeft ;
       T * b = data + (z * height + y_data) * width + x_data ;
-      stacked += x0 ;
-      for (int x = x0 ; x < x1 ; ++x) {
+      stacked += x ;
+      for ( ; x < x1 ; ++x) {
         *b += *stacked++ ;
         b += strideX ;
       }
-      stacked += numPatchesX - x1 ;
+      stacked += numPatchesX - x ;
     }
-    stacked += numPatchesX * (numPatchesY - y1) ;
+    stacked += numPatchesX * (numPatchesY - y) ;
   }
 }
 

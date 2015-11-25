@@ -4,6 +4,7 @@
 
 import sys, os, re, shutil
 import subprocess, signal
+import string, fnmatch
 
 from matdocparser import *
 from optparse import OptionParser
@@ -21,53 +22,90 @@ optparser.add_option(
     action  = "store_true",
     help    = "print debug information")
 
+findFunction = re.compile(r"^\s*(function|classdef).*$", re.MULTILINE)
+getFunction = re.compile(r"\s*%\s*(\w+)\s*(.*)\n"
+                          "((\s*%.*\n)+)")
+cleanComments = re.compile("^\s*%", re.MULTILINE)
+
 # --------------------------------------------------------------------
-def extract(path):
+def readText(path):
 # --------------------------------------------------------------------
-    """
-    (BODY, FUNC, BRIEF) = extract(PATH) extracts the comment BODY, the
-    function name FUNC and the brief description BRIEF from the MATLAB
-    M-file located at PATH.
-    """
-    body         = []
-    func         = ""
-    brief        = ""
-    seenfunction = False
-    seenpercent  = False
+    with open (path, "r") as myfile:
+        text=myfile.read()
+    return text
 
-    for l in open(path):
-        line = l.strip().lstrip()
-        if line.startswith('%'): seenpercent = True
-        if line.startswith('function'):
-            seenfunction = True
-            continue
-        if not line.startswith('%'):
-            if (seenfunction and seenpercent) or not seenfunction:
-                break
-            else:
-                continue
-        # remove leading `%' character
-        line = line[1:] #
-        body.append('%s\n' % line)
-    # Extract header from body
-    if len(body) > 0:
-        head  = body[0]
-        body  = body[1:]
-        match = re.match(r"^\s*(\w+)\s*(\S.*)\n$", head)
-        func  = match.group(1)
-        brief = match.group(2)
-    return (body, func, brief)
+# --------------------------------------------------------------------
+class MatlabFunction:
+# --------------------------------------------------------------------
+    def __init__(self, name, nature, brief, body):
+        self.name = name
+        self.nature = nature
+        self.brief = brief
+        self.body = body
 
+    def __str__(self):
+        return "%s (%s)" % (self.name, self.nature)
 
+# --------------------------------------------------------------------
+def findNextFunction(test, pos):
+# --------------------------------------------------------------------
+    if pos == 0 and test[0] == '%':
+        # This is an M-file with a MEX implementation
+        return (pos, 'function')
+    m = findFunction.search(test, pos)
+    if m:
+        return (m.end()+1, m.group(1))
+    else:
+        return (None, None)
+
+# --------------------------------------------------------------------
+def getFunctionDoc(text, nature, pos):
+# --------------------------------------------------------------------
+    m = getFunction.match(text, pos)
+    if m:
+        name = m.group(1)
+        brief = m.group(2).strip()
+        body = clean(m.group(3))
+        return (MatlabFunction(name, nature, brief, body), m.end()+1)
+    else:
+        return (None, pos)
+
+# --------------------------------------------------------------------
+def clean(text):
+# --------------------------------------------------------------------
+    return cleanComments.sub("", text)
+
+# --------------------------------------------------------------------
+def extract(text):
+# --------------------------------------------------------------------
+    funcs = []
+    pos = 0
+    while True:
+        (pos, nature) = findNextFunction(text, pos)
+        if nature is None: break
+        (f, pos) = getFunctionDoc(text, nature, pos)
+        if f:
+            funcs.append(f)
+    return funcs
+
+# --------------------------------------------------------------------
 class Frame(object):
+# --------------------------------------------------------------------
     prefix = ""
     before = None
-    def __init__(self, prefix, before = None):
+    def __init__(self, prefix, before = None, hlevel = 0):
         self.prefix = prefix
         self.before = before
+        self.hlevel = hlevel
 
+# --------------------------------------------------------------------
 class Context(object):
+# --------------------------------------------------------------------
     frames = []
+
+    def __init__(self, hlevel = 0):
+        self.hlevel = hlevel
+
     def __str__(self):
         text =  ""
         for f in self.frames:
@@ -89,8 +127,19 @@ class Context(object):
 def render_L(tree, context):
     print "%s%s" % (context,tree.text)
 
+def render_SL(tree, context):
+    print "%s%s %s" % (context,
+                      "#"*(context.hlevel+tree.section_level),
+                       tree.inner_text)
+
+def render_S(tree, context):
+    for n in tree.children: render_SL(n, context)
+
 def render_DH(tree, context):
-    print "%s**%s** [*%s*]" % (context, tree.description.strip(), tree.inner_text.strip())
+    if len(tree.inner_text.strip()) > 1:
+        print "%s**%s** [*%s*]" % (context, tree.description.strip(), tree.inner_text.strip())
+    else:
+        print "%s**%s**" % (context, tree.description.strip())
 
 def render_DI(tree, context):
     context.push(Frame("    ", "*   "))
@@ -129,11 +178,12 @@ def render_DIVL(tree, context):
         elif n.isa(BL): render_BL(n, context)
         elif n.isa(DL): render_DL(n, context)
         elif n.isa(V): render_V(n, context)
+        elif n.isa(S): render_S(n, context)
         context.before = ""
 
-def render(func, brief, tree):
-    print "## `%s` - %s" % (func.upper(), brief)
-    render_DIVL(tree, Context())
+def render(func, brief, tree, hlevel):
+    print "%s `%s` - %s" % ('#' * hlevel, func.upper(), brief)
+    render_DIVL(tree, Context(hlevel))
 
 if __name__ == '__main__':
     (opts, args) = optparser.parse_args()
@@ -141,8 +191,36 @@ if __name__ == '__main__':
         optparser.print_help()
         sys.exit(2)
     mfilePath = args[0]
-    (body, func, brief) = extract(mfilePath)
+
+    # Get the function
+    text = readText(mfilePath)
+    funcs = extract(text)
+    if len(funcs) == 0:
+        print >> sys.stderr, "Could not find a MATLAB function"
+        sys.exit(-1)
+
     parser = Parser()
-    lexer = Lexer(body)
-    tree = parser.parse(lexer)
-    render(func, brief, tree)
+    if funcs[0].nature == 'classdef':
+        # For MATLAB classes, look for other methods outside
+        # the classdef file
+        components = mfilePath.split(os.sep)
+        if len(components)>1 and components[-2][0] == '@':
+            classDir = string.join(components[:-1],os.sep)
+            for x in os.listdir(classDir):
+                if fnmatch.fnmatch(x, '*.m') and not x == components[-1]:
+                    text = readText(classDir + os.sep + x)
+                    funcs_ = extract(text)
+                    if len(funcs_) > 0:
+                        funcs.append(funcs_[0])
+    else:
+        # For MATLAB functions, do not print subfuctions
+        funcs = [funcs[0]]
+
+    hlevel = 1
+    for f in funcs:
+        lexer = Lexer(f.body.splitlines())
+        tree = parser.parse(lexer)
+        if opts.verb:
+            print >> sys.stderr, tree
+        render(f.name, f.brief, tree, hlevel)
+        hlevel = 2

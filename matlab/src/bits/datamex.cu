@@ -133,8 +133,16 @@ vl::MexTensor::MexTensor(MexContext & context)
 mxArray *
 vl::MexTensor::relinquish()
 {
-  isArrayOwner = false ;
-  return (mxArray*) array ;
+  if (isArrayOwner) {
+    isArrayOwner = false ;
+    return (mxArray*) array ;
+  } else {
+    // this is because we may be encapsulating an input argument
+    // and we may be trying to return it
+    // we should probably use the undocumented
+    // extern mxArray *mxCreateSharedDataCopy(const mxArray *pr);
+    return mxDuplicateArray(array) ;
+  }
 }
 
 void
@@ -174,10 +182,10 @@ vl::MexTensor::~MexTensor()
 vl::Error
 vl::MexTensor::init(Device dev, TensorGeometry const & geom)
 {
-  mwSize dimensions [4] = {geom.getHeight(),
-                           geom.getWidth(),
-                           geom.getDepth(),
-                           geom.getSize()} ;
+  mwSize dimensions [4] = {(mwSize)geom.getHeight(),
+                           (mwSize)geom.getWidth(),
+                           (mwSize)geom.getDepth(),
+                           (mwSize)geom.getSize()} ;
   mwSize newMemorySize = geom.getNumElements() * sizeof(float) ;
   float * newMemory = NULL ;
   mxArray * newArray = NULL ;
@@ -230,10 +238,10 @@ vl::MexTensor::initWithZeros(vl::Device dev, TensorGeometry const & geom)
 
   clear() ;
 
-  mwSize dimensions [4] = {geom.getHeight(),
-                           geom.getWidth(),
-                           geom.getDepth(),
-                           geom.getSize()} ;
+  mwSize dimensions [4] = {(mwSize)geom.getHeight(),
+                           (mwSize)geom.getWidth(),
+                           (mwSize)geom.getDepth(),
+                           (mwSize)geom.getSize()} ;
   mwSize newMemorySize = geom.getNumElements() * sizeof(float) ;
   float * newMemory = NULL ;
   mxArray * newArray = NULL ;

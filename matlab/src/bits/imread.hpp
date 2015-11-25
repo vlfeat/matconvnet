@@ -22,6 +22,8 @@ namespace vl {
     int depth ;
     float * memory ;
     int error ;
+
+    Image() : width(0), height(0), depth(0), memory(0), error(0) { }
   } ;
 
   class ImageReader

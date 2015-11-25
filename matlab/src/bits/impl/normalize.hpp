@@ -10,8 +10,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __vl_normalize__
-#define __vl_normalize__
+#ifndef __vl__normalize__
+#define __vl__normalize__
 
 #include "../data.hpp"
 #include <cstddef>
@@ -71,4 +71,4 @@ namespace vl { namespace impl {
 #endif
 
 } }
-#endif /* __vl_normalize__ */
+#endif /* __vl__normalize__ */

@@ -1,23 +1,48 @@
 function [net, info] = cnn_cifar(varargin)
-% CNN_CIFAR   Demonstrates MatConvNet on CIFAR
+% CNN_CIFAR   Demonstrates MatConvNet on CIFAR-10
+%    The demo includes two standard model: LeNet and Network in
+%    Network (NIN). Use the 'modelType' option to choose one.
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', 'matlab', 'vl_setupnn.m')) ;
 
+opts.modelType = 'lenet' ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+switch opts.modelType
+  case 'lenet'
+    opts.train.learningRate = [0.05*ones(1,15) 0.005*ones(1,10) 0.0005*ones(1,5)] ;
+    opts.train.weightDecay = 0.0001 ;
+  case 'nin'
+    opts.train.learningRate = [0.5*ones(1,30) 0.1*ones(1,10) 0.02*ones(1,10)] ;
+    opts.train.weightDecay = 0.0005 ;
+  otherwise
+    error('Unknown model type %s', opts.modelType) ;
+end
+opts.expDir = fullfile('data', sprintf('cifar-%s', opts.modelType)) ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.train.numEpochs = numel(opts.train.learningRate) ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
 opts.dataDir = fullfile('data','cifar') ;
-opts.expDir = fullfile('data','cifar-baseline') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
+opts.whitenData = true ;
+opts.contrastNormalization = true ;
 opts.train.batchSize = 100 ;
-opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
-opts.train.useGpu = false ;
-opts.train.learningRate = [0.001*ones(1, 12) 0.0001*ones(1,6) 0.00001] ;
+opts.train.gpus = [] ;
 opts.train.expDir = opts.expDir ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
-%                                                         Prepare data
+%                                               Prepare data and model
 % --------------------------------------------------------------------
+
+switch opts.modelType
+  case 'lenet', net = cnn_cifar_init(opts) ;
+  case 'nin',   net = cnn_cifar_init_nin(opts) ;
+end
 
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
@@ -27,94 +52,9 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
-% Define network CIFAR10-quick
-net.layers = {} ;
-
-% 1 conv1
-net.layers{end+1} = struct('type', 'conv', ...
-  'filters', 1e-4*randn(5,5,3,32, 'single'), ...
-  'biases', zeros(1, 32, 'single'), ...
-  'filtersLearningRate', 1, ...
-  'biasesLearningRate', 2, ...
-  'stride', 1, ...
-  'pad', 2) ;
-
-% 2 pool1 (max pool)
-net.layers{end+1} = struct('type', 'pool', ...
-                           'method', 'max', ...
-                           'pool', [3 3], ...
-                           'stride', 2, ...
-                           'pad', [0 1 0 1]) ;
-
-% 3 relu1
-net.layers{end+1} = struct('type', 'relu') ;
-
-% 4 conv2
-net.layers{end+1} = struct('type', 'conv', ...
-  'filters', 0.01*randn(5,5,32,32, 'single'),...
-  'biases', zeros(1,32,'single'), ...
-  'filtersLearningRate', 1, ...
-  'biasesLearningRate', 2, ...
-  'stride', 1, ...
-  'pad', 2) ;
-
-% 5 relu2
-net.layers{end+1} = struct('type', 'relu') ;
-
-% 6 pool2 (avg pool)
-net.layers{end+1} = struct('type', 'pool', ...
-                           'method', 'avg', ...
-                           'pool', [3 3], ...
-                           'stride', 2, ...
-                           'pad', [0 1 0 1]) ; % Emulate caffe
-
-% 7 conv3
-net.layers{end+1} = struct('type', 'conv', ...
-  'filters', 0.01*randn(5,5,32,64, 'single'),...
-  'biases', zeros(1,64,'single'), ...
-  'filtersLearningRate', 1, ...
-  'biasesLearningRate', 2, ...
-  'stride', 1, ...
-  'pad', 2) ;
-
-% 8 relu3
-net.layers{end+1} = struct('type', 'relu') ;
-
-% 9 pool3 (avg pool)
-net.layers{end+1} = struct('type', 'pool', ...
-                           'method', 'avg', ...
-                           'pool', [3 3], ...
-                           'stride', 2, ...
-                           'pad', [0 1 0 1]) ; % Emulate caffe
-
-% 10 ip1
-net.layers{end+1} = struct('type', 'conv', ...
-  'filters', 0.1*randn(4,4,64,64, 'single'),...
-  'biases', zeros(1,64,'single'), ...
-  'filtersLearningRate', 1, ...
-  'biasesLearningRate', 2, ...
-  'stride', 1, ...
-  'pad', 0) ;
-
-% 11 ip2
-net.layers{end+1} = struct('type', 'conv', ...
-                           'filters', 0.1*randn(1,1,64,10, 'single'),...
-                           'biases', zeros(1,10,'single'), ...
-                           'filtersLearningRate', 1, ...
-                           'biasesLearningRate', 2, ...
-                           'stride', 1, ...
-                           'pad', 0) ;
-% 12 loss
-net.layers{end+1} = struct('type', 'softmaxloss') ;
-
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
-
-% Take the mean out and make GPU if needed
-if opts.train.useGpu
-  imdb.images.data = gpuArray(imdb.images.data) ;
-end
 
 [net, info] = cnn_train(net, imdb, @getBatch, ...
     opts.train, ...
@@ -125,6 +65,7 @@ function [im, labels] = getBatch(imdb, batch)
 % --------------------------------------------------------------------
 im = imdb.images.data(:,:,:,batch) ;
 labels = imdb.images.labels(1,batch) ;
+if rand > 0.5, im=fliplr(im) ; end
 
 % --------------------------------------------------------------------
 function imdb = getCifarImdb(opts)
@@ -154,13 +95,37 @@ end
 
 set = cat(2, sets{:});
 data = single(cat(4, data{:}));
+
+% remove mean in any case
 dataMean = mean(data(:,:,:,set == 1), 4);
 data = bsxfun(@minus, data, dataMean);
+
+% normalize by image mean and std as suggested in `An Analysis of
+% Single-Layer Networks in Unsupervised Feature Learning` Adam
+% Coates, Honglak Lee, Andrew Y. Ng
+
+if opts.contrastNormalization
+  z = reshape(data,[],60000) ;
+  z = bsxfun(@minus, z, mean(z,1)) ;
+  n = std(z,0,1) ;
+  z = bsxfun(@times, z, mean(n) ./ max(n, 40)) ;
+  data = reshape(z, 32, 32, 3, []) ;
+end
+
+if opts.whitenData
+  z = reshape(data,[],60000) ;
+  W = z(:,set == 1)*z(:,set == 1)'/60000 ;
+  [V,D] = eig(W) ;
+  % the scale is selected to approximately preserve the norm of W
+  d2 = diag(D) ;
+  en = sqrt(mean(d2)) ;
+  z = V*diag(en./max(sqrt(d2), 10))*V'*z ;
+  data = reshape(z, 32, 32, 3, []) ;
+end
 
 clNames = load(fullfile(unpackPath, 'batches.meta.mat'));
 
 imdb.images.data = data ;
-imdb.images.data_mean = dataMean;
 imdb.images.labels = single(cat(2, labels{:})) ;
 imdb.images.set = set;
 imdb.meta.sets = {'train', 'val', 'test'} ;

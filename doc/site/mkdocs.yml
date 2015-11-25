@@ -1,40 +1,51 @@
 site_name: MatConvNet
-markdown_extensions: ['extra', 'mathjax']
+markdown_extensions: ['extra', 'mathjax', 'toc']
 theme: bootstrap
 
 extra_css: ['css/tables.css', 'css/fixes.css']
-extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js']
+extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js', 'js/toggle.js']
 
 repo_url: https://github.com/vlfeat/matconvnet
 
 pages:
-- ['index.md', 'MatConvNet: CNNs for MATLAB']
+- Home: 'index.md'
+- Getting Started:
+  - Quick Start: 'quick.md'
+  - Installing: 'install.md'
+  - CNN Wrappers: 'wrappers.md'
+  - Pretrained CNNs: 'pretrained.md'
+  - Training new CNNs: 'training.md'
+  - Using a GPU: 'gpu.md'
+  - About: 'about.md'
+  - Frequently-asked questions: 'faq.md'
 
-- ['install.md', 'Getting Started', 'Installing']
-- ['pretrained.md', 'Getting Started', 'Pretrained models']
-- ['training.md', 'Getting Started', 'Training new models']
-- ['gpu.md', 'Getting Started', 'Using GPU code']
-- ['about.md', 'Getting Started', 'About']
+- Functions:
+  - Index: 'functions.md'
+  - vl_nnbnorm: 'mfiles/vl_nnbnorm.md'
+  - vl_nnconcat: 'mfiles/vl_nnconcat.md'
+  - vl_nnspnorm: 'mfiles/vl_nnspnorm.md'
+  - vl_nnpdist: 'mfiles/vl_nnpdist.md'
+  - vl_nnconv: 'mfiles/vl_nnconv.md'
+  - vl_nnconvt: 'mfiles/vl_nnconvt.md'
+  - vl_nndropout: 'mfiles/vl_nndropout.md'
+  - vl_nnloss: 'mfiles/vl_nnloss.md'
+  - vl_nnnoffset: 'mfiles/vl_nnnoffset.md'
+  - vl_nnnormalize: 'mfiles/vl_nnnormalize.md'
+  - vl_nnpool: 'mfiles/vl_nnpool.md'
+  - vl_nnrelu: 'mfiles/vl_nnrelu.md'
+  - vl_nnsigmoid: 'mfiles/vl_nnsigmoid.md'
+  - vl_nnsoftmax: 'mfiles/vl_nnsoftmax.md'
+  - vl_nnsoftmaxloss: 'mfiles/vl_nnsoftmaxloss.md'
+  - DagNN wrapper: 'mfiles/+dagnn/@DagNN/DagNN.md'
+  - vl_simplenn: 'mfiles/simplenn/vl_simplenn.md'
+  - vl_simplenn_diagnose: 'mfiles/simplenn/vl_simplenn_diagnose.md'
+  - vl_simplenn_display: 'mfiles/simplenn/vl_simplenn_display.md'
+  - vl_simplenn_move: 'mfiles/simplenn/vl_simplenn_move.md'
+  - vl_argparse: 'mfiles/vl_argparse.md'
+  - vl_compilenn: 'mfiles/vl_compilenn.md'
+  - vl_rootnn: 'mfiles/vl_rootnn.md'
+  - vl_setupnn: 'mfiles/vl_setupnn.md'
 
-- ['functions.md', 'Functions', 'Overview']
-- ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
-- ['mfiles/vl_argparse.md', 'Functions', 'vl_argparse']
-- ['mfiles/vl_compilenn.md', 'Functions', 'vl_compilenn']
-- ['mfiles/vl_nnconv.md', 'Functions', 'vl_nnconv']
-- ['mfiles/vl_nndropout.md', 'Functions', 'vl_nndropout']
-- ['mfiles/vl_nnloss.md', 'Functions', 'vl_nnloss']
-- ['mfiles/vl_nnnoffset.md', 'Functions', 'vl_nnnoffset']
-- ['mfiles/vl_nnnormalize.md', 'Functions', 'vl_nnnormalize']
-- ['mfiles/vl_nnpool.md', 'Functions', 'vl_nnpool']
-- ['mfiles/vl_nnrelu.md', 'Functions', 'vl_nnrelu']
-- ['mfiles/vl_nnsoftmax.md', 'Functions', 'vl_nnsoftmax']
-- ['mfiles/vl_nnsoftmaxloss.md', 'Functions', 'vl_nnsoftmaxloss']
-- ['mfiles/vl_rootnn.md', 'Functions', 'vl_rootnn']
-- ['mfiles/vl_setupnn.md', 'Functions', 'vl_setupnn']
-- ['mfiles/vl_simplenn.md', 'Functions', 'vl_simplenn']
-- ['mfiles/vl_simplenn_diagnose.md', 'Functions', 'vl_simplenn_diagnose']
-- ['mfiles/vl_simplenn_display.md', 'Functions', 'vl_simplenn_display']
-- ['mfiles/vl_simplenn_move.md', 'Functions', 'vl_simplenn_move']
-
-- ['developers.md', 'Developers', 'Developer notes']
-- ['install-alt.md', 'Developers', 'Compiling from the command line']
+- Contributing:
+  - Developers notes: 'developers.md'
+  - Compiling from the command line: 'install-alt.md'

@@ -1,6 +1,6 @@
 #! /usr/bin/python
 # file: import-caffe.py
-# brief: Caffe importer
+# brief: Caffe importer for SimpleNN
 # author: Andrea Vedaldi and Karel Lenc
 
 # Requires Google Protobuf for Python and SciPy
@@ -33,7 +33,7 @@ def versiontuple(version):
 
 min_numpy_version = "1.7.0"
 if versiontuple(numpy.version.version) < versiontuple(min_numpy_version):
-  print 'Unsupported numpy version ({}), must be >= {}'.format(numpy.version.version, 
+  print 'Unsupported numpy version ({}), must be >= {}'.format(numpy.version.version,
     min_numpy_version)
   sys.exit(0)
 
@@ -314,7 +314,9 @@ for name in layers_name_param:
   mk = {'name': layer.name}
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   if ltype == 'conv':
+    # using an object array for the withgs prevents odd implicit reshapeing later
     mk['type'] = 'conv'
+    mk['weights'] = np.empty([1,2],dtype='object')
     if hasattr(layer, 'convolution_param'): param = layer.convolution_param
     if hasattr(layer, 'kernelsize'): support = [param.kernelsize]*2
     else: support = [param.kernel_size]*2
@@ -322,14 +324,14 @@ for name in layers_name_param:
     stride = [param.stride]*2
     num_output_channels = param.num_output
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0]
+      mk['weights'][0,0] = arrays[0]
     else:
-      mk['filters'] = np.zeros(support + [layer_input_size[2], num_output_channels],
+      mk['weights'][0,0] = np.zeros(support + [layer_input_size[2], num_output_channels],
                                dtype='float32')
     if len(arrays) >= 2:
-      mk['biases'] = np.squeeze(arrays[1], (2,3))
+      mk['weights'][0,1] = np.squeeze(arrays[1], (2,3))
     else:
-      mk['biases'] = np.zeros([1,num_output_channels],dtype='float32')
+      mk['weights'][0,1] = np.zeros([1,num_output_channels],dtype='float32')
     mk['pad'] = pad
     mk['stride'] = stride
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -366,27 +368,28 @@ for name in layers_name_param:
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype == 'innerproduct' or ltype == 'inner_product':
     mk['type'] = 'conv'
+    mk['weights'] = np.empty([1,2],dtype='object')
     if hasattr(layer, 'inner_product_param'): param = layer.inner_product_param
     support = [layer_input_size[0], layer_input_size[1]]
     pad = [0]*4
     stride = [1]*2
     num_output_channels = param.num_output
     if len(arrays) >= 1:
-      mk['filters'] = arrays[0].reshape(
+      mk['weights'][0,0] = arrays[0].reshape(
         layer_input_size[0],
         layer_input_size[1],
         layer_input_size[2],
         num_output_channels,
         order='F')
     else:
-      mk['filters'] = np.zeros([layer_input_size[0],
-                                layer_input_size[1],
-                                layer_input_size[2],
-                                num_output_channels],dtype='float32')
+      mk['weights'][0,0] = np.zeros([layer_input_size[0],
+                                     layer_input_size[1],
+                                     layer_input_size[2],
+                                     num_output_channels],dtype='float32')
     if len(arrays) >= 2:
-      mk['biases'] = np.squeeze(arrays[1], (2,3))
+      mk['weights'][0,1] = np.squeeze(arrays[1], (2,3))
     else:
-      mk['biases'] = np.zeros([1,num_output_channels],dtype='float32')
+      mk['weights'][0,1] = np.zeros([1,num_output_channels],dtype='float32')
     mk['pad'] = pad
     mk['stride'] = stride
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -423,13 +426,14 @@ for i in range(0,len(matlab_layers)):
     if f in matlab_layers[i]:
       matlab_layers[i][f] = np.array(matlab_layers[i][f],dtype=float).reshape([1,-1])
   if matlab_layers[i]['type'] == 'conv':
-    matlab_layers[i]['biases'] = matlab_layers[i]['biases'].reshape(1,-1) # row
+    matlab_layers[i]['weights'][0,1] = matlab_layers[i]['weights'][0,1].reshape(1,-1) # row
     if args.transpose:
-      matlab_layers[i]['filters'] = matlab_layers[i]['filters'].transpose([1,0,2,3])
+      matlab_layers[i]['weights'][0,0] = matlab_layers[i]['weights'][0,0].transpose([1,0,2,3])
       if first_conv_layer:
         if not args.caffe_variant in ['vgg-caffe']:
-          matlab_layers[i]['filters'] = matlab_layers[i]['filters'][:,:,: : -1,:] # to RGB
+          matlab_layers[i]['weights'][0,0] = matlab_layers[i]['weights'][0,0][:,:,: : -1,:] # to RGB
         first_conv_layer = False
+    print 'Filter size', matlab_layers[i]['weights'][0,0].shape
 
 # --------------------------------------------------------------------
 #                                                        Normalization
@@ -477,4 +481,4 @@ mnet = {
   'normalization': mkn,
   'classes': classes}
 
-scipy.io.savemat(args.output, mnet)
+scipy.io.savemat(args.output, mnet, oned_as='row')

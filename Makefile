@@ -34,15 +34,16 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 
 # Remark: each MATLAB version requires a particular CUDA Toolkit version.
 # Note that multiple CUDA Toolkits can be installed.
-#MATLABROOT ?= /Applications/MATLAB_R2013b.app
-#CUDAROOT ?= /Developer/NVIDIA/CUDA-5.5
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
+#MATLABROOT ?= /Applications/MATLAB_R2015b.app
+#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.5
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta10
+VER = 1.0-beta16
 DIST = $(NAME)-$(VER)
+LATEST = $(NAME)-latest
 RSYNC = rsync
 HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
@@ -56,12 +57,17 @@ MEX = $(MATLABROOT)/bin/mex
 MEXEXT = $(MATLABROOT)/bin/mexext
 MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
 MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
-MEXFLAGS = -largeArrayDims -lmwblas \
+MEXFLAGS = -cxx -largeArrayDims -lmwblas \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
 SHELL = /bin/bash # sh not good enough
+
 NVCC = $(CUDAROOT)/bin/nvcc
+NVCCVER = $(shell $(NVCC) --version | \
+sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
+xargs printf '%02d%02d%02d')
+NVCCVER_LT_70 = $(shell test $(NVCCVER) -lt 070000 && echo true)
 
 # this is used *onyl* for the 'nvcc' method
 NVCCFLAGS = \
@@ -71,7 +77,7 @@ $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT),) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 -Xcompiler -fPIC
-MEXFLAGS_NVCC = $(MEXFLAGS) -cxx -lmwgpu
+MEXFLAGS_NVCC = $(MEXFLAGS) -lmwgpu
 
 ifneq ($(DEBUG),)
 MEXFLAGS += -g
@@ -80,7 +86,7 @@ else
 MEXFLAGS += -DNDEBUG -O
 NVCCFLAGS += -DNDEBUG -O3
 # we still want debug symbols
-MEXFLAGS += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -g -O3'
+MEXFLAGS += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -g'
 MEXFLAGS += LDOPTIMFLAGS='$$LDOPTIMFLAGS -g'
 NVCCFLAGS += -g
 endif
@@ -93,7 +99,12 @@ endif
 # Mac OS X Intel
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 MEXFLAGS_GPU += -L$(CUDAROOT)/lib
+ifeq ($(NVCCVER_LT_70),true)
+# if using an old version of CUDA
 MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS -stdlib=libstdc++'
+else
+MEXFLAGS_NVCC += -L$(CUDAROOT)/lib LDFLAGS='$$LDFLAGS'
+endif
 IMAGELIB_DEFAULT = quartz
 endif
 
@@ -136,13 +147,17 @@ ext := $(if $(ENABLE_GPU),cu,cpp)
 cpp_src+=matlab/src/bits/data.$(ext)
 cpp_src+=matlab/src/bits/datamex.$(ext)
 cpp_src+=matlab/src/bits/nnconv.$(ext)
+cpp_src+=matlab/src/bits/nnbias.$(ext)
 cpp_src+=matlab/src/bits/nnfullyconnected.$(ext)
 cpp_src+=matlab/src/bits/nnsubsample.$(ext)
 cpp_src+=matlab/src/bits/nnpooling.$(ext)
 cpp_src+=matlab/src/bits/nnnormalize.$(ext)
+cpp_src+=matlab/src/bits/nnbnorm.$(ext)
 mex_src+=matlab/src/vl_nnconv.$(ext)
+mex_src+=matlab/src/vl_nnconvt.$(ext)
 mex_src+=matlab/src/vl_nnpool.$(ext)
 mex_src+=matlab/src/vl_nnnormalize.$(ext)
+mex_src+=matlab/src/vl_nnbnorm.$(ext)
 ifdef ENABLE_IMREADJPEG
 mex_src+=matlab/src/vl_imreadjpeg.cpp
 endif
@@ -153,6 +168,7 @@ cpp_src+=matlab/src/bits/impl/subsample_cpu.cpp
 cpp_src+=matlab/src/bits/impl/copy_cpu.cpp
 cpp_src+=matlab/src/bits/impl/pooling_cpu.cpp
 cpp_src+=matlab/src/bits/impl/normalize_cpu.cpp
+cpp_src+=matlab/src/bits/impl/bnorm_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
@@ -165,10 +181,12 @@ cpp_src+=matlab/src/bits/impl/subsample_gpu.cu
 cpp_src+=matlab/src/bits/impl/copy_gpu.cu
 cpp_src+=matlab/src/bits/impl/pooling_gpu.cu
 cpp_src+=matlab/src/bits/impl/normalize_gpu.cu
+cpp_src+=matlab/src/bits/impl/bnorm_gpu.cu
 cpp_src+=matlab/src/bits/datacu.cu
 ifdef ENABLE_CUDNN
 cpp_src+=matlab/src/bits/impl/nnconv_cudnn.cu
 cpp_src+=matlab/src/bits/impl/nnpooling_cudnn.cu
+cpp_src+=matlab/src/bits/impl/nnbias_cudnn.cu
 endif
 endif
 
@@ -218,10 +236,16 @@ info: doc-info
 	@echo "cpp_tgt=$(cpp_tgt)"
 	@echo "cu_src=$(cu_src)"
 	@echo "cu_tgt=$(cu_tgt)"
+	@echo '------------------------------'
 	@echo 'MEXFLAGS=$(MEXFLAGS)'
 	@echo 'MEXFLAGS_GPU=$(MEXFLAGS_GPU)'
 	@echo 'MEXFLAGS_NVCC=$(MEXFLAGS_NVCC)'
+	@echo '------------------------------'
+	@echo 'NVCC=$(NVCC)'
+	@echo 'NVCCVER=$(NVCCVER)'
+	@echo 'NVCCVER_LT_70=$(NVCCVER_LT_70)'
 	@echo 'NVCCFLAGS=$(NVCCFLAGS)'
+
 
 clean: doc-clean
 	find . -name '*~' -delete
@@ -237,9 +261,10 @@ pack:
 	COPYFILE_DISABLE=1 \
 	COPY_EXTENDED_ATTRIBUTES_DISABLE=1 \
 	$(GIT) archive --prefix=$(NAME)-$(VER)/ v$(VER) | gzip > $(DIST).tar.gz
+	ln -sf $(DIST).tar.gz $(LATEST).tar.gz
 
 post: pack
-	$(RSYNC) -aP $(DIST).tar.gz $(HOST)/download/
+	$(RSYNC) -aP $(DIST).tar.gz $(LATEST).tar.gz $(HOST)/download/
 
 post-models:
 	$(RSYNC) -aP data/models/*.mat $(HOST)/models/

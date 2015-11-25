@@ -1,6 +1,6 @@
 function vl_setupnn()
-% VL_SETUPNN  Setup the MatConvNet toolbox
-%    VL_SETUPNN() function adds the MatConvNet toolbox to MATLAB path.
+%VL_SETUPNN Setup the MatConvNet toolbox.
+%   VL_SETUPNN() function adds the MatConvNet toolbox to MATLAB path.
 
 % Copyright (C) 2014 Andrea Vedaldi.
 % All rights reserved.
@@ -11,4 +11,5 @@ function vl_setupnn()
 root = vl_rootnn() ;
 addpath(fullfile(root, 'matlab')) ;
 addpath(fullfile(root, 'matlab', 'mex')) ;
+addpath(fullfile(root, 'matlab', 'simplenn')) ;
 addpath(fullfile(root, 'matlab', 'xtest')) ;

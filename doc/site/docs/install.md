@@ -12,13 +12,13 @@ In order to install the library, follows these steps:
     in order to add MatConvNet to MATLAB's search path.
 
 At this point the library is ready to use. You can test it by using
-the command:
+the command (using MATLAB R2014a or later):
 
-    > vl_test_nnlayers
+    > vl_testnn
 
 To test GPU support (if you have [compiled it](#gpu)) use instead:
 
-> vl_test_nnlayers(true)
+    > vl_testnn('gpu',true)
 
 Note that the second tests runs slower than the CPU version; do not
 worry, this is an artefact of the test procedure.
@@ -27,8 +27,9 @@ worry, this is an artefact of the test procedure.
 ## Compiling
 
 MatConvNet compiles under Linux, Mac, and Windows. This page discusses
-compiling MatConvNet using the MATLAB function `vl_compilenn`. While
-this is the easiest method,
+compiling MatConvNet using the MATLAB function
+[`vl_compilenn`](mfiles/vl_compilenn). While this is the easiest
+method,
 [the command line or an IDE can be used as well](install-alt.md).
 
 <a name='cpu'></a>
@@ -77,8 +78,9 @@ ideally **match your MATLAB version**:
 | MATLAB    | CUDA toolkit      |
 |-----------|-------------------|
 | R2013b    | 5.5               |
-| R2014a    | 6.0               |
-| R2014b    | 6.5               |
+| R2014a    | 5.5               |
+| R2014b    | 6.0               |
+| R2015a    | 6.5               |
 
 You can also use the `gpuDevice` MATLAB command to find out the
 correct version of the CUDA toolkit. It is also possible (and
@@ -134,12 +136,12 @@ MatConvNet supports the NVIDIA <a
 href='https://developer.nvidia.com/cuDNN'>cuDNN library</a> for deep
 learning (and in particular their fast convolution code). In order to
 use it, obtain the
-[cuDNN Candidate Release 2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library). Note
-that only Candidate Release 2 has been tested so far (Candidate
-Release 1 will *not* work). Make sure that the CUDA toolkit matches
-the one in cuDNN (e.g. 6.5). This often means that the CUDA toolkit
-will *not* match the one used internally by MATLAB, such that the
-[compilation method](#nvcc) discussed above must be used.
+[cuDNN V2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library)
+library from NVIDIA (the older V2 RC2 version should also work, but
+other releases such as V1 will *not* work). Make sure that the CUDA
+toolkit matches the one in cuDNN (e.g. 6.5). This often means that the
+CUDA toolkit will *not* match the one used internally by MATLAB, such
+that the [compilation method](#nvcc) discussed above must be used.
 
 Unpack the cuDNN library binaries and header files in a place
 `<Cudnn>` of you choice. In the rest of the instructions, it will be

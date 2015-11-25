@@ -4,7 +4,9 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2015 Andrea Vedaldi.
+
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -34,6 +36,7 @@ enum {
   opt_no_der_biases,
   opt_cudnn,
   opt_no_cudnn,
+  opt_transpose
 } ;
 
 /* options */
@@ -43,7 +46,7 @@ vlmxOption  options [] = {
   {"Verbose",          0,   opt_verbose            },
   {"NoDerData",        0,   opt_no_der_data        },
   {"NoDerFilters",     0,   opt_no_der_filters     },
-  {"NoDerBiases",      0,   opt_no_der_biases      },
+  {"NoderBiases",      0,   opt_no_der_biases      },
   {"CUDNN",            0,   opt_cudnn              },
   {"NoCUDNN",          0,   opt_no_cudnn           },
   {0,                  0,   0                      }
@@ -73,7 +76,7 @@ enum {
 } ;
 
 enum {
-  OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIASES, OUT_END
+  OUT_RESULT = 0, OUT_DERFILTERS, OUT_derBiases, OUT_END
 } ;
 
 void mexFunction(int nout, mxArray *out[],
@@ -93,7 +96,7 @@ void mexFunction(int nout, mxArray *out[],
   bool fullyConnectedMode = false ;
   bool computeDerData = true ;
   bool computeDerFilters = true ;
-  bool computeDerBiases = true ;
+  bool computederBiases = true ;
 
   int verbosity = 0 ;
   int opt ;
@@ -159,7 +162,7 @@ void mexFunction(int nout, mxArray *out[],
             padRight = (int)mxGetPr(optarg)[3] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("PAD has neither one nor four elements.") ;
         }
         break ;
 
@@ -172,7 +175,7 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_no_der_biases :
-        computeDerBiases = VL_FALSE ;
+        computederBiases = VL_FALSE ;
         break ;
 
       case opt_no_cudnn :
@@ -303,7 +306,7 @@ void mexFunction(int nout, mxArray *out[],
     if (computeDerFilters && hasFilters) {
       derFilters.init(type, filters.getGeometry()) ;
     }
-    if (computeDerBiases && hasBiases) {
+    if (computederBiases && hasBiases) {
       derBiases.init(type, biases.getGeometry()) ;
     }
   }
@@ -389,8 +392,8 @@ void mexFunction(int nout, mxArray *out[],
   /* regular case */
   if (!backMode) {
     error = vl::nnconv_forward(context,
-                               output,
-                               data,
+                               output, 0,
+                               data, 1,
                                filters,
                                biases,
                                strideY, strideX,
@@ -417,8 +420,8 @@ done:
   }
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERBIASES] = (computeDerBiases & hasBiases) ? derBiases.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
+    out[OUT_derBiases] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;
   }
