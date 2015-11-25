@@ -73,14 +73,30 @@ clear v d ;
 % -------------------------------------------------------------------------
 
 switch opts.networkType
-  case 'simplenn', trainfn = @cnn_train ;
-  case 'dagnn', trainfn = @cnn_train_dag ;
+  case 'simplenn', trainFn = @cnn_train ;
+  case 'dagnn', trainFn = @cnn_train_dag ;
 end
 
-[net, info] = trainfn(net, imdb, getBatchFn(opts, net.meta), ...
+[net, info] = trainFn(net, imdb, getBatchFn(opts, net.meta), ...
                       'expDir', opts.expDir, ...
                       net.meta.trainOpts, ...
                       opts.train) ;
+
+% -------------------------------------------------------------------------
+%                                                                    Deploy
+% -------------------------------------------------------------------------
+
+net = cnn_imagenet_deploy(net) ;
+modelPath = fullfile(opts.expDir, 'net-deployed.mat')
+
+switch opts.networkType
+  case 'simplenn'
+    save(modelPath, '-struct', 'net') ;
+  case 'dagnn'
+    net_ = net.saveobj()
+    save(modelPath, '-struct', 'net_') ;
+    clear net_ ;
+end
 
 % -------------------------------------------------------------------------
 function fn = getBatchFn(opts, meta)
