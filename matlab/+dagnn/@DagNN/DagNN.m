@@ -129,7 +129,7 @@ classdef DagNN < handle
     setLayerInputs(obj, leyer, inputs)
     setLayerOutput(obj, layer, outputs)
     setLayerParams(obj, layer, params)
-    renameVar(obj, oldName, newName)
+    renameVar(obj, oldName, newName, varargin)
     rebuild(obj)
 
     % Process data with the DagNN
