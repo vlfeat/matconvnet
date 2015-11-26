@@ -72,8 +72,8 @@ Increase the verbosity level to 2 to get even more information.
 
 To use the the GPU-accelerated version of the library, you will need a
 NVIDA GPU card with compute capability 2.0 or greater and a copy of
-the NVIDIA CUDA toolkit. The version of the CUDA toolkit should
-ideally **match your MATLAB version**:
+the NVIDIA CUDA toolkit. Ideally, the version of the CUDA toolkit
+should match your MATLAB version:
 
 | MATLAB    | CUDA toolkit      |
 |-----------|-------------------|
@@ -83,10 +83,10 @@ ideally **match your MATLAB version**:
 | R2015a    | 6.5               |
 | R2015b    | 7.0               |
 
-You can also use the `gpuDevice` MATLAB command to find out the
-correct version of the CUDA toolkit. It is also possible (and
-sometimes necessary) to use a more recent version of CUDA of the one
-officially supported; this is [explained later](#nvcc).
+You can also use the `gpuDevice` MATLAB command to find out MATLAB's
+version of the CUDA toolkit. It is also possible (and often necessary)
+to use a more recent version of CUDA than the one officially supported
+by MATLAB; this is [explained later](#nvcc).
 
 Assuming that there is only a single copy of the CUDA toolkit
 installed in your system and that it matches MATLAB's version, compile
@@ -125,7 +125,7 @@ MATLAB accessing these libraries. On Linux one way to do so
 is to start MATLAB from the command line (terminal) specifying the
 `LD_LIBRARY_PATH` option. For instance, on Linux this may look like:
 
-    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.0/lib matlab
+    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.0/lib64 matlab
 
 On Windows, chances are that the CUDA libraries are already visible to
 MATLAB so that nothing else needs to be done.
@@ -141,8 +141,9 @@ href='https://developer.nvidia.com/cuDNN'>cuDNN library</a> for deep
 learning (and in particular their fast convolution code). In order to
 use it, obtain the
 [cuDNN](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library)
-library from NVIDIA (anything greater or requal than version 2 should
-work). Make sure that the CUDA toolkit matches the one in cuDNN
+library from NVIDIA (cuDNN v2 to v4 should work; however, later
+version are *strongly recommended* as earlier version had a few
+bugs). Make sure that the CUDA toolkit matches the one in cuDNN
 (e.g. 6.5). This often means that the CUDA toolkit will *not* match
 the one used internally by MATLAB, such that the
 [compilation method](#nvcc) discussed above must be used.
@@ -184,7 +185,7 @@ however, do not forget to point it to the paths of both the CUDA and
 cuDNN libraries. On a Linux terminal, this may look like:
 
     $ cd <MatConvNet>
-    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.5/lib:local matlab
+    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.5/lib64:local matlab
 
 On Windows, copy the cuDNN DLL file `<Cudnn>/cudnn*dll` (or from
 wherever you unpacked cuDNN) into the `<MatConvNet>/matlab/mex`

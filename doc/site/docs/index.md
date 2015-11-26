@@ -6,7 +6,7 @@ Download</a>
 </div>
 <div class="col-sm-3">
 <a href="http://www.github.com/vlfeat/matconvnet.git">
-<div class="menuicon"><span class="fa fa-git fa-2x"></span></div>
+<div class="menuicon"><span class="fa fa-github fa-2x"></span></div>
 Git repository</a>
 </div>
 <div class="col-sm-3">
@@ -32,15 +32,16 @@ pre-trained CNNs for image classification, segmentation, face
 recogntion, and text detection are available.
 
 
-> **New:** 1.0-beta17 tidies up the library in many ways. It also
-> improves how batch normalization is handled. Please check carefully
-> the [changes](about.md#changes) to see if any of this might impact
-> your workflow. In particular, check out the
-> [`vl_simplenn_tidy`](mfiles/simplenn/vl_simplenn_tidy.md) function
-> to bring old models up to date. We also have openend a new
+> **New:** [1.0-beta17](about.md#changes) tidies up the library in
+> many ways. It also improves how batch normalization is
+> handled. Please check carefully the [changes](about.md#changes) to
+> see if any of this might impact your workflow. In particular, check
+> out the [`vl_simplenn_tidy`](mfiles/simplenn/vl_simplenn_tidy.md)
+> function to bring old models up to date. We also have openend a new
 > [discussion group](https://groups.google.com/d/forum/matconvnet) for
 > MatConvNet users (please use this group for discussions and GitHub
-> for reporting bugs or similar).
+> for reporting bugs or similar). cuDNN v4 is also supported (although
+> not all v4 features are used yet).
 >
 > **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
 >

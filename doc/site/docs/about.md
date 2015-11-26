@@ -24,6 +24,9 @@ here.
 # Changes
 
 -   1.0-beta17 (November 2015).
+
+    **New features**
+
     * Mac OS X 10.11 support. Since setting `LD_LIBRARY_PATH` is not
       supported under this OS due to security reasons, now MatConvNet
       binaries hardcodes the location of the CUDA/cuDNN libraries as
@@ -33,11 +36,6 @@ here.
       root directory is assumed to contain two subdirectories `lib`
       and `include` instead of the binary and include files
       directly. This matches how cuDNN is now distributed.
-
-    * This version changes slightly how SimpleNN objects should be
-      handled. Use the `vl_simplenn_tidy()` to upgrade objects to the
-      latest version of MatConvNet as well as to fill in missing
-      default values.
 
     * This version changes how batch normalization is handled. Now the
       average moments are learned together with the other parameters.
@@ -53,18 +51,35 @@ here.
 
     * Examples have been re-organized in subdirectories.
 
+    * Compiles and works correctly with cuDNN v4. However, not all v4
+      features are used yet.
+
+    **Changes affecting backward compatibility**
+
+    * This version changes slightly how SimpleNN networks should be
+      handled. Use the `vl_simplenn_tidy()` to upgrade existing
+      networks to the latest version of MatConvNet. This function is
+      also useful to fill in missing default values for the parameters
+      of the network layers. It is therefore recommended to use
+      `vl_simplenn_tidy()` also when new models are defined.
+
+    * The downloadable pre-trained models have been updated to match
+      the new version of SimpleNN. The older models are still
+      available for download. Note that old and new models are
+      numerically equivalent, only the format is (slightly) different.
+
 -   1.0-beta16 (October 2015). Adds
     VGG-Face as a pretrained model. Bugfixes.
 -   1.0-beta15 (September 2015). Supports for new `DagNN` blocks and
     import script for the FCN models. Improved `vl_nnbnorm`.
 -   1.0-beta14 (August 2015). New `DagNN` wrapper for networks with
-    complex toplogies. GoogLeNet support. Rewritten `vl_nnloss` block
+    complex topologies. GoogLeNet support. Rewritten `vl_nnloss` block
     with support for more loss functions. New blocks, better
     documentation, bugfixes, new demos.
 -   1.0-beta13 (July 2015). Much faster batch normalization and several
     minor improvements and bugfixes.
 -   1.0-beta12 (May 2015). Added `vl_nnconvt` (convolution transpose or
-    deconvolition).
+    deconvolution).
 -   1.0-beta11 (April 2015) Added batch normalization, spatial
     normalization, sigmoid, p-distance.  Extended the example training
     code to support multiple GPUs. Significantly improved the tuning
@@ -83,7 +98,7 @@ here.
     support multiple GPUs.  The inteface is nearly the same, but the
     `useGpu` option has been replaced by a `gpus` list of GPUs to use.
 
--   1.0-beta10 (March 2015) vl_imreadjpeg works under Windows as well.
+-   1.0-beta10 (March 2015) `vl_imreadjpeg` works under Windows as well.
 -   1.0-beta9 (February 2015) CuDNN support. Major rewrite of the C/CUDA core.
 -   1.0-beta8 (December 2014) New website. Experimental Windows support.
 -   1.0-beta7 (September 2014) Adds VGG verydeep models.
