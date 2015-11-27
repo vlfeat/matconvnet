@@ -39,12 +39,14 @@ opts.errorFunction = 'multiclass' ;
 opts.errorLabels = {} ;
 opts.plotDiagnostics = false ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
+opts.profile = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
 if isnan(opts.train), opts.train = [] ; end
+if isnan(opts.val), opts.val = [] ; end
 
 % -------------------------------------------------------------------------
 %                                                    Network initialization
@@ -129,17 +131,26 @@ for epoch=start+1:opts.numEpochs
   learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   train = opts.train(randperm(numel(opts.train))) ; % shuffle
   val = opts.val ;
+
   if numGpus <= 1
-    [net,stats.train] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
+    [net,stats.train,prof] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
     [~,stats.val] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net) ;
+    if opts.profile
+      profile('viewer', prof) ;
+      keyboard ;
+    end
   else
     spmd(numGpus)
-      [net_, stats_train_] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
+      [net_, stats_train_,prof_] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
       [~, stats_val_] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net_) ;
     end
     net = net_{1} ;
     stats.train = sum([stats_train_{:}],2) ;
     stats.val = sum([stats_val_{:}],2) ;
+    if opts.profile
+      mpiprofile('viewer', [prof_{:,1}]) ;
+      keyboard ;
+    end
   end
 
   % save
@@ -241,7 +252,19 @@ else
   mode = 'val' ;
   evalMode = 'test' ;
 end
-if nargout > 2, mpiprofile on ; end
+
+% profile
+if opts.profile
+  if numGpus <= 1
+    prof = profile('info') ;
+    profile clear ;
+    profile on ;
+  else
+    prof = mpiprofile('info') ;
+    mpiprofile reset ;
+    mpiprofile on ;
+  end
+end
 
 numGpus = numel(opts.gpus) ;
 if numGpus >= 1
@@ -315,7 +338,6 @@ for t=1:opts.batchSize:numel(subset)
   end
 
   % print learning statistics
-
   time = toc(start) ;
   stats = sum([stats,[0 ; error]],2); % works even when stats=[]
   stats(1) = time ;
@@ -336,9 +358,16 @@ for t=1:opts.batchSize:numel(subset)
   end
 end
 
-if nargout > 2
-  prof = mpiprofile('info');
-  mpiprofile off ;
+if opts.profile
+  if numGpus <= 1
+    prof = profile('info') ;
+    profile off ;
+  else
+    prof = mpiprofile('info');
+    mpiprofile off ;
+  end
+else
+  prof = [] ;
 end
 
 if numGpus >= 1
