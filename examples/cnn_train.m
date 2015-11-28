@@ -136,7 +136,7 @@ for epoch=start+1:opts.numEpochs
     [net,stats.train,prof] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
     [~,stats.val] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net) ;
     if opts.profile
-      profile('viewer', prof) ;
+      profile('viewer') ;
       keyboard ;
     end
   else
@@ -341,13 +341,14 @@ for t=1:opts.batchSize:numel(subset)
   time = toc(start) ;
   stats = sum([stats,[0 ; error]],2); % works even when stats=[]
   stats(1) = time ;
-  n = (t + batchSize - 1) / max(1,numlabs) ;
+  n = t + batchSize - 1 ; % number of images processed overall
   speed = n/time ;
   fprintf('%.1f Hz%s\n', speed) ;
 
-  fprintf(' obj:%.3g', stats(2)/n) ;
+  m = n / max(1,numlabs) ; % on this lab only
+  fprintf(' obj:%.3g', stats(2)/m) ;
   for i=1:numel(opts.errorLabels)
-    fprintf(' %s:%.3g', opts.errorLabels{i}, stats(i+2)/n) ;
+    fprintf(' %s:%.3g', opts.errorLabels{i}, stats(i+2)/m) ;
   end
   fprintf(' [%d/%d]', numDone, batchSize);
   fprintf('\n') ;
