@@ -9,7 +9,7 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 opts.dataDir = fullfile('data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
 opts.networkType = 'simplenn' ;
-opts.batchNormalization = false ;
+opts.batchNormalization = true ;
 opts.weightInitMethod = 'gaussian' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
