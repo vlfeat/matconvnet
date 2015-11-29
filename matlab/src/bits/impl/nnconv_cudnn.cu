@@ -169,7 +169,7 @@ namespace vl { namespace impl {
                                                 filtersDesc,
                                                 convDesc,
                                                 outputDesc,
-                                                CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+                                                context.getCudaHelper().cudnnConvolutionFwdPreference,
                                                 context.getCudaHelper().cudnnConvolutionFwdWorkSpaceLimit,
                                                 &context.getCudaHelper().cudnnConvolutionFwdAlgo)) ;
     }
@@ -391,7 +391,7 @@ namespace vl { namespace impl {
              derOutputDesc,
              convDesc,
              filtersDesc,
-             CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
+             context.getCudaHelper().cudnnConvolutionBwdFilterPreference,
              context.getCudaHelper().cudnnConvolutionBwdFilterWorkSpaceLimit,
              &context.getCudaHelper().cudnnConvolutionBwdFilterAlgo)) ;
 
@@ -415,7 +415,7 @@ namespace vl { namespace impl {
              derOutputDesc,
              convDesc,
              dataDesc,
-             CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
+             context.getCudaHelper().cudnnConvolutionBwdDataPreference,
              context.getCudaHelper().cudnnConvolutionBwdDataWorkSpaceLimit,
              &context.getCudaHelper().cudnnConvolutionBwdDataAlgo)) ;
 
@@ -522,7 +522,7 @@ namespace vl { namespace impl {
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     return context.passError(error, "nnconv_backward_cudnn") ;
   }
-  
+
 } }
 
 template struct vl::impl::nnconv_cudnn<float> ;

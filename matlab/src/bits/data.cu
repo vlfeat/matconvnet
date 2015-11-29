@@ -282,7 +282,7 @@ vl::Context::getWorkspace(Device deviceType, size_t size)
 {
   vl::Error error = workspace[deviceType].init(deviceType, vlTypeChar, size) ;
   if (error != vlSuccess) {
-    setError(error, "getWorkspace: ") ;
+    setError(error, "getWorkspace") ;
     return NULL ;
   }
   return workspace[deviceType].getMemory() ;

@@ -79,7 +79,7 @@ enum {
 } ;
 
 enum {
-  OUT_RESULT = 0, OUT_DERFILTERS, OUT_derBiases, OUT_END
+  OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIASES, OUT_END
 } ;
 
 void mexFunction(int nout, mxArray *out[],
@@ -464,7 +464,7 @@ done:
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
     out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
-    out[OUT_derBiases] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
+    out[OUT_DERBIASES] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;
   }
