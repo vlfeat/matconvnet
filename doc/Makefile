@@ -43,7 +43,7 @@ svg_tgt=$(patsubst %.svg, %.pdf, $(svg_src))
 # Web components
 jquery_url=http://code.jquery.com/jquery-1.11.3.min.js
 jquery=doc/site/lib/jquery/js/jquery-1.11.3.min.js
-fontawesome_url=https://fortawesome.github.io/Font-Awesome/assets/font-awesome-4.4.0.zip
+fontawesome_url=https://fortawesome.github.io/Font-Awesome/assets/font-awesome-4.5.0.zip
 fontawesome=doc/site/lib/fontawesome/css/font-awesome.min.css
 bootstrap_url=https://github.com/twbs/bootstrap/releases/download/v3.3.5/bootstrap-3.3.5-dist.zip
 bootstrap=doc/site/lib/bootstrap/css/bootstrap.min.css
@@ -87,7 +87,7 @@ $(bootstrap):
 $(fontawesome):
 	@echo "**************************"
 	@echo "Downloading Fontawesome"
-	@echo "Download URL \"$(bootstrap_url)\""
+	@echo "Download URL \"$(fontawesome_url)\""
 	@echo "**************************"
 	mkdir -p doc/site/lib/fontawesome
 	wget $(fontawesome_url) -O doc/site/lib/fontawesome/font-awesome.zip
@@ -116,6 +116,13 @@ $(highlight):
 doc/site/site/index.html : doc/site/mkdocs.yml \
   $(mfile_doc) $(mds) \
   $(bootstrap) $(fontawesome) $(jquery) $(highlight)
+	cd doc/site/theme/css ; ln -sfv ../../lib/bootstrap/css/bootstrap.min.css ./
+	cd doc/site/theme/css ; ln -sfv ../../lib/fontawesome/css/font-awesome.min.css ./
+	cd doc/site/theme/css ; ln -sfv ../../lib/highlight/css/highlight.min.css ./
+	cd doc/site/theme/fonts ; ln -sfv ../../lib/fontawesome/fonts/fontawesome-webfont.{eot,svg,ttf,woff,woff2} ./
+	cd doc/site/theme/js ; ln -sfv ../../lib/bootstrap/js/{bootstrap.min.js,npm.js} ./
+	cd doc/site/theme/js ; ln -sfv ../../lib/highlight/js/highlight.min.js ./
+	cd doc/site/theme/js ; ln -sfv ../../lib/jquery/js/jquery-1.11.3.min.js ./
 	cd doc/site ; $(MKDOCS) build --clean
 
 doc-clean:

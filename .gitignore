@@ -20,6 +20,18 @@ doc/figures/*.idraw
 doc/.texpadtmp/*
 doc/*.pdf
 doc/.build
+doc/site/theme/css/bootstrap.min.css
+doc/site/theme/css/font-awesome.min.css
+doc/site/theme/css/highlight.min.css
+doc/site/theme/fonts/fontawesome-webfont.eot
+doc/site/theme/fonts/fontawesome-webfont.svg
+doc/site/theme/fonts/fontawesome-webfont.ttf
+doc/site/theme/fonts/fontawesome-webfont.woff
+doc/site/theme/fonts/fontawesome-webfont.woff2
+doc/site/theme/js/bootstrap.min.js
+doc/site/theme/js/highlight.min.js
+doc/site/theme/js/jquery-1.11.3.min.js
+doc/site/theme/js/npm.js
 
 # Visual C
 *.suo
