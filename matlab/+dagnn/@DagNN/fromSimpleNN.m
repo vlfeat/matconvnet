@@ -108,6 +108,7 @@ for l = 1:numel(net.layers)
           block.numGroups = net.layers{l}.numGroups ;
       end
       block.hasBias = hasBias ;
+      block.opts = net.layers{l}.opts ;
 
     case 'pool'
       block = Pooling() ;
@@ -115,6 +116,7 @@ for l = 1:numel(net.layers)
       block.poolSize = net.layers{l}.pool ;
       block.pad = net.layers{l}.pad ;
       block.stride = net.layers{l}.stride ;
+      block.opts = net.layers{l}.opts ;
 
     case {'normalize'}
       block = LRN() ;
