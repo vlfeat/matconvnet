@@ -45,7 +45,7 @@ namespace vl { namespace impl {
              type* derData,
              type* derMultipliers,
              type* derBiases,
-             type* moments,
+             type* moments, // can be null and it will be allocated internally
              type const* data,
              type const* multipliers,
              type const* biases,

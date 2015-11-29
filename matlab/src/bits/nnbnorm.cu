@@ -116,7 +116,7 @@ vl::nnbnorm_forward_given_moments(vl::Context& context,
       break;
 #endif
   }
-  return context.passError(status, "nnbnorm_forward: ") ;
+  return context.passError(status, "nnbnorm_forward") ;
 }
 
 /* ---------------------------------------------------------------- */
