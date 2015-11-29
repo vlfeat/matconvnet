@@ -261,7 +261,7 @@ namespace vl { namespace impl {
     bool filtersDescInitialized = false ;
     bool convDescInitialized = false ;
 
-#if (CUDNN_VERSION >= 4000)
+#if (CUDNN_VERSION >= 3000)
     void* workSpace = NULL ;
     size_t workSpaceSize = 0 ;
 #endif
@@ -381,7 +381,7 @@ namespace vl { namespace impl {
     context.getCudaHelper().cudnnConvolutionBwdFilterWorkSpaceUsed = 0 ;
     context.getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed = 0 ;
 
-#if (CUDNN_VERSION >= 4000)
+#if (CUDNN_VERSION >= 3000)
 
     if (derFilters) {
       // Get filter derivatives algorithm
@@ -462,8 +462,13 @@ namespace vl { namespace impl {
         ptrdiff_t dataGrpOffset = (data.getHeight() * data.getWidth() * derFilters.getDepth()) *  g ;
         float alpha = 1 ;
         float beta = 0 ;
+#if (CUDNN_VERSION >= 3000)
+        CHECK(
 #if (CUDNN_VERSION >= 4000)
-        CHECK(cudnnConvolutionBackwardFilter
+              cudnnConvolutionBackwardFilter
+#else
+              cudnnConvolutionBackwardFilter_v3
+#endif
               (handle,
                &alpha,
                dataDesc, data.getMemory() + dataGrpOffset,
@@ -490,8 +495,13 @@ namespace vl { namespace impl {
         float alpha = 1 ;
         float beta = 0 ;
 
+#if (CUDNN_VERSION >= 3000)
+        CHECK(
 #if (CUDNN_VERSION >= 4000)
-        CHECK(cudnnConvolutionBackwardData
+              cudnnConvolutionBackwardData
+#else
+              cudnnConvolutionBackwardData_v3
+#endif
               (handle,
                &alpha,
                filtersDesc, filters.getMemory() + filtersGrpOffset,

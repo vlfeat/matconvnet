@@ -54,6 +54,9 @@ here.
     * Compiles and works correctly with cuDNN v4. However, not all v4
       features are used yet.
 
+    * Adds an option to specify the maximum workspace size in the
+      convolution routines using cuDNN.
+
     **Changes affecting backward compatibility**
 
     * This version changes slightly how SimpleNN networks should be
