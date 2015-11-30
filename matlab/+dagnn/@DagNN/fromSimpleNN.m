@@ -118,7 +118,7 @@ for l = 1:numel(net.layers)
       block.stride = net.layers{l}.stride ;
       block.opts = net.layers{l}.opts ;
 
-    case {'normalize'}
+    case {'normalize', 'lrn'}
       block = LRN() ;
       block.param = net.layers{l}.param ;
 
