@@ -31,8 +31,6 @@ using namespace vl ;
  for output: must have data and optional filters or biases
  */
 
-
-
 vl::Error
 vl::nnconv_forward(Context& context,
                    Tensor output, double outputMult,
@@ -264,6 +262,3 @@ vl::nnconvt_backward(Context& context,
 done:
   return status ;
 }
-
-template struct vl::impl::nnconv_cudnn<float> ;
-
