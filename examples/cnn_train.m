@@ -19,27 +19,28 @@ function [net, info] = cnn_train(net, imdb, getBatch, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+opts.expDir = fullfile('data','exp') ;
+opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
 opts.train = [] ;
 opts.val = [] ;
+opts.gpus = [] ;
+opts.prefetch = false ;
 opts.numEpochs = 300 ;
-opts.gpus = [] ; % which GPU devices to use (none, one, or more)
 opts.learningRate = 0.001 ;
-opts.continue = false ;
-opts.expDir = fullfile('data','exp') ;
+opts.weightDecay = 0.0005 ;
+opts.momentum = 0.9 ;
+opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
+opts.profile = false ;
+
 opts.conserveMemory = true ;
 opts.backPropDepth = +inf ;
 opts.sync = false ;
-opts.prefetch = false ;
 opts.cudnn = true ;
-opts.weightDecay = 0.0005 ;
-opts.momentum = 0.9 ;
 opts.errorFunction = 'multiclass' ;
 opts.errorLabels = {} ;
 opts.plotDiagnostics = false ;
-opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
-opts.profile = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -121,7 +122,7 @@ modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
 
 start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
-  fprintf('resuming by loading epoch %d\n', start) ;
+  fprintf('%s: resuming by loading epoch %d\n', mfilename, start) ;
   load(modelPath(start), 'net', 'info') ;
 end
 
@@ -140,6 +141,7 @@ for epoch=start+1:opts.numEpochs
       keyboard ;
     end
   else
+    fprintf('%s: sending model to %d GPUs\n', mfilename, numGpus) ;
     spmd(numGpus)
       [net_, stats_train_,prof_] = process_epoch(opts, getBatch, epoch, train, learningRate, imdb, net) ;
       [~, stats_val_] = process_epoch(opts, getBatch, epoch, val, 0, imdb, net_) ;
@@ -151,6 +153,7 @@ for epoch=start+1:opts.numEpochs
       mpiprofile('viewer', [prof_{:,1}]) ;
       keyboard ;
     end
+    clear net_ stats_train_ stats_val_ ;
   end
 
   % save
@@ -162,7 +165,12 @@ for epoch=start+1:opts.numEpochs
     info.(f).objective(epoch) = stats.(f)(2) / n ;
     info.(f).error(:,epoch) = stats.(f)(3:end) / n ;
   end
-  if ~evaluateMode, save(modelPath(epoch), 'net', 'info') ; end
+  if ~evaluateMode
+    fprintf('%s: saving model for epoch %d\n', mfilename, epoch) ;
+    tic ;
+    save(modelPath(epoch), 'net', 'info') ;
+    fprintf('%s: model saved in %.2g s\n', mfilename, toc) ;
+  end
 
   figure(1) ; clf ;
   hasError = isa(opts.errorFunction, 'function_handle') ;
@@ -321,7 +329,7 @@ for t=1:opts.batchSize:numel(subset)
       sum(double(gather(res(end).x))) ;
       reshape(opts.errorFunction(opts, labels, res),[],1) ; ]],2) ;
     numDone = numDone + numel(batch) ;
-  end
+  end % next sub-batch
 
   % gather and accumulate gradients across labs
   if training
@@ -357,6 +365,7 @@ for t=1:opts.batchSize:numel(subset)
   if opts.plotDiagnostics && numGpus <= 1
     figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
   end
+
 end
 
 if opts.profile

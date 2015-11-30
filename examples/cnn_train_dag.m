@@ -9,8 +9,10 @@ function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+% Todo: save momentum with checkpointing (a waste?)
+
 opts.expDir = fullfile('data','exp') ;
-opts.continue = false ;
+opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
 opts.train = [] ;
@@ -21,8 +23,10 @@ opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
-opts.derOutputs = {'objective', 1} ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
+opts.profile = false ;
+
+opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts = vl_argparse(opts, varargin) ;
 
