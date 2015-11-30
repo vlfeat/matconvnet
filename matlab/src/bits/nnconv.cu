@@ -265,5 +265,7 @@ done:
   return status ;
 }
 
+#if ENABLE_CUDNN
 template struct vl::impl::nnconv_cudnn<float> ;
+#endif
 
