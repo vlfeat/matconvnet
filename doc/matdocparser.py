@@ -41,6 +41,9 @@ Term1:: Short description 2
 Term2:: Short description 2
 Term3:: Short description 3
   Longer explanations are optional.
+
+# Lines can begin with # to denote a title
+## Is a smaller title
 """
 
 import sys
@@ -48,8 +51,8 @@ import os
 import re
 
 __mpname__           = 'MatDocParser'
-__version__          = '1.0-beta1'
-__date__             = '2014-12-29'
+__version__          = '1.0-beta15'
+__date__             = '2015-09-20'
 __description__      = 'MatDoc MATLAB inline function description interpreter.'
 __long_description__ = __doc__
 __license__          = 'BSD'
@@ -91,6 +94,14 @@ class BH (L): # bullet: a line of type '  * <inner_text>'
 class DH (L):  # description: a line of type ' <description>::<inner_text>'
     inner_text = None
     description = None
+    def __str__(self, indent = 0):
+        return "%s: '%s' :: '%s'" % (super(L, self).__str__(indent),
+                           self.description, self.inner_text)
+class SL (L): # section: '<#+><text>'
+    section_level = 0
+    inner_text = None
+    def __str__(self, indent = 0):
+        return "%s: %s" % (super(L, self).__str__(indent), self.inner_text)
 
 # A lexer object: parse lines of the input document into terminal symbols
 class Lexer(object):
@@ -109,6 +120,15 @@ class Lexer(object):
         match = re.match(r"\s*\n?$", line) ;
         if match:
             return B()
+        # a line of type '  <#+><inner_text>'
+        match = re.match(r"(\s*)(#+)(.*)\n?$", line)
+        if match:
+            x = SL()
+            x.indent = len(match.group(1))
+            x.section_level = len(match.group(2))
+            x.inner_text = match.group(3)
+            #print x.indent, x.section_level, x.inner_text
+            return x
         # a line of type '  <content>::<inner_text>'
         match = re.match(r"(\s*)(.*)::(.*)\n?$", line)
         if match:
@@ -143,7 +163,10 @@ class Lexer(object):
 # DIVL is a consecutive list of blocks with the same indent and/or blank
 # lines.
 #
-# DIVL(indent) -> (B | P(indent) | V(indent) | BL(indent) | DL(indent))+
+# DIVL(indent) -> (B | SL(indent) | P(indent) | V(indent) |
+#                  BL(indent) | DL(indent))+
+#
+# S(indent) -> SL(indent)
 #
 # A P(indent) is a paragraph, a list of regular lines indentent by the
 # same amount.
@@ -182,6 +205,7 @@ class NonTerminal(Symbol):
             s += c.__str__(indent + 2) + "\n"
         return s[:-1]
 
+class S(NonTerminal): pass
 class DIVL(NonTerminal): pass
 class DIV(NonTerminal): pass
 class BL(NonTerminal): pass
@@ -201,13 +225,13 @@ class Parser(object):
             self.stack.append(self.lookahead)
         self.lookahead = self.lexer.next()
 
-    def reduce(self, S, n, indent = None):
+    def reduce(self, X, n, indent = None):
         #print "reducing %s with %d" % (S.__name__, n)
-        s = S(*self.stack[-n:])
+        x = X(*self.stack[-n:])
         del self.stack[-n:]
-        s.indent = indent
-        self.stack.append(s)
-        return s
+        x.indent = indent
+        self.stack.append(x)
+        return x
 
     def parse(self, lexer):
         self.lexer = lexer
@@ -217,6 +241,10 @@ class Parser(object):
             if not self.lookahead.isa(B): break
         self.parse_DIVL(self.lookahead.indent)
         return self.stack[0]
+
+    def parse_SL(self, indent):
+        self.shift()
+        self.reduce(S, 1, indent)
 
     def parse_P(self, indent):
         i = 0
@@ -235,7 +263,9 @@ class Parser(object):
         self.reduce(V, i, indent)
 
     def parse_DIV_helper(self, indent):
-        if self.lookahead.isa(PL, indent):
+        if self.lookahead.isa(SL, indent):
+            self.parse_SL(indent)
+        elif self.lookahead.isa(PL, indent):
             self.parse_P(indent)
         elif self.lookahead.isa(L) and (self.lookahead.indent > indent):
             self.parse_V(indent)
@@ -316,8 +346,18 @@ So in short we conclude that:
 *   It could do something,
     but still does not.
 
+   #
+
 See also: hope for the best.
 
+# Section number one
+
+Bla
+
+## More Sect
+### Even more
+
+blo
 """
     parser = Parser()
     lexer = Lexer(str.split('\n'))

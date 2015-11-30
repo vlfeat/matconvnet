@@ -1,13 +1,14 @@
-## Training your own models
+## Using MatConvNet to train convnets
 
-MatConvNet can be used to train models, typically by using stochastic
-gradient descent (SGD) and back-propagation.
+MatConvNet can be used to train models, typically by using a form of
+stochastic gradient descent (SGD) and back-propagation.
 
-The following learning demos are provided in the MatConvNet package:
+The following learning demonstrators are provided in the MatConvNet
+package:
 
-- **MNIST**. See `examples/cnn_mnist.m`.
-- **CIFAR**. See `examples/cnn_cifar.m`.
-- **ImageNet**. See `examples/cnn_imagenet.m`.
+- **MNIST**. See `examples/mnist/cnn_mnist.m`.
+- **CIFAR**. See `examples/cifar/cnn_cifar.m`.
+- **ImageNet**. See `examples/imagenet/cnn_imagenet.m`.
 
 These demos are self-contained; MNIST and CIFAR, in particular,
 automatically download and unpack the required data, so that they
@@ -20,6 +21,8 @@ complete in a reasonable time (a few days!). It also requires the
 accelerate reading large batches of JPEG images and avoid starving the
 GPU.
 
-All these demos use the `example/cnn_train.m` SGD driver, a simple
-implementation of SGD with momentum, done directly in MATLAB code. Do
-not be shy and experiment with your own learning algorithms!
+All these demos use the `example/cnn_train.m` and
+`example/cnn_train_dag.m` SGD drivers, which are simple
+implementations of the standard SGD with momentum, done directly in
+MATLAB code. However, it should be easy to implement your own
+specialized or improved solver.

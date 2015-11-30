@@ -21,8 +21,8 @@ namespace vl { namespace impl {
 
   template<vl::Device arch, typename type> inline vl::Error
   nnconv_forward_blas(Context& context,
-                      Tensor output,
-                      Tensor data,
+                      Tensor output, double outputMult,
+                      Tensor data, double dataMult,
                       Tensor filters,
                       Tensor biases,
                       int strideY, int strideX,
@@ -78,8 +78,8 @@ namespace vl { namespace impl {
 
 template<vl::Device arch, typename type> inline vl::Error
 vl::impl::nnconv_forward_blas(Context& context,
-                              Tensor output,
-                              Tensor data,
+                              Tensor output, double outputMult,
+                              Tensor data, double dataMult,
                               Tensor filters,
                               Tensor biases,
                               int strideY, int strideX,
@@ -125,8 +125,8 @@ vl::impl::nnconv_forward_blas(Context& context,
       ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
       ptrdiff_t tempGrpOffset = numOutputPixels * filtersVolume * g ;
       ptrdiff_t outputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
-      type alpha = 1 ;
-      type beta = 0 ;
+      type alpha = dataMult ;
+      type beta = outputMult ;
       error = gemm<arch,type>(context,
                               'n', 'n',
                               numOutputPixels, numFiltersPerGroup, filtersVolume,
@@ -169,39 +169,112 @@ vl::impl::nnconv_backward_blas(Context& context,
                                int padTop, int padBottom,
                                int padLeft, int padRight)
 {
-  assert(data) ;
-  assert(filters) ;
-  assert(derOutput) ;
-
   vl::Error error ;
+  ptrdiff_t numGroups = 0 ;
+  ptrdiff_t numFiltersPerGroup = 0 ;
+  ptrdiff_t filtersVolume = 0 ;
+  type const* allOnesMemory = NULL ;
+  ptrdiff_t tempVolume = 0 ;
+  type* tempMemory = NULL ;
 
-  ptrdiff_t numGroups = data.getDepth() / filters.getDepth() ;
-  ptrdiff_t numFiltersPerGroup = filters.getSize() / numGroups ;
+  // for all derivatives
+  assert(derOutput) ;
   ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
-  ptrdiff_t filtersVolume = filters.getHeight() * filters.getWidth() * filters.getDepth() ;
-  ptrdiff_t tempVolume = numOutputPixels * filtersVolume * numGroups ;
-
-  type* tempMemory = (type*) context.getWorkspace(arch, tempVolume * sizeof(type)) ;
-  type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                         get_vl_type<type>(),
-                                                         numOutputPixels) ;
-  if (tempMemory == NULL || allOnesMemory == NULL) {
-    error = context.getLastError() ;
-    goto done ;
+  
+  if (derBiases) {
+    // for derivative w.r.t. bias
+    allOnesMemory = (type*) context.getAllOnes(arch,
+                                               get_vl_type<type>(),
+                                               numOutputPixels) ;
+    if (allOnesMemory == NULL) {
+      error = context.getLastError() ;
+      goto done ;
+    }
   }
 
-  for (int image = 0 ; image < data.getSize() ; ++image) {
+  if (derData) {
+    // for derivative w.r.t. data
+    assert(filters) ;
+    numGroups = derData.getDepth() / filters.getDepth() ;
+    filtersVolume = filters.getHeight() * filters.getWidth() * filters.getDepth() ;
+  }
+  else if (derFilters) {
+    // for derivative w.r.t. filters
+    assert(data) ;
+    numGroups = data.getDepth() / derFilters.getDepth() ;
+    filtersVolume = derFilters.getHeight() * derFilters.getWidth() * derFilters.getDepth() ;
+  }
+  numFiltersPerGroup = derOutput.getDepth() / numGroups ;
 
-    ptrdiff_t derDataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
+  // get scratch space
+  tempVolume = numOutputPixels * filtersVolume * numGroups ;
+  if (tempVolume) {
+    tempMemory = (type*) context.getWorkspace(arch, tempVolume * sizeof(type)) ;
+    if (tempMemory == NULL) {
+      error = context.getLastError() ;
+      goto done ;
+    }
+  }
+
+  for (int image = 0 ; image < derOutput.getSize() ; ++image) {
+
     ptrdiff_t derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+
+    /* compute derData dz/dbias */
+    if (derBiases) {
+      // has derBiases, derOutput
+      type alpha = 1 ;
+      type beta = (image > 0) ; /* this saves init. the output array with 0 */
+      error = gemv<arch,type>(context,
+                              't',
+                              numOutputPixels, derOutput.getDepth(),
+                              alpha, /* alpha */
+                              derOutput.getMemory() + derOutputOffset, numOutputPixels,
+                              allOnesMemory, 1,
+                              beta, /* beta */
+                              derBiases.getMemory(), 1) ;
+      if (error != vl::vlSuccess) { return error ; }
+    }
+
+    /* compute derData dz/dx */
+    if (derData) {
+      // has derData, derOutput, filters
+      ptrdiff_t derDataOffset = (derData.getHeight()*derData.getWidth()*derData.getDepth()) * image ;
+      for (int g = 0 ; g < numGroups ; ++ g) {
+        ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
+        ptrdiff_t tempGrpOffset = numOutputPixels * filtersVolume * g ;
+        ptrdiff_t derOutputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
+        float alpha = 1 ;
+        float beta = 0 ;
+        error = gemm<arch,type>(context,
+                                'n', 't',
+                                numOutputPixels, filtersVolume, numFiltersPerGroup,
+                                alpha,
+                                (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
+                                (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
+                                beta,
+                                tempMemory + tempGrpOffset, numOutputPixels) ;
+        if (error != vl::vlSuccess) { return error ; }
+      }
+      error = vl::impl::row2im<arch,type>(context,
+                                          (type*)derData.getMemory() + derDataOffset,
+                                          tempMemory,
+                                          derData.getHeight(), derData.getWidth(), derData.getDepth(),
+                                          filters.getHeight(), filters.getWidth(),
+                                          strideY, strideX,
+                                          padTop, padBottom, padLeft, padRight) ;
+      if (error != vl::vlSuccess) { return error ; }
+    }
 
     /* compute derFilters dz/dF */
     if (derFilters) {
+      // has derFilters, derOutput, data
+      ptrdiff_t dataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
       error = vl::impl::im2row<arch,type>(context,
                                           (type*)tempMemory,
-                                          (type*)data.getMemory() + derDataOffset,
+                                          (type*)data.getMemory() + dataOffset,
                                           data.getHeight(), data.getWidth(), data.getDepth(),
-                                          filters.getHeight(), filters.getWidth(),
+                                          derFilters.getHeight(), derFilters.getWidth(),
                                           strideY, strideX,
                                           padTop, padBottom, padLeft, padRight) ;
       if (error != vl::vlSuccess) { return error ; }
@@ -222,49 +295,6 @@ vl::impl::nnconv_backward_blas(Context& context,
                                 (type*)derFilters.getMemory() + filterGrpOffset, filtersVolume) ;
         if (error != vl::vlSuccess) { return error ; }
       }
-    }
-
-    /* compute derData dz/dbias */
-    if (derBiases) {
-      type alpha = 1 ;
-      type beta = (image > 0) ; /* this saves init. the output array with 0 */
-      error = gemv<arch,type>(context,
-                              't',
-                              numOutputPixels, filters.getSize(),
-                              alpha, /* alpha */
-                              derOutput.getMemory() + derOutputOffset, numOutputPixels,
-                              allOnesMemory, 1,
-                              beta, /* beta */
-                              derBiases.getMemory(), 1) ;
-      if (error != vl::vlSuccess) { return error ; }
-    }
-
-    /* compute derData dz/dx */
-    if (derData) {
-      for (int g = 0 ; g < numGroups ; ++ g) {
-        ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
-        ptrdiff_t tempGrpOffset = numOutputPixels * filtersVolume * g ;
-        ptrdiff_t derOutputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
-        float alpha = 1 ;
-        float beta = 0 ;
-        error = gemm<arch,type>(context,
-                                'n', 't',
-                                numOutputPixels, filtersVolume, numFiltersPerGroup,
-                                alpha,
-                                (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
-                                (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
-                                beta,
-                                tempMemory + tempGrpOffset, numOutputPixels) ;
-        if (error != vl::vlSuccess) { return error ; }
-      }
-      error = vl::impl::row2im<arch,type>(context,
-                                          (type*)derData.getMemory() + derDataOffset,
-                                          tempMemory,
-                                          data.getHeight(), data.getWidth(), data.getDepth(),
-                                          filters.getHeight(), filters.getWidth(),
-                                          strideY, strideX,
-                                          padTop, padBottom, padLeft, padRight) ;
-      if (error != vl::vlSuccess) { return error ; }
     }
   }
 

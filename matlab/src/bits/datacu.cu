@@ -33,7 +33,11 @@ vl::CudaHelper::CudaHelper()
 #if ENABLE_CUDNN
 , isCudnnInitialized(false), cudnnEnabled(true)
 #endif
-{ }
+{
+#if ENABLE_CUDNN
+  resetCudnnConvolutionSettings() ;
+#endif
+}
 
 vl::CudaHelper::~CudaHelper()
 {
@@ -124,6 +128,99 @@ vl::CudaHelper::setCudnnEnabled(bool active)
   cudnnEnabled = active ;
 }
 #endif
+
+/* -------------------------------------------------------------------
+ * cuDNN parameters
+ * ---------------------------------------------------------------- */
+
+void
+vl::CudaHelper::resetCudnnConvolutionSettings()
+{
+  cudnnConvolutionFwdSpecificAlgo = false ;
+  cudnnConvolutionFwdPreference = CUDNN_CONVOLUTION_FWD_PREFER_FASTEST ;
+  cudnnConvolutionFwdAlgo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM ;
+  cudnnConvolutionFwdWorkSpaceLimit = 256 * 1024 * 1024 ; // 256MB
+  cudnnConvolutionFwdWorkSpaceUsed = 0 ;
+
+  cudnnConvolutionBwdFilterSpecificAlgo = false ;
+  cudnnConvolutionBwdFilterPreference = CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST ;
+  cudnnConvolutionBwdFilterAlgo = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0 ;
+  cudnnConvolutionBwdFilterWorkSpaceLimit = 256 * 1024 * 1024 ; // 256MB
+  cudnnConvolutionBwdFilterWorkSpaceUsed = 0 ;
+
+  cudnnConvolutionBwdDataSpecificAlgo = false ;
+  cudnnConvolutionBwdDataPreference = CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST ;
+  cudnnConvolutionBwdDataAlgo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 ;
+  cudnnConvolutionBwdDataWorkSpaceLimit = 256 * 1024 * 1024 ; // 256MB
+  cudnnConvolutionBwdDataWorkSpaceUsed = 0 ;
+}
+
+void
+vl::CudaHelper::setCudnnConvolutionFwdPreference(cudnnConvolutionFwdPreference_t x,
+                                                 size_t workSpaceLimit)
+{
+  cudnnConvolutionFwdSpecificAlgo = false ;
+  cudnnConvolutionFwdPreference = x ;
+  cudnnConvolutionFwdWorkSpaceLimit = workSpaceLimit ;
+}
+
+void
+vl::CudaHelper::setCudnnConvolutionFwdAlgo(cudnnConvolutionFwdAlgo_t x)
+{
+  cudnnConvolutionFwdSpecificAlgo = true ;
+  cudnnConvolutionFwdAlgo = x ;
+}
+
+size_t
+vl::CudaHelper::getCudnnConvolutionFwdWorkSpaceUsed() const
+{
+  return cudnnConvolutionFwdWorkSpaceUsed ;
+}
+
+void
+vl::CudaHelper::setCudnnConvolutionBwdFilterPreference(cudnnConvolutionBwdFilterPreference_t x,
+                                                       size_t workSpaceLimit)
+{
+  cudnnConvolutionBwdFilterSpecificAlgo = false ;
+  cudnnConvolutionBwdFilterPreference = x ;
+  cudnnConvolutionBwdFilterWorkSpaceLimit = workSpaceLimit ;
+}
+
+void
+vl::CudaHelper::setCudnnConvolutionBwdFilterAlgo(cudnnConvolutionBwdFilterAlgo_t x)
+
+{
+  cudnnConvolutionBwdFilterSpecificAlgo = true ;
+  cudnnConvolutionBwdFilterAlgo = x ;
+}
+
+size_t
+vl::CudaHelper::getCudnnConvolutionBwdFilterWorkSpaceUsed() const
+{
+  return cudnnConvolutionBwdFilterWorkSpaceUsed ;
+}
+
+void
+vl::CudaHelper::setCudnnConvolutionBwdDataPreference(cudnnConvolutionBwdDataPreference_t x,
+                                                     size_t workSpaceLimit)
+{
+  cudnnConvolutionBwdDataSpecificAlgo = false ;
+  cudnnConvolutionBwdDataPreference = x ;
+  cudnnConvolutionBwdDataWorkSpaceLimit = workSpaceLimit ;
+}
+
+void
+vl::CudaHelper::setCudnnConvolutionBwdDataAlgo(cudnnConvolutionBwdDataAlgo_t x)
+{
+  cudnnConvolutionBwdDataSpecificAlgo = true ;
+  cudnnConvolutionBwdDataAlgo = x ;
+}
+
+size_t
+vl::CudaHelper::getCudnnConvolutionBwdDataWorkSpaceUsed() const
+{
+  return cudnnConvolutionBwdDataWorkSpaceUsed ;
+}
 
 /* -------------------------------------------------------------------
  * CuBLAS Errors

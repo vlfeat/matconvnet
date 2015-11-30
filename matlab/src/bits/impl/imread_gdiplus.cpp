@@ -17,6 +17,8 @@ the terms of the BSD license (see the COPYING file).
 #include <gdiplus.h>
 #include <algorithm>
 
+#include <mex.h>
+
 using namespace Gdiplus;
 #pragma comment (lib,"Gdiplus.lib")
 
@@ -50,21 +52,7 @@ vl::ImageReader::Impl::~Impl()
 
 static void getImagePropertiesHelper(vl::Image & image, Gdiplus::Bitmap & bitmap)
 {
-  // determine if the image is grayscale
-  // this can either happen with an indexed images that has a grayscale palette
-  bool grayscale = false ;
-  Gdiplus::PixelFormat gdiPixelFormat = bitmap.GetPixelFormat();
-  if (Gdiplus::IsIndexedPixelFormat(gdiPixelFormat)) {
-    int paletteSize = bitmap.GetPaletteSize() ;
-    Gdiplus::ColorPalette * palette =
-      reinterpret_cast<Gdiplus::ColorPalette *>(new char[paletteSize]) ;
-    bitmap.GetPalette(palette, paletteSize) ;
-    grayscale = (palette->Flags & Gdiplus::PaletteFlagsGrayScale) != 0 ;
-    delete[] reinterpret_cast<char *>(palette) ;
-  }
-  // or if the pixel type is as follows
-  grayscale |= (gdiPixelFormat == PixelFormat16bppGrayScale) ;
-
+  bool grayscale = (bitmap.GetFlags() & ImageFlagsColorSpaceGRAY) ;
   image.width = bitmap.GetWidth() ;
   image.height = bitmap.GetHeight() ;
   image.depth = grayscale ? 1 : 3 ;
@@ -107,10 +95,34 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   }
 
   // get the pixels
+  // by default let GDIplus read as 32bpp RGB, unless the image is indexed 8bit grayscale
+  Gdiplus::PixelFormat targetPixelFormat = PixelFormat32bppRGB ;
+
+  if (image.depth == 1) {
+    Gdiplus::PixelFormat gdiPixelFormat = bitmap.GetPixelFormat();
+    if (gdiPixelFormat == PixelFormat8bppIndexed) {
+      int paletteSize = bitmap.GetPaletteSize() ;
+      Gdiplus::ColorPalette * palette =
+        reinterpret_cast<Gdiplus::ColorPalette *>(new char[paletteSize]) ;
+      bitmap.GetPalette(palette, paletteSize) ;
+      bool isStandardGrayscale = (palette->Count == 256) ;
+      if (isStandardGrayscale) {
+        for (int c = 0 ; c < 256 ; ++c) {
+          isStandardGrayscale &= palette->Entries[c] == Color::MakeARGB(255,c,c,c) ;
+          // mexPrintf("c%d: %d %d\n",c, palette->Entries[c], Color::MakeARGB(255,c,c,c)) ;
+        }
+      }
+      delete[] reinterpret_cast<char *>(palette) ;
+      if (isStandardGrayscale) {
+        targetPixelFormat = PixelFormat8bppIndexed ;
+      }
+    }
+  }
+
   rect = Rect(0,0,image.width,image.height);
   status = bitmap.LockBits(&rect,
                            ImageLockModeRead,
-                           PixelFormat32bppRGB,
+                           targetPixelFormat,
                            &data) ;
   if (status != Ok) {
     image.error = 1 ;
@@ -121,11 +133,20 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   switch (image.depth) {
 	case 3:
 	  vl::impl::imageFromPixels<impl::pixelFormatBGRA>(image, (char unsigned const *)data.Scan0, data.Stride) ;
-      break ;
+    break ;
 	case 1:
-	  vl::impl::imageFromPixels<impl::pixelFormatBGRAasL>(image, (char unsigned const *)data.Scan0, data.Stride) ;
+    switch (targetPixelFormat) {
+    case PixelFormat8bppIndexed:
+      vl::impl::imageFromPixels<impl::pixelFormatL>(image, (char unsigned const *)data.Scan0, data.Stride) ;
+      break ;
+    default:
+      vl::impl::imageFromPixels<impl::pixelFormatBGRAasL>(image, (char unsigned const *)data.Scan0, data.Stride) ;
+      break ;
+    }
 	  break ;
   }
+
+  bitmap.UnlockBits(&data) ;
 
 done:
   return image ;

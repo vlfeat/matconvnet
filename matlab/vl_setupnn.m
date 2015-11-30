@@ -1,8 +1,8 @@
 function vl_setupnn()
-% VL_SETUPNN  Setup the MatConvNet toolbox
-%    VL_SETUPNN() function adds the MatConvNet toolbox to MATLAB path.
+%VL_SETUPNN Setup the MatConvNet toolbox.
+%   VL_SETUPNN() function adds the MatConvNet toolbox to MATLAB path.
 
-% Copyright (C) 2014 Andrea Vedaldi.
+% Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -11,4 +11,11 @@ function vl_setupnn()
 root = vl_rootnn() ;
 addpath(fullfile(root, 'matlab')) ;
 addpath(fullfile(root, 'matlab', 'mex')) ;
+addpath(fullfile(root, 'matlab', 'simplenn')) ;
 addpath(fullfile(root, 'matlab', 'xtest')) ;
+addpath(fullfile(root, 'examples')) ;
+
+if ~exist('gather')
+  warning('The MATLAB Parallel Toolbox does not seem to be installed. Activating compatibility functions.') ;
+  addpath(fullfile(root, 'matlab', 'compatibility', 'parallel')) ;
+end

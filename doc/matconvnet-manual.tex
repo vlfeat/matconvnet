@@ -1,35 +1,52 @@
-\documentclass[12pt]{article}
+\documentclass[12pt]{memoir}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{amsthm}
 \usepackage{url}
 \usepackage{xspace}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
+\usetikzlibrary{positioning,calc,matrix,arrows}
 \usepackage{pgfplots} 
 \usepackage{listings}
 \usepackage{color}
 \usepackage{textcomp}
+\usepackage{fancyvrb}
 \usepackage[colorlinks]{hyperref}
+
+\newtheorem{example}{Example}
+
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
 \newcommand{\diag}{\operatorname{diag}}
-\newcommand{\vlnn}{\textsc{MatConvNet}\xspace}
+\newcommand{\matconvnet}{\textsc{MatConvNet}\xspace}
+\newcommand{\matlab}{\textsc{MATLAB}\xspace}
 \newcommand{\cpp}{C{}\texttt{++}~}
-
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
 \newcommand{\bz}{\mathbf{z}}
 \newcommand{\bff}{\mathbf{f}}
+\newcommand{\br}{\mathbf{r}}
 \newcommand{\bw}{\mathbf{w}}
-\newcommand{\bs}{\mathbf{s}}
+\newcommand{\bfs}{\mathbf{s}}
 \newcommand{\bfe}{\mathbf{e}}
 \newcommand{\bone}{\mathbf{1}}
 \newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\sign}{\operatornamewithlimits{sign}}
 
-\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] \tikzstyle{data} = []
+\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] 
+\tikzstyle{data} = []
+\tikzstyle{datac} = [draw, circle, minimum height=1em, minimum width=1em,inner sep=3pt]
+\tikzstyle{par} = [draw, circle, minimum height=1em, minimum width=1em,fill=black!20,inner sep=3pt]
 \tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{to} = [->,>=stealth',shorten >=1pt,semithick]
 
-% Taken inspiration from http://www.tjansson.dk/2008/11/using-lstlisting-to-include-code-in-latex/
+\VerbatimFootnotes
+
+\setsecnumdepth{subsection}
+\settocdepth{subsection}
+
 \definecolor{listinggray}{gray}{0.9}
 \definecolor{lbcolor}{rgb}{0.8,0.8,0.8}
 \lstset{
@@ -37,11 +54,9 @@
 	tabsize=4,
 	rulecolor=,
 	language=matlab,
-	basicstyle=\footnotesize,
+	basicstyle=\small,
 	upquote=true,
-	columns=fixed,
-	aboveskip={1.2\baselineskip},
-	belowskip={1.2\baselineskip},
+	columns=fullflexible,
 	showstringspaces=false,
 	extendedchars=true,
 	breaklines=false,
@@ -55,9 +70,11 @@
 	commentstyle=\itshape\color[rgb]{0.133,0.545,0.133},
 	stringstyle=\color[rgb]{0.627,0.126,0.941},
 }
+\lstMakeShortInline[columns=fullflexible, breaklines = true,
+ breakatwhitespace = true]!
 
-% ------------------------------------------------------------------
-\begin{document}
+\renewcommand{\subsectionautorefname}{section}
+
 \title{MatConvNet \\
 \Large
 Convolutional Neural Networks for MATLAB}
@@ -66,608 +83,39 @@ Andrea Vedaldi
 \and
 Karel Lenc}
 \date{}
+
+\sloppy
+
+% ------------------------------------------------------------------
+\begin{document}
+% ------------------------------------------------------------------
+
+%\end{document}
+
+\frontmatter
 \maketitle{}
-%\vspace{-3em}
+\clearpage
 
 \begin{abstract}
-\vlnn is an implementation of Convolutional Neural Networks (CNNs) for MATLAB. The toolbox is designed with an emphasis on simplicity and flexibility. It exposes the building blocks of CNNs as easy-to-use MATLAB functions, providing routines for computing linear convolutions with filter banks, feature pooling, and many more. In this manner, \vlnn allows fast prototyping of new CNN architectures; at the same time, it supports efficient computation on CPU and GPU allowing to train complex models on large datasets such as ImageNet ILSVRC. This document provides an overview of CNNs and how they are implemented in \vlnn and gives the technical details of each computational block in the toolbox.
+\matconvnet is an implementation of Convolutional Neural Networks (CNNs) for MATLAB. The toolbox is designed with an emphasis on simplicity and flexibility. It exposes the building blocks of CNNs as easy-to-use MATLAB functions, providing routines for computing linear convolutions with filter banks, feature pooling, and many more. In this manner, \matconvnet allows fast prototyping of new CNN architectures; at the same time, it supports efficient computation on CPU and GPU allowing to train complex models on large datasets such as ImageNet ILSVRC. This document provides an overview of CNNs and how they are implemented in \matconvnet and gives the technical details of each computational block in the toolbox.
 \end{abstract}
-
-\newpage
-\tableofcontents{}
-% ------------------------------------------------------------------
-
-% ------------------------------------------------------------------
-\section{Introduction}\label{s:intro}
-% ------------------------------------------------------------------
-
-\vlnn is a simple MATLAB toolbox implementing Convolutional Neural Networks (CNN) for computer vision applications. This documents starts with a short overview of CNNs and how they are implemented in \vlnn. Section~\ref{s:blocks} lists all the computational building blocks implemented in \vlnn that can be combined to create CNNs and gives the technical details of each one. Finally, Section~\ref{s:wrappers} discusses more abstract CNN wrappers and example code and models.
-
-A \emph{Convolutional Neural Network} (CNN) can be viewed as a function $f$ mapping data $\bx$, for example an image, on an output vector $\by$. The function $f$ is a composition of a sequence (or a directed acyclic graph) of simpler functions $f_1,\dots,f_L$, also called \emph{computational blocks} in this document. Furthermore, these blocks are \emph{convolutional}, in the sense that they map an input image of feature map to an output feature map by applying a translation-invariant and local operator, e.g. a linear filter. The \vlnn toolbox contains implementation for the most commonly used computational blocks (described in Section~\ref{s:blocks}) which can be used either directly, or through simple wrappers. Thanks to the modular structure, it is a simple task to create and combine new blocks with the existing ones. %New blocks are also easy to create and combine with the existing ones.
-
-Blocks in the CNN usually contain parameters $\bw_1,\dots,\bw_L$. These are \emph{discriminatively learned from example data} such that the resulting function $f$ realizes an useful mapping. A typical example is image classification; in this case the output of the CNN is a vector $\by=f(\bx)\in\real^C$ containing the confidence that $\bx$ belong to any of $C$ possible classes. Given training data $(\bx^{(i)},\by^{(i)})$ (where $\by^{(i)}$ is the indicator vector of the class of $\bx^{(i)}$), the parameters are learned by solving
-\begin{equation}\label{e:objective}
- \argmin_{\bw_1,\dots\bw_n}
- \frac{1}{n}\sum_{i=1}^n
- \ell\left(
- f(\bx^{(i)};\bw_1,\dots,\bw_L),
- \by^{(i)}
- \right)
-\end{equation}
-where $\ell$ is a suitable \emph{loss function} (e.g. the hinge or log loss).
-
-The optimization problem~\eqref{e:objective} is usually non-convex and very large as complex CNN architectures need to be trained from hundred-thousands or even millions of examples. Therefore efficiency is a paramount. Optimization often uses a variant of \emph{stochastic gradient descent}. The algorithm is, conceptually, very simple: at each iteration a training point is selected at random, the derivative of the loss term for that training sample is computed resulting in a gradient vector, and parameters are incrementally updated by moving towards the local minima in the direction of the gradient. The key operation here is to compute the derivative of the objective function, which is obtained by an application of the chain rule known as \emph{back-propagation}. \vlnn can evaluate the derivatives of all the computational blocks. It also contains several examples of training small and large models using these capabilities and a default solver, although it is easy to write customized solvers on top of the library.
-
-While CNNs are relatively efficient to compute, training requires iterating many times through vast data collections. Therefore the computation speed is very important in practice. Larger models, in particular, may require the use of GPU to be trained in a reasonable time. \vlnn has integrated GPU support based on NVIDIA CUDA and MATLAB built-in CUDA capabilities.
-
-% ------------------------------------------------------------------
-\subsection{\vlnn on a glance}\label{s:vlnn}
-% ------------------------------------------------------------------
-
-\vlnn has a simple design philosophy. Rather than wrapping CNNs around complex layers of software, it exposes simple functions to compute CNN building blocks, such as linear convolution and ReLU operators. These building blocks are easy to combine into a complete CNNs and can be used to implement sophisticated learning algorithms. While several real-world examples of small and large CNN architectures and training routines are provided, it is always possible to go back to the basics and build your own, using the efficiency of MATLAB in prototyping. Often no C coding is required at all to try a new architectures. As such, \vlnn is an ideal playground for research in computer vision and CNNs.
-
-\vlnn contains the following elements:
-\begin{itemize}
-\item \emph{CNN computational blocks.} A set of optimized routines computing fundamental building blocks of a CNN. For example, a convolution block is implemented by \linebreak \verb!y=vl_nnconv(x,f,b)! where \verb!x! is an image, \verb!f! a filter bank, and \verb!b! a vector of biases (Section~\ref{s:convolution}). The derivatives are computed as
-\verb![dzdx,dzdf,dzdb] = vl_nnconv(x,f,b,dzdy)! where \verb!dzdy! is the derivative of the CNN output w.r.t \verb!y!~(Section~\ref{s:convolution}). Section~\ref{s:blocks} describes all the blocks in detail.
-\item \emph{CNN wrappers.} \vlnn provides a simple wrapper, suitably invoked by \verb!vl_simplenn!, that implements a CNN with a linear topology (a chain of blocks). This is good enough to run most of current state-of-the-art models for image classification. You are invited to look at the implementation of this function, as it is a great starting point to understand how to implement more complex CNNs.
-\item \emph{Example applications.} \vlnn provides several example of learning CNNs with stochastic gradient descent and CPU or GPU, on MNIST, CIFAR10, and ImageNet data.
-\item \emph{Pre-trained models.} \vlnn provides several state-of-the-art pre-trained CNN models that can be used off-the-shelf, either to classify images or to produce image encodings in the spirit of Caffe or DeCAF.
-\end{itemize}
-
-% ------------------------------------------------------------------
-\subsection{The structure and evaluation of CNNs}\label{s:forward}
-% ------------------------------------------------------------------
-
-CNNs are obtained by connecting one or more \emph{computational blocks}. Each block $\by = f(\bx,\bw)$ takes an image $\bx$ and a set of parameters $\bw$ as input and produces a new image $\by$ as output. An image is a real 4D array; the first two dimensions index spatial coordinates (image rows and columns respectively), the third dimension feature channels (there can be any number), and the last dimension image instances. A computational block $f$ is therefore represented as follows:
-\begin{center}
-\begin{tikzpicture}[auto, node distance=2cm]
-\node (x) [data] {$\bx$};
-\node (f) [block,right of=x]{$f$};
-\node (y) [data, right of=f] {$\by$};
-\node (w) [data, below of=f] {$\bw$};
-\draw [->] (x.east) -- (f.west) {};
-\draw [->] (f.east) -- (y.west) {};
-\draw [->] (w.north) -- (f.south) {};
-\end{tikzpicture}
-\end{center}
-Formally, $\bx$ is a 4D tensor stacking $N$ 3D images
-\[
-   \bx \in \real^{H \times W \times D \times N}
-\]
-where $H$ and $W$ are the height and width of the images, $D$ its depth, and $N$ the number of images. In what follows, all operations are applied identically to each image in the stack $\bx$; hence for simplicity we will drop the last dimension in the discussion (equivalent to assuming $N=1$), but the ability to operate on image batches is very important for efficiency.
-
-In general, a CNN can be obtained by connecting blocks in a directed acyclic graph (DAG). In the simplest case, this graph reduces to a sequence of computational blocks $(f_1,f_2,\dots,f_L)$. Let $\bx_1,\bx_2,\dots,\bx_L$ be the output of each layer in the network, and let $\bx_0$ denote the network input. Each output $\bx_l$ depends on the previous output $\bx_{l-1}$ through a function $f_l$ with parameter $\bw_l$ as $\bx_l = f_l(\bx_{l-1};\bw_l)$; schematically:
-\begin{center}
-\begin{tikzpicture}[auto, node distance=2cm]
-\node (x0)  [data] {$\bx_0$};
-\node (f1) [block,right of=x0]{$f_1$};
-\node (f2) [block,right of=f1,node distance=3cm]{$f_2$};
-\node (dots) [right of=f2]{...};
-\node (fL) [block,right of=dots]{$f_L$};
-\node (xL)  [data, right of=fL] {$\bx_L$};
-\node (w1) [data, below of=f1] {$\bw_1$};
-\node (w2) [data, below of=f2] {$\bw_2$};
-\node (wL) [data, below of=fL] {$\bw_L$};
-\draw [->] (x0.east) -- (f1.west) {};
-\draw [->] (f1.east) -- node {$\bx_2$} (f2.west);
-\draw [->] (f2.east) -- node {$\bx_3$} (dots.west) {};
-\draw [->] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
-\draw [->] (fL.east) -- (xL.west) {};
-\draw [->] (w1.north) -- (f1.south) {};
-\draw [->] (w2.north) -- (f2.south) {};
-\draw [->] (wL.north) -- (fL.south) {};
-\end{tikzpicture}
-\end{center}
-Given an input $\bx_0$, evaluating the network is a simple matter of evaluating all the intermediate stages in order to compute an overall function $\bx_L = f(\bx_0;\bw_1,\dots,\bw_L)$. 
-
-% ------------------------------------------------------------------
-\subsection{CNN derivatives}\label{s:backward}
-% ------------------------------------------------------------------
-
-In training a CNN, we are often interested in taking the derivative of a loss $\ell : f(\bx,\bw) \mapsto \real$ with respect to the parameters. This effectively amounts to extending the network with a \emph{scalar block} at the end:
-\begin{center}
-\begin{tikzpicture}[auto, node distance=2cm]
-\node (x0)  [data] {$\bx_0$};
-\node (f1) [block,right of=x0]{$f_1$};
-\node (f2) [block,right of=f1,node distance=3cm]{$f_2$};
-\node (dots) [right of=f2]{...};
-\node (fL) [block,right of=dots]{$f_L$};
-\node (loss) [block,right of=fL,node distance=3cm]{$\ell$};
-\node (w1) [data, below of=f1] {$\bw_1$};
-\node (w2) [data, below of=f2] {$\bw_2$};
-\node (wL) [data, below of=fL] {$\bw_L$};
-\node (z) [data, right of=loss] {$z\in\real$};
-\draw [->] (x0.east) -- (f1.west) {};
-\draw [->] (f1.east) -- node {$\bx_2$} (f2.west);
-\draw [->] (f2.east) -- node {$\bx_3$} (dots.west) {};
-\draw [->] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
-\draw [->] (fL.east) -- node {$\bx_L$} (loss.west);
-\draw [->] (loss.east) -- (z) {};
-\draw [->] (w1.north) -- (f1.south) {};
-\draw [->] (w2.north) -- (f2.south) {};
-\draw [->] (wL.north) -- (fL.south) {};
-\end{tikzpicture}
-\end{center}
-The derivative of $\ell \circ f$ with respect to the parameters can be computed but starting from the end of the chain (or DAG) and working backwards using the chain rule, a process also known as back-propagation. For example the derivative w.r.t. $\bw_l$ is:
-\begin{equation}\label{e:chain-rule}
- \frac{dz}{d(\vv\bw_l)^\top}
- =
- \frac{dz}{d(\vv\bx_{L})^\top}
- \frac{d\vv\bx_{L}}{d(\vv\bx_{L-1})^\top}
- \dots
- \frac{d\vv\bx_{l+1}}{d(\vv\bx_{l})^\top}
- \frac{d\vv\bx_{l}}{d(\vv\bw_{l})^\top}.
-\end{equation}
-Note that the derivatives are implicitly evaluated at the working point determined by the input $\bx_0$ during the evaluation of the network in the forward pass. The $\vv$ symbol is the vectorization operator, which simply reshape its tensor argument to a column vector. This notation for the derivatives is taken from~\cite{kinghorn96integrals} and is used throughout this document.
-
-Computing~\eqref{e:chain-rule} requires computing the derivative of each block $\bx_l = f_l(\bx_{l-1},\bw_l)$ with respect to its parameters $\bw_l$ and input $\bx_{l-1}$. Let us know focus on computing the derivatives for one computational block. We can look at the network as follows:
-\[
-    \underbrace{
-    \ell \circ f_{L}(\cdot,\bw_L)
-     \circ f_{L-1}(\cdot,\bw_{L-1})
-     \dots
-     \circ f_{l+1}(\cdot,\bw_{l+1})
-     }_{\displaystyle z(\cdot)}
-     \circ f_{l}(\bx_l,\bw_{l})
-     \circ \dots
-\]
-where $\circ$ denotes the composition of function. For simplicity, lump together the factors from $f_l+1$ to the loss $\ell$ into a single scalar function $z(\cdot)$ and drop the subscript $l$ from the first block. Hence, the problem is to compute the derivative of $(z \circ f)(\bx,\bw) \in \real$ with respect to the data $\bx$ and the parameters $\bw$. Graphically:
-\begin{center}
-\begin{tikzpicture}[auto, node distance=2cm]
-\node (x) [data] {$\bx$};
-\node (f) [block,right of=x ] {$f$};
-\node (bz)[block,right of=f ] {$z(\cdot)$};
-\node (z) [data, right of=bz] {$z$};
-\node (w) [data, below of=f ] {$\bw$};
-\draw [->] (x.east) -- (f.west) {};
-\draw [->] (f.east) -- node {$\by$}  (bz.west) {};
-\draw [->] (w.north) -- (f.south) {};
-\draw [->] (bz.east) -- (z.west) {};
-\end{tikzpicture}
-\end{center}
-The derivative of $z \circ f$ with respect to $\bx$ and $\bw$ are given by:
-\[
-\frac{dz}{d(\vv \bx)^\top}
-=
-\frac{dz}{d(\vv \by)^\top}
-\frac{d\vv f}{d(\vv \bx)^\top},
-\quad
-\frac{dz}{d(\vv \bw)^\top}
-=
-\frac{dz}{d(\vv \by)^\top}
-\frac{d\vv f}{d(\vv \bw)^\top},
-\]
-We note two facts. The first one is that, since $z$ is a scalar function, the derivatives have a number of elements equal to the number of parameters. So in particular $dz/d\vv \bx^\top$ can be reshaped into an array $dz/d\bx$ with the same shape of $\bx$, and the same applies to the derivatives $dz/d\by$ and $dz/d\bw$. Beyond the notational convenience, this means that storage for the derivatives is not larger than the storage required for the model parameters and forward evaluation.
-
-The second fact is that computing $dz/d\bx$ and $dz/d\bw$ require the derivative $dz/d\by$. The latter can be obtained by applying this calculation recursively to the next block in the chain.
-
-% ------------------------------------------------------------------
-\subsection{CNN modularity}\label{s:modularity}
-% ------------------------------------------------------------------
-
-Sections~\ref{s:forward} and~\ref{s:backward} suggests a modular programming interface for the implementation of CNN modules. Abstractly, we need two functionalities:
-\begin{itemize}
-\item {\bf Forward messages:} Evaluation of the output $\by=f(\bx,\bw)$ given input data $\bx$ and parameters $\bw$ (forward message).
-\item {\bf Backward messages:} Evaluation of the CNN derivative $dz/d\bx$ and $dz/d\bw$ with respect to the block input data $\bx$ and parameters $\bw$ given the block input data $\bx$ and paramters $\bw$ as well as the CNN derivative $dx/d\by$ with respect to the block output data $\by$.
-\end{itemize}
-
-
-
-% ------------------------------------------------------------------
-\section{Computational blocks}\label{s:blocks}
-% ------------------------------------------------------------------
-
-This section describes the individual computational block supported by the \vlnn. The interface of a CNN computational block follows Section~\ref{s:modularity}. The block can be evaluated as a MATLAB function \verb!y = vl_nn<block>(x,w)! that takes as input arrays \verb!x! and \verb!w! representing the input data and parameters of the block and returns an array \verb!y! as output. \verb!x! and \verb!y! are 4D real arrays packing $N$ maps or images, as discussed above, whereas \verb!\bw! may have an arbitrary shape.
-
-In order to compute the block derivatives, the same function can take a third optional argument \verb!dzdy! representing the derivative of the output of the network with respect to $\by$ and returns the corresponding derivatives \verb![dzdx,dzdw] = vl_nn<block>(x,w,dzdy)!. \verb!dzdx!, \verb!dzdy! and \verb!dzdw! are array with the same dimension of \verb!x!, \verb!y! and \verb!w! respectively, as discussed in Section~\ref{s:backward}.
-
-A function syntax may differ slightly depending on the specifics of a block. For example, a function can take additional optional arguments, specified as a property-value list; it can take no parameters (e.g. a rectified linear unit), in which case \verb!w! is omitted; it can take multiple inputs and parameters, in which there may be more than one \verb!x!, \verb!w!, \verb!dzdx!, \verb!dzdy! or \verb!dzdw!. See the MATLAB inline help of each function for details on the syntax.\footnote{In some cases it may be convenient to wrap these functions to obtain completely uniform and abstract interfaces to all block types. Writing such wrappers, if they are needed, is easy. The core functions, however, focus on providing a straightforward and obvious interface to each block.}
-
-The rest of the section describes the blocks implemented in \vlnn. The purpose is to describe the blocks analytically; refer to MATLAB inline help for further details on the API.
-
-% ------------------------------------------------------------------
-\subsection{Convolution}\label{s:convolution}
-% ------------------------------------------------------------------
-
-The convolutional block is implemented by the function \verb!vl_nnconv!. \verb!y=vl_nnconv(x,f,b)! computes the convolution of the input map $\bx$ with a bank of $K$ multi-dimensional filters $\bff$ and biases $b$. Here
-\[
- \bx\in\real^{H \times W \times D}, \quad
- \bff\in\real^{H' \times W' \times D \times K}, \quad
- \by\in\real^{H'' \times W'' \times K}, \quad
- \quad
- W'' = W - W' + 1,
- \quad
- H'' = H - H' + 1,
-\]
-Formally, the output  is given by
-\[
-y_{i''j''k}
-=
-b_k
-+
-\sum_{i'=1}^{H'}
-\sum_{j'=1}^{W'}
-\sum_{d=1}^D
-f_{i'j'd} \times x_{i''+i',j''+j',d,k}.
-\]
-The call \verb!vl_nnconv(x,f,[])! does not use the biases. Note that the function works with arbitrarily sized inputs and filters (as opposed to, for example, square images).
-
-\paragraph{Output size, padding, and sampling stride.} The convolution operator can be adapted to account for image padding and subsampling. Suppose that the input image or map $\bx$ has width $W$ and that the filter $\bff$ has width $W' \leq W$. Then there are 
-\[
-  W'' = W - W' + 1
-\]
-possible translations of the filters in the horizontal direction such that the filter is entirely contained in the input $\bx$. Hence, by default the filtered signal $\by$ has width $W''$. However, \verb!vl_nnconv! accepts a padding parameters $[P_t,P_b,P_l,P_r]$ whose effect is to virtually pad with zeros the signal $\bx$ in the top, bottom, left, and right  spatial directions respectively. In this case, the output signal has width
-\[
-  W'' = W + (P_l + P_r) - W' + 1.
-\]
-\verb!vl_nnconv! also accepts a stride parameter $(\delta_w,\delta_h)$ to subsample the output. In this case, if $j$ is the column index of the output signal $\by$, its maximum value is given by:
-\[
-(j-1)\delta_w + W' \leq W + (P_l+P_r).
-\]
-Hence the width of $\by$ is given by
-\[
-W'' = \lfloor
-\frac{W + P_l+P_r - W'}{\delta_w}
-\rfloor + 1
-\]
-samples. Similar relations apply to the signal heights $H,H'$ and $H''$.
-
-\paragraph{Fully connected layers.} In other libraries, a \emph{fully connected blocks or layers} are blocks where each output dimension linearly depends on all the input dimensions. \vlnn does not distinguishes between fully connected layers and convolutional blocks. Instead, the former is a special case of the latter obtained when the output map $\by$ has dimensions $W''=H''=1$. Internally, \verb!vl_nnconv! handle this case more efficiently if possible.
-
-\paragraph{Filter groups.} For additional flexibility, \verb!vl_nnconv! allows to group input feature channels and apply to them different filter groups. To to do so, specify as input a bank  of $K$ filters $\bff\in\real^{H'\times W'\times D'\times K}$ such that $D'$ divides the number of input dimensions $D$. These are treated as $g=D/D'$ filter groups; the first group is applied to dimensions $d=1,\dots,D'$ of the input $\bx$; the second group to dimensions $d=D'+1,\dots,2D'$ and so on. Note that the ouptut is still an array $\by\in\real^{H''\times W''\times K}$.
-
-An application of grouping is implementing the Krizhevsky and Hinton network~\cite{krizhevsky12imagenet}, which uses two such streams. Another application is sum pooling; in the latter case, one can specify $D$ groups of $D'=1$ dimensional filters identical filters of value 1 (however, this is considerably slower than calling the dedicated pooling function as given in Section~\ref{s:pooling}).
-
-\paragraph{Matrix notation and derivations.} It is often convenient to express the convolution operation in matrix form. To this end, let $\phi(\bx)$ the {\tt im2row} operator, extracting all $W' \times H'$ patches from the map $\bx$ and storing them as rows of a $(H''W'') \times (H'W'D)$ matrix. Formally, this operator is given by:
-\[
-   [\phi(\bx)]_{pq} \underset{(i,j,d)=t(p,q)}{=} x_{ijd}
-\]
-where the index mapping $(i,j,d) = t(p,q)$ is
-\[
- i = i''+i'-1, \quad
- j = j''+j'-1, \quad
- p = i'' + H'' (j''-1), \quad
- q = i' + H'(j'-1) + H'W' (d-1).
-\]
-It is also useful to define the ``transposed'' operator {\tt row2im}:
-\[
-   [\phi^*(M)]_{ijd}
-   =
-   \sum_{(p,q) \in t^{-1}(i,j,d)}
-   M_{pq}.
-\]
-Note that $\phi$ and $\phi^*$ are linear operators. Both can be expressed by a matrix $H\in\real^{(H''W''H'W'D) \times(HWD)}$ such that
-\[
-  \vv(\phi(\bx)) = H \vv(\bx), \qquad 
-  \vv(\phi^*(M)) = H^\top \vv(M).
-\]
-Hence we obtain the following expression for the vectorized output (see~\cite{kinghorn96integrals}):
-\[
- \vv\by = 
- \vv\left(\phi(\bx) F\right)
- =
- \begin{cases}
- (I \otimes \phi(\bx)) \vv F, & \text{or, equivalently,} \\
- (F^\top \otimes I) \vv \phi(\bx),
- \end{cases}
-\]
-where $F\in\mathbb{R}^{(H'W'D)\times K}$ is the matrix obtained by reshaping the array $\bff$ and $I$ is an identity matrix of suitable dimensions. This allows obtaining the following formulas for the derivatives:
-\[
-\frac{dz}{d(\vv F)^\top}
-=
-\frac{dz}{d(\vv\by)^\top}
-(I \otimes \phi(\bx))
-= \vv\left[ 
-\phi(\bx)^\top 
-\frac{dz}{dY}
-\right]^\top
-\]
-where $Y\in\real^{(H''W'')\times K}$ is the matrix obtained by reshaping the array $\by$. Likewise:
-\[
-\frac{dz}{d(\vv \bx)^\top}
-=
-\frac{dz}{d(\vv\by)^\top}
-(F^\top \otimes I)
-\frac{d\vv \phi(\bx)}{d(\vv \bx)^\top}
-=
-\vv\left[ 
-\frac{dz}{dY}
-F^\top
-\right]^\top
-H
-\]
-In summary, after reshaping these terms we obtain the formulas:
-\[
-\boxed{
-\vv\by = 
- \vv\left(\phi(\bx) F\right),
-\qquad
-\frac{dz}{dF}
-=
-\phi(\bx)^\top\frac{d z}{d Y},
-\qquad
-\frac{d z}{d X}
-=
-\phi^*\left(
-\frac{d z}{d Y}F^\top
-\right)
-}
-\]
-where $X\in\real^{(H'W')\times D}$ is the matrix obtained by reshaping $\bx$. Notably, these expressions are used to implement the convolutional operator; while this may seem inefficient, it is instead a fast approach when the number of filters is large and it allows leveraging fast BLAS and GPU BLAS implementations.
-
-% ------------------------------------------------------------------
-\subsection{Pooling}\label{s:pooling}
-% ------------------------------------------------------------------
-
-\verb!vl_nnpool! implements max and sum pooling. The \emph{max pooling} operator computes the maximum response of each feature channel in a $H' \times W'$ patch
-\[
-y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i',j''+j',d}.
-\]
-resulting in an output of size $\by\in\real^{H''\times W'' \times D}$, similar to the convolution operator of Sectino~\ref{s:convolution}. Sum-pooling computes the average of the values instead:
-\[
-y_{i''j''d} = \frac{1}{W'H'}
-\sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i',j''+j',d}.
-\]
-
-\paragraph{Padding and stride.} Similar to the convolution operator of Sect.~\ref{s:convolution}, \verb!vl_nnpool! supports padding the input; however, the effect is different from padding in the convolutional block as pooling regions straddling the image boundaries are cropped. For max pooling, this is equivalent to extending the input data with $-\infty$; for sum pooling, this is similar to padding with zeros, but the normalization factor at the boundaries is smaller to account for the smaller integration area.
-
-\paragraph{Matrix notation.} Since max pooling simply select for each output element an input element, the relation can be expressed in matrix form as
-$
-    \vv\by = S(\bx) \vv \bx
-$
-for a suitable selector matrix $S(\bx)\in\{0,1\}^{(H''W''D) \times (HWD)}$. The derivatives can the be written as:
-$
-\frac{d z}{d (\vv \bx)^\top}
-=
-\frac{d z}{d (\vv \by)^\top}
-S(\bx),
-$
-for all but a null set of points, where the operator is not differentiable (this usually does not pose problems in optimization by stochastic gradient). For max-pooling, similar relations exists with two differences: $S$ does not depend on the input $\bx$ and it is not binary, in order to account for the normalization factors. In summary, we have the expressions:
-\begin{equation}\label{e:max-mat}
-\boxed{
-\vv\by = S(\bx) \vv \bx,
-\qquad
-\frac{d z}{d \vv \bx}
-=
-S(\bx)^\top
-\frac{d z}{d \vv \by}.
-}
-\end{equation}
-
-% ------------------------------------------------------------------
-\subsection{ReLU}\label{s:relu}
-% ------------------------------------------------------------------
-
-\verb!vl_nnrelu! computes the \emph{Rectified Linear Unit} (ReLU):
-\[
- y_{ijd} = \max\{0, x_{ijd}\}.
-\]
-
-\paragraph{Matrix notation.} With matrix notation, we can express the ReLU as
-\[
-\boxed{
-\vv\by = \diag\bs \vv \bx,
-\qquad
-\frac{d z}{d \vv \bx}
-=
-\diag\bs
-\frac{d z}{d \vv \by}
-}
-\]
-where $\bs = [\vv \bx > 0] \in\{0,1\}^{HWD}$ is an indicator vector.
-
-% ------------------------------------------------------------------
-\subsection{Normalization}\label{s:normalization}
-% ------------------------------------------------------------------
-
-\verb!vl_nnnormalize! implements a cross-channel normalization operator. Normalization applied independently at each spatial location and groups of channels to get:
-\[
- y_{ijk} = x_{ijk} \left( \kappa + \alpha \sum_{t\in G(k)} x_{ijt}^2 \right)^{-\beta},
-\]
-where, for each output channel $k$, $G(k) \subset \{1, 2, \dots, D\}$ is a corresponding subset of input channels. Note that input $\bx$ and output $\by$ have the same dimensions. Note also that the operator is applied across feature channels in a convolutional manner at all spatial locations.
-
-\paragraph{Implementation details.} The derivative is easily computed as:
-\[
-\frac{dz}{d x_{ijd}}
-=
-\frac{dz}{d y_{ijd}}
-L(i,j,d|\bx)^{-\beta}
--2\alpha\beta x_{ijd}
-\sum_{k:d\in G(k)}
-\frac{dz}{d y_{ijk}}
-L(i,j,k|\bx)^{-\beta-1} x_{ijk} 
-\]
-where
-\[
- L(i,j,k|\bx) = \kappa + \alpha \sum_{t\in G(k)} x_{ijt}^2.
-\]
-
-% ------------------------------------------------------------------
-\subsection{Softmax}\label{s:softmax}
-% ------------------------------------------------------------------
-
-\verb!vl_softmax! computes the softmax operator:
-\[
- y_{ijk} = \frac{e^{x_{ijk}}}{\sum_{t=1}^D e^{x_{ijt}}}.
-\]
-Note that the operator is applied across feature channels and in a convolutional manner at all spatial locations.
-
-\paragraph{Implementation details.} Care must be taken in evaluating the exponential in order to avoid underflow or overflow. The simplest way to do so is to divide from numerator and denominator by the maximum value:
-\[
- y_{ijk} = \frac{e^{x_{ijk} - \max_d x_{ijd}}}{\sum_{t=1}^D e^{x_{ijt}- \max_d x_{ijd}}}.
-\]
-The derivative is given by:
-\[
-\frac{dz}{d x_{ijd}}
-=
-\sum_{k}
-\frac{dz}{d y_{ijk}}
-\left(
-e^{x_{ijd}} L(\bx)^{-1} \delta_{\{k=d\}}
--
-e^{x_{ijd}}
-e^{x_{ijk}} L(\bx)^{-2}
-\right),
-\quad
-L(\bx) = \sum_{t=1}^D e^{x_{ijt}}.
-\]
-Simplifying:
-\[
-\frac{dz}{d x_{ijd}}
-=
-y_{ijd} 
-\left(
-\frac{dz}{d y_{ijd}}
--
-\sum_{k=1}^K
-\frac{dz}{d y_{ijk}} y_{ijk}.
-\right).
-\]
-In matrix for:
-\[
-  \frac{dz}{dX} = Y \odot \left(\frac{dz}{dY} 
-  - \left(\frac{dz}{dY} \odot Y\right) \bone\bone^\top\right)
-\]
-where $X,Y\in\real^{HW\times D}$ are the matrices obtained by reshaping the arrays
-$\bx$ and $\by$. Note that the numerical implementation of this expression is straightforward once the output $Y$ has been computed with the caveats above.
-
-% ------------------------------------------------------------------
-\subsection{Log-loss}\label{s:loss}
-% ------------------------------------------------------------------
-
-\verb!vl_logloss! computes the \emph{logarithmic loss}
-\[
- y = \ell(\bx,c) = - \sum_{ij} \log x_{ijc}
-\]
-where $c \in \{1,2,\dots,D\}$ is the ground-truth class. Note that the operator is applied across input channels in a convolutional manner, summing the loss computed at each spatial location into a single scalar. 
-
-\paragraph{Implementation details.} The derivative is
-\[
-\frac{dz}{dx_{ijd}} = - \frac{dz}{dy} \frac{1}{x_{ijc}} \delta_{\{d = c\}}.
-\]
-
-% ------------------------------------------------------------------
-\subsection{Softmax log-loss}\label{s:sfloss}
-% ------------------------------------------------------------------
-
-\verb!vl_softmaxloss! combines the softmax layer and the log-loss into one step for improved numerical stability. It computes
-\[
-y = - \sum_{ij} \left(
-x_{ijc} - \log \sum_{d=1}^D e^{x_{ijd}}
-\right)
-\]
-where $c$ is the ground-truth class.
-
-\paragraph{Implementation details.} The derivative is given by
-\[
-\frac{dz}{dx_{ijd}} 
-= - \frac{dz}{dy} \left(\delta_{d=c} - y_{ijc}\right)
-\]
-where $y_{ijc}$ is the output of the softmax layer. In matrix form:
-\[
-\frac{dz}{dX} 
-= - \frac{dz}{dy} \left(\bone^\top \bfe_c - Y\right)
-\]
-where $X,Y\in\real^{HW\times D}$ are the matrices obtained by reshaping the arrays
-$\bx$ and $\by$ and $\bfe_c$ is the indicator vector of class $c$.
-
-% ------------------------------------------------------------------
-\section{Network wrappers and examples}\label{s:wrappers}
-% ------------------------------------------------------------------
-
-It is easy enough to combine the computational blocks of Sect.~\ref{s:blocks} in any network DAG by writing a corresponding MATLAB script. Nevertheless, \vlnn provides a simple wrapper for the common case of a linear chain. This is implemented by the \verb!vl_simplenn! and \verb!vl_simplenn_move! functions.
-
-\verb!vl_simplenn! takes as input a structure \verb!net! representing the CNN as well as input \verb!x! and potentially output derivatives \verb!dzdy!, depending on the mode of operation. Please refer to the inline help of the \verb!vl_simplenn! function for details on the input and output formats. In fact, the implementation of \verb!vl_simplenn! is a good example of how the basic neural net building block can be used together and can serve as a basis for more complex implementations.
-
-% ------------------------------------------------------------------
-\subsection{Pre-trained models}
-% ------------------------------------------------------------------
-
-\verb!vl_simplenn! is easy to use with pre-trained models (see the homepage to download some). For example, the following code downloads a model pre-trained on the ImageNet data and applies it to one of MATLAB stock images:
-\begin{lstlisting}[language=Matlab]
-% setup MatConvNet in MATLAB
-run matlab/vl_setupnn
-
-% download a pre-trained CNN from the web
-urlwrite(...
-  'http://www.vlfeat.org/sandbox-matconvnet/models/imagenet-vgg-f.mat', ...
-  'imagenet-vgg-f.mat') ;
-net = load('imagenet-vgg-f.mat') ;
-
-% obtain and preprocess an image
-im = imread('peppers.png') ;
-im_ = single(im) ; % note: 255 range
-im_ = imresize(im_, net.normalization.imageSize(1:2)) ;
-im_ = im_ - net.normalization.averageImage ;
-\end{lstlisting}
-Note that the image should be preprocessed before running the network. While preprocessing specifics depend on the model, the pre-trained model contain a \verb!net.normalization! field that describes the type of preprocessing that is expected. Note in particular that this network takes images of a fixed size as input and requires removing the mean; also, image intensities are normalized in the range [0,255].
-
-The next step is running the CNN. This will return a \verb!res! structure with the output of the network layers:
-\begin{lstlisting}[language=Matlab]
-% run the CNN
-res = vl_simplenn(net, im_) ;
-\end{lstlisting}
-
-The output of the last layer can be used to classify the image. The class names are contained in the \verb!net! structure for convenience:
-\begin{lstlisting}[language=Matlab]
-% show the classification result
-scores = squeeze(gather(res(end).x)) ;
-[bestScore, best] = max(scores) ;
-figure(1) ; clf ; imagesc(im) ;
-title(sprintf('%s (%d), score %.3f',...
-net.classes.description{best}, best, bestScore)) ;
-\end{lstlisting}
-
-Note that several extensions are possible. First, images can be cropped rather than rescaled. Second, multiple crops can be fed to the network and results averaged, usually for improved results. Third, the output of the network can be used as generic features for image encoding.
-
-% ------------------------------------------------------------------
-\subsection{Learning models}
-% ------------------------------------------------------------------
-
-As \vlnn can compute derivatives of the CNN using back-propagation, it is simple to implement learning algorithms with it. A basic implementation of stochastic gradient descent is therefore straightforward. Example code is provided in \verb!examples/cnn_train!. This code is flexible enough to allow training on NMINST, CIFAR, ImageNet, and probably many other datasets. Corresponding examples are provided in the \verb!examples/! directory.
-
-% ------------------------------------------------------------------
-\subsection{Running large scale experiments}
-% ------------------------------------------------------------------
-
-For large scale experiments, such as learning a network for ImageNet, a NVIDIA GPU (at least 6GB of memory) and adequate CPU and disk speeds are highly recommended. For example, to train on ImageNet, we suggest the following:
-\begin{itemize}
-\item Download the ImageNet data~\url{http://www.image-net.org/challenges/LSVRC}. Install it somewhere and link to it from \verb!data/imagenet12!
-\item Consider preprocessing the data to convert all images to have an height 256 pixels. This can be done with the supplied \verb!utils/preprocess-imagenet.sh! script. In this manner, training will not have to resize the images every time. Do not forget to point the training code to the pre-processed data.
-\item Consider copying the dataset in to a RAM disk (provided that you have enough memory!) for faster access. Do not forget to point the training code to this copy.
-\item Compile \vlnn with GPU support. See the homepage for instructions.
-\item Compile also the \verb!vl_imreadjpeg! function. Currently, reading JPEG images from disk is a bottleneck and this function can partially alleviate this problem (in the future it should remove the bottleneck almost entirely). See the homepage for instructions.
-\end{itemize}
-
-Once your setup is ready, you should be able to run \verb!examples/cnn_imagenet! (edit the file and change any flag as needed to enable GPU support and image pre-fetching on multiple threads).
-
-If all goes well, you should expect to be able to train with 200-300 images/sec.
-
-% ------------------------------------------------------------------
-\section{About \vlnn}
-% ------------------------------------------------------------------
-
-\vlnn main features are:
-\begin{itemize}
-\item \emph{Flexibility.} Neural network layers are implemented in a straightforward manner, often directly in MATLAB code, so that they are easy to modify, extend, or integrate with new ones.
-\item \emph{Power.} The implementation can run the latest models such as Krizhevsky~\textit{et al.}~\cite{krizhevsky12imagenet}, including the DeCAF and Caffe variants, and variants from the Oxford Visual Geometry Group. Pre-learned features for different tasks can be easily downloaded.
-\item \emph{Efficiency.} The implementation is quite efficient, supporting both CPU and GPU computation (in the latest versions of MALTAB).
-\item \emph{Self contained.} The implementation is fully self-contained, requiring only MATLAB and a compatible C/C++ compiler to work (GPU code requires the freely-available CUDA DevKit). Several fully-functional image classification examples are included.\end{itemize}
-
-\paragraph{Relation to other CNN implementations.} There are many other open-source CNN implementations. \vlnn borrows its convolution algorithms from Caffe (and is in fact capable of running most of Caffe's models). Caffe is a \cpp framework using a custom CNN definition language based on Google Protocol Buffers. Both \vlnn and Caffe are predated by Cuda-Convnet~\cite{krizhevsky12imagenet}, a \cpp-based project that allows defining a CNN architectures using configuration files. While Caffe and Cuda-Convnet can be somewhat faster than \vlnn, the latter exposes individual CNN building blocks as MATLAB functions, as well as integrating with the native MATLAB GPU support, which makes it very convenient for fast prototyping. The DeepLearningToolbox~\cite{deepltbx12} is a MATLAB toolbox implementing, among others, CNNs, but it does not seem to have been tested on large scale problems. While \vlnn specialises on CNNs and computer vision applications, there are several general-purpose machine learning frameworks which include CNN support, but none of them interfaces natively with MATLAB. For example, the Torch7 toolbox~\cite{collobert2011torch7} uses Lua and Theano~\cite{bergstra2010} uses Python.
-
-% ------------------------------------------------------------------
-\subsection{Acknowledgments}\label{s:ack}
-% ------------------------------------------------------------------
-
-The implementation of several CNN computations in this library are inspired by the Caffe library~\cite{jia13caffe} (however, Caffe is \emph{not} a dependency). Several of the example networks have been trained by Karen Simonyan as part of~\cite{chatfield14return}.
-
-We kindly thank NVIDIA for suppling GPUs used in the creation of this software.
+\clearpage
+
+\tableofcontents*
+\clearpage
+
+\mainmatter
+\input{intro}
+\input{fundamentals}
+\input{wrappers}
+\input{blocks}
+\input{geometry}
+\input{impl}
+\clearpage
 
 % ------------------------------------------------------------------
 \bibliographystyle{plain}
-\bibliography{references}
+\bibliography{references,/Users/vedaldi/src/bibliography/vedaldi}
 \end{document}
 % ------------------------------------------------------------------
 

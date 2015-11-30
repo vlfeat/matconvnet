@@ -1,0 +1,4 @@
+* text=auto
+*.vcxproj text merge=union eol=crlf
+*.vcxproj.filters merge=union eol=crlf
+*.sln text merge=union eol=crlf

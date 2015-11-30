@@ -4,7 +4,9 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2015 Andrea Vedaldi.
+
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -21,6 +23,7 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datacu.hpp"
 #endif
 
+#include <cmath>
 #include <memory>
 #include <assert.h>
 
@@ -34,19 +37,22 @@ enum {
   opt_no_der_biases,
   opt_cudnn,
   opt_no_cudnn,
+  opt_cudnn_workspace_limit,
+  opt_transpose
 } ;
 
 /* options */
 vlmxOption  options [] = {
-  {"Stride",           1,   opt_stride             },
-  {"Pad",              1,   opt_pad                },
-  {"Verbose",          0,   opt_verbose            },
-  {"NoDerData",        0,   opt_no_der_data        },
-  {"NoDerFilters",     0,   opt_no_der_filters     },
-  {"NoDerBiases",      0,   opt_no_der_biases      },
-  {"CUDNN",            0,   opt_cudnn              },
-  {"NoCUDNN",          0,   opt_no_cudnn           },
-  {0,                  0,   0                      }
+  {"Stride",                1,   opt_stride                },
+  {"Pad",                   1,   opt_pad                   },
+  {"Verbose",               0,   opt_verbose               },
+  {"NoDerData",             0,   opt_no_der_data           },
+  {"NoDerFilters",          0,   opt_no_der_filters        },
+  {"NoderBiases",           0,   opt_no_der_biases         },
+  {"Cudnn",                 0,   opt_cudnn                 },
+  {"NoCudnn",               0,   opt_no_cudnn              },
+  {"CudnnWorkSpaceLimit",   1,   opt_cudnn_workspace_limit },
+  {0,                       0,   0                         }
 } ;
 
 /* ---------------------------------------------------------------- */
@@ -93,7 +99,7 @@ void mexFunction(int nout, mxArray *out[],
   bool fullyConnectedMode = false ;
   bool computeDerData = true ;
   bool computeDerFilters = true ;
-  bool computeDerBiases = true ;
+  bool computederBiases = true ;
 
   int verbosity = 0 ;
   int opt ;
@@ -159,7 +165,7 @@ void mexFunction(int nout, mxArray *out[],
             padRight = (int)mxGetPr(optarg)[3] ;
             break ;
           default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+            mexErrMsgTxt("PAD has neither one nor four elements.") ;
         }
         break ;
 
@@ -172,7 +178,7 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_no_der_biases :
-        computeDerBiases = VL_FALSE ;
+        computederBiases = VL_FALSE ;
         break ;
 
       case opt_no_cudnn :
@@ -186,6 +192,32 @@ void mexFunction(int nout, mxArray *out[],
         context.getCudaHelper().setCudnnEnabled(true) ;
 #endif
         break ;
+
+      case opt_cudnn_workspace_limit :
+      {
+#if ENABLE_CUDNN
+        double x ;
+        if (!mxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
+          mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
+        }
+        context.getCudaHelper().setCudnnConvolutionFwdPreference
+        ((std::isinf(x) ?
+          CUDNN_CONVOLUTION_FWD_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        context.getCudaHelper().setCudnnConvolutionBwdFilterPreference
+        ((std::isinf(x) ?
+          CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        context.getCudaHelper().setCudnnConvolutionBwdDataPreference
+        ((std::isinf(x) ?
+          CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        break ;
+#endif
+      }
 
       default: break ;
     }
@@ -303,7 +335,7 @@ void mexFunction(int nout, mxArray *out[],
     if (computeDerFilters && hasFilters) {
       derFilters.init(type, filters.getGeometry()) ;
     }
-    if (computeDerBiases && hasBiases) {
+    if (computederBiases && hasBiases) {
       derBiases.init(type, biases.getGeometry()) ;
     }
   }
@@ -389,8 +421,8 @@ void mexFunction(int nout, mxArray *out[],
   /* regular case */
   if (!backMode) {
     error = vl::nnconv_forward(context,
-                               output,
-                               data,
+                               output, 0,
+                               data, 1,
                                filters,
                                biases,
                                strideY, strideX,
@@ -407,6 +439,20 @@ void mexFunction(int nout, mxArray *out[],
                                 padTop, padBottom, padLeft, padRight) ;
   }
 
+  if (verbosity > 0) {
+#if ENABLE_CUDNN
+    if (context.getCudaHelper().getCudnnEnabled()) {
+      mexPrintf("vl_nnconv: cuDNN workspace used: "
+                "fwd %.2f MB"
+                ", bwd filter %.2f MB"
+                ", bwd data %.2f MB\n",
+                (double)context.getCudaHelper().getCudnnConvolutionFwdWorkSpaceUsed() / (1024*1024),
+                (double)context.getCudaHelper().getCudnnConvolutionBwdFilterWorkSpaceUsed() / (1024*1024),
+                (double)context.getCudaHelper().getCudnnConvolutionBwdDataWorkSpaceUsed() / (1024*1024)) ;
+    }
+#endif
+  }
+
   /* -------------------------------------------------------------- */
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
@@ -417,8 +463,8 @@ done:
   }
   if (backMode) {
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERBIASES] = (computeDerBiases & hasBiases) ? derBiases.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
+    out[OUT_DERFILTERS] = (computeDerFilters & hasFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
+    out[OUT_DERBIASES] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;
   }
