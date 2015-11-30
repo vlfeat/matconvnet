@@ -71,17 +71,6 @@ if ~evaluateMode
         net.layers{i}.weightDecay = ones(1, J, 'single') ;
       end
     end
-    % Legacy code: will be removed
-    if isfield(net.layers{i}, 'filters')
-      net.layers{i}.momentum{1} = zeros(size(net.layers{i}.filters), 'single') ;
-      net.layers{i}.momentum{2} = zeros(size(net.layers{i}.biases), 'single') ;
-      if ~isfield(net.layers{i}, 'learningRate')
-        net.layers{i}.learningRate = ones(1, 2, 'single') ;
-      end
-      if ~isfield(net.layers{i}, 'weightDecay')
-        net.layers{i}.weightDecay = single([1 0]) ;
-      end
-    end
   end
 end
 
@@ -109,7 +98,7 @@ if isstr(opts.errorFunction)
       opts.errorFunction = @error_binary ;
       if isempty(opts.errorLabels), opts.errorLabels = {'binerr'} ; end
     otherwise
-      error('Uknown error function ''%s''', opts.errorFunction) ;
+      error('Unknown error function ''%s''.', opts.errorFunction) ;
   end
 end
 
