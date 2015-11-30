@@ -99,9 +99,9 @@ for epoch=start+1:opts.numEpochs
     stats__ = accumulateStats(stats_) ;
     stats.train(epoch) = stats__.train ;
     stats.val(epoch) = stats__.val ;
+    clear net_ stats_ stats__ savedNet_ ;
   end
 
-  % save
   if ~evaluateMode
     saveState(modelPath(epoch), net, stats) ;
   end

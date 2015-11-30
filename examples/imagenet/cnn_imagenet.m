@@ -26,7 +26,7 @@ opts.train = struct([]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
-%                                                            Prepare model
+%                                                             Prepare model
 % -------------------------------------------------------------------------
 
 net = cnn_imagenet_init('model', opts.modelType, ...

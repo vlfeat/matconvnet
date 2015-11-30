@@ -339,11 +339,8 @@ for i=1:n
   end
 
   if gpuMode & opts.sync
-    % This should make things slower, but on MATLAB 2014a it is necessary
-    % for any decent performance.
     wait(gpuDevice) ;
   end
-
   res(i).time = toc(res(i).time) ;
 end
 

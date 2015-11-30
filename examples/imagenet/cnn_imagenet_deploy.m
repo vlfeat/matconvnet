@@ -1,5 +1,5 @@
 function net = cnn_imagenet_deploy(net)
-%CNN_IMAGENET_DEPLOY  Deploy ImageNet model
+%CNN_IMAGENET_DEPLOY  Deploy a CNN
 
 isDag = isa(net, 'dagnn.DagNN') ;
 if isDag
@@ -22,6 +22,19 @@ if isDag
 else
   net = simpleMergeBatchNorm(net) ;
   net = simpleRemoveLayersOfType(net, 'bnorm') ;
+end
+
+if ~isDag
+  net = simpleRemoveMomentum(net) ;
+end
+
+% -------------------------------------------------------------------------
+function net = simpleRemoveMomentum(net)
+% -------------------------------------------------------------------------
+for l = 1:numel(net.layers)
+  if isfield(net.layers{l}, 'momentum')
+    net.layers{l} = rmfield(net.layers{l}, 'momentum') ;
+  end
 end
 
 % -------------------------------------------------------------------------

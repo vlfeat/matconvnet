@@ -342,7 +342,7 @@ for t=1:opts.batchSize:numel(subset)
   speed = n/time ;
   fprintf('%.1f Hz%s\n', speed) ;
 
-  m = n / max(1,numlabs) ; % on this lab only
+  m = n / max(1,numlabs) ; % num images processed on this lab only
   fprintf(' obj:%.3g', stats(2)/m) ;
   for i=1:numel(opts.errorLabels)
     fprintf(' %s:%.3g', opts.errorLabels{i}, stats(i+2)/m) ;
