@@ -1,3 +1,7 @@
+# file: layers.py
+# brief: A number of objects to wrap caffe layers for conversion
+# author: Andrea Vedaldi
+
 from collections import OrderedDict
 from math import floor, ceil
 import numpy as np
@@ -6,6 +10,7 @@ import scipy
 import scipy.io
 import scipy.misc
 import copy
+import collections
 
 layers_type = {}
 layers_type[0]  = 'none'
@@ -101,7 +106,7 @@ class CaffeBuffer(object):
     def __init__(self, name):
         self.name = name
         self.size = None
-        self.value = np.zeros((0,))
+        self.value = np.zeros(shape=(0,0), dtype='float32')
         self.bgrInput = False
 
     def toMatlab(self):
@@ -109,6 +114,9 @@ class CaffeBuffer(object):
         mparam['name'][0] = self.name
         mparam['value'][0] = self.value
         return mparam
+
+    def toMatlabSimpleNN(self):
+        return self.value
 
 class CaffeTransform(object):
     def __init__(self, size, stride, offset):
@@ -137,12 +145,22 @@ def transposeTransform(a):
     for i in [0,1]:
         size[i] = (a.size[i] + a.stride[i] - 1.0) / a.stride[i]
         stride[i] = 1.0/a.stride[i]
-        offset[i] = (1.0 + a.stride[i] - a.offset[i])/a.stride[i]
+        offset[i] = (1.0 + a.stride[i] - a.offset[i]) / a.stride[i]
     c = CaffeTransform(size, stride, offset)
     return c
 
 # --------------------------------------------------------------------
-#                                                               Layers
+#                                                               Errors
+# --------------------------------------------------------------------
+
+class ConversionError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+# --------------------------------------------------------------------
+#                                                         Basic Layers
 # --------------------------------------------------------------------
 
 class CaffeLayer(object):
@@ -151,6 +169,7 @@ class CaffeLayer(object):
         self.inputs = inputs
         self.outputs = outputs
         self.params = []
+        self.model = None
 
     def reshape(self, model):
         pass
@@ -184,6 +203,12 @@ class CaffeLayer(object):
         mlayer['block'][0] = dictToMatlabStruct({})
         return mlayer
 
+    def toMatlabSimpleNN(self):
+        mparam = collections.OrderedDict() ;
+        mparam['name'] = self.name
+        mparam['type'] = None
+        return mparam
+
 class CaffeElementWise(CaffeLayer):
     def reshape(self, model):
         for i in range(len(self.inputs)):
@@ -196,7 +221,16 @@ class CaffeReLU(CaffeElementWise):
 
     def toMatlab(self):
         mlayer = super(CaffeReLU, self).toMatlab()
-        mlayer['type'] = u'dagnn.ReLU'
+        mlayer['type'][0] = u'dagnn.ReLU'
+        mlayer['block'][0] = dictToMatlabStruct(
+            {'leak': float(0.0) })
+        # todo: leak factor
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffeReLU, self).toMatlabSimpleNN()
+        mlayer['type'] = u'relu'
+        mlayer['leak'] = float(0.0)
         return mlayer
 
 class CaffeLRN(CaffeElementWise):
@@ -209,12 +243,21 @@ class CaffeLRN(CaffeElementWise):
 
     def toMatlab(self):
         mlayer = super(CaffeLRN, self).toMatlab()
-        mlayer['type'] = u'dagnn.LRN'
+        mlayer['type'][0] = u'dagnn.LRN'
         mlayer['block'][0] = dictToMatlabStruct(
             {'param': row([self.local_size,
                            self.kappa,
                            self.alpha / self.local_size,
                            self.beta])})
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffeLRN, self).toMatlabSimpleNN()
+        mlayer['type'] = u'lrn'
+        mlayer['param'] = row([self.local_size,
+                               self.kappa,
+                               self.alpha / self.local_size,
+                               self.beta])
         return mlayer
 
 class CaffeSoftMax(CaffeElementWise):
@@ -223,7 +266,12 @@ class CaffeSoftMax(CaffeElementWise):
 
     def toMatlab(self):
         mlayer = super(CaffeSoftMax, self).toMatlab()
-        mlayer['type'] = u'dagnn.SoftMax'
+        mlayer['type'][0] = u'dagnn.SoftMax'
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffeSoftMax, self).toMatlabSimpleNN()
+        mlayer['type'] = u'softmax'
         return mlayer
 
 class CaffeSoftMaxLoss(CaffeElementWise):
@@ -232,7 +280,12 @@ class CaffeSoftMaxLoss(CaffeElementWise):
 
     def toMatlab(self):
         mlayer = super(CaffeSoftMaxLoss, self).toMatlab()
-        mlayer['type'] = u'dagnn.SoftMaxLoss'
+        mlayer['type'][0] = u'dagnn.SoftMaxLoss'
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffeSoftMaxLoss, self).toMatlabSimpleNN()
+        mlayer['type'] = u'softmax'
         return mlayer
 
 class CaffeDropout(CaffeElementWise):
@@ -244,6 +297,12 @@ class CaffeDropout(CaffeElementWise):
         mlayer = super(CaffeDropout, self).toMatlab()
         mlayer['type'][0] = u'dagnn.DropOut'
         mlayer['block'][0] = dictToMatlabStruct({'rate': float(self.ratio)})
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffeDropout, self).toMatlabSimpleNN()
+        mlayer['type'] = u'dropout'
+        mlayer['rate'] = float(self.ratio)
         return mlayer
 
     def display(self):
@@ -275,7 +334,7 @@ class CaffeConv(CaffeLayer):
         print "  Pad: %s" % (self.pad,)
         print "  Stride: %s" % (self.stride,)
         print "  Num Filters: %s" % self.numFilters
-        print "  Filter Dimension", self.filterDimension
+        print "  Filter Dimension:", self.filterDimension
 
     def reshape(self, model):
         varin = model.vars[self.inputs[0]]
@@ -312,6 +371,17 @@ class CaffeConv(CaffeLayer):
              'stride': row(self.stride)})
         return mlayer
 
+    def toMatlabSimpleNN(self):
+        size = self.kernelSize + [self.filterDimension, self.numFilters]
+        mlayer = super(CaffeConv, self).toMatlabSimpleNN()
+        mlayer['type'] = u'conv'
+        mlayer['weights'] = np.empty([1,len(self.params)], dtype=np.object)
+        mlayer['size'] = row(size)
+        mlayer['pad'] = row(self.pad)
+        mlayer['stride'] = row(self.stride)
+        for p, name in enumerate(self.params):
+            mlayer['weights'][0,p] = self.model.params[name].toMatlabSimpleNN()
+        return mlayer
 
 # --------------------------------------------------------------------
 #                                                        Inner Product
@@ -388,6 +458,19 @@ class CaffeDeconvolution(CaffeConv):
              'crop': row(self.pad)})
         return mlayer
 
+    def toMatlabSimpleNN(self):
+        size = self.kernelSize +  [self.numFilters, \
+                                      self.filterDimension / self.numFilterGroups]
+        mlayer = super(CaffeDeconvolution, self).toMatlabSimpleNN()
+        mlayer['type'] = u'convt'
+        mlayer['weights'] = np.empty([1,len(self.params)], dtype=np.object)
+        mlayer['size'] = row(size)
+        mlayer['upsample'] =  row(self.stride)
+        mlayer['crop'] = row(self.pad)
+        for p, name in enumerate(self.params):
+            mlayer['weights'][0,p] = self.model.params[name].toMatlabSimpleNN()
+        return mlayer
+
 # --------------------------------------------------------------------
 #                                                              Pooling
 # --------------------------------------------------------------------
@@ -438,13 +521,23 @@ class CaffePooling(CaffeLayer):
         mlayer = super(CaffePooling, self).toMatlab()
         mlayer['type'][0] = u'dagnn.Pooling'
         mlayer['block'][0] = dictToMatlabStruct(
-            {'poolSize': row(self.kernelSize),
+            {'method': self.method,
+             'poolSize': row(self.kernelSize),
              'stride': row(self.stride),
              'pad': row(self.padCorrected)})
         return mlayer
 
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffePooling, self).toMatlabSimpleNN()
+        mlayer['type'] = u'pool'
+        mlayer['method'] = self.method
+        mlayer['pool'] = row(self.kernelSize)
+        mlayer['stride'] = row(self.stride)
+        mlayer['pad'] = row(self.padCorrected)
+        return mlayer
+
 # --------------------------------------------------------------------
-#                                                         Other Layers
+#                                                        Concatenation
 # --------------------------------------------------------------------
 
 class CaffeConcat(CaffeLayer):
@@ -454,12 +547,6 @@ class CaffeConcat(CaffeLayer):
 
     def transpose(self, model):
         self.concatDim = [1, 0, 2, 3][self.concatDim]
-
-    def toMatlab(self):
-        mlayer = super(CaffeConcat, self).toMatlab()
-        mlayer['type'][0] = u'dagnn.Concat'
-        mlayer['block'][0] = dictToMatlabStruct({'dim': float(self.concatDim) + 1})
-        return mlayer
 
     def reshape(self, model):
         sizes = [model.vars[x].size for x in self.inputs]
@@ -477,6 +564,19 @@ class CaffeConcat(CaffeLayer):
     def display(self):
         super(CaffeConcat, self).display()
         print "  Concat Dim: ", self.concatDim
+
+    def toMatlab(self):
+        mlayer = super(CaffeConcat, self).toMatlab()
+        mlayer['type'][0] = u'dagnn.Concat'
+        mlayer['block'][0] = dictToMatlabStruct({'dim': float(self.concatDim) + 1})
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        raise ConversionError('Concat layers do not work in a SimpleNN network')
+
+# --------------------------------------------------------------------
+#                                                   EltWise (Sum, ...)
+# --------------------------------------------------------------------
 
 class CaffeEltWise(CaffeElementWise):
     def __init__(self, name, inputs, outputs, operation, coeff, stableProdGrad):
@@ -505,6 +605,13 @@ class CaffeEltWise(CaffeElementWise):
             model.vars[self.inputs[0]].size
         for i in range(1, len(self.inputs)):
             assert(model.vars[self.inputs[0]].size == model.vars[self.inputs[i]].size)
+
+    def toMatlabSimpleNN(self):
+        raise ConversionError('EltWise (sum, ...) layers do not work in a SimpleNN network')
+
+# --------------------------------------------------------------------
+#                                                                 Crop
+# --------------------------------------------------------------------
 
 class CaffeCrop(CaffeLayer):
     def __init__(self, name, inputs, outputs):
@@ -570,13 +677,17 @@ class CaffeCrop(CaffeLayer):
         mlayer['block'][0] = dictToMatlabStruct({'crop': row(self.crop)})
         return mlayer
 
+    def toMatlabSimpleNN(self):
+        # todo: simple 1 input crop layers should be supported though!
+        raise ConversionError('Crop layers do not work in a SimpleNN network')
+
 class CaffeData(CaffeLayer):
     def __init__(self, name, inputs, outputs, size):
         super(CaffeData, self).__init__(name, inputs, outputs)
         self.size = size
 
 # --------------------------------------------------------------------
-#                                                     Helper functions
+#                                                          Caffe Model
 # --------------------------------------------------------------------
 
 class CaffeModel(object):
@@ -655,11 +766,11 @@ class CaffeModel(object):
             layer.display()
         for var in self.vars.itervalues():
             print 'Variable ', var.name
-            print '       size: %s' % (var.size,)
+            print '  comp. shape: %s' % (var.size,)
         for par in self.params.itervalues():
             print 'Parameter ', par.name
-            print '       size: %s' % (par.size,)
-            print ' data found: %s' % (par.value is not None,)
+            print '   data found: %s' % (par.size is not None)
+            print '   data shape: %s' % (str(par.value.shape))
 
     def transpose(self):
         for layer in self.layers.itervalues():

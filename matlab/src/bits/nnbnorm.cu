@@ -71,7 +71,7 @@ vl::nnbnorm_forward(vl::Context& context,
       break;
 #endif
   }
-  return context.passError(status, "nnbnorm_forward: ") ;
+  return context.passError(status, "nnbnorm_forward") ;
 }
 
 vl::Error
@@ -116,7 +116,7 @@ vl::nnbnorm_forward_given_moments(vl::Context& context,
       break;
 #endif
   }
-  return context.passError(status, "nnbnorm_forward: ") ;
+  return context.passError(status, "nnbnorm_forward_given_moments") ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -178,7 +178,7 @@ vl::nnbnorm_backward(Context& context,
       break;
 #endif
   }
-  return context.passError(status, "nnbnorm_backward: ") ;
+  return context.passError(status, "nnbnorm_backward") ;
 }
 
 vl::Error
@@ -236,5 +236,5 @@ vl::nnbnorm_backward_given_moments(Context& context,
       break;
 #endif
   }
-  return context.passError(status, "nnbnorm_backward: ") ;
+  return context.passError(status, "nnbnorm_backward_given_moments") ;
 }

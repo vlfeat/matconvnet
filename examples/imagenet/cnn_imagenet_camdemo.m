@@ -7,7 +7,7 @@ function cnn_imagenet_camdemo()
 %   http://mathworks.com/hardware-support/matlab-webcam.html
 
 run(fullfile(fileparts(mfilename('fullpath')), ...
-  '..', 'matlab', 'vl_setupnn.m')) ;
+  '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 cam = webcam(1) ;
 run matlab/vl_setupnn ;
@@ -19,12 +19,8 @@ net = load(sprintf('data/models/%s.mat', model)) ;
 if strcmp(model, 'imagenet-googlenet-dag')
   net = dagnn.DagNN.loadobj(net) ;
   out = net.getVarIndex('prob') ;
-  normalization = net.meta.normalization ;
-  description = net.meta.classes.description ;
   dag = true ;
 else
-  normalization = net.normalization ;
-  description = net.classes.description ;
   dag = false ;
 end
 
@@ -39,8 +35,8 @@ while true
   dx = floor(max(-d,0)/2) ;
   im = im(dy+1:end-dy, dx+1:end-dx, :) ; % center crop
   im_ = single(im) ; % note: 255 range
-  im_ = imresize(im_, normalization.imageSize(1:2), 'bilinear') ;
-  im_ = im_ - normalization.averageImage ;
+  im_ = imresize(im_, net.meta.normalization.imageSize(1:2), 'bilinear') ;
+  im_ = im_ - net.meta.normalization.averageImage ;
 
   % run the CNN
   if dag
@@ -58,7 +54,7 @@ while true
   % visualize
   figure(1) ; clf ; imagesc(im) ;
   title(sprintf('%s, score %.3f',...
-    strtok(description{best},','), bestScore), ...
+    strtok(net.meta.classes.description{best},','), bestScore), ...
     'FontSize', 30) ;
   axis equal off ;
   drawnow ;

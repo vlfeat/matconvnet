@@ -5,7 +5,7 @@ MatConvNet includes several MATLAB functions organized as follows:
 - [Building blocks](#core). These functions implement the CNN
   computational blocks that can be combined either manually or using
   one of the provided wrappers to construct CNNs.
-  - [SimpleCNN wrapper](#simplenn). SimpleNN is a lightweight wrapper
+- [SimpleCNN wrapper](#simplenn). SimpleNN is a lightweight wrapper
   implementing CNNs that are linear chains of computational blocks.
 - [DagNN wrapper](#dagnn). DagNN is an object-oriented wrapper
   supporting more complex network topologies.
@@ -38,13 +38,13 @@ showing how to train CNNs.
 
 ## SimpleCNN wrapper
 
-- [`vl_simplenn`](mfiles/vl_simplenn.md) A lightweight wrapper for
+- [`vl_simplenn`](mfiles/simplenn/vl_simplenn.md) A lightweight wrapper for
   CNNs with a linear topology.
-- [`vl_simplenn_diagnose`](mfiles/vl_simplenn_diagnose.md) Print
-  diagnostics about the CNN.
-- [`vi_simplenn_display`](mfiles/vl_simplenn_display.md) Print
+- [`vl_simplenn_tidy`](mfiles/simplenn/vl_simplenn_tidy.md) Upgrade or
+  otherwise fix a CNN.
+- [`vi_simplenn_display`](mfiles/simplenn/vl_simplenn_display.md) Print
   information about the CNN architecture.
-- [`vl_simplenn_move`](mfiles/vl_simplenn_move.md) Move the CNN
+- [`vl_simplenn_move`](mfiles/simplenn/vl_simplenn_move.md) Move the CNN
   between CPU and GPU.
 
 <a name="dagnn"></a>

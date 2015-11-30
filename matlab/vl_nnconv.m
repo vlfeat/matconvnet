@@ -62,9 +62,15 @@
 %   If compiled in, the function will use cuDNN convolution routines
 %   (with the exception of asymmetric left-right or top-bottom
 %   padding and a few corner cases such as 1x1 filters in Linux that
-%   trigger current bugs in cuDNN). You can use the 'NoCuDNN' option
-%   to disable cuDNN or 'cuDNN' to activate it back again (the choice
+%   trigger current bugs in cuDNN). You can use the 'NoCudnn' option
+%   to disable cuDNN or 'Cudnn' to activate it back again (the choice
 %   sticks until MATLAB purges the MEX files for any reason).
+%
+%   Some CuDNN algorithms may use a very large amount of memory on the
+%   GPU (workspace). MatConvNet chooses always the fastest, which
+%   might not be the most economical. To change this behaviour, use
+%   the `CudnnWorskpaceLimit` option to specify the maximum size of
+%   the workspace in bytes (set to +inf to remove the limit).
 
 % Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
 % Copyright (C) 2015 Andrea Vedaldi.

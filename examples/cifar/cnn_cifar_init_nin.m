@@ -1,4 +1,6 @@
-function net = cnn_cifar_init_nin(opts)
+function net = cnn_cifar_init_nin(varargin)
+opts.networkType = 'simplenn' ;
+opts = vl_argparse(opts, varargin) ;
 
 % CIFAR-10 model from
 % M. Lin, Q. Chen, and S. Yan. Network in network. CoRR, abs/1312.4400, 2013.
@@ -98,6 +100,24 @@ net.layers{end+1} = struct('type', 'pool', ...
 % Loss layer
 net.layers{end+1} = struct('type', 'softmaxloss') ;
 
-vl_simplenn_display(net,'inputSize', [32 32 3 256])
-%keyboard
+% Meta parameters
+net.meta.inputSize = [32 32 3] ;
+net.meta.trainOpts.learningRate = [0.5*ones(1,30) 0.1*ones(1,10) 0.02*ones(1,5)]  ;
+net.meta.trainOpts.weightDecay = 0.0005 ;
+net.meta.trainOpts.batchSize = 100 ;
+net.meta.trainOpts.numEpochs = numel(net.meta.trainOpts.learningRate) ;
 
+% Fill in default values
+net = vl_simplenn_tidy(net) ;
+
+% Switch to DagNN if requested
+switch lower(opts.networkType)
+  case 'simplenn'
+    % done
+  case 'dagnn'
+    net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
+    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
+      {'prediction','label'}, 'error') ;
+  otherwise
+    assert(false) ;
+end

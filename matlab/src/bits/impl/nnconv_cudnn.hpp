@@ -18,51 +18,32 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<typename type> vl::Error
-  nnconv_forward_cudnn(Context& context,
-                       Tensor output, double outputMult,
-                       Tensor data, double dataMult,
-                       Tensor filters,
-                       Tensor biases,
-                       int strideX, int strideY,
-                       int padLeft, int padRight,
-                       int padTop, int padBottom) ;
 
-  template<typename type> vl::Error
-  nnconv_backward_cudnn(Context& context,
-                        Tensor derData,
-                        Tensor derFilters,
-                        Tensor derBiases,
-                        Tensor data,
-                        Tensor filters,
-                        Tensor derOutput,
-                        int strideX, int strideY,
-                        int padLeft, int padRight,
-                        int padTop, int padBottom) ;
+  template<typename type>
+  struct nnconv_cudnn
+  {
+    static vl::Error
+    forward(Context& context,
+            Tensor output, double outputMult,
+            Tensor data, double dataMult,
+            Tensor filters,
+            Tensor biases,
+            int strideX, int strideY,
+            int padLeft, int padRight,
+            int padTop, int padBottom) ;
 
-  /* specializations */
+    static vl::Error
+    backward(Context& context,
+             Tensor derData,
+             Tensor derFilters,
+             Tensor derBiases,
+             Tensor data,
+             Tensor filters,
+             Tensor derOutput,
+             int strideX, int strideY,
+             int padLeft, int padRight,
+             int padTop, int padBottom) ;
+  } ;
 
-  template<> vl::Error
-  nnconv_forward_cudnn<float>(Context& context,
-                              Tensor output, double outputMult,
-                              Tensor data, double dataMult,
-                              Tensor filters,
-                              Tensor biases,
-                              int strideX, int strideY,
-                              int padLeft, int padRight,
-                              int padTop, int padBottom) ;
-
-  template<> vl::Error
-  nnconv_backward_cudnn<float>(Context& context,
-                               Tensor derData,
-                               Tensor derFilters,
-                               Tensor derBiases,
-                               Tensor data,
-                               Tensor filters,
-                               Tensor derOutput,
-                               int strideX, int strideY,
-                               int padLeft, int padRight,
-                               int padTop, int padBottom) ;
 } }
-
 #endif /* defined(__vl__nnconv_cudnn__) */

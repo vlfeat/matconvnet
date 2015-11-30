@@ -41,7 +41,14 @@ get "$GOOGLENET_PROTO_URL"
 get "$GOOGLENET_MODEL_URL"
 get "$GOOGLENET_MEAN_URL"
 
-(cd $"data/tmp/googlenet" ; patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff")
+(
+    cd $"data/tmp/googlenet" ;
+    patch -Np0 --dry-run < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
+    if [ $? -eq 0 ];
+    then
+        patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
+    fi
+)
 
 base="$data/tmp/googlenet"
 out="$data/models/imagenet-googlenet-dag.mat"
@@ -56,8 +63,8 @@ else
 	--remove-dropout \
         --remove-loss \
         --append-softmax="cls3_fc" \
-        --synsets="$base/synset_words.txt" \
         --average-image="$base/imagenet_mean.binaryproto" \
+        --synsets="$base/synset_words.txt" \
         --caffe-data="$base/imagenet_googlenet.caffemodel" \
         "$base/train_val_googlenet.prototxt" \
         "$out"

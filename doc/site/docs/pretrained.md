@@ -4,8 +4,6 @@ This section describes how pre-trained models can be downloaded and
 used in MatConvNet. Using the pre-trained model is easy; just start
 from the example code included in the [quickstart guide](quick.md).
 
-[TOC]
-
 > **Remark:** The following CNN models may have been *imported from
 > other reference implementations* and are equivalent to the originals
 > up to numerical precision. However, note that:
@@ -190,3 +188,33 @@ depending on the network but also on how the data was preprocessed;
 for example, `caffe-ref` and `caffe-alex` should be as fast as
 `vgg-f`, but they are not since images were pre-processed in such a
 way that MATLAB had to call `imresize` for each input image.
+
+## File checksums
+
+The following table summarizes the MD5 checksums for the model files.
+
+| MD5                              | File name                      |
+|----------------------------------|--------------------------------|
+| 1ab8cd9e23d18cc1f823be31ce00941f | imagenet-caffe-alex.mat        |
+| 2b1fc1888b59a7d9cb077bd420f50826 | imagenet-caffe-ref.mat         |
+| 34629e19a051e08e86b1ecec928ba880 | imagenet-googlenet-dag.mat     |
+| beebca0a40f47c6219d6df4bdaa77108 | imagenet-matconvnet-alex.mat   |
+| ccfb42034f0ece46b317064d8728786f | imagenet-vgg-f.mat             |
+| 97c1b6b0097636341aac82e9b0328335 | imagenet-vgg-m-1024.mat        |
+| efc032b8adbf58b1897e2fcf7dad1bfe | imagenet-vgg-m-128.mat         |
+| 41916b5fc921579c0895a2392a265c69 | imagenet-vgg-m-2048.mat        |
+| 476a84843ac756c015dc502cf8884afb | imagenet-vgg-m.mat             |
+| 4a0628065d26be5edfa8ea321301a3e4 | imagenet-vgg-s.mat             |
+| 7d2a4cbdf77ee1dbbd34f6da68eb71c0 | imagenet-vgg-verydeep-16.mat   |
+| 7354f1087a23b7fb4221c6a4b5653cd0 | imagenet-vgg-verydeep-19.mat   |
+| 6570e4476597e5c7ce0ea1ae0f6c3652 | pascal-fcn16s-dag.mat          |
+| 83203463c5a5337c90092a99575b65fa | pascal-fcn32s-dag.mat          |
+| dcd6d815df13667fa2f0830e36128dbc | pascal-fcn8s-dag.mat           |
+| d54434b195dd0544f8ceab779519f272 | vgg-face.mat                   |
+
+## Older file versions
+
+Older models for MatConvNet beta16 are available
+[here](models/beta16). They should be numerically equivalent, but in
+beta17 the format has changed slightly for SimpleNN models. Older
+models can also be updated using the `vl_simplenn_tidy` function.

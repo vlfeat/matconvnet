@@ -28,13 +28,12 @@ classdef Layer < handle
 
     function reset(obj)
     %RESET Restore internal state
-    %  RESET(OBJ) objets the layer objec OBJ, clearing any internal
-    %  state.
+    %  RESET(OBJ)resets the layer OBJ, clearing any internal state.
     end
 
     function params = initParams(obj)
     %INIT Initialize layer parameters
-    %  PARAMS = INIT(OBJ) takes the layer object OBJ and returns a cell
+    %  PARAMS = INIT(OBJ) takes the layer OBJ and returns a cell
     %  array of layer parameters PARAMS with some initial
     %  (e.g. random) values.
       params = {} ;
@@ -195,7 +194,7 @@ classdef Layer < handle
         obj.(f) = s.(f) ;
       end
     end
-
+        
     function s = save(obj)
     %SAVE Save the layer configuration to a parameter structure
     %  S = SAVE(OBJ) extracts all the properties of the layer object OBJ
@@ -211,5 +210,24 @@ classdef Layer < handle
         s.(p.Name) = obj.(p.Name) ;
       end
     end
-  end
-end
+    
+    function attach(obj, net, index)
+    %ATTACH  Attach the layer to a DAG.
+    %   ATTACH(OBJ, NET, INDEX). Override this function to
+    %   configure parameters or variables.
+      obj.net = net ;
+      obj.layerIndex = index ;     
+      for input = net.layers(index).inputs
+        net.addVar(char(input)) ;
+      end
+      for output = net.layers(index).outputs
+        net.addVar(char(output)) ;
+      end
+      for param = net.layers(index).params
+        net.addParam(char(param)) ;
+        p = net.getParamIndex(char(param)) ;
+      end
+    end
+
+  end % methods
+end % classdef

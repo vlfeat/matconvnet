@@ -1,23 +1,38 @@
 function [info, str] = vl_simplenn_display(net, varargin)
-% VL_SIMPLENN_DISPLAY  Simple CNN statistics
-%    VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
+%VL_SIMPLENN_DISPLAY  Display the structure of a SimpleNN network.
+%   VL_SIMPLENN_DISPLAY(NET) prints statistics about the network NET.
 %
-%    INFO=VL_SIMPLENN_DISPLAY(NET) returns instead a structure INFO
-%    with several statistics for each layer of the network NET.
+%   INFO = VL_SIMPLENN_DISPLAY(NET) returns instead a structure INFO
+%   with several statistics for each layer of the network NET.
 %
-%    The function accepts the following options:
+%   [INFO, STR] = VL_SIMPLENN_DISPLAY(...) returns also a string STR
+%   with the text that would otherwise be printed.
 %
-%    `inputSize`:: heuristically set
-%       Specifies the size of the input tensor X that will be passed
-%       to the network. This is used in order to estiamte the memory
-%       required to process the network. If not specified,
-%       VL_SIMPLENN_DISPLAY uses the value in
-%       NET.NORMALIZATION.IMAGESIZE assuming a batch size of one
-%       image, unless otherwise specified by the `batchSize` option.
+%   The function accepts the following options:
 %
-%    `batchSize`:: 1
-%       Specifies the number of data points in a batch in estimating
-%       the memory consumption (see `inputSize`).
+%   `inputSize`:: auto
+%      Specifies the size of the input tensor X that will be passed to
+%      the network as input. This information is used in order to
+%      estiamte the memory required to process the network. When this
+%      option is not used, VL_SIMPLENN_DISPLAY() tires to use values
+%      in the NET structure to guess the input size:
+%      NET.META.INPUTSIZE and NET.META.NORMALIZATION.IMAGESIZE
+%      (assuming a batch size of one image, unless otherwise specified
+%      by the `batchSize` option).
+%
+%   `batchSize`:: []
+%      Specifies the number of data points in a batch in estimating
+%      the memory consumption, overriding the last dimension of
+%      `inputSize`.
+%
+%   `maxNumColumns`:: 18
+%      Maximum number of columns in a table. Wider tables are broken
+%      into multiple smaller ones.
+%
+%   `format`:: `'ascii'`
+%      One of `'ascii'`, `'latex'`, or `'csv'`.
+%
+%   See also: VL_SIMPLENN().
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
@@ -26,10 +41,31 @@ function [info, str] = vl_simplenn_display(net, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.inputSize = [] ;
-opts.batchSize = 1 ;
+opts.batchSize = [] ;
 opts.maxNumColumns = 18 ;
 opts.format = 'ascii' ;
 opts = vl_argparse(opts, varargin) ;
+
+% determine input size, using first the option, then net.meta.inputSize, 
+% and eventually net.meta.normalization.imageSize, if any
+if isempty(opts.inputSize)
+  tmp = [] ;
+  opts.inputSize = [NaN;NaN;NaN;1] ;
+  if isfield(net, 'meta')
+    if isfield(net.meta, 'inputSize')
+      tmp =  net.meta.inputSize(:) ;
+    elseif isfield(net.meta, 'normalization') && ...
+        isfield(net.meta.normalization, 'imageSize')
+      tmp = net.meta.normalization.imageSize ;
+    end
+    opts.inputSize(1:numel(tmp)) = tmp(:) ;
+  end  
+end
+
+if ~isempty(opts.batchSize)
+  opts.inputSize(4) = opts.batchSize ;
+end
+
 
 fields={'layer', 'type', 'name', '-', ...
         'support', 'filtd', 'nfilt', 'stride', 'pad', '-', ...
@@ -73,15 +109,8 @@ for l = 1:numel(net.layers)
   info.receptiveFieldStride = cumprod(info.stride,2) ;
 end
 
-
 % get the dimensions of the data
-if ~isempty(opts.inputSize) ;
-  info.dataSize(1:4,1) = opts.inputSize(:) ;
-elseif isfield(net, 'normalization') && isfield(net.normalization, 'imageSize')
-  info.dataSize(1:4,1) = [net.normalization.imageSize(:) ; opts.batchSize] ;
-else
-  info.dataSize(1:4,1) = [NaN NaN NaN opts.batchSize] ;
-end
+info.dataSize(1:4,1) = opts.inputSize(:) ;
 for l = 1:numel(net.layers)
   ly = net.layers{l} ;
   if strcmp(ly.type, 'custom') && isfield(ly, 'getForwardSize')
