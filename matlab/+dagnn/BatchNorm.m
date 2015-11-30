@@ -11,6 +11,10 @@ classdef BatchNorm < dagnn.ElementWise
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       [derInputs{1}, derParams{1}, derParams{2}, derParams{3}] = ...
         vl_nnbnorm(inputs{1}, params{1}, params{2}, derOutputs{1}) ;
+      % multiply the moments update by the number of images in the batch
+      % this is required to make the update additive for subbatches
+      % and will eventually be normalized away
+      derParams{3} = derParams{3} * size(inputs{1},4) ;
     end
 
     % ---------------------------------------------------------------------
