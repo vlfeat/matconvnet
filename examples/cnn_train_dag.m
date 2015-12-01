@@ -135,7 +135,7 @@ numGpus = numel(opts.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
   if strcmp(mode,'train')
-    sate.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
+    state.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
   end
 end
 if numGpus > 1
