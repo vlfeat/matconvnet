@@ -137,21 +137,21 @@ void
 vl::CudaHelper::resetCudnnConvolutionSettings()
 {
   cudnnConvolutionFwdSpecificAlgo = false ;
-  cudnnConvolutionFwdPreference = CUDNN_CONVOLUTION_FWD_PREFER_FASTEST ;
+  cudnnConvolutionFwdPreference = CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT ;
   cudnnConvolutionFwdAlgo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM ;
-  cudnnConvolutionFwdWorkSpaceLimit = 256 * 1024 * 1024 ; // 256MB
+  cudnnConvolutionFwdWorkSpaceLimit = 512 * 1024 * 1024 ; // 512MB
   cudnnConvolutionFwdWorkSpaceUsed = 0 ;
 
   cudnnConvolutionBwdFilterSpecificAlgo = false ;
-  cudnnConvolutionBwdFilterPreference = CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST ;
+  cudnnConvolutionBwdFilterPreference = CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT ;
   cudnnConvolutionBwdFilterAlgo = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0 ;
-  cudnnConvolutionBwdFilterWorkSpaceLimit = 256 * 1024 * 1024 ; // 256MB
+  cudnnConvolutionBwdFilterWorkSpaceLimit = 512 * 1024 * 1024 ; // 512MB
   cudnnConvolutionBwdFilterWorkSpaceUsed = 0 ;
 
   cudnnConvolutionBwdDataSpecificAlgo = false ;
-  cudnnConvolutionBwdDataPreference = CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST ;
+  cudnnConvolutionBwdDataPreference = CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT ;
   cudnnConvolutionBwdDataAlgo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 ;
-  cudnnConvolutionBwdDataWorkSpaceLimit = 256 * 1024 * 1024 ; // 256MB
+  cudnnConvolutionBwdDataWorkSpaceLimit = 512 * 1024 * 1024 ; // 512MB
   cudnnConvolutionBwdDataWorkSpaceUsed = 0 ;
 }
 

@@ -113,6 +113,7 @@ start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
   fprintf('%s: resuming by loading epoch %d\n', mfilename, start) ;
   load(modelPath(start), 'net', 'info') ;
+  net = vl_simplenn_tidy(net) ; % just in case MatConvNet was updated
 end
 
 for epoch=start+1:opts.numEpochs
