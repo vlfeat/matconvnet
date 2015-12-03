@@ -156,61 +156,105 @@ ILSVRC challenge data.
     - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
     - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
 
--   **Berkeley**
-    [Caffe reference models](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
+    The following models have been trained using MatConvNet (beta17)
+    and batch normalization using the code in the `examples/imagenet`
+    directory:
+
+    - [imagenet-matconvnet-vgg-f](models/imagenet-mantconvnet-vgg-f.mat)
+    - [imagenet-matconvnet-vgg-m](models/imagenet-mantconvnet-vgg-m.mat)
+    - [imagenet-matconvnet-vgg-s](models/imagenet-mantconvnet-vgg-s.mat)
+
+-   **Caffe reference model** [obtained
+    here](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
     (version downloaded on September 2014).
 
     > Citation: please see the [Caffe homepage](http://caffe.berkeleyvision.org).
 
     - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
+
+-   **AlexNet**
+
+    > `ImageNet classification with deep convolutional neural
+    networks', *A. Krizhevsky and I. Sutskever and G. E. Hinton,* NIPS
+    2012 ([BibTex and
+    paper](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-))
+
     - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
+    - [imagenet-matconvnet-alex](models/imagenet-matconvnet-alex.mat)
+
+    The first model has been imported from
+    [Caffe](http://caffe.berkeleyvision.org/getting_pretrained_models.html).
+
+    The MatConvNet model was trained using using MatConvNet (beta17)
+    and batch normalization using the code in the `examples/imagenet`
+    directory.
 
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
 |               model|top-1 err.|top-5 err.|  images/s|
 |--------------------|----------|----------|----------|
-|           caffe-ref|      42.7|      19.8|     205.4|
-|          caffe-alex|      42.9|      19.8|     274.8|
-|               vgg-s|      36.9|      15.4|     312.2|
-|               vgg-m|      37.5|      16.1|     382.8|
-|               vgg-f|      41.5|      19.1|     638.0|
-|     vgg-verydeep-19|      29.0|      10.1|      57.1|
-|     vgg-verydeep-16|      28.8|      10.1|      68.3|
+|     matconvnet-alex|      41.8|      19.2|     547.3|
+|    matconvnet-vgg-s|      37.0|      15.8|     337.4|
+|    matconvnet-vgg-m|      36.9|      15.5|     422.8|
+|    matconvnet-vgg-f|      41.4|      19.1|     658.8|
+|           caffe-ref|      42.4|      19.6|     336.7|
+|          caffe-alex|      42.6|      19.6|     332.2|
+|               vgg-s|      36.7|      15.3|     321.7|
+|               vgg-m|      37.3|      15.9|     404.3|
+|               vgg-f|      41.1|      18.8|     661.6|
+|     vgg-verydeep-19|      28.7|       9.9|      60.9|
+|     vgg-verydeep-16|      28.5|       9.9|      73.9|
+|       googlenet-dag|      32.2|      11.6|     231.4|
 
-Note that these error rates are computed on a single centre-crop and
-are therefore higher than what reported in some publications, where
-multiple evaluations per image are combined.
+Important notes:
 
-The evaluation speed was measured on a 12-cores machine using a single
-NVIDIA Titan Black GPU and MATLAB R2015a; performance varies hugely
-depending on the network but also on how the data was preprocessed;
-for example, `caffe-ref` and `caffe-alex` should be as fast as
-`vgg-f`, but they are not since images were pre-processed in such a
-way that MATLAB had to call `imresize` for each input image.
+* The model trained using MatConvNet are slightly better than the
+  original, probably due to the use of batch normalization during
+  training.
+
+* Error rates are computed on a single centre-crop and are therefore
+  higher than what reported in some publications, where multiple
+  evaluations per image are combined.
+
+* The **evaluation speed** was measured on a 12-cores machine using a
+  single NVIDIA Titan Black GPU, MATLAB R2015a, and CuDNN v4;
+  performance varies hugely depending on the network but also on how
+  the data was preprocessed; for example, `caffe-ref` and `caffe-alex`
+  should be as fast as `matconvnet-alex`, but they are not since
+  images were pre-processed in such a way that MATLAB had to call
+  `imresize` for each input image for the Caffe models.
+
+* The GoogLeNet model performance is a little lower than expected (the
+  model should be on par or a little better than VGG-VD). This network
+  was imported from the Princeton version of GoogLeNet, not by the
+  Google team, so the difference might be due to parameter setting
+  during training. On the positive side, GoogLeNet is much smaller (in
+  terms of parameters) and faster than VGG-VD.
 
 ## File checksums
 
 The following table summarizes the MD5 checksums for the model files.
 
-| MD5                              | File name                      |
-|----------------------------------|--------------------------------|
-| 1ab8cd9e23d18cc1f823be31ce00941f | imagenet-caffe-alex.mat        |
-| 2b1fc1888b59a7d9cb077bd420f50826 | imagenet-caffe-ref.mat         |
-| 34629e19a051e08e86b1ecec928ba880 | imagenet-googlenet-dag.mat     |
-| beebca0a40f47c6219d6df4bdaa77108 | imagenet-matconvnet-alex.mat   |
-| ccfb42034f0ece46b317064d8728786f | imagenet-vgg-f.mat             |
-| 97c1b6b0097636341aac82e9b0328335 | imagenet-vgg-m-1024.mat        |
-| efc032b8adbf58b1897e2fcf7dad1bfe | imagenet-vgg-m-128.mat         |
-| 41916b5fc921579c0895a2392a265c69 | imagenet-vgg-m-2048.mat        |
-| 476a84843ac756c015dc502cf8884afb | imagenet-vgg-m.mat             |
-| 4a0628065d26be5edfa8ea321301a3e4 | imagenet-vgg-s.mat             |
-| 7d2a4cbdf77ee1dbbd34f6da68eb71c0 | imagenet-vgg-verydeep-16.mat   |
-| 7354f1087a23b7fb4221c6a4b5653cd0 | imagenet-vgg-verydeep-19.mat   |
-| 6570e4476597e5c7ce0ea1ae0f6c3652 | pascal-fcn16s-dag.mat          |
-| 83203463c5a5337c90092a99575b65fa | pascal-fcn32s-dag.mat          |
-| dcd6d815df13667fa2f0830e36128dbc | pascal-fcn8s-dag.mat           |
-| d54434b195dd0544f8ceab779519f272 | vgg-face.mat                   |
+| MD5                              | File name                          |
+|----------------------------------|------------------------------------|
+| 77ba5337725eb77362e9f318898af494 | imagenet-caffe-alex.mat            |
+| 7001959cb66a3d62a86d52efff42f168 | imagenet-caffe-ref.mat             |
+| e646ea925dee772e34794f01ebbe1bd8 | imagenet-googlenet-dag.mat         |
+| d79a53b79b62aee8a6c48755c29448fa | imagenet-matconvnet-alex.mat       |
+| 5c00773832303a2a9656afec097fb1c1 | imagenet-matconvnet-vgg-f.mat      |
+| 2ccbc5c4d77a56fbfc288ca810d12206 | imagenet-matconvnet-vgg-m.mat      |
+| 79c64eedb1fa49668997342b02dea863 | imagenet-matconvnet-vgg-s.mat      |
+| 4775484a70e8bac3e9521aed59f31dfc | imagenet-vgg-f.mat                 |
+| b4e8616c0ab66b1fda72854226f82d02 | imagenet-vgg-m.mat                 |
+| 2f83043a38e71e9dd9b1c5c0cb3ef6f9 | imagenet-vgg-s.mat                 |
+| 5a68244cf55c66fea59e23ee63cf56ef | imagenet-vgg-verydeep-16.mat       |
+| b9b4a9eb1c2fb3b50e1ec1aca6f22342 | imagenet-vgg-verydeep-19.mat       |
+| 210308543d1a510239ed85feb9b2e885 | pascal-fcn16s-dag.mat              |
+| 2dea567374085a63ad6e83b7b08fa482 | pascal-fcn32s-dag.mat              |
+| 8db84f60ba7d519de15cdf9d2c9a40e1 | pascal-fcn8s-dag.mat               |
+| ad374f3aa98208847489e5c7bfd8e013 | pascal-fcn8s-tvg-dag.mat           |
+| 5069daad93d2937554325e30388463ca | vgg-face.mat                       |
 
 ## Older file versions
 

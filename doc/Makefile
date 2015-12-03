@@ -10,14 +10,18 @@ site=doc/site/docs
 mfiles=\
 vl_argparse.m \
 vl_compilenn.m \
+vl_imreadjpeg.m \
 vl_nnbnorm.m \
 vl_nnconcat.m \
 vl_nnconv.m \
+vl_nnconvinit.m \
 vl_nnconvt.m \
+vl_nncrop.m \
 vl_nndropout.m \
 vl_nnloss.m \
 vl_nnnoffset.m \
 vl_nnnormalize.m \
+vl_nnnormalizelp.m \
 vl_nnpdist.m \
 vl_nnpool.m \
 vl_nnrelu.m \
@@ -116,6 +120,7 @@ $(highlight):
 doc/site/site/index.html : doc/site/mkdocs.yml \
   $(mfile_doc) $(mds) \
   $(bootstrap) $(fontawesome) $(jquery) $(highlight)
+	mkdir -p doc/site/theme/{css,js,fonts}
 	cd doc/site/theme/css ; ln -sfv ../../lib/bootstrap/css/bootstrap.min.css ./
 	cd doc/site/theme/css ; ln -sfv ../../lib/fontawesome/css/font-awesome.min.css ./
 	cd doc/site/theme/css ; ln -sfv ../../lib/highlight/css/highlight.min.css ./

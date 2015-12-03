@@ -37,6 +37,8 @@ here.
       and `include` instead of the binary and include files
       directly. This matches how cuDNN is now distributed.
 
+    * CuDNN v4 is now supported.
+
     * This version changes how batch normalization is handled. Now the
       average moments are learned together with the other parameters.
       The net result is that batch normalization is easy to bypass at
@@ -57,6 +59,14 @@ here.
     * Adds an option to specify the maximum workspace size in the
       convolution routines using cuDNN.
 
+    * The AlexNet, VGG-F, VGG-M, VGG-S exmaples provided in the
+      `examples/imagenet` directory have been refined in order to
+      produced deployable models. MatConvNet pretrained versions of
+      these models are available for download.
+
+    * A new option in `vl_nnconv` and `vl_nnconvt` allows setting the
+      maximum amount of memory used by CuDNN to perform convolution.
+
     **Changes affecting backward compatibility**
 
     * This version changes slightly how SimpleNN networks should be
@@ -70,6 +80,10 @@ here.
       the new version of SimpleNN. The older models are still
       available for download. Note that old and new models are
       numerically equivalent, only the format is (slightly) different.
+
+    * Recent versions of CuDNN may use by default a very large amount
+      of memory for computation.
+
 
 -   1.0-beta16 (October 2015). Adds
     VGG-Face as a pretrained model. Bugfixes.

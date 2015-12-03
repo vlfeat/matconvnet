@@ -46,7 +46,7 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %     error derivative is flat; therefore this loss is useful for
 %     assessment, but not for training a model.
 %
-%  Top-K classification error:: `topkerror`
+%   Top-K classification error:: `topkerror`
 %     L(X,c) = (rank X(c) in X <= K). The top rank is the one with
 %     highest score. For K=1, this is the same as the
 %     classification error. K is controlled by the `topK` option.
@@ -116,6 +116,8 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %   TopK:: 5
 %     Top-K value for the top-K error. Note that K should not
 %     exceed the number of labels.
+%
+%   See also: VL_NNSOFTMAX().
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.

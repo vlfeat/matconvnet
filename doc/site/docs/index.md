@@ -1,3 +1,5 @@
+# MatConvNet: CNNs for MATLAB
+
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
 <a href="download/matconvnet-1.0-beta17.tar.gz">
@@ -23,8 +25,6 @@ Discussion forum
 </div>
 </div>
 
-# MatConvNet: CNNs for MATLAB
-
 **MatConvNet** is a MATLAB toolbox implementing *Convolutional Neural
 Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Many
@@ -41,7 +41,9 @@ recogntion, and text detection are available.
 > [discussion group](https://groups.google.com/d/forum/matconvnet) for
 > MatConvNet users (please use this group for discussions and GitHub
 > for reporting bugs or similar). cuDNN v4 is also supported (although
-> not all v4 features are used yet).
+> not all v4 features are used yet). Sevearl pre-trained ImageNet models
+> trained with MatConvNet using the suppied *example code* are now
+> available.
 >
 > **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
 >
