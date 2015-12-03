@@ -160,9 +160,9 @@ ILSVRC challenge data.
     and batch normalization using the code in the `examples/imagenet`
     directory:
 
-    - [imagenet-matconvnet-vgg-f](models/imagenet-mantconvnet-vgg-f.mat)
-    - [imagenet-matconvnet-vgg-m](models/imagenet-mantconvnet-vgg-m.mat)
-    - [imagenet-matconvnet-vgg-s](models/imagenet-mantconvnet-vgg-s.mat)
+    - [imagenet-matconvnet-vgg-f](models/imagenet-matconvnet-vgg-f.mat)
+    - [imagenet-matconvnet-vgg-m](models/imagenet-matconvnet-vgg-m.mat)
+    - [imagenet-matconvnet-vgg-s](models/imagenet-matconvnet-vgg-s.mat)
 
 -   **Caffe reference model** [obtained
     here](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
