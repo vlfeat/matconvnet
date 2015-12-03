@@ -93,7 +93,7 @@ switch opts.networkType
   case 'simplenn'
     save(modelPath, '-struct', 'net') ;
   case 'dagnn'
-    net_ = net.saveobj()
+    net_ = net.saveobj() ;
     save(modelPath, '-struct', 'net_') ;
     clear net_ ;
 end

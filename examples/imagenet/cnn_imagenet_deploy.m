@@ -34,7 +34,8 @@ if ~isDag
     net.layers{l}.opts = removeCuDNNMemoryLimit(net.layers{l}.opts) ;
   end
 else
-  for l = dagFindLayersOfType('dagnn.Conv')
+  for name = dagFindLayersOfType(net, 'dagnn.Conv')
+    l = net.getLayerIndex(char(name)) ;
     net.layers(l).block.opts = removeCuDNNMemoryLimit(net.layers(l).block.opts) ;
   end
 end
@@ -42,9 +43,9 @@ end
 % -------------------------------------------------------------------------
 function opts = removeCuDNNMemoryLimit(opts)
 % -------------------------------------------------------------------------
-remove = false(numel(opts)) ;
+remove = false(1, numel(opts)) ;
 for i = 1:numel(opts)
-  if isstr(opts{i}) && srcmp(lower(opts{i}), 'CudnnWorkspaceLimit')
+  if isstr(opts{i}) && strcmp(lower(opts{i}), 'CudnnWorkspaceLimit')
     remove([i i+1]) = true ;
   end
 end
