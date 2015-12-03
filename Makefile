@@ -273,7 +273,7 @@ post-models:
 	$(RSYNC) -aP data/models/*.mat $(HOST)/models/
 
 post-doc: doc
-	$(RSYNC) -aP README.md doc/matconvnet-manual.pdf $(HOST)/
+	$(RSYNC) -aP doc/matconvnet-manual.pdf $(HOST)/
 	$(RSYNC) \
 		--recursive \
 		--perms \
@@ -281,4 +281,5 @@ post-doc: doc
 	        --delete \
 	        --exclude=download \
 	        --exclude=models \
+	        --exclude=matconvnet-manual.pdf \
 	        --exclude=.htaccess doc/site/site/ $(HOST)/

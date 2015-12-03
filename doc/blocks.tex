@@ -168,11 +168,11 @@ See \autoref{s:impl-activation} for implementation details.
 \subsection{Local response normalization (LRN)}\label{s:ccnormalization}
 % ------------------------------------------------------------------
 
-!vl_nnnormalize! implements a cross-channel normalization operator. Normalization applied independently at each spatial location and groups of channels to get:
+!vl_nnnormalize! implements the Local Response Normalization (LRN) operator. This operator is applied independently at each spatial location and to groups of feature channels as follows:
 \[
  y_{ijk} = x_{ijk} \left( \kappa + \alpha \sum_{t\in G(k)} x_{ijt}^2 \right)^{-\beta},
 \]
-where, for each output channel $k$, $G(k) \subset \{1, 2, \dots, D\}$ is a corresponding subset of input channels. Note that input $\bx$ and output $\by$ have the same dimensions. Note also that the operator is applied across feature channels in a convolutional manner at all spatial locations.
+where, for each output channel $k$, $G(k) \subset \{1, 2, \dots, D\}$ is a corresponding subset of input channels. Note that input $\bx$ and output $\by$ have the same dimensions. Note also that the operator is applied uniformly at all spatial locations.
 
 See \autoref{s:impl-ccnormalization} for implementation details.
 
