@@ -48,6 +48,7 @@ pages:
   - vl_compilenn: 'mfiles/vl_compilenn.md'
   - vl_rootnn: 'mfiles/vl_rootnn.md'
   - vl_setupnn: 'mfiles/vl_setupnn.md'
+  - vl_imreadjpeg: 'mfiles/vl_imreadjpeg.md'
 
 - Contributing:
   - Developers notes: 'developers.md'

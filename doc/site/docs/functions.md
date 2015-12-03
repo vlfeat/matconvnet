@@ -66,4 +66,4 @@ showing how to train CNNs.
 - [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fiels in the toolbox.
 - [`vl_rootnn`](mfiles/vl_rootnn.md) Return the path to the MatConvNet toolbox installation.
 - [`vl_setpunn`](mfiles/vl_setupnn.md) Setup MatConvNet for use in MATLAB.
-- [`vl_imreadjpg`](mfiles/vl_imreadjpg.md) Quickly load a batch of JPEG images.
+- [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) Quickly load a batch of JPEG images.
