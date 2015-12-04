@@ -31,7 +31,7 @@ for i = 1:numel(models)
   opts.numFetchThreads = 12 ;
   opts.train.batchSize = 128 ;
   opts.train.numEpochs = 1 ;
-  opts.train.gpus = [1] ;
+  opts.train.gpus = [] ;
   opts.train.prefetch = true ;
   opts.train.expDir = opts.expDir ;
 
