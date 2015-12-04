@@ -1,5 +1,5 @@
---- train_val_googlenet.prototxt.orig	2015-10-03 12:37:43.299697610 +0100
-+++ train_val_googlenet.prototxt	2015-10-03 13:05:39.343696311 +0100
+--- train_val_googlenet_patched.prototxt.orig	2015-10-03 12:37:43.299697610 +0100
++++ train_val_googlenet_patched.prototxt	2015-10-03 13:05:39.343696311 +0100
 @@ -1,38 +1,11 @@
  name: "GoogLeNet"
 -layers {

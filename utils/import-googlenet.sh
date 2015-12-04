@@ -43,11 +43,8 @@ get "$GOOGLENET_MEAN_URL"
 
 (
     cd $"data/tmp/googlenet" ;
-    patch -Np0 --dry-run < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
-    if [ $? -eq 0 ];
-    then
-        patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
-    fi
+    cp -v train_val_googlenet.prototxt train_val_googlenet_patched.prototxt
+    patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
 )
 
 base="$data/tmp/googlenet"
@@ -66,6 +63,6 @@ else
         --average-image="$base/imagenet_mean.binaryproto" \
         --synsets="$base/synset_words.txt" \
         --caffe-data="$base/imagenet_googlenet.caffemodel" \
-        "$base/train_val_googlenet.prototxt" \
+        "$base/train_val_googlenet_patched.prototxt" \
         "$out"
 fi
