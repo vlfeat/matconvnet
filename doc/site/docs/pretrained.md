@@ -205,6 +205,9 @@ This is a summary of the performance of these models on the ILSVRC
 |                         vgg-s|      36.7|      15.3|     321.7|
 |                         vgg-m|      37.3|      15.9|     404.3|
 |                         vgg-f|      41.1|      18.8|     661.6|
+|                     vgg-m-128|      40.8|      18.4|     388.5|
+|                    vgg-m-1024|      37.8|      16.1|     406.9|
+|                    vgg-m-2048|      37.1|      15.8|     401.6|
 |               vgg-verydeep-19|      28.7|       9.9|      60.9|
 |               vgg-verydeep-16|      28.5|       9.9|      73.9|
 |                 googlenet-dag|      32.2|      11.6|     231.4|
@@ -238,25 +241,29 @@ Important notes:
 
 The following table summarizes the MD5 checksums for the model files.
 
-| MD5                              | File name                          |
-|----------------------------------|------------------------------------|
-| 77ba5337725eb77362e9f318898af494 | imagenet-caffe-alex.mat            |
-| 7001959cb66a3d62a86d52efff42f168 | imagenet-caffe-ref.mat             |
-| e646ea925dee772e34794f01ebbe1bd8 | imagenet-googlenet-dag.mat         |
-| d79a53b79b62aee8a6c48755c29448fa | imagenet-matconvnet-alex.mat       |
-| 5c00773832303a2a9656afec097fb1c1 | imagenet-matconvnet-vgg-f.mat      |
-| 2ccbc5c4d77a56fbfc288ca810d12206 | imagenet-matconvnet-vgg-m.mat      |
-| 79c64eedb1fa49668997342b02dea863 | imagenet-matconvnet-vgg-s.mat      |
-| 4775484a70e8bac3e9521aed59f31dfc | imagenet-vgg-f.mat                 |
-| b4e8616c0ab66b1fda72854226f82d02 | imagenet-vgg-m.mat                 |
-| 2f83043a38e71e9dd9b1c5c0cb3ef6f9 | imagenet-vgg-s.mat                 |
-| 5a68244cf55c66fea59e23ee63cf56ef | imagenet-vgg-verydeep-16.mat       |
-| b9b4a9eb1c2fb3b50e1ec1aca6f22342 | imagenet-vgg-verydeep-19.mat       |
-| 210308543d1a510239ed85feb9b2e885 | pascal-fcn16s-dag.mat              |
-| 2dea567374085a63ad6e83b7b08fa482 | pascal-fcn32s-dag.mat              |
-| 8db84f60ba7d519de15cdf9d2c9a40e1 | pascal-fcn8s-dag.mat               |
-| ad374f3aa98208847489e5c7bfd8e013 | pascal-fcn8s-tvg-dag.mat           |
-| 5069daad93d2937554325e30388463ca | vgg-face.mat                       |
+| MD5                              | File name                               |
+|----------------------------------|-----------------------------------------|
+| 77ba5337725eb77362e9f318898af494 | imagenet-caffe-alex.mat                 |
+| 7001959cb66a3d62a86d52efff42f168 | imagenet-caffe-ref.mat                  |
+| e646ea925dee772e34794f01ebbe1bd8 | imagenet-googlenet-dag.mat              |
+| d79a53b79b62aee8a6c48755c29448fa | imagenet-matconvnet-alex.mat            |
+| 5c00773832303a2a9656afec097fb1c1 | imagenet-matconvnet-vgg-f.mat           |
+| 2ccbc5c4d77a56fbfc288ca810d12206 | imagenet-matconvnet-vgg-m.mat           |
+| 79c64eedb1fa49668997342b02dea863 | imagenet-matconvnet-vgg-s.mat           |
+| 7502ff082bf53ce9cc67110399bbdf53 | imagenet-matconvnet-vgg-verydeep-16.mat |
+| 4775484a70e8bac3e9521aed59f31dfc | imagenet-vgg-f.mat                      |
+| 0545aea6fc5173b2806784f2a8bd3333 | imagenet-vgg-m-1024.mat                 |
+| 80ec27ef99e2faefb9c837216c9ea0e4 | imagenet-vgg-m-128.mat                  |
+| 620aca6468345e4a791a0396c6a51ce1 | imagenet-vgg-m-2048.mat                 |
+| b4e8616c0ab66b1fda72854226f82d02 | imagenet-vgg-m.mat                      |
+| 2f83043a38e71e9dd9b1c5c0cb3ef6f9 | imagenet-vgg-s.mat                      |
+| 5a68244cf55c66fea59e23ee63cf56ef | imagenet-vgg-verydeep-16.mat            |
+| b9b4a9eb1c2fb3b50e1ec1aca6f22342 | imagenet-vgg-verydeep-19.mat            |
+| 210308543d1a510239ed85feb9b2e885 | pascal-fcn16s-dag.mat                   |
+| 2dea567374085a63ad6e83b7b08fa482 | pascal-fcn32s-dag.mat                   |
+| 8db84f60ba7d519de15cdf9d2c9a40e1 | pascal-fcn8s-dag.mat                    |
+| ad374f3aa98208847489e5c7bfd8e013 | pascal-fcn8s-tvg-dag.mat                |
+| 5069daad93d2937554325e30388463ca | vgg-face.mat                            |
 
 ## Older file versions
 
