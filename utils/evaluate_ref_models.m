@@ -67,4 +67,4 @@ for i = 1:numel(models)
     sprintf('%5.1f',speed)) ;
 end
 
-% md5sum * | xargs  printf '| %-33s| %-35s|\n'
+% md5sum * | xargs  printf '| %-33s| %-40s|\n'

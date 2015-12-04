@@ -71,7 +71,7 @@ modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
 
 start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
-  fprintf('resuming by loading epoch %d\n', start) ;
+  fprintf('%s: resuming by loading epoch %d\n', mfilename, start) ;
   [net, stats] = loadState(modelPath(start)) ;
 end
 
