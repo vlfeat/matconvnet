@@ -404,7 +404,7 @@ namespace vl { namespace impl {
              filtersDesc,
              context.getCudaHelper().cudnnConvolutionBwdFilterAlgo,
              &context.getCudaHelper().cudnnConvolutionBwdFilterWorkSpaceUsed)) ;
-      workSpaceSize = max(workSpaceSize, context.getCudaHelper().cudnnConvolutionBwdFilterWorkSpaceUsed) ;
+      workSpaceSize = std::max(workSpaceSize, context.getCudaHelper().cudnnConvolutionBwdFilterWorkSpaceUsed) ;
     }
 
     if (derData) {
@@ -428,7 +428,7 @@ namespace vl { namespace impl {
              dataDesc,
              context.getCudaHelper().cudnnConvolutionBwdDataAlgo,
              &context.getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed)) ;
-      workSpaceSize = max(workSpaceSize, context.getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed) ;
+      workSpaceSize = std::max(workSpaceSize, context.getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed) ;
     }
 
     // Get workspace
