@@ -19,8 +19,8 @@ pushd `dirname $0` > /dev/null
 SCRIPTPATH=`pwd`
 popd > /dev/null
 
-#converter="python -m pdb $SCRIPTPATH/import-caffe-dag.py"
-converter="python $SCRIPTPATH/import-caffe-dag.py"
+#converter="python -m pdb $SCRIPTPATH/import-caffe.py"
+converter="python $SCRIPTPATH/import-caffe.py"
 data="$SCRIPTPATH/../data"
 
 mkdir -pv "$data"/{tmp/caffe,tmp/googlenet,models}
