@@ -17,9 +17,9 @@ matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu $(cpp_tgt) $(cu_tgt)
 endif
 
 matlab/mex/.build/%.o : matlab/src/bits/%.cpp matlab/mex/.build/.stamp
-	$(MEX) -c $(MEXFLAGS) "$(<)"
+	$(MEX) -c $(MEXFLAGS_CPU) "$(<)"
 	mv -f "$(notdir $(@))" "$(@)"
 
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp $(cpp_tgt)
-	$(MEX) $(MEXFLAGS) "$(<)" -output "$(@)" $(cpp_tgt)
+	$(MEX) $(MEXFLAGS_CPU) "$(<)" -output "$(@)" $(cpp_tgt)
 
