@@ -1,14 +1,35 @@
 function vl_testnn(varargin)
-%VL_TESTNN Run MatConvNet test suite
-%   VL_TESTNN('cpu', true)
-%   VL_TESTNN('gpu', true)
-%   VL_TESTNN('command', 'nnloss')
+%VL_TESTNN Run MatConvNet test suite 
+%
+% VL_TESTNN('option', value, ...) takes the following options:
+%  `cpu`:: true
+%    Run the CPU tests.
+%
+%  `gpu`:: false
+%    Run the GPU tests.
+%
+%  `command`:: 'nn'
+%    Run only tests which name starts with the specified substring.
+%    E.g. `vl_testnn('command', 'nnloss') would run only the nnloss tests.
+%
+%  `break`:: false
+%    Stop tests in case of error.
+%
+%  `tapFile`:: ''
+%    Output the test results to a file. If a specified file does 
+%    exist it is overwritten.
+
+% Copyright (C) 2015 Andrea Vedaldi, Karel Lenc.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
 opts.cpu = true ;
 opts.gpu = false ;
 opts.command = 'nn' ;
 opts.break = false ;
-opts.tapFile = [];
+opts.tapFile = '';
 opts = vl_argparse(opts, varargin) ;
 
 import matlab.unittest.constraints.* ;
@@ -33,6 +54,9 @@ if opts.break
   runner.addPlugin(matlab.unittest.plugins.StopOnFailuresPlugin) ;
 end
 if ~isempty(opts.tapFile)
+  if exist(opts.tapFile, 'file')
+    delete(opts.tapFile);
+  end
   runner.addPlugin(TAPPlugin.producingOriginalFormat(ToFile(opts.tapFile)));
 end
 result = runner.run(suite);
