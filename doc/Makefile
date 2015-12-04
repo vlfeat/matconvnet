@@ -145,3 +145,6 @@ doc-info:
 	@echo "mfile_src=$(mfile_src)"
 	@echo "mfile_doc=$(mfile_doc)"
 	@echo "svg_tgt=$(svg_tgt)"
+
+doc-serve:
+	cd doc/site ; $(MKDOCS) serve
