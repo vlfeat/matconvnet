@@ -14,7 +14,6 @@ vl_imreadjpeg.m \
 vl_nnbnorm.m \
 vl_nnconcat.m \
 vl_nnconv.m \
-vl_nnconvinit.m \
 vl_nnconvt.m \
 vl_nncrop.m \
 vl_nndropout.m \
