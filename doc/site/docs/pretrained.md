@@ -163,6 +163,7 @@ ILSVRC challenge data.
     - [imagenet-matconvnet-vgg-f](models/imagenet-matconvnet-vgg-f.mat)
     - [imagenet-matconvnet-vgg-m](models/imagenet-matconvnet-vgg-m.mat)
     - [imagenet-matconvnet-vgg-s](models/imagenet-matconvnet-vgg-s.mat)
+    - [imagenet-matconvnet-vgg-verydeep-16](models/imagenet-matconvnet-vgg-verydeep-16.mat)
 
 -   **Caffe reference model** [obtained
     here](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
@@ -192,20 +193,21 @@ ILSVRC challenge data.
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
-|               model|top-1 err.|top-5 err.|  images/s|
-|--------------------|----------|----------|----------|
-|     matconvnet-alex|      41.8|      19.2|     547.3|
-|    matconvnet-vgg-s|      37.0|      15.8|     337.4|
-|    matconvnet-vgg-m|      36.9|      15.5|     422.8|
-|    matconvnet-vgg-f|      41.4|      19.1|     658.8|
-|           caffe-ref|      42.4|      19.6|     336.7|
-|          caffe-alex|      42.6|      19.6|     332.2|
-|               vgg-s|      36.7|      15.3|     321.7|
-|               vgg-m|      37.3|      15.9|     404.3|
-|               vgg-f|      41.1|      18.8|     661.6|
-|     vgg-verydeep-19|      28.7|       9.9|      60.9|
-|     vgg-verydeep-16|      28.5|       9.9|      73.9|
-|       googlenet-dag|      32.2|      11.6|     231.4|
+|                         model|top-1 err.|top-5 err.|  images/s|
+|------------------------------|----------|----------|----------|
+|               matconvnet-alex|      41.8|      19.2|     547.3|
+|              matconvnet-vgg-s|      37.0|      15.8|     337.4|
+|              matconvnet-vgg-m|      36.9|      15.5|     422.8|
+|              matconvnet-vgg-f|      41.4|      19.1|     658.8|
+|    matconvnet-vgg-verydeep-16|      28.3|       9.5|      79.1|
+|                     caffe-ref|      42.4|      19.6|     336.7|
+|                    caffe-alex|      42.6|      19.6|     332.2|
+|                         vgg-s|      36.7|      15.3|     321.7|
+|                         vgg-m|      37.3|      15.9|     404.3|
+|                         vgg-f|      41.1|      18.8|     661.6|
+|               vgg-verydeep-19|      28.7|       9.9|      60.9|
+|               vgg-verydeep-16|      28.5|       9.9|      73.9|
+|                 googlenet-dag|      32.2|      11.6|     231.4|
 
 Important notes:
 
