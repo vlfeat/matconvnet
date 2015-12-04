@@ -30,7 +30,29 @@ ul ul, ol ul, ul ol, ol ol {
 
 /* Nicer font for code samples */
 code, kbd, pre, samp {
-font-family: "Lucida Console","Courier New",monospace;
+font-family: "Droid Sans Mono","Lucida Console","Courier New",monospace;
+}
+
+code {
+    color: #337ab7;
+    background-color: white;
+    padding: 0;
+    font-size: 100%;
+}
+
+h1 code {
+    color: #333;
+    font-weight: 600;
+}
+
+h2 code {
+    color: #333;
+    font-weight: 600;
+}
+
+a code {
+    font-size: 95%;
+    font-weight: 600;
 }
 
 /* Solves the problem of jumping to section and being hidden by fixed nav-bar */
