@@ -127,7 +127,6 @@ vl::CudaHelper::setCudnnEnabled(bool active)
 {
   cudnnEnabled = active ;
 }
-#endif
 
 /* -------------------------------------------------------------------
  * cuDNN parameters
@@ -221,6 +220,7 @@ vl::CudaHelper::getCudnnConvolutionBwdDataWorkSpaceUsed() const
 {
   return cudnnConvolutionBwdDataWorkSpaceUsed ;
 }
+#endif
 
 /* -------------------------------------------------------------------
  * CuBLAS Errors
