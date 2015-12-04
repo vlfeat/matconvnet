@@ -201,7 +201,7 @@ void mexFunction(int nout, mxArray *out[],
       {
 #if ENABLE_CUDNN
         double x ;
-        if (!mxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
+        if (!vlmxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
           mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
         }
         context.getCudaHelper().setCudnnConvolutionFwdPreference
