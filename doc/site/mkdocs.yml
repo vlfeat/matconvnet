@@ -26,7 +26,6 @@ pages:
   - vl_nnspnorm: 'mfiles/vl_nnspnorm.md'
   - vl_nnpdist: 'mfiles/vl_nnpdist.md'
   - vl_nnconv: 'mfiles/vl_nnconv.md'
-  - vl_nnconvcat: 'mfiles/vl_nnconcat.md'
   - vl_nnconvt: 'mfiles/vl_nnconvt.md'
   - vl_nncrop: 'mfiles/vl_nncrop.md'
   - vl_nndropout: 'mfiles/vl_nndropout.md'
