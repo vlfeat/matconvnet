@@ -103,8 +103,8 @@ font-family: "Droid Sans Mono","Lucida Console","Courier New",monospace;
 
 code {
     color: #002247;
-    background-color: #FFF;
-    padding: 0;
+    background-color: #F5F5F5;
+    padding: 2px;
     font-size: 93%;
     font-weight: 600;
 }
@@ -112,6 +112,7 @@ code {
 h1 code, h2 code {
     color: #333;
     font-weight: 600;
+    background-color: #FFF;
 }
 
 a code {
