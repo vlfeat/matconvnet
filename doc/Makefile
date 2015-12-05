@@ -51,7 +51,7 @@ fontawesome_url=https://fortawesome.github.io/Font-Awesome/assets/font-awesome-4
 fontawesome=doc/site/lib/fontawesome/css/font-awesome.min.css
 bootstrap_url=https://github.com/twbs/bootstrap/releases/download/v3.3.5/bootstrap-3.3.5-dist.zip
 bootstrap=doc/site/lib/bootstrap/css/bootstrap.min.css
-highlight_url=cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1
+highlight_url=http://www.robots.ox.ac.uk/~karel/hljs
 highlight=doc/site/lib/highlight/js/highlight.min.js
 
 doc: doc-site doc-manual
@@ -114,8 +114,8 @@ $(highlight):
 	@echo "Download URL \"$(highlight_url)\""
 	@echo "**************************"
 	mkdir -p doc/site/lib/highlight/{js,css}
-	wget $(highlight_url)/styles/default.min.css -O doc/site/lib/highlight/css/highlight.min.css
-	wget $(highlight_url)/highlight.min.js -O doc/site/lib/highlight/js/highlight.min.js
+	wget $(highlight_url)/highlight.default.css -O doc/site/lib/highlight/css/highlight.min.css
+	wget $(highlight_url)/highlight.matlab.js -O doc/site/lib/highlight/js/highlight.min.js
 
 doc/site/site/index.html : doc/site/mkdocs.yml \
   $(mfile_doc) $(mds) \
