@@ -54,8 +54,8 @@ recogntion, and text detection are available.
 ## Obtaining MatConvNet
 - <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta17](download/matconvnet-1.0-beta17.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
-- <span class="fa fa-pencil-square-o"></span>&nbsp;<span style="color:#428bca;"
-  onclick="toggle_visibility('citation');">Citation</span>
+- <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
+  onclick="toggle_visibility('citation');">Citation</a>
   <div class="shy" id="citation">
   "MatConvNet - Convolutional Neural Networks for MATLAB", A. Vedaldi
   and K. Lenc, *Proc. of the ACM Int. Conf. on Multimedia*, 2015.
