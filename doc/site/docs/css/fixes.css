@@ -120,6 +120,11 @@ a code {
     font-weight: 600;
 }
 
+.hljs {
+  background: #F5F5F5;
+  padding: 0px
+}
+
 /* Solves the problem of jumping to section and being hidden by fixed nav-bar */
 /* https://github.com/twbs/bootstrap/issues/1768 */
 *[id]:before {
