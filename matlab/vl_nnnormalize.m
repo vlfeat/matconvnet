@@ -1,4 +1,4 @@
-%VL_NNNORMALIZE CNN LRN normalization.
+%VL_NNNORMALIZE CNN Local Response Normalization (LRN)
 %   Y = VL_NNORMALIZE(X, PARAM) computes the so-called Local Response
 %   Normalization (LRN) operator. This operator performs a
 %   channel-wise sliding window normalization of each column of the
@@ -23,6 +23,14 @@
 %   DZDX = VL_NNORMALIZE(X, PARAM, DZDY) computes the derivative of
 %   the block projected onto DZDY. DZDX and DZDY have the same
 %   dimensions as X and Y respectively.
+%
+%   **Remark:** Some CNN libraries (e.g. Caffe) use a slightly
+%   different convention for the parameters of the LRN. Caffe in
+%   particular uses the convention:
+%
+%     PARAM_CAFFE = [N KAPPA N*ALPHA BETA]
+%
+%   i.e. the ALPHA paramter is multiplied by N.
 
 % Copyright (C) 2014 Andrea Vedaldi.
 % All rights reserved.
