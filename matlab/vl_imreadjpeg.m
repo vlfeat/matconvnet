@@ -17,13 +17,13 @@
 %
 %   The function takes the following options:
 %
-%   Prefetch:: [not specified]
+%   `Prefetch`:: `not specified`
 %     If specified, run without blocking (see above).
 %
-%   Verbose:: [not specified]
+%   `Verbose`:: `not specified`
 %     Increase the verbosity level.
 %
-%   NumThreads:: [1]
+%   `NumThreads`:: `1`
 %     Specify the number of threads used to read images. This number
 %     must be at least 1. Note that it does not make sense to specify
 %     a number larger than the number of available CPU cores, and

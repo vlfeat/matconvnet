@@ -18,7 +18,7 @@ the command (using MATLAB R2014a or later):
 
 To test GPU support (if you have [compiled it](#gpu)) use instead:
 
-    > vl_testnn('gpu',true)
+    > vl_testnn('gpu', true)
 
 Note that the second tests runs slower than the CPU version; do not
 worry, this is an artefact of the test procedure.

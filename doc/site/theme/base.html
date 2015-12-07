@@ -14,7 +14,8 @@
 
         <link href="{{ base_url }}/css/bootstrap.min.css" rel="stylesheet">
         <link href="{{ base_url }}/css/font-awesome.min.css" rel="stylesheet">
-        <link href="{{ base_url }}/css/highlight.css" rel="stylesheet">
+        <link href="//fonts.googleapis.com/css?family=Droid+Sans+Mono" rel="stylesheet">
+        <link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.0.0/styles/github-gist.min.css" rel="stylesheet">
         <link href="{{ base_url }}/css/base.css" rel="stylesheet">
         {%- for path in extra_css %}
         <link href="{{ path }}" rel="stylesheet">
@@ -56,10 +57,11 @@
 		<center>Copyright &copy; 2014-15 The MatConvNet Team.</center>
 	</footer>
 
-
-        <script src="{{ base_url }}/js/jquery-1.11.3.min.js"></script>
+        <script src="{{ base_url }}/js/jquery.min.js"></script>
         <script src="{{ base_url }}/js/bootstrap.min.js"></script>
-        <script src="{{ base_url }}/js/highlight.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.0.0/highlight.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.0.0/languages/matlab.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
         <script src="{{ base_url }}/js/base.js"></script>
         {%- for path in extra_javascript %}
         <script src="{{ path }}"></script>

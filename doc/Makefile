@@ -4,6 +4,7 @@ PDFLATEX = pdflatex
 BIBTEX = bibtex
 MKDOCS = mkdocs
 SVG2PDF = svg2pdf
+NPM = npm
 MATLAB = $(MATLABROOT)/bin/matlab
 DOT = dot
 
@@ -50,14 +51,9 @@ models=$(wildcard data/models/*.mat)
 model_svg_tgt=$(patsubst %.mat, %.svg, $(models))
 
 # Web components
-jquery_url=http://code.jquery.com/jquery-1.11.3.min.js
-jquery=doc/site/lib/jquery/js/jquery-1.11.3.min.js
-fontawesome_url=https://fortawesome.github.io/Font-Awesome/assets/font-awesome-4.5.0.zip
-fontawesome=doc/site/lib/fontawesome/css/font-awesome.min.css
-bootstrap_url=https://github.com/twbs/bootstrap/releases/download/v3.3.5/bootstrap-3.3.5-dist.zip
-bootstrap=doc/site/lib/bootstrap/css/bootstrap.min.css
-highlight_url=cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1
-highlight=doc/site/lib/highlight/js/highlight.min.js
+jquery=doc/site/.build/node_modules/jquery/dist/jquery.min.js
+fontawesome=doc/site/.build/node_modules/font-awesome/css/font-awesome.min.css
+bootstrap=doc/site/.build/node_modules/bootstrap/dist/css/bootstrap.min.css
 
 doc: doc-site doc-manual
 doc-site: doc/site/site/index.html
@@ -82,57 +78,26 @@ $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocp
 	$(PYTHON) doc/matdoc.py "$(<)" > "$(@)"
 
 $(bootstrap):
-	@echo "**************************"
-	@echo "Downloading Bootstrap"
-	@echo "Download URL \"$(bootstrap_url)\""
-	@echo "**************************"
-	mkdir -p doc/site/lib/bootstrap
-	wget $(bootstrap_url) -O doc/site/lib/bootstrap/bootstrap.zip
-	cd doc/site/lib/bootstrap ; unzip -o bootstrap.zip
-	cd doc/site/lib/bootstrap ; cp -r bootstrap-*-dist/{fonts,css,js} .
-	rm -rf doc/site/lib/bootstrap/bootstrap-*-dist
-	rm doc/site/lib/bootstrap/bootstrap.zip
+	mkdir -p doc/site/.build/
+	cd doc/site/.build ; $(NPM) install bootstrap@3.3.6
 
 $(fontawesome):
-	@echo "**************************"
-	@echo "Downloading Fontawesome"
-	@echo "Download URL \"$(fontawesome_url)\""
-	@echo "**************************"
-	mkdir -p doc/site/lib/fontawesome
-	wget $(fontawesome_url) -O doc/site/lib/fontawesome/font-awesome.zip
-	cd doc/site/lib/fontawesome ; unzip -o font-awesome.zip
-	cd doc/site/lib/fontawesome ; cp -r font-awesome-*/{fonts,css} .
-	rm -rf doc/site/lib/fontawesome/font-awesome-*
-	rm doc/site/lib/fontawesome/font-awesome.zip
+	mkdir -p doc/site/.build/
+	cd doc/site/.build ; $(NPM) install font-awesome@4.5.0
 
 $(jquery):
-	@echo "**************************"
-	@echo "Downloading JQuery"
-	@echo "Download URL \"$(jquery_url)\""
-	@echo "**************************"
-	mkdir -p doc/site/lib/jquery/js
-	wget $(jquery_url) -O $(jquery)
-
-$(highlight):
-	@echo "**************************"
-	@echo "Downloading Highlight"
-	@echo "Download URL \"$(highlight_url)\""
-	@echo "**************************"
-	mkdir -p doc/site/lib/highlight/{js,css}
-	wget $(highlight_url)/styles/default.min.css -O doc/site/lib/highlight/css/highlight.min.css
-	wget $(highlight_url)/highlight.min.js -O doc/site/lib/highlight/js/highlight.min.js
+	mkdir -p doc/site/.build/
+	cd doc/site/.build ; $(NPM) install jquery@2.1.4
 
 doc/site/site/index.html : doc/site/mkdocs.yml \
   $(mfile_doc) $(mds) \
-  $(bootstrap) $(fontawesome) $(jquery) $(highlight)
+  $(bootstrap) $(fontawesome) $(jquery)
 	mkdir -p doc/site/theme/{css,js,fonts}
-	cd doc/site/theme/css ; ln -sfv ../../lib/bootstrap/css/bootstrap.min.css ./
-	cd doc/site/theme/css ; ln -sfv ../../lib/fontawesome/css/font-awesome.min.css ./
-	cd doc/site/theme/css ; ln -sfv ../../lib/highlight/css/highlight.min.css ./
-	cd doc/site/theme/fonts ; ln -sfv ../../lib/fontawesome/fonts/fontawesome-webfont.{eot,svg,ttf,woff,woff2} ./
-	cd doc/site/theme/js ; ln -sfv ../../lib/bootstrap/js/{bootstrap.min.js,npm.js} ./
-	cd doc/site/theme/js ; ln -sfv ../../lib/highlight/js/highlight.min.js ./
-	cd doc/site/theme/js ; ln -sfv ../../lib/jquery/js/jquery-1.11.3.min.js ./
+	cd doc/site/theme/css ; ln -sfv ../../.build/node_modules/bootstrap/dist/css/bootstrap.min.css{,.map} ./
+	cd doc/site/theme/css ; ln -sfv ../../.build/node_modules/font-awesome/css/font-awesome.min.css ./
+	cd doc/site/theme/fonts ; ln -sfv ../../.build/node_modules/font-awesome/fonts/fontawesome-webfont.{eot,svg,ttf,woff,woff2} ./
+	cd doc/site/theme/js ; ln -sfv ../../.build/node_modules/bootstrap/dist/js/{bootstrap.min.js,npm.js} ./
+	cd doc/site/theme/js ; ln -sfv ../../.build/node_modules/jquery/dist/jquery.min.{js,map} ./
 	cd doc/site ; $(MKDOCS) build --clean
 
 doc-clean:
@@ -142,7 +107,7 @@ doc-clean:
 doc-distclean:
 	rm -f doc/matconvnet-manual.pdf
 	rm -rf doc/site/site
-	rm -rf doc/site/lib
+	rm -rf doc/site/.build
 	rm -f $(mfile_doc)
 
 doc-info:
