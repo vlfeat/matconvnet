@@ -4,6 +4,8 @@ PDFLATEX = pdflatex
 BIBTEX = bibtex
 MKDOCS = mkdocs
 SVG2PDF = svg2pdf
+MATLAB = $(MATLABROOT)/bin/matlab
+DOT = dot
 
 site=doc/site/docs
 
@@ -43,6 +45,9 @@ mfile_doc=$(patsubst %.m,%.md,$(addprefix $(site)/mfiles/, $(mfiles)))
 mds=$(wildcard doc/site/docs/*.md)
 svg_src=$(wildcard doc/figures/svg/*.svg)
 svg_tgt=$(patsubst %.svg, %.pdf, $(svg_src))
+
+models=$(wildcard data/models/*.mat)
+model_svg_tgt=$(patsubst %.mat, %.svg, $(models))
 
 # Web components
 jquery_url=http://code.jquery.com/jquery-1.11.3.min.js
@@ -148,3 +153,11 @@ doc-info:
 
 doc-serve:
 	cd doc/site ; $(MKDOCS) serve
+
+data/models/%.dot : data/models/%.mat
+	$(MATLAB) -nosplash -nodesktop -r "addpath('utils'); model2dot('$(<)', '$(@)'); exit;"
+
+data/models/%.svg : data/models/%.dot
+	$(DOT) -Tsvg -o "$(@)" "$(<)"
+
+model-svg : $(model_svg_tgt)
