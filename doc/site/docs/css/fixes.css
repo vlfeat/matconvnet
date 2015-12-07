@@ -120,6 +120,11 @@ a code {
     font-weight: 600;
 }
 
+a .fa, a .fa:visited {
+    color: #AAA;
+    padding-left: 3px;
+}
+
 .hljs {
   background: #F5F5F5;
   padding: 0px
