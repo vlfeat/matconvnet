@@ -5,6 +5,8 @@ BIBTEX = bibtex
 MKDOCS = mkdocs
 SVG2PDF = svg2pdf
 NPM = npm
+MATLAB = $(MATLABROOT)/bin/matlab
+DOT = dot
 
 site=doc/site/docs
 
@@ -45,10 +47,14 @@ mds=$(wildcard doc/site/docs/*.md)
 svg_src=$(wildcard doc/figures/svg/*.svg)
 svg_tgt=$(patsubst %.svg, %.pdf, $(svg_src))
 
+models=$(wildcard data/models/*.mat)
+model_svg_tgt=$(patsubst %.mat, %.svg, $(models))
+
 # Web components
-jquery=doc/site/.build/node_modules/jquery/dist/jquery.min.js
-fontawesome=doc/site/.build/node_modules/font-awesome/css/font-awesome.min.css
-bootstrap=doc/site/.build/node_modules/bootstrap/dist/css/bootstrap.min.css
+node_modules = doc/site/.build/node_modules
+jquery=$(node_modules)/jquery/dist/jquery.min.js
+fontawesome=$(node_modules)/font-awesome/css/font-awesome.min.css
+bootstrap=$(node_modules)/bootstrap/dist/css/bootstrap.min.css
 
 doc: doc-site doc-manual
 doc-site: doc/site/site/index.html
@@ -72,17 +78,17 @@ $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocp
 	mkdir -p $(dir $(@))
 	$(PYTHON) doc/matdoc.py "$(<)" > "$(@)"
 
-$(bootstrap):
-	mkdir -p doc/site/.build/
-	cd doc/site/.build ; $(NPM) install bootstrap@3.3.6
+$(node_modules):
+	mkdir -p $(node_modules)
+
+$(bootstrap): $(node_modules)
+	cd $(node_modules) ; $(NPM) install bootstrap@3.3.6
 
 $(fontawesome):
-	mkdir -p doc/site/.build/
-	cd doc/site/.build ; $(NPM) install font-awesome@4.5.0
+	cd $(node_modules) ; $(NPM) install font-awesome@4.5.0
 
 $(jquery):
-	mkdir -p doc/site/.build/
-	cd doc/site/.build ; $(NPM) install jquery@2.1.4
+	cd $(node_modules) ; $(NPM) install jquery@2.1.4
 
 doc/site/site/index.html : doc/site/mkdocs.yml \
   $(mfile_doc) $(mds) \
@@ -113,3 +119,11 @@ doc-info:
 
 doc-serve:
 	cd doc/site ; $(MKDOCS) serve
+
+data/models/%.dot : data/models/%.mat
+	$(MATLAB) -nosplash -nodesktop -r "addpath('utils'); model2dot('$(<)', '$(@)'); exit;"
+
+data/models/%.svg : data/models/%.dot
+	$(DOT) -Tsvg -o "$(@)" "$(<)"
+
+model-svg : $(model_svg_tgt)

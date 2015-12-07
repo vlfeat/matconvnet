@@ -36,7 +36,7 @@ These models are trained for face classification and verification.
     > Conference (BMVC), 2015
     > ([paper](http://www.robots.ox.ac.uk/~vgg/publications/2015/Parkhi15/parkhi15.pdf)).
 
-    - [vgg-face](models/vgg-face.mat)
+    - [vgg-face](models/vgg-face.mat) [<i class="fa fa-file-image-o"></i>](models/vgg-face.svg)
 
     See the script `examples/cnn_vgg_face.m` for an example of using
     VGG-Face in 'classifcation' mode. To use this for face
@@ -61,9 +61,9 @@ PASCAL VOC category definitions.
     *Jonathan Long, Evan Shelhamer and Trevor Darrell*, CVPR, 2015
     ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Long_Fully_Convolutional_Networks_2015_CVPR_paper.pdf)).
 
-    - [pascal-fcn32s-dag](models/pascal-fcn32s-dag.mat)
-    - [pascal-fcn16s-dag](models/pascal-fcn16s-dag.mat)
-    - [pascal-fcn8s-dag](models/pascal-fcn8s-dag.mat)
+    - [pascal-fcn32s-dag](models/pascal-fcn32s-dag.mat) [<i class="fa fa-file-image-o"></i>](models/pascal-fcn32s-dag.svg)
+    - [pascal-fcn16s-dag](models/pascal-fcn16s-dag.mat) [<i class="fa fa-file-image-o"></i>](models/pascal-fcn16s-dag.svg)
+    - [pascal-fcn8s-dag](models/pascal-fcn8s-dag.mat) [<i class="fa fa-file-image-o"></i>](models/pascal-fcn8s-dag.svg)
 
     These networks are trained on the PASCAL VOC 2011 training and (in
     part) validation data, using Berekely's extended annotations
@@ -88,7 +88,7 @@ PASCAL VOC category definitions.
     > H. S. Torr*,
     > ICCV 2015 ([paper](http://www.robots.ox.ac.uk/~szheng/papers/CRFasRNN.pdf)).
 
-    - [pascal-fcn8s-tvg-dag](models/pascal-fcn8s-tvg-dag.mat)
+    - [pascal-fcn8s-tvg-dag](models/pascal-fcn8s-tvg-dag.mat) [<i class="fa fa-file-image-o"></i>](models/pascal-fcn8s-tvg-dag.svg)
 
     These networks are trained on the PASCAL VOC 2011 training and (in
     part) validation data, using Berekely's extended annotations, as
@@ -127,7 +127,7 @@ ILSVRC challenge data.
     Dumitru Erhan, Vincent Vanhoucke, Andrew Rabinovich*, CVPR, 2015
     ([paper](http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Szegedy_Going_Deeper_With_2015_CVPR_paper.pdf)).
 
-    - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat)
+    - [imagenet-googlenet-dag](models/imagenet-googlenet-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-googlenet-dag.svg)
 
 -   **VGG-VD** models from the
     [Very Deep Convolutional Networks for Large-Scale Visual Recognition](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) project.
@@ -137,8 +137,8 @@ ILSVRC challenge data.
     technical report, 2014,
     ([paper](http://arxiv.org/abs/1409.1556/)).
 
-    - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat)
-    - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat)
+    - [imagenet-vgg-verydeep-16](models/imagenet-vgg-verydeep-16.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-verydeep-16.svg)
+    - [imagenet-vgg-verydeep-19](models/imagenet-vgg-verydeep-19.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-verydeep-19.svg)
 
 -   **VGG-S,M,F** models from the
     [Return of the Devil](http://www.robots.ox.ac.uk/~vgg/research/deep_eval)
@@ -149,21 +149,21 @@ ILSVRC challenge data.
     Vedaldi, and Andrew Zisserman,* BMVC 2014
     ([BibTex and paper](http://www.robots.ox.ac.uk/~vgg/publications/2014/Chatfield14/)).
 
-    - [imagenet-vgg-f](models/imagenet-vgg-f.mat)
-    - [imagenet-vgg-m](models/imagenet-vgg-m.mat)
-    - [imagenet-vgg-s](models/imagenet-vgg-s.mat)
-    - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat)
-    - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat)
-    - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat)
+    - [imagenet-vgg-f](models/imagenet-vgg-f.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-f.svg)
+    - [imagenet-vgg-m](models/imagenet-vgg-m.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-m.svg)
+    - [imagenet-vgg-s](models/imagenet-vgg-s.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-s.svg)
+    - [imagenet-vgg-m-2048](models/imagenet-vgg-m-2048.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-m-2048.svg)
+    - [imagenet-vgg-m-1024](models/imagenet-vgg-m-1024.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-m-1024.svg)
+    - [imagenet-vgg-m-128](models/imagenet-vgg-m-128.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-vgg-m-128.svg)
 
     The following models have been trained using MatConvNet (beta17)
     and batch normalization using the code in the `examples/imagenet`
     directory:
 
-    - [imagenet-matconvnet-vgg-f](models/imagenet-matconvnet-vgg-f.mat)
-    - [imagenet-matconvnet-vgg-m](models/imagenet-matconvnet-vgg-m.mat)
-    - [imagenet-matconvnet-vgg-s](models/imagenet-matconvnet-vgg-s.mat)
-    - [imagenet-matconvnet-vgg-verydeep-16](models/imagenet-matconvnet-vgg-verydeep-16.mat)
+    - [imagenet-matconvnet-vgg-f](models/imagenet-matconvnet-vgg-f.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-f.svg)
+    - [imagenet-matconvnet-vgg-m](models/imagenet-matconvnet-vgg-m.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-m.svg)
+    - [imagenet-matconvnet-vgg-s](models/imagenet-matconvnet-vgg-s.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-s.svg)
+    - [imagenet-matconvnet-vgg-verydeep-16](models/imagenet-matconvnet-vgg-verydeep-16.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-verydeep-16.svg)
 
 -   **Caffe reference model** [obtained
     here](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
@@ -171,7 +171,7 @@ ILSVRC challenge data.
 
     > Citation: please see the [Caffe homepage](http://caffe.berkeleyvision.org).
 
-    - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat)
+    - [imagenet-caffe-ref](models/imagenet-caffe-ref.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-caffe-ref.svg)
 
 -   **AlexNet**
 
@@ -180,8 +180,8 @@ ILSVRC challenge data.
     2012 ([BibTex and
     paper](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-))
 
-    - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat)
-    - [imagenet-matconvnet-alex](models/imagenet-matconvnet-alex.mat)
+    - [imagenet-caffe-alex](models/imagenet-caffe-alex.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-caffe-alex.svg)
+    - [imagenet-matconvnet-alex](models/imagenet-matconvnet-alex.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-alex.svg)
 
     The first model has been imported from
     [Caffe](http://caffe.berkeleyvision.org/getting_pretrained_models.html).
