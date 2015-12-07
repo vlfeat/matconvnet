@@ -1,11 +1,9 @@
-
 html { overflow-y: scroll; } /* Always show a scrollbar */
 .shy { display: none ; }
 h1 { font-size: 2em ; }
 h2 { font-size: 1.5em ; }
 h3 { font-size: 1.2em ; }
-a  { color: #003065 ; }
-
+//a  { color: #004075 ; }
 
 #logo {
     height: 40px;
@@ -79,6 +77,7 @@ a  { color: #003065 ; }
     vertical-align: middle;
     color: #aaa ;
 }
+
 .menuicon > span {
     line-height: 50px ;
 }
@@ -102,7 +101,8 @@ font-family: "Droid Sans Mono","Lucida Console","Courier New",monospace;
 }
 
 code {
-    color: #002247;
+    //color: #002247;
+    color:  #C48E10;
     background-color: #F5F5F5;
     padding: 2px;
     font-size: 93%;
