@@ -297,23 +297,24 @@ function str = printDot(net, varSizes, paramSizes, otps)
 % -------------------------------------------------------------------------
 str = {} ;
 str{end+1} = sprintf('digraph DagNN {\n\tfontsize=12\n') ;
+font_style = 'fontsize=12 fontname="helvetica"';
 
 for v = 1:numel(net.vars)
   label=sprintf('{{%s} | {%s | %s }}', net.vars(v).name, pdims(varSizes{v}), pmem(4*prod(varSizes{v}))) ;
-  str{end+1} = sprintf('\tvar_%s [label="%s" shape=Mrecord style=filled color=beige fontsize=12]\n', ...
-    net.vars(v).name, label) ;
+  str{end+1} = sprintf('\tvar_%s [label="%s" shape=record style="solid,rounded,filled" color=cornsilk4 fillcolor=beige %s ]\n', ...
+    net.vars(v).name, label, font_style) ;
 end
 
 for p = 1:numel(net.params)
   label=sprintf('{{%s} | {%s | %s }}', net.params(p).name, pdims(paramSizes{p}), pmem(4*prod(paramSizes{p}))) ;
-  str{end+1} = sprintf('\tpar_%s [label="%s" shape=Mrecord style=filled color=lightsteelblue fontsize=12]\n', ...
-    net.params(p).name, label) ;
+  str{end+1} = sprintf('\tpar_%s [label="%s" shape=record style="solid,rounded,filled" color=lightsteelblue4 fillcolor=lightsteelblue %s ]\n', ...
+    net.params(p).name, label, font_style) ;
 end
 
 for l = 1:numel(net.layers)
   label = sprintf('{ %s | %s }', net.layers(l).name, class(net.layers(l).block)) ;
-  str{end+1} = sprintf('\t%s [label="%s" shape=record style="bold"]\n', ...
-    net.layers(l).name, label) ;
+  str{end+1} = sprintf('\t%s [label="%s" shape=record style="bold,filled" color="tomato4" fillcolor="tomato" %s ]\n', ...
+    net.layers(l).name, label, font_style) ;
   for i = 1:numel(net.layers(l).inputs)
     str{end+1} = sprintf('\tvar_%s->%s []\n', ...
       net.layers(l).inputs{i}, ...
@@ -348,6 +349,10 @@ f = fopen(in,'w') ; fwrite(f, str) ; fclose(f) ;
 
 cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotexe, out, in) ;
 [status, result] = system(cmd) ;
+if status ~= 0
+  error('Unable to run %s\n%s', cmd, result);
+end
+fprintf('Dot output:\n%s\n', result);
 
 %f = fopen(out,'r') ; file=fread(f, 'char=>char')' ; fclose(f) ;
 switch computer
