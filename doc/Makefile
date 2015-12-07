@@ -52,6 +52,7 @@ model_svg_tgt=$(patsubst %.mat, %.svg, $(models))
 
 # Web components
 node_modules = doc/site/.build/node_modules
+node_modules-dir = $(node_modules)/.stamp
 jquery=$(node_modules)/jquery/dist/jquery.min.js
 fontawesome=$(node_modules)/font-awesome/css/font-awesome.min.css
 bootstrap=$(node_modules)/bootstrap/dist/css/bootstrap.min.css
@@ -78,16 +79,17 @@ $(site)/mfiles/%.md : matlab/%.m $(site)/mfiles/.stamp doc/matdoc.py doc/matdocp
 	mkdir -p $(dir $(@))
 	$(PYTHON) doc/matdoc.py "$(<)" > "$(@)"
 
-$(node_modules):
+$(node_modules-dir):
 	mkdir -p $(node_modules)
+	touch -t 197301010000 $(node_modules-dir)
 
-$(bootstrap): $(node_modules)
+$(bootstrap): $(node_modules-dir)
 	cd $(node_modules) ; $(NPM) install bootstrap@3.3.6
 
-$(fontawesome):
+$(fontawesome): $(node_modules-dir)
 	cd $(node_modules) ; $(NPM) install font-awesome@4.5.0
 
-$(jquery):
+$(jquery): $(node_modules-dir)
 	cd $(node_modules) ; $(NPM) install jquery@2.1.4
 
 doc/site/site/index.html : doc/site/mkdocs.yml \
