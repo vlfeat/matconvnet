@@ -50,7 +50,7 @@ library:
 
 At this point MatConvNet should start compiling. If all goes well, you
 are ready to use the library. If not, you can try debugging the
-problem by running the complation script again in verbose mode:
+problem by running the compilation script again in verbose mode:
 
     > vl_compilenn('verbose', 1)
 

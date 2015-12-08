@@ -73,6 +73,6 @@ from the m-files using the `doc/matdoc.py` Python script. This is
 called by `doc/Makefile` as needed.
 
 `matdoc.py` does three things: it extracts the function documentation
-from a m-file, it interprets it using a pseud-Markdown syntax, and
+from a m-file, it interprets it using a pseudo-Markdown syntax, and
 then it writes the result in Markdown format for use with
 MkDocs. These are stored in `doc/site/docs/mfiles`.

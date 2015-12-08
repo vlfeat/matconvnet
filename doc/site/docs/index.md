@@ -9,7 +9,7 @@ Download</a>
 <div class="col-sm-3">
 <a href="http://www.github.com/vlfeat/matconvnet.git">
 <div class="menuicon"><span class="fa fa-github fa-2x"></span></div>
-Git repository</a>
+Code &amp; issues</a>
 </div>
 <div class="col-sm-3">
 <a href="pretrained/">
@@ -29,7 +29,7 @@ Discussion forum
 Networks* (CNNs) for computer vision applications. It is simple,
 efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
-recogntion, and text detection are available.
+recognition, and text detection are available.
 
 
 > **New:** [1.0-beta17](about.md#changes) tidies up the library in
@@ -37,12 +37,12 @@ recogntion, and text detection are available.
 > handled. Please check carefully the [changes](about.md#changes) to
 > see if any of this might impact your workflow. In particular, check
 > out the [`vl_simplenn_tidy`](mfiles/simplenn/vl_simplenn_tidy.md)
-> function to bring old models up to date. We also have openend a new
+> function to bring old models up to date. We also have opened a new
 > [discussion group](https://groups.google.com/d/forum/matconvnet) for
 > MatConvNet users (please use this group for discussions and GitHub
 > for reporting bugs or similar). cuDNN v4 is also supported (although
-> not all v4 features are used yet). Sevearl pre-trained ImageNet models
-> trained with MatConvNet using the suppied *example code* are now
+> not all v4 features are used yet). Several pre-trained ImageNet models
+> trained with MatConvNet using the supplied *example code* are now
 > available.
 >
 > **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
@@ -72,6 +72,7 @@ recogntion, and text detection are available.
 - <span class="fa fa-book"></span> [Manual](matconvnet-manual.pdf) (PDF)
 - <span class="fa fa-puzzle-piece"></span> [MATLAB functions](functions.md)
 - <span class="fa fa-question-circle"></span> [FAQ](faq.md)
+- <span class="fa fa-comments"></span> [Discussion group](https://groups.google.com/d/forum/matconvnet)
 
 ## Getting started
 - [Quick start guide](quick.md)
