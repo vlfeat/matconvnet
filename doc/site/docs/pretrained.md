@@ -245,7 +245,7 @@ The following table summarizes the MD5 checksums for the model files.
 |----------------------------------|-----------------------------------------|
 | 77ba5337725eb77362e9f318898af494 | imagenet-caffe-alex.mat                 |
 | 7001959cb66a3d62a86d52efff42f168 | imagenet-caffe-ref.mat                  |
-| e646ea925dee772e34794f01ebbe1bd8 | imagenet-googlenet-dag.mat              |
+| 051332469fbba9a002722f8a4302f031 | imagenet-googlenet-dag.mat              |
 | d79a53b79b62aee8a6c48755c29448fa | imagenet-matconvnet-alex.mat            |
 | 5c00773832303a2a9656afec097fb1c1 | imagenet-matconvnet-vgg-f.mat           |
 | 2ccbc5c4d77a56fbfc288ca810d12206 | imagenet-matconvnet-vgg-m.mat           |
@@ -259,10 +259,10 @@ The following table summarizes the MD5 checksums for the model files.
 | 2f83043a38e71e9dd9b1c5c0cb3ef6f9 | imagenet-vgg-s.mat                      |
 | 5a68244cf55c66fea59e23ee63cf56ef | imagenet-vgg-verydeep-16.mat            |
 | b9b4a9eb1c2fb3b50e1ec1aca6f22342 | imagenet-vgg-verydeep-19.mat            |
-| 210308543d1a510239ed85feb9b2e885 | pascal-fcn16s-dag.mat                   |
-| 2dea567374085a63ad6e83b7b08fa482 | pascal-fcn32s-dag.mat                   |
-| 8db84f60ba7d519de15cdf9d2c9a40e1 | pascal-fcn8s-dag.mat                    |
-| ad374f3aa98208847489e5c7bfd8e013 | pascal-fcn8s-tvg-dag.mat                |
+| fb58bc62a17e21dfed8c2b8648dda33b | pascal-fcn16s-dag.mat                   |
+| 98158e126af7e9100fd4f2a10e312c15 | pascal-fcn32s-dag.mat                   |
+| 64d7b41efddefc93bfeded599e2448cc | pascal-fcn8s-dag.mat                    |
+| 32d4f9ad465fa9d952c64069f8dae705 | pascal-fcn8s-tvg-dag.mat                |
 | 5069daad93d2937554325e30388463ca | vgg-face.mat                            |
 
 ## Older file versions
