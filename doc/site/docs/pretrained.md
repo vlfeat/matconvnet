@@ -39,8 +39,8 @@ These models are trained for face classification and verification.
     - [vgg-face](models/vgg-face.mat) [<i class="fa fa-file-image-o"></i>](models/vgg-face.svg)
 
     See the script `examples/cnn_vgg_face.m` for an example of using
-    VGG-Face in 'classifcation' mode. To use this for face
-    verification, extract the 4K dimensional features by removing the
+    VGG-Face for classification. To use this network for face
+    verification instead, extract the 4K dimensional features by removing the
     last classification layer and normalize the resulting vector in L2
     norm.
 
