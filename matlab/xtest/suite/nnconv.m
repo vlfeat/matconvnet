@@ -150,7 +150,8 @@ classdef nnconv < nntest
 
       for o = 1:numel(opts)
         for v = 1:numel(variants)
-          args = horzcat(variants{v}, opts{o}, {'verbose'}) ;
+          %args = horzcat(variants{v}, opts{o}, {'verbose'}) ;
+          args = horzcat(variants{v}, opts{o}) ;
           y = vl_nnconv(x,w,b,args{:}) ;
           dzdy = test.randn(size(y),'single') ;
           [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,args{:}) ;
