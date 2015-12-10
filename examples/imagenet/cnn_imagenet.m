@@ -22,7 +22,7 @@ opts.expDir = fullfile('data', ['imagenet12-' sfx]) ;
 opts.numFetchThreads = 12 ;
 opts.lite = false ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.train = struct([]) ;
+opts.train = struct('gpus', []) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 % -------------------------------------------------------------------------
