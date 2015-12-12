@@ -67,10 +67,11 @@ classdef nnsimplenn < nntest
       end
       % Verify the forget functionality for the backward pass
       res = vl_simplenn(test.net, test.x, 1, [], 'conserveMemory', true);
-      for ri = 2:numel(res)
+      for ri = 2:numel(res) - 1
         test.verifyEmpty(res(ri).x);
         test.verifyEmpty(res(ri).dzdx);
       end
+      % The values are kept in the first and last results
       for ri = 1:numel(res) - 1
         if strcmp(test.net.layers{ri}.type, 'conv')
           test.verifyNotEmpty(res(ri).dzdw);
@@ -108,7 +109,7 @@ classdef nnsimplenn < nntest
       end
 
       res = vl_simplenn(net_, test.x, 1, [], 'conserveMemory', true);
-      for ri = 2:numel(res)
+      for ri = 2:numel(res) - 1
         if ri - 1 == selLayer
           test.verifyNotEmpty(res(ri).x);
           test.verifyNotEmpty(res(ri).dzdx);

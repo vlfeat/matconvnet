@@ -332,7 +332,7 @@ for i=1:n
   end
 
   % optionally forget intermediate results
-  forget = opts.conserveMemory & ~(doder & n >= backPropLim) & i ~= n ;
+  forget = opts.conserveMemory & ~(doder & n >= backPropLim) ;
   if i > 1
     lp = net.layers{i-1} ;
     % forget RELU input, even for BPROP
