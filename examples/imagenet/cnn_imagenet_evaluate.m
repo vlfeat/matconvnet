@@ -40,7 +40,7 @@ net = load(opts.modelPath) ;
 if isfield(net, 'net') ;
   net = net.net ;
 end
-isDag = isfield(net, 'params') ;
+isDag = isa(net, 'dagnn.DagNN') ;
 
 if isDag
   opts.networkType = 'dagnn' ;
