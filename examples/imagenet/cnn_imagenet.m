@@ -6,7 +6,7 @@ function cnn_imagenet(varargin)
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.dataDir = fullfile('data','ILSVRC2012') ;
+opts.dataDir = fullfile(vl_rootnn, 'data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
 opts.networkType = 'simplenn' ;
 opts.batchNormalization = true ;
@@ -16,7 +16,7 @@ opts.weightInitMethod = 'gaussian' ;
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
 sfx = [sfx '-' opts.networkType] ;
-opts.expDir = fullfile('data', ['imagenet12-' sfx]) ;
+opts.expDir = fullfile(vl_rootnn, 'data', ['imagenet12-' sfx]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;
