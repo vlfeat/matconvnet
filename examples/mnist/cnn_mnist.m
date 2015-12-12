@@ -12,7 +12,8 @@ opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.useBatchNorm = false ;
 opts.networkType = 'simplenn' ;
 opts.train = struct() ;
-[opts, varargin] = vl_argparse(opts, varargin) ;
+opts = vl_argparse(opts, varargin) ;
+if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % --------------------------------------------------------------------
 %                                                         Prepare data
