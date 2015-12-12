@@ -53,6 +53,8 @@ if isnan(opts.val), opts.val = [] ; end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
+net = vl_simplenn_tidy(net); % fill in some eventually missing values
+net.layers{end-1}.precious = 1; % do not remove predictions, used for error
 vl_simplenn_display(net, 'batchSize', opts.batchSize) ;
 
 evaluateMode = isempty(opts.train) ;
