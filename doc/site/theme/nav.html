@@ -12,7 +12,9 @@
             </button>
 
             <!-- Main title -->
-            <a class="navbar-brand" href="{{ homepage_url }}">{{ site_name }}</a>
+            <a class="navbar-brand" href="{{ homepage_url }}">
+                <img src="{{ base_url }}/matconvnet-blue.svg" alt="{{ site_name }}" id="logo">
+            </a>
         </div>
 
         <!-- Expanded navigation -->
@@ -21,7 +23,7 @@
             <ul class="nav navbar-nav">
             {% for nav_item in nav %}
             {% if nav_item.children %}
-                <li class="dropdown{% if nav_item.active %} active{% endif %}">
+                <li id="{{ nav_item.title }}" class="dropdown{% if nav_item.active %} active{% endif %}">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ nav_item.title }} <b class="caret"></b></a>
                     <ul class="dropdown-menu">
                     {% for nav_item in nav_item.children %}
@@ -32,7 +34,7 @@
                     </ul>
                 </li>
             {% else %}
-                <li {% if nav_item.active %}class="active"{% endif %}>
+                <li id="{{ nav_item.title }}" {% if nav_item.active %}class="active"{% endif %}>
                     <a href="{{ nav_item.url }}">{{ nav_item.title }}</a>
                 </li>
             {% endif %}
