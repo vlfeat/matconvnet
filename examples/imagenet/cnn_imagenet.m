@@ -22,8 +22,9 @@ opts.expDir = fullfile(vl_rootnn, 'data', ['imagenet12-' sfx]) ;
 opts.numFetchThreads = 12 ;
 opts.lite = false ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.train = struct([]) ;
-[opts, varargin] = vl_argparse(opts, varargin) ;
+opts.train = struct() ;
+opts = vl_argparse(opts, varargin) ;
+if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % -------------------------------------------------------------------------
 %                                                             Prepare model
