@@ -169,7 +169,7 @@ classdef DagNN < handle
     %   with such a name is found, the value NaN is returned for the
     %   index.
     %
-    %   Variables can then be accessed as the `obj.layers(INDEX)`
+    %   Layers can then be accessed as the `obj.layers(INDEX)`
     %   property of the DaG.
     %
     %   Indexes are stable unless the DaG is modified (e.g. by adding
