@@ -1,4 +1,4 @@
-function cnn_imagenet(varargin)
+function [net, info] = cnn_imagenet(varargin)
 %CNN_IMAGENET   Demonstrates training a CNN on ImageNet
 %  This demo demonstrates training the AlexNet, VGG-F, VGG-S, VGG-M,
 %  VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
