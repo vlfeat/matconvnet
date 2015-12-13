@@ -10,6 +10,7 @@ classdef nndagnn < nntest
 
   methods (TestClassSetup)
     function initNet(test)
+      test.net = [];
       test.net.layers = {} ;
       test.net.layers{end+1} = struct('type', 'conv', ...
         'weights', {{randn(5,5,1,20, 'single'), zeros(1, 20, 'single')}}, ...
@@ -114,14 +115,17 @@ classdef nndagnn < nntest
           test.verifyEmpty(test.net.vars(ri).value);
         end
       end
+      test.net.vars(outputIdx).precious = false;
     end
   end
 
   methods
     function forward(test)
+      test.net.reset();
       test.net.eval({'x0', test.x, 'label', test.class});
     end
     function backward(test)
+      test.net.reset();
       test.net.eval({'x0', test.x, 'label', test.class}, {'x8', 1});
     end
   end
