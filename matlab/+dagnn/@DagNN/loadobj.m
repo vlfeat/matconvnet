@@ -14,6 +14,12 @@ function obj = loadobj(s)
 
 if ischar(s) s = load(s); end
 if isstruct(s)
+  assert(isfield(s, 'layers'), 'Invalid model.');
+  if ~isstruct(s.layers)
+    warning('The model appears to be `simplenn` model. Using `fromSimpleNN` instead.');
+    obj = dagnn.DagNN.fromSimpleNN(s);
+    return;
+  end
   obj = dagnn.DagNN() ;
   for l = 1:numel(s.layers)
     constr = str2func(s.layers(l).type) ;

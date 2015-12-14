@@ -154,7 +154,7 @@ vl::impl::nnconv_forward_blas(Context& context,
   }
 
 done:
-  return context.passError(error, "nnconv_forward_blas<>: ") ;
+  return context.passError(error, "nnconv_forward_blas<>") ;
 }
 
 template<vl::Device arch, typename type> inline vl::Error

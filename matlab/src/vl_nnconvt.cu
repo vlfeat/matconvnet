@@ -205,17 +205,17 @@ void mexFunction(int nout, mxArray *out[],
           mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
         }
         context.getCudaHelper().setCudnnConvolutionFwdPreference
-        ((std::isinf(x) ?
+        ((x==mxGetInf() ?
           CUDNN_CONVOLUTION_FWD_PREFER_FASTEST :
           CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
         context.getCudaHelper().setCudnnConvolutionBwdFilterPreference
-        ((std::isinf(x) ?
+        ((x==mxGetInf() ?
           CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
         context.getCudaHelper().setCudnnConvolutionBwdDataPreference
-        ((std::isinf(x) ?
+        ((x==mxGetInf() ?
           CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
@@ -381,9 +381,9 @@ void mexFunction(int nout, mxArray *out[],
 #if ENABLE_CUDNN
     if (context.getCudaHelper().getCudnnEnabled()) {
       mexPrintf("vl_nnconvt: cuDNN workspace used: "
-                "fwd %.2f MB"
-                ", bwd filter %.2f MB"
-                ", bwd data %.2f MB\n",
+                "fwd %.6g MB"
+                ", bwd filter %.6g MB"
+                ", bwd data %.6g MB\n",
                 (double)context.getCudaHelper().getCudnnConvolutionFwdWorkSpaceUsed() / (1024*1024),
                 (double)context.getCudaHelper().getCudnnConvolutionBwdFilterWorkSpaceUsed() / (1024*1024),
                 (double)context.getCudaHelper().getCudnnConvolutionBwdDataWorkSpaceUsed() / (1024*1024)) ;

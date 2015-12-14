@@ -127,5 +127,46 @@ classdef nnconv < nntest
       test.der(@(x) vl_nnconv(x,w,[]), x, dzdy, dzdx, test.range * 1e-2) ;
       test.der(@(w) vl_nnconv(x,w,[]), w, dzdy, dzdw, test.range * 1e-2) ;
     end
+
+    function test_gpu_correctnes(test)
+      if ~strcmp(test.currentDevice, 'gpu'), return ; end
+      opts = {...
+        {'pad', [0 0 0 0], 'stride', [1 1]}, ...
+        {'pad', [5 5 8 8], 'stride', [1 1]}, ...
+        {'pad', [5 5 8 8], 'stride', [3 2]}} ;
+
+      variants = {{'nocudnn'}, ...
+                  {'cudnn', 'cudnnworkspacelimit', 0}, ...
+                  {'cudnn', 'cudnnworkspacelimit', +inf}} ;
+
+      fh = 11 ;
+      fw = 11 ;
+      fn = 10 ;
+      n = 8 ;
+      depth = 8 ;
+      x = test.randn(128,128,depth,n,'single') ;
+      w = test.randn(fh,fw,depth,fn,'single') ;
+      b = test.randn(1,fn,'single') ;
+
+      for o = 1:numel(opts)
+        for v = 1:numel(variants)
+          %args = horzcat(variants{v}, opts{o}, {'verbose'}) ;
+          args = horzcat(variants{v}, opts{o}) ;
+          y = vl_nnconv(x,w,b,args{:}) ;
+          dzdy = test.randn(size(y),'single') ;
+          [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,args{:}) ;
+
+          dzdy_ = gather(dzdy) ;
+          y_ = vl_nnconv(gather(x), gather(w), gather(b), opts{o}{:}) ;
+          [dzdx_,dzdw_,dzdb_] = vl_nnconv(gather(x),gather(w),gather(b), ...
+                                          gather(dzdy), opts{o}{:}) ;
+
+          test.eq(y, y_) ;
+          test.eq(dzdx, dzdx_) ;
+          test.eq(dzdw, dzdw_) ;
+          test.eq(dzdb, dzdb_) ;
+        end
+      end
+    end
   end
 end

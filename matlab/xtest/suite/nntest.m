@@ -4,6 +4,7 @@ classdef nntest < matlab.unittest.TestCase
   end
 
   properties
+    currentDevice
     randn
     rand
     toDevice
@@ -14,6 +15,7 @@ classdef nntest < matlab.unittest.TestCase
     function generators(test, device)
       range = 128 ;
       seed = 0 ;
+      test.currentDevice = device ;
       switch device
         case 'gpu'
           gpuDevice ;

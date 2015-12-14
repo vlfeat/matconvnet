@@ -1,6 +1,6 @@
 function net = cnn_mnist_init(varargin)
 % CNN_MNIST_LENET Initialize a CNN similar for MNIST
-opts.useBatchNorm = true ;
+opts.batchNormalization = true ;
 opts.networkType = 'simplenn' ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -39,7 +39,7 @@ net.layers{end+1} = struct('type', 'conv', ...
 net.layers{end+1} = struct('type', 'softmaxloss') ;
 
 % optionally switch to batch normalization
-if opts.useBatchNorm
+if opts.batchNormalization
   net = insertBnorm(net, 1) ;
   net = insertBnorm(net, 4) ;
   net = insertBnorm(net, 7) ;

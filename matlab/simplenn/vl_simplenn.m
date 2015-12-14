@@ -43,7 +43,8 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %      Aggressively delete intermediate results. This in practice has
 %      a very small performance hit and allows training much larger
 %      models. However, it can be useful to disable it for
-%      debugging.
+%      debugging. It is also possible to preserve individual layer outputs
+%      by setting `net.layers{...}.precious` to `true`.
 %
 %   `CuDNN`:: `true`
 %      Use CuDNN when available.
@@ -215,6 +216,7 @@ opts.backPropDepth = +inf ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
+backPropLim = max(n - opts.backPropDepth + 1, 1);
 
 if (nargin <= 2) || isempty(dzdy)
   doder = false ;
@@ -330,15 +332,19 @@ for i=1:n
   end
 
   % optionally forget intermediate results
-  forget = opts.conserveMemory ;
-  forget = forget & (~doder || strcmp(l.type, 'relu')) ;
-  forget = forget & ~(strcmp(l.type, 'loss') || strcmp(l.type, 'softmaxloss')) ;
-  forget = forget & (~isfield(l, 'rememberOutput') || ~l.rememberOutput) ;
+  forget = opts.conserveMemory & ~(doder & n >= backPropLim) ;
+  if i > 1
+    lp = net.layers{i-1} ;
+    % forget RELU input, even for BPROP
+    forget = forget & (~doder | (strcmp(l.type, 'relu') & ~lp.precious)) ;
+    forget = forget & ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
+    forget = forget & ~lp.precious ;
+  end
   if forget
     res(i).x = [] ;
   end
 
-  if gpuMode & opts.sync
+  if gpuMode && opts.sync
     wait(gpuDevice) ;
   end
   res(i).time = toc(res(i).time) ;
@@ -445,10 +451,11 @@ if doder
         end
         dzdw = [] ;
     end
-    if opts.conserveMemory
+    if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
       res(i+1).dzdx = [] ;
+      res(i+1).x = [] ;
     end
-    if gpuMode & opts.sync
+    if gpuMode && opts.sync
       wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;

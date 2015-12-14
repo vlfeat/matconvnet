@@ -1,4 +1,4 @@
-function cnn_imagenet(varargin)
+function [net, info] = cnn_imagenet(varargin)
 %CNN_IMAGENET   Demonstrates training a CNN on ImageNet
 %  This demo demonstrates training the AlexNet, VGG-F, VGG-S, VGG-M,
 %  VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
@@ -6,7 +6,7 @@ function cnn_imagenet(varargin)
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.dataDir = fullfile('data','ILSVRC2012') ;
+opts.dataDir = fullfile(vl_rootnn, 'data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
 opts.networkType = 'simplenn' ;
 opts.batchNormalization = true ;
@@ -16,14 +16,15 @@ opts.weightInitMethod = 'gaussian' ;
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
 sfx = [sfx '-' opts.networkType] ;
-opts.expDir = fullfile('data', ['imagenet12-' sfx]) ;
+opts.expDir = fullfile(vl_rootnn, 'data', ['imagenet12-' sfx]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;
 opts.lite = false ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.train = struct([]) ;
-[opts, varargin] = vl_argparse(opts, varargin) ;
+opts.train = struct() ;
+opts = vl_argparse(opts, varargin) ;
+if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % -------------------------------------------------------------------------
 %                                                             Prepare model

@@ -41,6 +41,7 @@ opts.cudnn = true ;
 opts.errorFunction = 'multiclass' ;
 opts.errorLabels = {} ;
 opts.plotDiagnostics = false ;
+opts.plotEval = true;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -53,6 +54,8 @@ if isnan(opts.val), opts.val = [] ; end
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
+net = vl_simplenn_tidy(net); % fill in some eventually missing values
+net.layers{end-1}.precious = 1; % do not remove predictions, used for error
 vl_simplenn_display(net, 'batchSize', opts.batchSize) ;
 
 evaluateMode = isempty(opts.train) ;
@@ -162,35 +165,37 @@ for epoch=start+1:opts.numEpochs
     fprintf('%s: model saved in %.2g s\n', mfilename, toc) ;
   end
 
-  figure(1) ; clf ;
-  hasError = isa(opts.errorFunction, 'function_handle') ;
-  subplot(1,1+hasError,1) ;
-  if ~evaluateMode
-    semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ;
-    hold on ;
-  end
-  semilogy(1:epoch, info.val.objective, '.--') ;
-  xlabel('training epoch') ; ylabel('energy') ;
-  grid on ;
-  h=legend(sets) ;
-  set(h,'color','none');
-  title('objective') ;
-  if hasError
-    subplot(1,2,2) ; leg = {} ;
+  if opts.plotEval
+    figure(1) ; clf ;
+    hasError = isa(opts.errorFunction, 'function_handle') ;
+    subplot(1,1+hasError,1) ;
     if ~evaluateMode
-      plot(1:epoch, info.train.error', '.-', 'linewidth', 2) ;
+      semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ;
       hold on ;
-      leg = horzcat(leg, strcat('train ', opts.errorLabels)) ;
     end
-    plot(1:epoch, info.val.error', '.--') ;
-    leg = horzcat(leg, strcat('val ', opts.errorLabels)) ;
-    set(legend(leg{:}),'color','none') ;
+    semilogy(1:epoch, info.val.objective, '.--') ;
+    xlabel('training epoch') ; ylabel('energy') ;
     grid on ;
-    xlabel('training epoch') ; ylabel('error') ;
-    title('error') ;
+    h=legend(sets) ;
+    set(h,'color','none');
+    title('objective') ;
+    if hasError
+      subplot(1,2,2) ; leg = {} ;
+      if ~evaluateMode
+        plot(1:epoch, info.train.error', '.-', 'linewidth', 2) ;
+        hold on ;
+        leg = horzcat(leg, strcat('train ', opts.errorLabels)) ;
+      end
+      plot(1:epoch, info.val.error', '.--') ;
+      leg = horzcat(leg, strcat('val ', opts.errorLabels)) ;
+      set(legend(leg{:}),'color','none') ;
+      grid on ;
+      xlabel('training epoch') ; ylabel('error') ;
+      title('error') ;
+    end
+    drawnow ;
+    print(1, modelFigPath, '-dpdf') ;
   end
-  drawnow ;
-  print(1, modelFigPath, '-dpdf') ;
 end
 
 % -------------------------------------------------------------------------
