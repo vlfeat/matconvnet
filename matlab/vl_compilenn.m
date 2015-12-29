@@ -546,7 +546,7 @@ function cuda_root = search_cuda_devkit(opts)
 % -------------------------------------------------------------------------
 % This function tries to to locate a working copy of the CUDA Devkit.
 
-opts.verbose && fprintf(['%s:\tCUDA: seraching for the CUDA Devkit' ...
+opts.verbose && fprintf(['%s:\tCUDA: searching for the CUDA Devkit' ...
                     ' (use the option ''CudaRoot'' to override):\n'], mfilename);
 
 % Propose a number of candidate paths for NVCC
