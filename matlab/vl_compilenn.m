@@ -411,15 +411,17 @@ end
 srcs = horzcat(lib_src,mex_src) ;
 for i = 1:numel(horzcat(lib_src, mex_src))
   [~,~,ext] = fileparts(srcs{i}) ; ext(1) = [] ;
+  objfile = toobj(bld_dir,srcs{i});
   if strcmp(ext,'cu')
     if strcmp(opts.cudaMethod,'nvcc')
-      nvcc_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.nvcc) ;
+      nvcc_compile(opts, srcs{i}, objfile, flags.nvcc) ;
     else
-      mex_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.mexcu) ;
+      mex_compile(opts, srcs{i}, objfile, flags.mexcu) ;
     end
   else
-    mex_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.mexcc) ;
+    mex_compile(opts, srcs{i}, objfile, flags.mexcc) ;
   end
+  assert(exist(objfile, 'file') ~= 0, 'Compilation of %s failed.', objfile);
 end
 
 % Link into MEX files
