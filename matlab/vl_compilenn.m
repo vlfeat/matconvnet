@@ -55,7 +55,8 @@ function vl_compilenn(varargin)
 %      `vl_imreadjpeg`.
 %
 %   `EnableCudnn`:: `false`
-%      Set to `true` to compile CuDNN support.
+%      Set to `true` to compile CuDNN support. See CuDNN documentation for
+%      the Hardware/CUDA version requirements.
 %
 %   `CudnnRoot`:: `'local/'`
 %      Directory containing the unpacked binaries and header files of
@@ -94,9 +95,10 @@ function vl_compilenn(varargin)
 %
 %     | MATLAB version | Release | CUDA Devkit |
 %     |----------------|---------|-------------|
-%     | 2013b          | 2013b   | 5.5         |
-%     | 2014a          | 2014a   | 5.5         |
-%     | 2014b          | 2014b   | 6.0         |
+%     | 8.2            | 2013b   | 5.5         |
+%     | 8.3            | 2014a   | 5.5         |
+%     | 8.4            | 2014b   | 6.0         |
+%     | 8.6            | 2015b   | Latest(7.5) |
 %
 %     A different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
@@ -109,7 +111,7 @@ function vl_compilenn(varargin)
 %     Toolkit 6.5.
 %   * Mac OS X 10.9 and 10.10, MATLAB R2013a and R2013b, Xcode, CUDA
 %     Toolkit 5.5.
-%   * GNU/Linux, MATALB R2014a, gcc, CUDA Toolkit 5.5.
+%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc, CUDA Toolkit 5.5/6.5/7.5.
 %
 %   Furthermore your GPU card must have ComputeCapability >= 2.0 (see
 %   output of `gpuDevice()`) in order to be able to run the GPU code.
