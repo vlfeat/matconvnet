@@ -552,7 +552,7 @@ opts.verbose && fprintf(['%s:\tCUDA: seraching for the CUDA Devkit' ...
 % Propose a number of candidate paths for NVCC
 paths = {getenv('MW_NVCC_PATH')} ;
 paths = [paths, which_nvcc(opts)] ;
-for v = {'5.5', '6.0', '6.5', '7.0'}
+for v = {'5.5', '6.0', '6.5', '7.0', '7.5'}
   switch computer('arch')
     case 'glnxa64'
       paths{end+1} = sprintf('/usr/local/cuda-%s/bin/nvcc', char(v)) ;
