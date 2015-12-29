@@ -182,7 +182,7 @@ mex_src = {} ;
 
 % Files that are compiled as CPP or CU depending on whether GPU support
 % is enabled.
-if opts.enableGpu, ext = 'cu' ; else, ext='cpp' ; end
+if opts.enableGpu, ext = 'cu' ; else ext='cpp' ; end
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['data.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['datamex.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnconv.' ext]) ;
@@ -249,6 +249,11 @@ if opts.enableGpu
     case 'maci64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib') ;
     case 'glnxa64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib64') ;
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
+  end
+
+  % Set the nvcc method as default for Win platforms
+  if strcmp(arch, 'win64') && isempty(opts.cudaMethod)
+    opts.cudaMethod = 'nvcc';
   end
 
   % Activate the CUDA Devkit
