@@ -582,7 +582,8 @@ index = find([nvcc.isvalid]) ;
 if isempty(index)
   error('Could not find a valid NVCC executable\n') ;
 end
-nvcc = nvcc(index(1)) ;
+[~, newest] = max([nvcc(index).version]);
+nvcc = nvcc(index(newest)) ;
 cuda_root = fileparts(fileparts(nvcc.path)) ;
 
 if opts.verbose
