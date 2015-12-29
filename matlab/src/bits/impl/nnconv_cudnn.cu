@@ -214,14 +214,20 @@ namespace vl { namespace impl {
       if (biases) {
         float alpha = 1.0f ;
         float beta = 1.0f ;
-        CHECK(cudnnAddTensor(handle,
 #if (CUDNN_VERSION < 4000)
+        CHECK(cudnnAddTensor(handle,
                              CUDNN_ADD_SAME_C,
-#endif
                              &alpha,
                              biasesDesc, biases.getMemory() + biasesGrpOffset,
                              &beta,
                              outputDesc, output.getMemory() + outputGrpOffset)) ;
+#else
+        CHECK(cudnnAddTensor(handle,
+                             &alpha,
+                             biasesDesc, biases.getMemory() + biasesGrpOffset,
+                             &beta,
+                             outputDesc, output.getMemory() + outputGrpOffset)) ;
+#endif
       }
     }
 
@@ -462,13 +468,19 @@ namespace vl { namespace impl {
         ptrdiff_t dataGrpOffset = (data.getHeight() * data.getWidth() * derFilters.getDepth()) *  g ;
         float alpha = 1 ;
         float beta = 0 ;
-#if (CUDNN_VERSION >= 3000)
-        CHECK(
 #if (CUDNN_VERSION >= 4000)
-              cudnnConvolutionBackwardFilter
-#else
-              cudnnConvolutionBackwardFilter_v3
-#endif
+        CHECK(cudnnConvolutionBackwardFilter
+              (handle,
+               &alpha,
+               dataDesc, data.getMemory() + dataGrpOffset,
+               derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
+               convDesc,
+               context.getCudaHelper().cudnnConvolutionBwdFilterAlgo,
+               workSpace, workSpaceSize,
+               &beta,
+               filtersDesc, derFilters.getMemory() + filtersGrpOffset)) ;
+#elif (CUDNN_VERSION >= 3000)
+        CHECK(cudnnConvolutionBackwardFilter_v3
               (handle,
                &alpha,
                dataDesc, data.getMemory() + dataGrpOffset,
@@ -495,13 +507,19 @@ namespace vl { namespace impl {
         float alpha = 1 ;
         float beta = 0 ;
 
-#if (CUDNN_VERSION >= 3000)
-        CHECK(
 #if (CUDNN_VERSION >= 4000)
-              cudnnConvolutionBackwardData
-#else
-              cudnnConvolutionBackwardData_v3
-#endif
+        CHECK(cudnnConvolutionBackwardData
+              (handle,
+               &alpha,
+               filtersDesc, filters.getMemory() + filtersGrpOffset,
+               derOutputDesc, derOutput.getMemory() + derOutputGrpOffset,
+               convDesc,
+               context.getCudaHelper().cudnnConvolutionBwdDataAlgo,
+               workSpace, workSpaceSize,
+               &beta,
+               dataDesc, derData.getMemory() + dataGrpOffset)) ;
+#elif (CUDNN_VERSION >= 3000)
+        CHECK(cudnnConvolutionBackwardData_v3
               (handle,
                &alpha,
                filtersDesc, filters.getMemory() + filtersGrpOffset,

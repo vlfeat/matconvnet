@@ -17,7 +17,7 @@ the terms of the BSD license (see the COPYING file).
 #include "nnbias_cudnn.hpp"
 #include "../datacu.hpp"
 #include <assert.h>
-#include<iostream>
+#include <iostream>
 
 using namespace vl ;
 
@@ -77,14 +77,20 @@ vl::impl::nnbias_forward_cudnn<float>(vl::Context& context,
 
     float alpha = biasesMult ;
     float beta = outputMult ;
-    CHECK(cudnnAddTensor(handle,
 #if (CUDNN_VERSION < 4000)
+    CHECK(cudnnAddTensor(handle,
                          CUDNN_ADD_SAME_C,
-#endif
                          &alpha,
                          biasesDesc, biases.getMemory(),
                          &beta,
                          outputDesc, output.getMemory())) ;
+#else
+    CHECK(cudnnAddTensor(handle,
+                         &alpha,
+                         biasesDesc, biases.getMemory(),
+                         &beta,
+                         outputDesc, output.getMemory())) ;
+#endif
     outputMult = 1 ;
   }
 
@@ -101,14 +107,20 @@ vl::impl::nnbias_forward_cudnn<float>(vl::Context& context,
 
     float alpha = dataMult ;
     float beta = outputMult ;
-    CHECK(cudnnAddTensor(handle,
 #if (CUDNN_VERSION < 4000)
+    CHECK(cudnnAddTensor(handle,
                          CUDNN_ADD_FULL_TENSOR,
-#endif
                          &alpha,
                          dataDesc, data.getMemory(),
                          &beta,
                          outputDesc, output.getMemory()));
+#else
+    CHECK(cudnnAddTensor(handle,
+                         &alpha,
+                         dataDesc, data.getMemory(),
+                         &beta,
+                         outputDesc, output.getMemory()));
+#endif
   }
 
   /* cleanup */
