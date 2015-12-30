@@ -157,7 +157,7 @@ for l = 1:numel(net.layers)
       if isfield(net.layers{l},'weightDecay')
         params(1).weightDecay = net.layers{l}.weightDecay(1) ;
         params(2).weightDecay = net.layers{l}.weightDecay(2) ;
-        params(2).weightDecay = 0 ;
+        params(3).weightDecay = 0 ;
       end
 
     otherwise
