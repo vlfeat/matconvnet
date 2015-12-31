@@ -228,7 +228,7 @@ void mexFunction(int nout, mxArray *out[],
       padRight >= poolWidth ||
       padTop >= poolHeight  ||
       padBottom >= poolHeight) {
-    mexErrMsgTxt("A padding value is larger or equal than the size of the pooling window.") ;
+    mexErrMsgTxt("A padding value is larger or equal to the size of the pooling window.") ;
   }
 
   /* Get the output geometry */

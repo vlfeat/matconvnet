@@ -50,7 +50,7 @@ vl::nnpooling_forward(vl::Context& context,
           assert(false) ;
           return vl::vlErrorUnknown ;
         case vl::vlPoolingAverage:
-          status = vl::impl::pooling_average_forward<CPU,float>
+          status = vl::impl::pooling_average<CPU,float>::forward
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
            poolHeight, poolWidth,
@@ -59,7 +59,7 @@ vl::nnpooling_forward(vl::Context& context,
            padLeft, padRight) ;
           break ;
         case vl::vlPoolingMax:
-          status = vl::impl::pooling_max_forward<CPU,float>
+          status = vl::impl::pooling_max<CPU,float>::forward
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
            poolHeight, poolWidth,
@@ -91,7 +91,7 @@ vl::nnpooling_forward(vl::Context& context,
           assert(false) ;
           return vl::vlErrorUnknown ;
         case vl::vlPoolingAverage:
-          status = vl::impl::pooling_average_forward<GPU,float>
+          status = vl::impl::pooling_average<GPU,float>::forward
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
            poolHeight, poolWidth,
@@ -100,7 +100,7 @@ vl::nnpooling_forward(vl::Context& context,
            padLeft, padRight) ;
           break ;
         case vl::vlPoolingMax:
-          status = vl::impl::pooling_max_forward<GPU,float>
+          status = vl::impl::pooling_max<GPU,float>::forward
           ((float*)output.getMemory(), (float const*)data.getMemory(),
            data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(),
            poolHeight, poolWidth,
@@ -115,7 +115,7 @@ vl::nnpooling_forward(vl::Context& context,
       break ;
 #endif
   }
-  return context.passError(status, "nnpooling_forward: ") ;
+  return context.passError(status, "nnpooling_forward") ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -145,7 +145,7 @@ vl::nnpooling_backward(Context& context,
           assert(false) ;
           return vl::vlErrorUnknown ;
         case vl::vlPoolingAverage:
-          status = vl::impl::pooling_average_backward<CPU,float>
+          status = vl::impl::pooling_average<CPU,float>::backward
           ((float*)derData.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
            poolHeight, poolWidth,
@@ -154,7 +154,7 @@ vl::nnpooling_backward(Context& context,
            padLeft, padRight) ;
           break ;
         case vl::vlPoolingMax:
-          status = vl::impl::pooling_max_backward<CPU,float>
+          status = vl::impl::pooling_max<CPU,float>::backward
           ((float*)derData.getMemory(), (float const*)data.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
            poolHeight, poolWidth,
@@ -180,7 +180,7 @@ vl::nnpooling_backward(Context& context,
           assert(false) ;
           return vl::vlErrorUnknown ;
         case vl::vlPoolingAverage:
-          status = vl::impl::pooling_average_backward<GPU,float>
+          status = vl::impl::pooling_average<GPU,float>::backward
           ((float*)derData.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
            poolHeight, poolWidth,
@@ -189,7 +189,7 @@ vl::nnpooling_backward(Context& context,
            padLeft, padRight) ;
           break ;
         case vl::vlPoolingMax:
-          status = vl::impl::pooling_max_backward<GPU,float>
+          status = vl::impl::pooling_max<GPU,float>::backward
           ((float*)derData.getMemory(), (float const*)data.getMemory(), (float const*)derPooled.getMemory(),
            derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(),
            poolHeight, poolWidth,
@@ -199,10 +199,10 @@ vl::nnpooling_backward(Context& context,
           break ;
       }
       if (status == vlErrorCuda) {
-        context.setError(context.getCudaHelper().catchCudaError("pooling_*_backward: ")) ;
+        context.setError(context.getCudaHelper().catchCudaError("pooling_*_backward")) ;
       }
       break ;
 #endif
   }
-  return context.passError(status, "nnpooling_backward: ") ;
+  return context.passError(status, "nnpooling_backward") ;
 }
