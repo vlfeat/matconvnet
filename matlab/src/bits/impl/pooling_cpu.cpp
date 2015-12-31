@@ -4,12 +4,12 @@
 // @author Karel Lenc
 
 /*
- Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
- All rights reserved.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "pooling.hpp"
 #include "../data.hpp"
@@ -235,7 +235,8 @@ namespace vl { namespace impl {
              size_t padTop, size_t padBottom,
              size_t padLeft, size_t padRight)
     {
-      pooling_backward_cpu<type, acc_max<type> > (derData, data, derOutput,
+      pooling_backward_cpu<type, acc_max<type> > (derData,
+                                                  data, derOutput,
                                                   height, width, depth,
                                                   poolHeight, poolWidth,
                                                   strideY, strideX,
@@ -274,7 +275,8 @@ namespace vl { namespace impl {
              size_t padTop, size_t padBottom,
              size_t padLeft, size_t padRight)
     {
-      pooling_backward_cpu<type, acc_sum<type> > (derData, NULL, derPooled,
+      pooling_backward_cpu<type, acc_sum<type> > (derData,
+                                                  NULL, derPooled,
                                                   height, width, depth,
                                                   poolHeight, poolWidth,
                                                   strideY, strideX,
@@ -289,7 +291,7 @@ namespace vl { namespace impl {
 template struct vl::impl::pooling_max<vl::CPU, float> ;
 template struct vl::impl::pooling_average<vl::CPU, float> ;
 
-#ifdef VL_ENABLE_DOUBLE
+#ifdef ENABLE_DOUBLE
 template struct vl::impl::pooling_max<vl::CPU, double> ;
 template struct vl::impl::pooling_average<vl::CPU, double> ;
 #endif

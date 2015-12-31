@@ -70,7 +70,7 @@ void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   bool backMode = false ;
-  float epsilon = 10E-4 ;
+  double epsilon = 10E-4 ;
 
   // For the moment true need to be fixed
   bool computeDerData = true ;
@@ -109,7 +109,7 @@ void mexFunction(int nout, mxArray *out[],
         if (!vlmxIsPlainScalar(optarg)) {
           mexErrMsgTxt("EPSILON is not a plain scalar.") ;
         }
-        epsilon = (float)mxGetPr(optarg)[0] ;
+        epsilon = mxGetPr(optarg)[0] ;
         break ;
       case opt_moments:
         momentsArray = optarg ;
@@ -127,76 +127,88 @@ void mexFunction(int nout, mxArray *out[],
   vl::MexTensor moments(context) ;
 
   data.init(in[IN_DATA]) ;
+  data.reshape(4) ;
+
   multipliers.init(in[IN_MULTIPLIERS]) ;
+  multipliers.reshape(1) ;
+
   biases.init(in[IN_BIASES]) ;
-  if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
+  biases.reshape(1) ;
+
+  if (backMode) {
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    derOutput.reshape(4) ;
+  }
+
   if (givenMomentsMode) {
     moments.init(momentsArray) ;
+    moments.reshape(2) ;
   }
 
   /* Check for GPU/data class consistency */
   if (! vl::areCompatible(data, multipliers)) {
-    mexErrMsgTxt("DATA and MULTIPLIERS are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and MULTIPLIERS do not have compatible formats.") ;
   }
   if (! vl::areCompatible(data, biases)) {
-    mexErrMsgTxt("DATA and BIASES are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and BIASES do not have compatible formats.") ;
   }
   if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
   }
-  if (backMode && (data.getGeometry() != derOutput.getGeometry())) {
+  if (backMode && (data.getShape() != derOutput.getShape())) {
     mexErrMsgTxt("DATA and DEROUTPUT do not have the same size.") ;
   }
   if (givenMomentsMode && ! vl::areCompatible(data, moments))
   {
-    mexErrMsgTxt("DATA and MOMENTS are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and MOMENTS do not have compatible formats.") ;
   }
 
   /* Get the filter geometry */
-  vl::TensorGeometry multipliersGeom(multipliers) ;
+  vl::TensorShape multipliersGeom(multipliers) ;
   if (multipliersGeom.getHeight() != data.getDepth()) {
     mexErrMsgTxt("The MULTIPLIERS size does not match the DATA depth.") ;
   }
-  vl::TensorGeometry biasesGeom(biases);
+  vl::TensorShape biasesGeom(biases);
   if (biasesGeom.getHeight() != data.getDepth()) {
     mexErrMsgTxt("The BIASES size does not match the DATA depth.") ;
   }
   if (givenMomentsMode) {
-    vl::TensorGeometry momentsGeom(moments) ;
+    vl::TensorShape momentsGeom(moments) ;
     if (momentsGeom.getNumElements() != 2*data.getDepth()) {
       mexErrMsgTxt("The MOMENTS size does not match the DATA depth.") ;
     }
   }
 
   /* Create output buffers */
-  vl::Device type = data.getMemoryType() ;
+  vl::Device deviceType = data.getDeviceType() ;
+  vl::Type dataType = data.getDataType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
   vl::MexTensor derMultipliers(context) ;
   vl::MexTensor derBiases(context) ;
 
   if (returnMomentsMode & !givenMomentsMode) {
-    vl::TensorGeometry momentsGeom(data.getDepth(), 2, 1, 1) ;
-    moments.init(type, momentsGeom) ;
+    vl::TensorShape momentsGeom(data.getDepth(), 2, 1, 1) ;
+    moments.init(deviceType, dataType, momentsGeom) ;
   }
 
   if (!backMode) {
-    output.init(type, data.getGeometry()) ;
+    output.init(deviceType, dataType, data.getShape()) ;
   } else {
     if (computeDerData) {
-      derData.init(type, data.getGeometry()) ;
+      derData.init(deviceType, dataType, data.getShape()) ;
     }
     if (computeDerMultipliers) {
-      derMultipliers.init(type, multipliers.getGeometry()) ;
+      derMultipliers.init(deviceType, dataType, multipliers.getShape()) ;
     }
     if (computeDerBiases) {
-      derBiases.init(type, biases.getGeometry()) ;
+      derBiases.init(deviceType, dataType, biases.getShape()) ;
     }
   }
 
   if (verbosity > 0) {
     mexPrintf("vl_nnbnorm: mode %s; %s; moments %s/%s\n",
-              (data.getMemoryType()==vl::GPU)?"gpu":"cpu",
+              (data.getDeviceType()==vl::GPU)?"gpu":"cpu",
               backMode?"backward":"forward",
               givenMomentsMode?"given":"computed",
               returnMomentsMode?"returned":"discared") ;

@@ -4,12 +4,12 @@
 // @author Karel Lenc
 
 /*
- Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
- All rights reserved.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "pooling.hpp"
 #include "../datacu.hpp"
@@ -159,6 +159,20 @@ pooling_max_backward_with_pooled_data
 }
 #endif
 
+// an implementation of atomicAdd() for double (really slow)
+__device__ double atomicAdd(double* address, double val)
+{
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val +
+                                         __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+
 template<typename T> __global__ void
 pooling_max_backward_kernel
 (T* derData,
@@ -292,7 +306,7 @@ namespace vl { namespace impl {
       int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
       int pooledVolume = pooledWidth * pooledHeight * depth ;
 
-      pooling_max_kernel<float>
+      pooling_max_kernel<type>
       <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (pooled, data,
        pooledHeight, pooledWidth, pooledVolume,
@@ -319,7 +333,7 @@ namespace vl { namespace impl {
       int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
       int pooledVolume = pooledWidth * pooledHeight * depth ;
 
-      pooling_max_backward_kernel<float>
+      pooling_max_backward_kernel<type>
       <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData, data, derOutput,
        pooledHeight, pooledWidth, pooledVolume,
@@ -349,7 +363,7 @@ namespace vl { namespace impl {
       int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
       int pooledVolume = pooledWidth * pooledHeight * depth ;
 
-      pooling_average_kernel<float>
+      pooling_average_kernel<type>
       <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (pooled, data,
        pooledHeight, pooledWidth, pooledVolume,
@@ -375,7 +389,7 @@ namespace vl { namespace impl {
       int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
       int dataVolume = width * height * depth ;
 
-      pooling_average_backward_kernel<float>
+      pooling_average_backward_kernel<type>
       <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData, derPooled,
        dataVolume,
@@ -396,7 +410,7 @@ namespace vl { namespace impl {
 template struct vl::impl::pooling_max<vl::GPU, float> ;
 template struct vl::impl::pooling_average<vl::GPU, float> ;
 
-#ifdef VL_ENABLE_DOUBLE
+#ifdef ENABLE_DOUBLE
 template struct vl::impl::pooling_max<vl::GPU, double> ;
 template struct vl::impl::pooling_average<vl::GPU, double> ;
 #endif

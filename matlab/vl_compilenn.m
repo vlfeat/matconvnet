@@ -43,6 +43,10 @@ function vl_compilenn(varargin)
 %   `EnableImreadJpeg`:: `true`
 %      Set this option to `true` to compile `vl_imreadjpeg`.
 %
+%   `EnableDouble`:: `true`
+%      Set this optino to `true` to compile the support for DOUBLE
+%      data types.
+%
 %   `ImageLibrary`:: `libjpeg` (Linux), `gdiplus` (Windows), `quartz` (Mac)
 %      The image library to use for `vl_impreadjpeg`.
 %
@@ -141,6 +145,7 @@ addpath(fullfile(root, 'matlab')) ;
 opts.enableGpu        = false;
 opts.enableImreadJpeg = true;
 opts.enableCudnn      = false;
+opts.enableDouble     = true;
 opts.imageLibrary = [] ;
 opts.imageLibraryCompileFlags = {} ;
 opts.imageLibraryLinkFlags = [] ;
@@ -297,6 +302,9 @@ if opts.enableGpu, flags.cc{end+1} = '-DENABLE_GPU' ; end
 if opts.enableCudnn,
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
   flags.cc{end+1} = ['-I' opts.cudnnIncludeDir] ;
+end
+if opts.enableDouble
+  flags.cc{end+1} = '-DENABLE_DOUBLE' ;
 end
 flags.link{end+1} = '-lmwblas' ;
 switch arch

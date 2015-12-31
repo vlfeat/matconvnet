@@ -4,7 +4,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi.
+Copyright (C) 2015-16 Sebastien Ehrhardt and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -151,7 +151,7 @@ batch_normalize_backward(T * derData,
 }
 
 /* ---------------------------------------------------------------- */
-/*                                                  bnorm functions */
+/*                                                           driver */
 /* ---------------------------------------------------------------- */
 
 namespace vl { namespace impl {
@@ -171,7 +171,7 @@ namespace vl { namespace impl {
                           T const* data,
                           T const* multipliers,
                           T const* biases,
-                          int height, int width, int depth, int num)
+                          size_t height, size_t width, size_t depth, size_t num)
     {
       int WH = height * width ;
       for(int channel = 0; channel < depth; ++channel) {
@@ -197,7 +197,7 @@ namespace vl { namespace impl {
             T const* data,
             T const* multipliers,
             T const* biases,
-            int height, int width, int depth, int size,
+            size_t height, size_t width, size_t depth, size_t size,
             T epsilon)
     {
       vl::Error error = vlSuccess ;
@@ -243,7 +243,7 @@ namespace vl { namespace impl {
                            T const* multipliers,
                            T const* biases,
                            T const* derOutput,
-                           int height, int width, int depth, int size,
+                           size_t height, size_t width, size_t depth, size_t size,
                            T epsilon)
     {
       vl::Error error = vlSuccess ;
@@ -284,8 +284,8 @@ namespace vl { namespace impl {
              T const* multipliers,
              T const* biases,
              T const* derOutput,
-             int height, int width, int depth, int size,
-             float epsilon)
+             size_t height, size_t width, size_t depth, size_t size,
+             T epsilon)
     {
       vl::Error error = vlSuccess ;
       T* muz = NULL ;
@@ -323,9 +323,12 @@ namespace vl { namespace impl {
       return error ;
     }
   } ;
-  
+
 } } // namespace vl::impl
 
 template struct vl::impl::bnorm<vl::CPU, float> ;
 
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::bnorm<vl::CPU, double> ;
+#endif
 

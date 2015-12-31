@@ -4,7 +4,7 @@
 // @author Karel Lenc
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -21,19 +21,20 @@ namespace vl { namespace impl {
 
   template<vl::Device dev, typename type>
   struct pooling_max {
+    typedef type data_type ;
 
     static vl::Error
-    forward(type* pooled,
-            type const* data,
+    forward(data_type* output,
+            data_type const* data,
             size_t height, size_t width, size_t depth,
             size_t poolHeight, size_t poolWidth,
             size_t strideY, size_t strideX,
             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
     static vl::Error
-    backward(type* derData,
-             type const* data,
-             type const* derPooled,
+    backward(data_type* derData,
+             data_type const* data,
+             data_type const* derOutput,
              size_t height, size_t width, size_t depth,
              size_t poolHeight, size_t poolWidth,
              size_t strideY, size_t strideX,
@@ -42,10 +43,11 @@ namespace vl { namespace impl {
 
   template<vl::Device dev, typename type>
   struct pooling_average {
+    typedef type data_type ;
 
     static vl::Error
-    forward(type* pooled,
-            type const* data,
+    forward(data_type* output,
+            data_type const* data,
             size_t height, size_t width, size_t depth,
             size_t poolHeight, size_t poolWidth,
             size_t strideY, size_t strideX,
@@ -53,7 +55,7 @@ namespace vl { namespace impl {
 
     static vl::Error
     backward(type* derData,
-             type const* derPooled,
+             type const* derOutput,
              size_t height, size_t width, size_t depth,
              size_t poolHeight, size_t poolWidth,
              size_t strideY, size_t strideX,

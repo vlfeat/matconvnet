@@ -15,6 +15,7 @@
 ENABLE_GPU ?=
 ENABLE_CUDNN ?=
 ENABLE_IMREADJPEG ?= yes
+ENABLE_DOUBLE ?= yes
 DEBUG ?=
 ARCH ?= maci64
 
@@ -61,7 +62,8 @@ MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
 MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
 MEXFLAGS = -cxx -largeArrayDims -lmwblas \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
-$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,)
+$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
+$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,)
 MEXFLAGS_CPU = $(MEXFLAGS)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
 SHELL = /bin/bash # sh not good enough
@@ -77,6 +79,7 @@ NVCCFLAGS = \
 -gencode=arch=compute_30,code=\"sm_30,compute_30\" \
 -DENABLE_GPU \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
+$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 -Xcompiler -fPIC

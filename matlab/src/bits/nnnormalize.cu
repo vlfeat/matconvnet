@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi.
+Copyright (C) 2014-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -25,27 +25,39 @@ the terms of the BSD license (see the COPYING file).
 using namespace vl ;
 
 /* ---------------------------------------------------------------- */
-/*                                              nnnormalize_forward */
+/*                                                    nnlrn_forward */
 /* ---------------------------------------------------------------- */
 
+#define DISPATCH(deviceType, type) \
+error = vl::impl::lrn<deviceType,type>::forward \
+((type*)output.getMemory(), (type const*)data.getMemory(), \
+data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
+normDetph, kappa, alpha, beta) ;
+
+#define DISPATCH2(deviceType) \
+switch (dataType) { \
+case vlTypeFloat : DISPATCH(deviceType, float) ; break ; \
+IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, double) ; break ;) \
+default: assert(false) ; return vlErrorUnknown ; \
+}
+
 vl::Error
-vl::nnnormalize_forward(vl::Context& context,
-                        vl::Tensor output,
-                        vl::Tensor data,
-                        size_t normDetph,
-                        double kappa, double alpha, double beta)
+vl::nnlrn_forward(vl::Context& context,
+                  vl::Tensor output,
+                  vl::Tensor data,
+                  size_t normDetph,
+                  double kappa, double alpha, double beta)
 {
-  vl::Error status = vl::vlSuccess ;
-  switch (output.getMemoryType()) {
+  vl::Error error = vl::vlSuccess ;
+  vl::Type dataType = output.getDataType() ;
+
+  switch (output.getDeviceType()) {
     default:
       assert(false) ;
       return vl::vlErrorUnknown ;
 
     case vl::CPU:
-      status = vl::impl::normalize_forward<vl::CPU,float>
-      ((float*)output.getMemory(), (float const*)data.getMemory(),
-       data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(),
-       normDetph, kappa, alpha, beta) ;
+      DISPATCH2(vl::CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
@@ -53,53 +65,57 @@ vl::nnnormalize_forward(vl::Context& context,
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         /*
-         status = vl::impl::nnnormalize_forward_cudnn<float>(context, output, data, filters, biases,
+         error = vl::impl::nnlrn_forward_cudnn<float>(context, output, data, filters, biases,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (status == vl::vlSuccess) { return status ; }
-         if (status != vl::UNSUPPORTED) { return status ; }
+         if (error == vl::vlSuccess) { return error ; }
+         if (error != vl::UNSUPPORTED) { return error ; }
          */
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      status = vl::impl::normalize_forward<vl::GPU,float>
-      ((float*)output.getMemory(), (float const*)data.getMemory(),
-       data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(),
-       normDetph, kappa, alpha, beta) ;
-      if (status != vl::vlSuccess) { context.getCudaHelper().catchCudaError("normalize_forward<GPU,float>") ; }
+      DISPATCH2(vl::GPU) ;
+      if (error != vl::vlSuccess) { context.getCudaHelper().catchCudaError(__func__) ; }
       break ;
 #endif
   }
-  if (status != vl::vlSuccess) {
-    context.setError(status, "normalize_forward") ;
+  if (error != vl::vlSuccess) {
+    context.setError(error, __func__) ;
   }
-  return status ;
+  return error ;
 }
 
 /* ---------------------------------------------------------------- */
-/*                                             nnnormalize_backward */
+/*                                                   nnlrn_backward */
 /* ---------------------------------------------------------------- */
 
+#undef DISPATCH
+
+#define DISPATCH(deviceType, type) \
+error = vl::impl::lrn<deviceType,type>::backward \
+((type*)derData.getMemory(), (type const*)data.getMemory(), (type const*)derOutput.getMemory(), \
+data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
+normDetph, kappa, alpha, beta) ;
+
 vl::Error
-vl::nnnormalize_backward(vl::Context& context,
-                         vl::Tensor derData,
-                         vl::Tensor data,
-                         vl::Tensor derOutput,
-                         size_t normDetph,
-                         double kappa, double alpha, double beta)
+vl::nnlrn_backward(vl::Context& context,
+                   vl::Tensor derData,
+                   vl::Tensor data,
+                   vl::Tensor derOutput,
+                   size_t normDetph,
+                   double kappa, double alpha, double beta)
 {
-  vl::Error status = vl::vlSuccess ;
-  switch (derData.getMemoryType()) {
+  vl::Error error = vl::vlSuccess ;
+  vl::Type dataType = derOutput.getDataType() ;
+
+  switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
       return vl::vlErrorUnknown ;
 
     case vl::CPU:
-      status = vl::impl::normalize_backward<vl::CPU,float>
-      ((float*)derData.getMemory(), (float const*)data.getMemory(), (float const*)derOutput.getMemory(),
-       data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(),
-       normDetph, kappa, alpha, beta) ;
+      DISPATCH2(vl::CPU) ;
       break ;
 
 #if ENABLE_GPU
@@ -107,26 +123,23 @@ vl::nnnormalize_backward(vl::Context& context,
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         /*
-         status = vl::impl::nnnormalize_backward_cudnn<float>(context, output, data, filters, biases,
+         error = vl::impl::nnlrn_backward_cudnn<float>(context, output, data, filters, biases,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (status == vl::vlSuccess) { return status ; }
-         if (status != vl::UNSUPPORTED) { return status ; }
+         if (error == vl::vlSuccess) { return error ; }
+         if (error != vl::UNSUPPORTED) { return error ; }
          */
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      status = vl::impl::normalize_backward<vl::GPU,float>
-      ((float*)derData.getMemory(), (float const*)data.getMemory(), (float const*)derOutput.getMemory(),
-       data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(),
-       normDetph, kappa, alpha, beta) ;
-      if (status != vl::vlSuccess) { context.getCudaHelper().catchCudaError("normalize_backward<GPU,float>") ; }
+      DISPATCH2(vl::GPU) ;
+      if (error != vl::vlSuccess) { context.getCudaHelper().catchCudaError(__func__) ; }
       break ;
 #endif
   }
-  if (status != vl::vlSuccess) {
-    context.setError(status, "normalize_backward") ;
+  if (error != vl::vlSuccess) {
+    context.setError(error, __func__) ;
   }
-  return status ;
+  return error ;
 }

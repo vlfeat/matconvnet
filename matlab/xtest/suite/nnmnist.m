@@ -11,6 +11,9 @@ classdef nnmnist < nntest
 
   methods (Test)
     function valErrorRate(test, networkType)
+      clear mex ; % will reset GPU, remove MCN to avoid crashing
+                  % MATLAB on exit (BLAS issues?)
+      if strcmp(test.dataType, 'double'), return ; end
       switch test.currentDevice
         case 'cpu'
           gpus = [];

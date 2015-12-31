@@ -7,9 +7,9 @@ classdef nnsoftmax < nntest
     function basic(test,h,w)
       d = 10 ;
       n = 3 ;
-      x = test.randn(h,w,d,n,'single')/test.range ;
+      x = test.randn(h,w,d,n)/test.range ;
       y = vl_nnsoftmax(x) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       dzdx = vl_nnsoftmax(x, dzdy) ;
       test.der(@(x) vl_nnsoftmax(x), x, dzdy, dzdx, 1e-2) ;
     end

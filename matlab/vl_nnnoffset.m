@@ -20,8 +20,7 @@ function y = vl_nnnoffset(x, param, dzdy)
 % the terms of the BSD license (see the COPYING file).
 
 L = sum(x.^2,3) ;
-L = max(L, single(1e-8)) ;
-param = single(param) ;
+L = max(L, 1e-8) ;
 
 if nargin <= 2
   y = bsxfun(@minus, x, param(1)*L.^param(2)) ;

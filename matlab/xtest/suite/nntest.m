@@ -1,32 +1,57 @@
 classdef nntest < matlab.unittest.TestCase
-  properties (MethodSetupParameter)
+  properties (ClassSetupParameter)
     device = {'cpu', 'gpu'}
+    dataType = {'single', 'double'}
   end
 
   properties
     currentDevice
+    currentDataType
     randn
     rand
+    zeros
+    ones
     toDevice
+    toDataType
     range = 128
   end
 
-  methods (TestMethodSetup)
-    function generators(test, device)
+  methods (TestClassSetup)
+    function generators(test, device, dataType)
       range = 128 ;
-      seed = 0 ;
       test.currentDevice = device ;
+      test.currentDataType = dataType ;
+      switch dataType
+        case 'single'
+          test.toDataType = @(x) single(x) ;
+        case 'double'
+          test.toDataType = @(x) double(x) ;
+      end
       switch device
         case 'gpu'
           gpuDevice ;
-          test.randn = @(varargin) range * gpuArray.randn(varargin{:}) ;
-          test.rand = @(varargin) range * gpuArray.rand(varargin{:}) ;
+          test.randn = @(varargin) range * gpuArray.randn(varargin{:},dataType) ;
+          test.rand = @(varargin) range * gpuArray.rand(varargin{:},dataType) ;
+          test.zeros = @(varargin) gpuArray.zeros(varargin{:},dataType) ;
+          test.ones = @(varargin) gpuArray.ones(varargin{:},dataType) ;
           test.toDevice = @(x) gpuArray(x) ;
+        case 'cpu'
+          test.randn = @(varargin) range * randn(varargin{:},dataType) ;
+          test.rand = @(varargin) range * rand(varargin{:},dataType) ;
+          test.zeros = @(varargin) zeros(varargin{:},dataType) ;
+          test.ones = @(varargin) ones(varargin{:},dataType) ;
+          test.toDevice = @(x) gather(x) ;
+      end
+    end
+  end
+
+  methods (TestMethodSetup)
+    function seeds(test)
+      seed = 0 ;
+      switch test.currentDevice
+        case 'gpu'
           parallel.gpu.rng(seed, 'combRecursive') ;
         case 'cpu'
-          test.randn = @(varargin) range * randn(varargin{:}) ;
-          test.rand = @(varargin) range * rand(varargin{:}) ;
-          test.toDevice = @(x) gather(x) ;
           rng(seed, 'combRecursive') ;
       end
     end
@@ -37,7 +62,7 @@ classdef nntest < matlab.unittest.TestCase
       if nargin < 7
         tau = [] ;
       end
-      dzdx_ = test.numder(g, x, dzdy, delta) ;
+      dzdx_ = test.toDataType(test.numder(g, x, dzdy, delta)) ;
       test.eq(gather(dzdx_), gather(dzdx), tau) ;
     end
 
@@ -59,9 +84,10 @@ classdef nntest < matlab.unittest.TestCase
       if isempty(tau) % can happen if a and b are empty
         tau = 0 ;
       end
-      tol = matlab.unittest.constraints.AbsoluteTolerance(single(tau)) ;
-      test.verifyThat(a, ...
-        matlab.unittest.constraints.IsEqualTo(b, 'Within', tol)) ;
+      test.verifyThat(b, matlab.unittest.constraints.IsOfClass(class(a))) ;
+      tau = feval(class(a), tau) ; % convert to same type as a
+      tol = matlab.unittest.constraints.AbsoluteTolerance(tau) ;
+      test.verifyThat(a, matlab.unittest.constraints.IsEqualTo(b, 'Within', tol)) ;
     end
   end
 
@@ -80,7 +106,6 @@ classdef nntest < matlab.unittest.TestCase
         factors = dzdy .* (y_ - y)/delta ;
         dzdx(i) = dzdx(i) + sum(factors(:)) ;
       end
-      dzdx = single(dzdx) ;
     end
   end
 end
