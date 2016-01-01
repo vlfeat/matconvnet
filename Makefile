@@ -99,7 +99,7 @@ MEXFLAGS += -v
 NVCCFLAGS += -v
 endif
 
-# Mac OS X Intel
+# Mac OS X
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 comma:=,
 MEXLDFLAGS := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
@@ -107,6 +107,7 @@ MEXLDFLAGS += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/li
 ifeq ($(NVCCVER_LT_70),true)
 MEXLDFLAGS += -stdlib=libstdc++
 endif
+MEXFLAGS_CPU  += CXXFLAGS='$$CXXFLAGS -mmacosx-version-min=10.8'
 MEXFLAGS_NVCC += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 MEXFLAGS_GPU  += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 IMAGELIB_DEFAULT = quartz
