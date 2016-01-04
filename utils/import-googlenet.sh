@@ -19,8 +19,8 @@ pushd `dirname $0` > /dev/null
 SCRIPTPATH=`pwd`
 popd > /dev/null
 
-#converter="python -m pdb $SCRIPTPATH/import-caffe-dag.py"
-converter="python $SCRIPTPATH/import-caffe-dag.py"
+#converter="python -m pdb $SCRIPTPATH/import-caffe.py"
+converter="python $SCRIPTPATH/import-caffe.py"
 data="$SCRIPTPATH/../data"
 
 mkdir -pv "$data"/{tmp/caffe,tmp/googlenet,models}
@@ -41,7 +41,11 @@ get "$GOOGLENET_PROTO_URL"
 get "$GOOGLENET_MODEL_URL"
 get "$GOOGLENET_MEAN_URL"
 
-(cd $"data/tmp/googlenet" ; patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff")
+(
+    cd $"data/tmp/googlenet" ;
+    cp -v train_val_googlenet.prototxt train_val_googlenet_patched.prototxt
+    patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
+)
 
 base="$data/tmp/googlenet"
 out="$data/models/imagenet-googlenet-dag.mat"
@@ -56,9 +60,9 @@ else
 	--remove-dropout \
         --remove-loss \
         --append-softmax="cls3_fc" \
-        --synsets="$base/synset_words.txt" \
         --average-image="$base/imagenet_mean.binaryproto" \
+        --synsets="$base/synset_words.txt" \
         --caffe-data="$base/imagenet_googlenet.caffemodel" \
-        "$base/train_val_googlenet.prototxt" \
+        "$base/train_val_googlenet_patched.prototxt" \
         "$out"
 fi

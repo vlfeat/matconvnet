@@ -32,6 +32,11 @@ the terms of the BSD license (see the COPYING file).
 #endif
 
 namespace vl {
+
+#if ENABLE_CUDNN
+  namespace impl { template<typename T> struct nnconv_cudnn ; }
+#endif
+
   class CudaHelper {
   public:
     // Cuda errors
@@ -53,10 +58,30 @@ namespace vl {
     void clearCudnn() ;
     bool getCudnnEnabled() const ;
     void setCudnnEnabled(bool active) ;
+
+    // Convolution parameters
+    void resetCudnnConvolutionSettings() ;
+    void setCudnnConvolutionFwdAlgo(cudnnConvolutionFwdAlgo_t x) ;
+    void setCudnnConvolutionFwdPreference(cudnnConvolutionFwdPreference_t x,
+                                          size_t workSpaceLimit = 0) ;
+    size_t getCudnnConvolutionFwdWorkSpaceUsed() const ;
+
+    void setCudnnConvolutionBwdFilterAlgo(cudnnConvolutionBwdFilterAlgo_t x) ;
+    void setCudnnConvolutionBwdFilterPreference(cudnnConvolutionBwdFilterPreference_t x,
+                                                size_t workSpaceLimit = 0) ;
+    size_t getCudnnConvolutionBwdFilterWorkSpaceUsed() const ;
+
+    void setCudnnConvolutionBwdDataAlgo(cudnnConvolutionBwdDataAlgo_t x) ;
+    void setCudnnConvolutionBwdDataPreference(cudnnConvolutionBwdDataPreference_t x,
+                                              size_t workSpaceLimit = 0) ;
+    size_t getCudnnConvolutionBwdDataWorkSpaceUsed() const ;
+
     cudnnStatus_t getLastCudnnError() const ;
     std::string const& getLastCudnnErrorMessage() const ;
     vl::Error catchCudnnError(cudnnStatus_t status,
                               char const* description = NULL) ;
+
+    template<typename T> friend struct vl::impl::nnconv_cudnn ;
 #endif
 
   protected:
@@ -83,6 +108,24 @@ namespace vl {
     cudnnHandle_t cudnnHandle ;
     bool isCudnnInitialized ;
     bool cudnnEnabled ;
+
+    bool cudnnConvolutionFwdSpecificAlgo ;
+    cudnnConvolutionFwdPreference_t cudnnConvolutionFwdPreference ;
+    cudnnConvolutionFwdAlgo_t cudnnConvolutionFwdAlgo ;
+    size_t cudnnConvolutionFwdWorkSpaceLimit ;
+    size_t cudnnConvolutionFwdWorkSpaceUsed  ;
+
+    bool cudnnConvolutionBwdFilterSpecificAlgo ;
+    cudnnConvolutionBwdFilterPreference_t  cudnnConvolutionBwdFilterPreference;
+    cudnnConvolutionBwdFilterAlgo_t cudnnConvolutionBwdFilterAlgo ;
+    size_t cudnnConvolutionBwdFilterWorkSpaceLimit ;
+    size_t cudnnConvolutionBwdFilterWorkSpaceUsed  ;
+
+    bool cudnnConvolutionBwdDataSpecificAlgo ;
+    cudnnConvolutionBwdDataPreference_t cudnnConvolutionBwdDataPreference ;
+    cudnnConvolutionBwdDataAlgo_t cudnnConvolutionBwdDataAlgo ;
+    size_t cudnnConvolutionBwdDataWorkSpaceLimit ;
+    size_t cudnnConvolutionBwdDataWorkSpaceUsed  ;
 #endif
   } ;
 }

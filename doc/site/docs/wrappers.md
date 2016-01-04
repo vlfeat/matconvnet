@@ -5,7 +5,7 @@ At its core, MatConvNet consists of a
 building blocks. These are usually combined into complete CNNs by
 using one of the two CNN wrappers. The first wrapper is
 [SimpleNN](#simplenn), most of which is implemented by the MATLAB
-function [`vl_simplenn`](mfiles/vl_simplenn.md). SimpleNN is suitable
+function [`vl_simplenn`](mfiles/simplenn/vl_simplenn.md). SimpleNN is suitable
 for networks that have a linear topology, i.e. a chain of
 computational blocks. The second wrapper is [DagNN](#dagnn), which is
 implemented as the MATLAB class
@@ -16,7 +16,7 @@ implemented as the MATLAB class
 ## SimpleNN wrapper
 
 The SimpleNN wrapper is implemented by the function
-[`vl_simplenn`](mfiles/vl_simplenn) and a
+[`vl_simplenn`](mfiles/simplenn/vl_simplenn.md) and a
 [few others](functions.md#simplenn). This is a lightweight wrapper,
 suitable for CNN consistting of a simple chain of blocks.
 
@@ -63,7 +63,7 @@ res =
 Here `x` is the variable value, `dzdx` the derivative of the CNN with
 respect to `x`, `dzdw` the derivative of the CNN with respect to each
 of the block parameters, `aux` space for custom information (e.g. the
-mask in dropout layers), and `time` and `backwardTime` the time spen
+mask in dropout layers), and `time` and `backwardTime` the time spent
 in the forward and backward pass.
 
 For example, `res(1).x` is the input of the CNN and `res(3).x` its
@@ -78,7 +78,7 @@ res = vl_simplenn(res, data, dzdy)
 This performs both a forward and a backward pass. `dzdy` is a
 projection applied to the output value of the CNN (see the
 [PDF manual](../matconvnet-manual.pdf) to clarify this point). During
-traning, CNNs are often terminated by a block that computes a single
+training, CNNs are often terminated by a block that computes a single
 scalar loss value (i.e. `res(end).x` is a scalar). In this case, one
 often picks `dzdy = 1`.
 
@@ -115,7 +115,7 @@ or more variables and zero or more *parameters* as input and produces
 zero or more variables as outputs. Layers are added using the
 `addLayer()` method of the DagNN object. For example, the following
 command adds a layer an input `x1`, an output `x2`, and two parameters
-`filetrs` and `biases`.
+`filters` and `biases`.
 
 ```matlab
 convBlock = dagnn.Conv('size', [3 3 256 16], 'hasBias', true) ;
@@ -134,7 +134,7 @@ have an arbitrary numbers of inputs and outputs (compatibly with the
 block type).
 
 At this point, `net` contains the two blocks as well as the three
-variables and the two parametrs. These are stored as entries in
+variables and the two parameters. These are stored as entries in
 `net.layers`, `net.vars` and `net.params` respectively. For example
 
 ```matlab

@@ -2,10 +2,20 @@
 
 ## Running MatConvNet
 
+### Do I need a specific version of the CUDA devkit?
+
+Officially, MathWorks supports a specific version of the CUDA devkit
+with each MATLAB version (see [here](install.md#gpu)). However, in
+practice we normally use the most recent version of CUDA (and cuDNN)
+available from NVIDIA without problems (see
+[here](install.md#nvcc)).
+
 ### Can I use MatConvNet with CuDNN?
 
-Yes, but CuDNN must be installed and linked to MatConvNet. See the
-[installation instructions](install.md).
+Yes, and this is the recommended way of running MatConvNet on NVIDIA
+GPUs. However, you need to install cuDNN and link it to
+MatConvNet. See the [installation instructions](install.md#cudnn) to
+know how.
 
 ### How do I fix the error `Attempt to execute SCRIPT vl_nnconv as a function`?
 

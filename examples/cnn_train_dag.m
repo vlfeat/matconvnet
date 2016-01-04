@@ -1,4 +1,4 @@
-function stats = cnn_train_dag(net, imdb, getBatch, varargin)
+function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 %CNN_TRAIN_DAG Demonstrates training a CNN using the DagNN wrapper
 %    CNN_TRAIN_DAG() is similar to CNN_TRAIN(), but works with
 %    the DagNN wrapper instead of the SimpleNN wrapper.
@@ -9,8 +9,10 @@ function stats = cnn_train_dag(net, imdb, getBatch, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+% Todo: save momentum with checkpointing (a waste?)
+
 opts.expDir = fullfile('data','exp') ;
-opts.continue = false ;
+opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
 opts.train = [] ;
@@ -21,8 +23,10 @@ opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
-opts.derOutputs = {'objective', 1} ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
+opts.profile = false ;
+
+opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -95,30 +99,37 @@ for epoch=start+1:opts.numEpochs
     stats__ = accumulateStats(stats_) ;
     stats.train(epoch) = stats__.train ;
     stats.val(epoch) = stats__.val ;
+    clear net_ stats_ stats__ savedNet_ ;
   end
 
-  % save
   if ~evaluateMode
     saveState(modelPath(epoch), net, stats) ;
   end
 
   figure(1) ; clf ;
-  values = [] ;
-  leg = {} ;
-  for s = {'train', 'val'}
-    s = char(s) ;
-    for f = setdiff(fieldnames(stats.train)', {'num', 'time'})
+  plots = setdiff(...
+    cat(2,...
+        fieldnames(stats.train)', ...
+        fieldnames(stats.val)'), {'num', 'time'}) ;
+  for p = plots
+    p = char(p) ;
+    values = zeros(0, epoch) ;
+    leg = {} ;
+    for f = {'train', 'val'}
       f = char(f) ;
-      leg{end+1} = sprintf('%s (%s)', f, s) ;
-      tmp = [stats.(s).(f)] ;
-      values(end+1,:) = tmp(1,:)' ;
+      if isfield(stats.(f), p)
+        tmp = [stats.(f).(p)] ;
+        values(end+1,:) = tmp(1,:)' ;
+        leg{end+1} = f ;
+      end
     end
+    subplot(1,numel(plots),find(strcmp(p,plots))) ;
+    plot(1:epoch, values','o-') ;
+    xlabel('epoch') ;
+    title(p) ;
+    legend(leg{:}) ;
+    grid on ;
   end
-  subplot(1,2,1) ; plot(1:epoch, values') ;
-  legend(leg{:}) ; xlabel('epoch') ; ylabel('metric') ;
-  subplot(1,2,2) ; semilogy(1:epoch, values') ;
-  legend(leg{:}) ; xlabel('epoch') ; ylabel('metric') ;
-  grid on ;
   drawnow ;
   print(1, modelFigPath, '-dpdf') ;
 end
@@ -135,7 +146,7 @@ numGpus = numel(opts.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
   if strcmp(mode,'train')
-    sate.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
+    state.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
   end
 end
 if numGpus > 1
@@ -145,7 +156,7 @@ else
 end
 
 stats.time = 0 ;
-stats.scores = [] ;
+stats.num = 0 ;
 subset = state.(mode) ;
 start = tic ;
 num = 0 ;
@@ -175,9 +186,11 @@ for t=1:opts.batchSize:numel(subset)
     end
 
     if strcmp(mode, 'train')
+      net.mode = 'normal' ;
       net.accumulateParamDers = (s ~= 1) ;
       net.eval(inputs, opts.derOutputs) ;
     else
+      net.mode = 'test' ;
       net.eval(inputs) ;
     end
   end
@@ -218,23 +231,41 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
-for i=1:numel(net.params)
-  thisDecay = opts.weightDecay * net.params(i).weightDecay ;
-  thisLR = state.learningRate * net.params(i).learningRate ;
+for p=1:numel(net.params)
 
+  % bring in gradients from other GPUs if any
   if ~isempty(mmap)
-    tmp = zeros(size(mmap.Data(labindex).(net.params(i).name)), 'single') ;
-    for g = setdiff(1:numel(mmap.Data), labindex)
-      tmp = tmp + mmap.Data(g).(net.params(i).name) ;
+    numGpus = numel(mmap.Data) ;
+    tmp = zeros(size(mmap.Data(labindex).(net.params(p).name)), 'single') ;
+    for g = setdiff(1:numGpus, labindex)
+      tmp = tmp + mmap.Data(g).(net.params(p).name) ;
     end
-    net.params(i).der = net.params(i).der + tmp ;
+    net.params(p).der = net.params(p).der + tmp ;
+  else
+    numGpus = 1 ;
   end
 
-  state.momentum{i} = opts.momentum * state.momentum{i} ...
-    - thisDecay * net.params(i).value ...
-    - (1 / batchSize) * net.params(i).der ;
+  switch net.params(p).trainMethod
 
-  net.params(i).value = net.params(i).value + thisLR * state.momentum{i} ;
+    case 'average' % mainly for batch normalization
+      thisLR = net.params(p).learningRate ;
+      net.params(p).value = ...
+          (1 - thisLR) * net.params(p).value + ...
+          (thisLR/batchSize) * net.params(p).der ;
+
+    case 'gradient'
+      thisDecay = opts.weightDecay * net.params(p).weightDecay ;
+      thisLR = state.learningRate * net.params(p).learningRate ;
+      state.momentum{p} = opts.momentum * state.momentum{p} ...
+        - thisDecay * net.params(p).value ...
+        - (1 / batchSize) * net.params(p).der ;
+      net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
+
+    case 'otherwise'
+      error('Unknown training method ''%s'' for parameter ''%s''.', ...
+        net.params(p).trainMethod, ...
+        net.params(p).name) ;
+  end
 end
 
 % -------------------------------------------------------------------------

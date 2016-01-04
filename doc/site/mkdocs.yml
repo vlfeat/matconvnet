@@ -1,8 +1,8 @@
 site_name: MatConvNet
 markdown_extensions: ['extra', 'mathjax', 'toc']
-theme: bootstrap
+theme_dir: theme
 
-extra_css: ['css/tables.css', 'css/fixes.css']
+extra_css: ['css/fixes.css']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js', 'js/toggle.js']
 
 repo_url: https://github.com/vlfeat/matconvnet
@@ -27,6 +27,7 @@ pages:
   - vl_nnpdist: 'mfiles/vl_nnpdist.md'
   - vl_nnconv: 'mfiles/vl_nnconv.md'
   - vl_nnconvt: 'mfiles/vl_nnconvt.md'
+  - vl_nncrop: 'mfiles/vl_nncrop.md'
   - vl_nndropout: 'mfiles/vl_nndropout.md'
   - vl_nnloss: 'mfiles/vl_nnloss.md'
   - vl_nnnoffset: 'mfiles/vl_nnnoffset.md'
@@ -38,6 +39,7 @@ pages:
   - vl_nnsoftmaxloss: 'mfiles/vl_nnsoftmaxloss.md'
   - DagNN wrapper: 'mfiles/+dagnn/@DagNN/DagNN.md'
   - vl_simplenn: 'mfiles/simplenn/vl_simplenn.md'
+  - vl_simplenn_tidy: 'mfiles/simplenn/vl_simplenn_tidy.md'
   - vl_simplenn_diagnose: 'mfiles/simplenn/vl_simplenn_diagnose.md'
   - vl_simplenn_display: 'mfiles/simplenn/vl_simplenn_display.md'
   - vl_simplenn_move: 'mfiles/simplenn/vl_simplenn_move.md'
@@ -45,6 +47,7 @@ pages:
   - vl_compilenn: 'mfiles/vl_compilenn.md'
   - vl_rootnn: 'mfiles/vl_rootnn.md'
   - vl_setupnn: 'mfiles/vl_setupnn.md'
+  - vl_imreadjpeg: 'mfiles/vl_imreadjpeg.md'
 
 - Contributing:
   - Developers notes: 'developers.md'

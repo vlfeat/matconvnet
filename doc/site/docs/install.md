@@ -18,7 +18,7 @@ the command (using MATLAB R2014a or later):
 
 To test GPU support (if you have [compiled it](#gpu)) use instead:
 
-    > vl_testnn('gpu',true)
+    > vl_testnn('gpu', true)
 
 Note that the second tests runs slower than the CPU version; do not
 worry, this is an artefact of the test procedure.
@@ -50,7 +50,7 @@ library:
 
 At this point MatConvNet should start compiling. If all goes well, you
 are ready to use the library. If not, you can try debugging the
-problem by running the complation script again in verbose mode:
+problem by running the compilation script again in verbose mode:
 
     > vl_compilenn('verbose', 1)
 
@@ -72,8 +72,8 @@ Increase the verbosity level to 2 to get even more information.
 
 To use the the GPU-accelerated version of the library, you will need a
 NVIDA GPU card with compute capability 2.0 or greater and a copy of
-the NVIDIA CUDA toolkit. The version of the CUDA toolkit should
-ideally **match your MATLAB version**:
+the NVIDIA CUDA toolkit. Ideally, the version of the CUDA toolkit
+should match your MATLAB version:
 
 | MATLAB    | CUDA toolkit      |
 |-----------|-------------------|
@@ -81,11 +81,12 @@ ideally **match your MATLAB version**:
 | R2014a    | 5.5               |
 | R2014b    | 6.0               |
 | R2015a    | 6.5               |
+| R2015b    | 7.0               |
 
-You can also use the `gpuDevice` MATLAB command to find out the
-correct version of the CUDA toolkit. It is also possible (and
-sometimes necessary) to use a more recent version of CUDA of the one
-officially supported; this is [explained later](#nvcc).
+You can also use the `gpuDevice` MATLAB command to find out MATLAB's
+version of the CUDA toolkit. It is also possible (and often necessary)
+to use a more recent version of CUDA than the one officially supported
+by MATLAB; this is [explained later](#nvcc).
 
 Assuming that there is only a single copy of the CUDA toolkit
 installed in your system and that it matches MATLAB's version, compile
@@ -97,7 +98,7 @@ If you have multiple versions of the CUDA toolkit, or if the script
 cannot find the toolkit for any reason, specify the path to the CUDA
 toolkit explicitly. For example, on a Mac this may look like:
 
-    > vl_compilenn('enableGpu', true, 'cudaRoot', '/Developer/NVIDIA/CUDA-6.0')
+    > vl_compilenn('enableGpu', true, 'cudaRoot', '/Developer/NVIDIA/CUDA-7.0')
 
 Once more, you can use the `verbose` option to obtain more information
 if needed.
@@ -114,20 +115,23 @@ Compiling with a newer version of CUDA requires using the
 `cudaMethod,nvcc` option. For example, on a Mac this may look like:
 
     > vl_compilenn('enableGpu', true, ...
-                   'cudaRoot', '/Developer/NVIDIA/CUDA-6.5', ...
+                   'cudaRoot', '/Developer/NVIDIA/CUDA-7.0', ...
                    'cudaMethod', 'nvcc')
 
 Note that at this point MatConvNet MEX files are linked *against the
 specified CUDA libraries* instead of the one distributed with
 MATLAB. Hence, in order to use MatConvNet it is now necessary to allow
-MATLAB accessing these libraries. On Linux and Mac, one way to do so
+MATLAB accessing these libraries. On Linux one way to do so
 is to start MATLAB from the command line (terminal) specifying the
-`LD_LIBRARY_PATH` option. For instance, on a Mac this may look like:
+`LD_LIBRARY_PATH` option. For instance, on Linux this may look like:
 
-    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-6.5/lib /Applications/MATLAB_R2014b.app/bin/matlab
+    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.0/lib64 matlab
 
 On Windows, chances are that the CUDA libraries are already visible to
 MATLAB so that nothing else needs to be done.
+
+On Mac, this step should not be necessary as the library paths are
+hardcoded during compilation.
 
 <a name='cudnn'></a>
 ### Compiling the cuDNN support
@@ -136,19 +140,20 @@ MatConvNet supports the NVIDIA <a
 href='https://developer.nvidia.com/cuDNN'>cuDNN library</a> for deep
 learning (and in particular their fast convolution code). In order to
 use it, obtain the
-[cuDNN V2](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library)
-library from NVIDIA (the older V2 RC2 version should also work, but
-other releases such as V1 will *not* work). Make sure that the CUDA
-toolkit matches the one in cuDNN (e.g. 6.5). This often means that the
-CUDA toolkit will *not* match the one used internally by MATLAB, such
-that the [compilation method](#nvcc) discussed above must be used.
+[cuDNN](http://devblogs.nvidia.com/parallelforall/accelerate-machine-learning-cudnn-deep-neural-network-library)
+library from NVIDIA (cuDNN v2 to v4 should work; however, later
+version are *strongly recommended* as earlier version had a few
+bugs). Make sure that the CUDA toolkit matches the one in cuDNN
+(e.g. 6.5). This often means that the CUDA toolkit will *not* match
+the one used internally by MATLAB, such that the
+[compilation method](#nvcc) discussed above must be used.
 
 Unpack the cuDNN library binaries and header files in a place
-`<Cudnn>` of you choice. In the rest of the instructions, it will be
-assumed that this is a new directory called `local/` in the
-`<MatConvNet>` root directory,
-(i.e. `<Cudnn>`=`<MatConvNet>/local`). For example, the directory
-structure on a Mac could look like:
+`<Cudnn>` of you choice. In the rest of this example, it will be
+assumed that this cuDNN RC4 has been unpacked in `local/cudnn-rc4` in
+the `<MatConvNet>` root directory,
+(i.e. `<Cudnn>`=`<MatConvNet>/local/cudnn-rc4`). For example, the
+directory structure on a Mac should look like:
 
      COPYING
      Makefile
@@ -156,10 +161,13 @@ structure on a Mac could look like:
      ...
      examples/
      local/
-       cudnn.h
-       libcudnn.6.5.dylib
-       libcudnn.dylib
-       ...
+       cudnn-rc4/
+         include/
+           cudnn.h
+         lib/
+           libcudnn.7.5.dylib
+           libcudnn.dylib
+         ...
 
 Use `vl_compilenn` with the `cudnnEnable,true` option to compile the
 library; do not forget to use `cudaMethod,nvcc` as, at it is likely,
@@ -167,21 +175,24 @@ the CUDA toolkit version is newer than MATLAB's CUDA toolkit. For
 example, on Mac this may look like:
 
     > vl_compilenn('enableGpu', true, ...
-                   'cudaRoot', '/Developer/NVIDIA/CUDA-6.5', ...
+                   'cudaRoot', '/Developer/NVIDIA/CUDA-7.5', ...
                    'cudaMethod', 'nvcc', ...
                    'enableCudnn', 'true', ...
-                   'cudnnRoot', 'local/') ;
+                   'cudnnRoot', 'local/cudnn-rc4') ;
 
 MatConvNet is now compiled with cuDNN support. When starting MATLAB,
 however, do not forget to point it to the paths of both the CUDA and
-cuDNN libraries. On a Mac terminal, this may look like:
+cuDNN libraries. On a Linux terminal, this may look like:
 
     $ cd <MatConvNet>
-    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-6.5/lib:local /Applications/MATLAB_R2014b.app/bin/matlab
+    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.5/lib64:local matlab
 
-On Windows, copy the CUDNN DLL file `<Cudnn>/cudnn*dll` (or from
+On Windows, copy the cuDNN DLL file `<Cudnn>/cudnn*dll` (or from
 wherever you unpacked cuDNN) into the `<MatConvNet>/matlab/mex`
 directory.
+
+On Mac, this step should not be necessary as the library paths are
+hardcoded during compilation.
 
 ## Further examples
 
@@ -190,10 +201,20 @@ CUDA toolkit 6.5 and cuDNN Release Candidate 2, use:
 
     > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
                    'cudaRoot', '/Developer/NVIDIA/CUDA-6.5', ...
-                   'enableCudnn', true, 'cudnnRoot', 'local/') ;
+                   'enableCudnn', true, 'cudnnRoot', 'local/cudnn-rc2') ;
 
 The equivalent command on Ubuntu Linux would look like:
 
     > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...
                    'cudaRoot', '/opt/local/cuda-6.5', ...
-                   'enableCudnn', true, 'cudnnRoot', 'local/') ;
+                   'enableCudnn', true, 'cudnnRoot', 'local/cudnn-rc2') ;
+
+Using MATLAB 2015b, CUDA 7.5, and cuDNN R4:
+
+    > vl_compilenn('enableGpu', true, ...
+                   'cudaMethod', 'nvcc', ...
+                   'cudaRoot', '/opt/local/cuda-7.5', ...
+                   'enableCudnn', true, ...
+                   'cudnnRoot', 'local/cudnn-rc4') ;
+
+

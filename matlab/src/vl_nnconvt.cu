@@ -35,21 +35,22 @@ enum {
   opt_no_der_biases,
   opt_cudnn,
   opt_no_cudnn,
-  opt_transpose
+  opt_cudnn_workspace_limit,
 } ;
 
 /* options */
 vlmxOption  options [] = {
-  {"Upsample",         1,   opt_upsample           },
-  {"Crop",             1,   opt_crop               },
-  {"Verbose",          0,   opt_verbose            },
-  {"NumGroups",        1,   opt_num_groups         },
-  {"NoDerData",        0,   opt_no_der_data        },
-  {"NoDerFilters",     0,   opt_no_der_filters     },
-  {"NoderBiases",      0,   opt_no_der_biases      },
-  {"CUDNN",            0,   opt_cudnn              },
-  {"NoCUDNN",          0,   opt_no_cudnn           },
-  {0,                  0,   0                      }
+  {"Upsample",              1,   opt_upsample              },
+  {"Crop",                  1,   opt_crop                  },
+  {"Verbose",               0,   opt_verbose               },
+  {"NumGroups",             1,   opt_num_groups            },
+  {"NoDerData",             0,   opt_no_der_data           },
+  {"NoDerFilters",          0,   opt_no_der_filters        },
+  {"NoDerBiases",           0,   opt_no_der_biases         },
+  {"CUDNN",                 0,   opt_cudnn                 },
+  {"NoCUDNN",               0,   opt_no_cudnn              },
+  {"CudnnWorkSpaceLimit",   1,   opt_cudnn_workspace_limit },
+  {0,                       0,   0                         }
 } ;
 
 /* ---------------------------------------------------------------- */
@@ -195,6 +196,32 @@ void mexFunction(int nout, mxArray *out[],
         context.getCudaHelper().setCudnnEnabled(true) ;
 #endif
         break ;
+
+      case opt_cudnn_workspace_limit :
+      {
+#if ENABLE_CUDNN
+        double x ;
+        if (!vlmxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
+          mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
+        }
+        context.getCudaHelper().setCudnnConvolutionFwdPreference
+        ((std::isinf(x) ?
+          CUDNN_CONVOLUTION_FWD_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        context.getCudaHelper().setCudnnConvolutionBwdFilterPreference
+        ((std::isinf(x) ?
+          CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        context.getCudaHelper().setCudnnConvolutionBwdDataPreference
+        ((std::isinf(x) ?
+          CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        break ;
+#endif
+      }
 
       default: break ;
     }
@@ -348,6 +375,20 @@ void mexFunction(int nout, mxArray *out[],
                                  derOutput,
                                  upsampleY, upsampleX,
                                  cropTop, cropBottom, cropLeft, cropRight) ;
+  }
+
+  if (verbosity > 0) {
+#if ENABLE_CUDNN
+    if (context.getCudaHelper().getCudnnEnabled()) {
+      mexPrintf("vl_nnconvt: cuDNN workspace used: "
+                "fwd %.2f MB"
+                ", bwd filter %.2f MB"
+                ", bwd data %.2f MB\n",
+                (double)context.getCudaHelper().getCudnnConvolutionFwdWorkSpaceUsed() / (1024*1024),
+                (double)context.getCudaHelper().getCudnnConvolutionBwdFilterWorkSpaceUsed() / (1024*1024),
+                (double)context.getCudaHelper().getCudnnConvolutionBwdDataWorkSpaceUsed() / (1024*1024)) ;
+    }
+#endif
   }
 
   /* -------------------------------------------------------------- */

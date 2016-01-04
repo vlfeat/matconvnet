@@ -43,6 +43,6 @@ else
   if nargin <= 1 || isempty(dzdy)
     y = x .* (opts.leak + (1 - opts.leak) * single(x > 0)) ;
   else
-    y = dzdy .* (opts.leak + (1 - opts.leak) * single(x > 0)) ; ;
+    y = dzdy .* (opts.leak + (1 - opts.leak) * single(x > 0)) ;
   end
 end

@@ -52,10 +52,10 @@ import dagnn.*
 
 obj = DagNN() ;
 net = vl_simplenn_move(net, 'cpu') ;
+net = vl_simplenn_tidy(net) ;
 
-if isfield(net, 'normalization')
-  obj.meta.normalization = net.normalization ;
-end
+% copy meta-information as is
+obj.meta = net.meta ;
 
 for l = 1:numel(net.layers)
   inputs = {sprintf('x%d',l-1)} ;
@@ -74,24 +74,13 @@ for l = 1:numel(net.layers)
 
   switch net.layers{l}.type
     case {'conv', 'convt'}
-      if isfield(net.layers{l},'filters')
-        sz = size(net.layers{l}.filters) ;
-        hasBias = ~isempty(net.layers{l}.biases) ;
-        params(1).name = sprintf('%sf',name) ;
-        params(1).value = net.layers{l}.filters ;
-        if hasBias
-          params(2).name = sprintf('%sb',name) ;
-          params(2).value = net.layers{l}.biases ;
-        end
-      else
-        sz = size(net.layers{l}.weights{1}) ;
-        hasBias = ~isempty(net.layers{l}.weights{2}) ;
-        params(1).name = sprintf('%sf',name) ;
-        params(1).value = net.layers{l}.weights{1} ;
-        if hasBias
-          params(2).name = sprintf('%sb',name) ;
-          params(2).value = net.layers{l}.weights{2} ;
-        end
+      sz = size(net.layers{l}.weights{1}) ;
+      hasBias = ~isempty(net.layers{l}.weights{2}) ;
+      params(1).name = sprintf('%sf',name) ;
+      params(1).value = net.layers{l}.weights{1} ;
+      if hasBias
+        params(2).name = sprintf('%sb',name) ;
+        params(2).value = net.layers{l}.weights{2} ;
       end
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
@@ -109,86 +98,68 @@ for l = 1:numel(net.layers)
         case 'conv'
           block = Conv() ;
           block.size = sz ;
-          if isfield(net.layers{l},'pad')
-            block.pad = net.layers{l}.pad ;
-          end
-          if isfield(net.layers{l},'stride')
-            block.stride = net.layers{l}.stride ;
-          end
+          block.pad = net.layers{l}.pad ;
+          block.stride = net.layers{l}.stride ;
         case 'convt'
           block = ConvTranspose() ;
           block.size = sz ;
-          if isfield(net.layers{l},'upsample')
-            block.upsample = net.layers{l}.upsample ;
-          end
-          if isfield(net.layers{l},'crop')
-            block.crop = net.layers{l}.crop ;
-          end
-          if isfield(net.layers{l},'numGroups')
-            block.numGroups = net.layers{l}.numGroups ;
-          end
+          block.upsample = net.layers{l}.upsample ;
+          block.crop = net.layers{l}.crop ;
+          block.numGroups = net.layers{l}.numGroups ;
       end
       block.hasBias = hasBias ;
+      block.opts = net.layers{l}.opts ;
+
     case 'pool'
       block = Pooling() ;
-      if isfield(net.layers{l},'method')
-        block.method = net.layers{l}.method ;
-      end
-      if isfield(net.layers{l},'pool')
-        block.poolSize = net.layers{l}.pool ;
-      end
-      if isfield(net.layers{l},'pad')
-        block.pad = net.layers{l}.pad ;
-      end
-      if isfield(net.layers{l},'stride')
-        block.stride = net.layers{l}.stride ;
-      end
-    case {'normalize'}
+      block.method = net.layers{l}.method ;
+      block.poolSize = net.layers{l}.pool ;
+      block.pad = net.layers{l}.pad ;
+      block.stride = net.layers{l}.stride ;
+      block.opts = net.layers{l}.opts ;
+
+    case {'normalize', 'lrn'}
       block = LRN() ;
-      if isfield(net.layers{l},'param')
-        block.param = net.layers{l}.param ;
-      end
+      block.param = net.layers{l}.param ;
+
     case {'dropout'}
       block = DropOut() ;
-      if isfield(net.layers{l},'rate')
-        block.rate = net.layers{l}.rate ;
-      end
-      if isfield(net.layers{l},'frozen')
-        block.frozen = net.layers{l}.frozen ;
-      end
+      block.rate = net.layers{l}.rate ;
+
     case {'relu'}
-      lopts = {} ;
-      if isfield(net.layers{l}, 'leak'), lopts = {'leak', net.layers{l}} ; end
-      block = ReLU('opts', lopts) ;
+      block = ReLU() ;
+      block.leak = net.layers{l}.leak ;
+
     case {'sigmoid'}
       block = Sigmoid() ;
+
     case {'softmax'}
       block = SoftMax() ;
+
     case {'softmaxloss'}
       block = Loss('loss', 'softmaxlog') ;
       % The loss has two inputs
       inputs{2} = getNewVarName(obj, 'label') ;
+
     case {'bnorm'}
       block = BatchNorm() ;
-      if isfield(net.layers{l},'filters')
-        params(1).name = sprintf('%sm',name) ;
-        params(1).value = net.layers{l}.filters ;
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.biases ;
-      else
-        params(1).name = sprintf('%sm',name) ;
-        params(1).value = net.layers{l}.weights{1} ;
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.weights{2} ;
-      end
+      params(1).name = sprintf('%sm',name) ;
+      params(1).value = net.layers{l}.weights{1} ;
+      params(2).name = sprintf('%sb',name) ;
+      params(2).value = net.layers{l}.weights{2} ;
+      params(3).name = sprintf('%sx',name) ;
+      params(3).value = net.layers{l}.weights{3} ;
       if isfield(net.layers{l},'learningRate')
         params(1).learningRate = net.layers{l}.learningRate(1) ;
         params(2).learningRate = net.layers{l}.learningRate(2) ;
+        params(3).learningRate = net.layers{l}.learningRate(3) ;
       end
       if isfield(net.layers{l},'weightDecay')
         params(1).weightDecay = net.layers{l}.weightDecay(1) ;
         params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+        params(3).weightDecay = 0 ;
       end
+
     otherwise
       error([net.layers{l}.type ' is unsupported']) ;
   end
@@ -200,28 +171,16 @@ for l = 1:numel(net.layers)
     outputs, ...
     {params.name}) ;
 
-  if ~isempty(params)
-    findex = obj.getParamIndex(params(1).name) ;
-    bindex = obj.getParamIndex(params(2).name) ;
-
-    % if empty, keep default values
-    if ~isempty(params(1).value)
-      obj.params(findex).value = params(1).value ;
+  for p = 1:numel(params)
+    pindex = obj.getParamIndex(params(p).name) ;
+    if ~isempty(params(p).value)
+      obj.params(pindex).value = params(p).value ;
     end
-    if ~isempty(params(2).value)
-      obj.params(bindex).value = params(2).value ;
+    if ~isempty(params(p).learningRate)
+      obj.params(pindex).learningRate = params(p).learningRate ;
     end
-    if ~isempty(params(1).learningRate)
-      obj.params(findex).learningRate = params(1).learningRate ;
-    end
-    if ~isempty(params(2).learningRate)
-      obj.params(bindex).learningRate = params(2).learningRate ;
-    end
-    if ~isempty(params(1).weightDecay)
-      obj.params(findex).weightDecay = params(1).weightDecay ;
-    end
-    if ~isempty(params(2).weightDecay)
-      obj.params(bindex).weightDecay = params(2).weightDecay ;
+    if ~isempty(params(p).weightDecay)
+      obj.params(pindex).weightDecay = params(p).weightDecay ;
     end
   end
 end

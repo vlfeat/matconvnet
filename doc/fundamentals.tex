@@ -10,7 +10,7 @@ This chapter reviews fundamental concepts of CNNs as needed to understand how to
 
 A \emph{Convolutional Neural Network} (CNN) is a function $g$ mapping data $\bx$, for example an image, to an output vector $\by$. The function $g=f_L \circ \dots \circ f_1$ is the composition of a sequence of simpler functions $f_l$, which we  call \emph{computational blocks} or \emph{layers}.  Let $\bx_1,\bx_2,\dots,\bx_L$ be the outputs of each layer in the network, and let $\bx_0=\bx$ denote the network input. Each output $\bx_l = f_l(\bx_{l-1};\bw_l)$ is computed from the previous output $\bx_{l-1}$  by applying the function $f_l$ with parameters $\bw_l$. The data flowing through the network has a spatial structure; namely,  $\bx_l\in\mathbb{R}^{H_l \times W_l \times D_l}$ is a 3D array whose first two dimensions are interpreted as spatial coordinates (it therefore represents a feature field).  A fourth non-singleton dimension in the array allows processing \emph{batches} of images in parallel, which is important for efficiency. The network is called \emph{convolutional} because the functions $f_l$ act as local and translation invariant operators (i.e. non-linear filters). 
 
-\matlab includes a variety of  building blocks, contained in the !matlab/! directory, such as !vl_nnconv! (convolution), !vl_nnconvt! (convolution transpose or deconvolution), !vl_nnpool! (max and average pooling), !vl_nnrelu! (ReLU activation), !vl_nnsigmoid! (sigmoid activation), !vl_nnsoftmax! (softmax operator), !vl_nnloss! (classification log-loss), !vl_nnbnorm! (batch normalization), !vl_nnspnorm! (spatial normalization), !vl_nnnormalize! (cross-channel normalization), or !vl_nnpdist! ($p$-distance).  The library of blocks is sufficiently extensive that many interesting state-of-the-art network can be implemented and learned using the toolbox, or even ported from other toolboxes such as Caffe.
+\matlab includes a variety of  building blocks, contained in the !matlab/! directory, such as !vl_nnconv! (convolution), !vl_nnconvt! (convolution transpose or deconvolution), !vl_nnpool! (max and average pooling), !vl_nnrelu! (ReLU activation), !vl_nnsigmoid! (sigmoid activation), !vl_nnsoftmax! (softmax operator), !vl_nnloss! (classification log-loss), !vl_nnbnorm! (batch normalization), !vl_nnspnorm! (spatial normalization), !vl_nnnormalize! (locar response normalization -- LRN), or !vl_nnpdist! ($p$-distance).  The library of blocks is sufficiently extensive that many interesting state-of-the-art network can be implemented and learned using the toolbox, or even ported from other toolboxes such as Caffe.
 
 CNNs are used as classifiers or regressors. In the example of \autoref{f:demo}, the output $\hat \by = f(\bx)$ is a vector of probabilities, one for each of a 1,000 possible image labels (dog, cat, trilobite, ...).  If $\by$ is the true label of image $\bx$, we can measure the CNN performance by a loss function $\ell_\by(\hat \by)  \in \mathbb{R}$ which assigns a penalty to classification errors. The CNN parameters can then be tuned or \emph{learned} to minimise this loss averaged over a large dataset of labelled example images.
 
@@ -51,8 +51,8 @@ In the simplest case, this graph reduces to a chain $(f_1,f_2,\dots,f_L)$. Let $
 \node (w2) [data, below of=f2] {$\bw_2$};
 \node (wL) [data, below of=fL] {$\bw_L$};
 \draw [to] (x0.east) -- (f1.west) {};
-\draw [to] (f1.east) -- node {$\bx_2$} (f2.west);
-\draw [to] (f2.east) -- node {$\bx_3$} (dots.west) {};
+\draw [to] (f1.east) -- node {$\bx_1$} (f2.west);
+\draw [to] (f2.east) -- node {$\bx_2$} (dots.west) {};
 \draw [to] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
 \draw [to] (fL.east) -- (xL.west) {};
 \draw [to] (w1.north) -- (f1.south) {};
@@ -150,8 +150,8 @@ In order to understand backpropagation, consider first a simple CNN terminating 
 \node (wL) [data, below of=fL] {$\bw_L$};
 \node (z) [data, right of=loss] {$z\in\real$};
 \draw [to] (x0.east) -- (f1.west) {};
-\draw [to] (f1.east) -- node {$\bx_2$} (f2.west);
-\draw [to] (f2.east) -- node {$\bx_3$} (dots.west) {};
+\draw [to] (f1.east) -- node {$\bx_1$} (f2.west);
+\draw [to] (f2.east) -- node {$\bx_2$} (dots.west) {};
 \draw [to] (dots.east) -- node {$\bx_{L-1}$} (fL.west) {};
 \draw [to] (fL.east) -- node {$\bx_L$} (loss.west);
 \draw [to] (loss.east) -- (z) {};

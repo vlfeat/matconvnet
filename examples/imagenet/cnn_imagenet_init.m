@@ -8,28 +8,36 @@ opts.weightDecay = 1 ;
 opts.weightInitMethod = 'gaussian' ;
 opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
+opts.networkType = 'simplenn' ;
+opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
 opts = vl_argparse(opts, varargin) ;
 
 % Define layers
 switch opts.model
   case 'alexnet'
-    net.normalization.imageSize = [227, 227, 3] ;
+    net.meta.normalization.imageSize = [227, 227, 3] ;
     net = alexnet(net, opts) ;
+    bs = 256 ;
   case 'vgg-f'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_f(net, opts) ;
+    bs = 256 ;
   case 'vgg-m'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_m(net, opts) ;
+    bs = 196 ;
   case 'vgg-s'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_s(net, opts) ;
+    bs = 128 ;
   case 'vgg-vd-16'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
+    bs = 32 ;
   case 'vgg-vd-19'
-    net.normalization.imageSize = [224, 224, 3] ;
+    net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_vd(net, opts) ;
+    bs = 24 ;
   otherwise
     error('Unknown model ''%s''', opts.model) ;
 end
@@ -41,11 +49,44 @@ switch lower(opts.weightInitMethod)
 end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
-net.normalization.border = 256 - net.normalization.imageSize(1:2) ;
-net.normalization.interpolation = 'bicubic' ;
-net.normalization.averageImage = [] ;
-net.normalization.keepAspect = true ;
- 
+% Meta parameters
+net.meta.inputSize = net.meta.normalization.imageSize ;
+net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
+net.meta.normalization.interpolation = 'bicubic' ;
+net.meta.normalization.averageImage = [] ;
+net.meta.normalization.keepAspect = true ;
+net.meta.augmentation.rgbVariance = zeros(0,3) ;
+net.meta.augmentation.transformation = 'stretch' ;
+
+if ~opts.batchNormalization
+  lr = logspace(-2, -4, 60) ;
+else
+  lr = logspace(-1, -4, 20) ;
+end
+
+net.meta.trainOpts.learningRate = lr ;
+net.meta.trainOpts.numEpochs = numel(lr) ;
+net.meta.trainOpts.batchSize = bs ;
+net.meta.trainOpts.weightDecay = 0.0005 ;
+
+% Fill in default values
+net = vl_simplenn_tidy(net) ;
+
+% Switch to DagNN if requested
+switch lower(opts.networkType)
+  case 'simplenn'
+    % done
+  case 'dagnn'
+    net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
+    net.addLayer('top1err', dagnn.Loss('loss', 'classerror'), ...
+                 {'prediction','label'}, 'top1err') ;
+    net.addLayer('top5err', dagnn.Loss('loss', 'topkerror', ...
+                                       'opts', {'topK',5}), ...
+                 {'prediction','label'}, 'top5err') ;
+  otherwise
+    assert(false) ;
+end
+
 % --------------------------------------------------------------------
 function net = add_block(net, opts, id, h, w, in, out, stride, pad, init_bias)
 % --------------------------------------------------------------------
@@ -56,16 +97,18 @@ if fc
 else
   name = 'conv' ;
 end
+convOpts = {'CudnnWorkspaceLimit', opts.cudnnWorkspaceLimit} ;
 net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ...
                            'weights', {{init_weight(opts, h, w, in, out, 'single'), zeros(out, 1, 'single')}}, ...
                            'stride', stride, ...
                            'pad', pad, ...
                            'learningRate', [1 2], ...
-                           'weightDecay', [opts.weightDecay 0]) ;
+                           'weightDecay', [opts.weightDecay 0], ...
+                           'opts', {convOpts}) ;
 if opts.batchNormalization
-  net.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%d',id), ...
-                             'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single')}}, ...
-                             'learningRate', [2 1], ...
+  net.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s',id), ...
+                             'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single'), zeros(out, 2, 'single')}}, ...
+                             'learningRate', [2 1 0.05], ...
                              'weightDecay', [0 0]) ;
 end
 net.layers{end+1} = struct('type', 'relu', 'name', sprintf('relu%s',id)) ;

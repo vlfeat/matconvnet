@@ -46,10 +46,10 @@ net = load('imagenet-vgg-f.mat') ;
 % obtain and preprocess an image
 im = imread('peppers.png') ;
 im_ = single(im) ; % note: 255 range
-im_ = imresize(im_, net.normalization.imageSize(1:2)) ;
-im_ = im_ - net.normalization.averageImage ;
+im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
+im_ = im_ - net.meta.normalization.averageImage ;
 \end{lstlisting}
-Note that the image should be preprocessed before running the network. While preprocessing specifics depend on the model, the pre-trained model contain a \verb!net.normalization! field that describes the type of preprocessing that is expected. Note in particular that this network takes images of a fixed size as input and requires removing the mean; also, image intensities are normalized in the range [0,255].
+Note that the image should be preprocessed before running the network. While preprocessing specifics depend on the model, the pre-trained model contain a \verb!net.meta.normalization! field that describes the type of preprocessing that is expected. Note in particular that this network takes images of a fixed size as input and requires removing the mean; also, image intensities are normalized in the range [0,255].
 
 The next step is running the CNN. This will return a \verb!res! structure with the output of the network layers:
 \begin{lstlisting}[language=Matlab]
@@ -64,7 +64,7 @@ scores = squeeze(gather(res(end).x)) ;
 [bestScore, best] = max(scores) ;
 figure(1) ; clf ; imagesc(im) ;
 title(sprintf('%s (%d), score %.3f',...
-net.classes.description{best}, best, bestScore)) ;
+net.meta.classes.description{best}, best, bestScore)) ;
 \end{lstlisting}
 
 Note that several extensions are possible. First, images can be cropped rather than rescaled. Second, multiple crops can be fed to the network and results averaged, usually for improved results. Third, the output of the network can be used as generic features for image encoding.

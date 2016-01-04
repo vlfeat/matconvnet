@@ -7,17 +7,33 @@ data
 *.o
 *.pyc
 *~
-doc/.texpadtmp/*
-doc/*.pdf
-doc/.build
 index.html
 matconvnet-*.tar.gz
 local
-doc/site/docs/mfiles
-doc/site/site
 
+# Documentation
 doc/figures/svg/*.pdf
 doc/figures/*.idraw
+doc/.texpadtmp/*
+doc/*.pdf
+doc/.build
+
+# Website
+doc/site/docs/mfiles
+doc/site/site
+doc/site/.build
+doc/site/theme/css/bootstrap.min.css
+doc/site/theme/css/bootstrap.min.css.map
+doc/site/theme/css/font-awesome.min.css
+doc/site/theme/fonts/fontawesome-webfont.eot
+doc/site/theme/fonts/fontawesome-webfont.svg
+doc/site/theme/fonts/fontawesome-webfont.ttf
+doc/site/theme/fonts/fontawesome-webfont.woff
+doc/site/theme/fonts/fontawesome-webfont.woff2
+doc/site/theme/js/bootstrap.min.js
+doc/site/theme/js/jquery.min.js
+doc/site/theme/js/jquery.min.map
+doc/site/theme/js/npm.js
 
 # Visual C
 *.suo
@@ -25,3 +41,4 @@ doc/figures/*.idraw
 *.sdf
 *.opensdf
 doc/figures/svg/*.idraw
+

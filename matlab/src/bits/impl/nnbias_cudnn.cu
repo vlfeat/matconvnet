@@ -78,7 +78,9 @@ vl::impl::nnbias_forward_cudnn<float>(vl::Context& context,
     float alpha = biasesMult ;
     float beta = outputMult ;
     CHECK(cudnnAddTensor(handle,
+#if (CUDNN_VERSION < 4000)
                          CUDNN_ADD_SAME_C,
+#endif
                          &alpha,
                          biasesDesc, biases.getMemory(),
                          &beta,
@@ -100,7 +102,9 @@ vl::impl::nnbias_forward_cudnn<float>(vl::Context& context,
     float alpha = dataMult ;
     float beta = outputMult ;
     CHECK(cudnnAddTensor(handle,
+#if (CUDNN_VERSION < 4000)
                          CUDNN_ADD_FULL_TENSOR,
+#endif
                          &alpha,
                          dataDesc, data.getMemory(),
                          &beta,

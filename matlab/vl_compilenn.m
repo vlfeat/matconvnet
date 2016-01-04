@@ -152,7 +152,7 @@ opts.cudaArch         = [] ;
 opts.defCudaArch      = [...
   '-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
   '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
-opts.cudnnRoot        = 'local' ;
+opts.cudnnRoot        = 'local/cudnn' ;
 opts = vl_argparse(opts, varargin);
 
 % --------------------------------------------------------------------
@@ -260,6 +260,16 @@ if opts.enableGpu
                           mfilename, opts.cudaArch) ;
 end
 
+if opts.enableCudnn
+  opts.cudnnIncludeDir = fullfile(opts.cudnnRoot, 'include') ;
+  switch arch
+    case 'win64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib', 'x64') ;
+    case 'maci64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib') ;
+    case 'glnxa64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib64') ;
+    otherwise, error('Unsupported architecture ''%s''.', arch) ;
+  end
+end  
+
 % --------------------------------------------------------------------
 %                                                     Compiler options
 % --------------------------------------------------------------------
@@ -286,7 +296,7 @@ end
 if opts.enableGpu, flags.cc{end+1} = '-DENABLE_GPU' ; end
 if opts.enableCudnn,
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
-  flags.cc{end+1} = ['-I' opts.cudnnRoot] ;
+  flags.cc{end+1} = ['-I' opts.cudnnIncludeDir] ;
 end
 flags.link{end+1} = '-lmwblas' ;
 switch arch
@@ -312,7 +322,7 @@ if opts.enableGpu
       flags.link{end+1} = '-lgpu' ;
   end
   if opts.enableCudnn
-    flags.link{end+1} = ['-L' opts.cudnnRoot] ;
+    flags.link{end+1} = ['-L' opts.cudnnLibDir] ;
     flags.link{end+1} = '-lcudnn' ;
   end
 end
@@ -332,6 +342,15 @@ if strcmp(arch, 'maci64') && opts.enableGpu && cuver < 70000
     % default when linking MEX files overriding the option above. We
     % force it to use GCC libstdc++
     flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+  end
+end
+if strcmp(arch, 'maci64') && opts.enableGpu
+  % Mac OS X 10.11 disables LD_LIBRARY_PATH for security reason. To
+  % address this issue, we need to rpath the required CUDA and
+  % cuDNN libraries.
+  flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+  if opts.enableCudnn
+    flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
   end
 end
 if opts.enableGpu

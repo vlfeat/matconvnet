@@ -12,8 +12,8 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %
 %   While often one has H = W = 1, the case W, H > 1 is useful in
 %   dense labelling problems such as image segmentation. In the latter
-%   case, the loss is summed across pixels (unless otherwise specified
-%   using the `InstanceWeights` option described below).
+%   case, the loss is summed across pixels (contributions can be
+%   weighed using the `InstanceWeights` option described below).
 %
 %   The array C contains the categorical labels. In the simplest case,
 %   C is an array of integers in the range [1, D] with N elements
@@ -44,7 +44,12 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %   Classification error:: `classerror`
 %     L(X,c) = (argmax_q X(q) ~= c). Note that the classification
 %     error derivative is flat; therefore this loss is useful for
-%     assesment, but not for training a model.
+%     assessment, but not for training a model.
+%
+%   Top-K classification error:: `topkerror`
+%     L(X,c) = (rank X(c) in X <= K). The top rank is the one with
+%     highest score. For K=1, this is the same as the
+%     classification error. K is controlled by the `topK` option.
 %
 %   Log loss:: `log`
 %     L(X,c) = - log(X(c)). This function assumes that X(c) is the
@@ -108,6 +113,12 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %     W x 1 or a H x W x 1 x N array. For attribute losses, this is
 %     either a H x W x D or a H x W x D x N array.
 %
+%   TopK:: 5
+%     Top-K value for the top-K error. Note that K should not
+%     exceed the number of labels.
+%
+%   See also: VL_NNSOFTMAX().
+
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
 %
@@ -118,6 +129,7 @@ opts.instanceWeights = [] ;
 opts.classWeights = [] ;
 opts.threshold = 0 ;
 opts.loss = 'softmaxlog' ;
+opts.topK = 5 ;
 opts = vl_argparse(opts,varargin) ;
 
 inputSize = [size(X,1) size(X,2) size(X,3) size(X,4)] ;
@@ -138,7 +150,7 @@ labelSize = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
 assert(isequal(labelSize(1:2), inputSize(1:2))) ;
 assert(labelSize(4) == inputSize(4)) ;
 switch lower(opts.loss)
-  case {'classerror', 'log', 'softmaxlog', 'mhinge', 'mshinge'}
+  case {'classerror', 'topkerror', 'log', 'softmaxlog', 'mhinge', 'mshinge'}
     binary = false ;
 
     % there must be one categorical label per prediction vector
@@ -186,6 +198,9 @@ if nargin <= 2 || isempty(dzdy)
     case 'classerror'
       [~,chat] = max(X,[],3) ;
       t = single(c ~= chat) ;
+    case 'topkerror'
+      [~,predictions] = sort(X,3,'descend') ;
+      t = 1 - sum(bsxfun(@eq, c, predictions(:,:,1:opts.topK,:)), 3) ;
     case 'log'
       t = - log(X(ci)) ;
     case 'softmaxlog'
@@ -214,7 +229,7 @@ if nargin <= 2 || isempty(dzdy)
 else
   dzdy = dzdy * instanceWeights ;
   switch lower(opts.loss)
-    case 'classerror'
+    case {'classerror', 'topkerror'}
       Y = zerosLike(X) ;
     case 'log'
       Y = zerosLike(X) ;
