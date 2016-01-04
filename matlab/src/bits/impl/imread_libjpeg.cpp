@@ -106,6 +106,10 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   image.height = decompressor.output_height ;
   image.depth = decompressor.output_components ;
 
+  if (image.depth == 4 && decompressor.jpeg_color_space == JCS_YCCK) {
+    fprintf(stderr, "libjpeg does not support conversion from YCCK->RGB.\n");
+  }
+
   /* allocate image memory */
   if (memory == NULL) {
     image.memory = (float*)malloc(sizeof(float)*image.depth*image.width*image.height) ;
@@ -140,6 +144,7 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   switch (image.depth) {
     case 3 : vl::impl::imageFromPixels<impl::pixelFormatRGB>(image, pixels, image.width*3) ; break ;
     case 1 : vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, image.width*1) ; break ;
+    default : image.error = 1 ; goto done ;
   }
   jpeg_finish_decompress(&decompressor) ;
   requiresAbort = false ;
