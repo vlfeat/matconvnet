@@ -50,7 +50,7 @@ classdef nnloss < nntest
     function nullcategories(test, loss, weighed)
       [x,c,dzdy,instanceWeights] = test.getx(loss) ;
       % make a number of categories null
-      c(:) = c(:) .* (test.randn(numel(c),1) > 0) ;
+      c = c .* (test.randn(size(c)) > 0) ;
       opts = {'loss',loss} ;
       if weighed, opts = {opts{:}, 'instanceWeights', instanceWeights} ; end
       y = vl_nnloss(x,c,[],opts{:}) ;
