@@ -2,7 +2,11 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %VL_SIMPLENN  Evaluate a SimpleNN network.
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
-%   derivative on data X and output derivative DZDY.
+%   derivative on data X and output derivative DZDY (foward+bacwkard pass).
+%   RES = VL_SIMPLENN(NET, X, [], RES) evaluates the NET on X reusing the
+%   structure RES.
+%   RES = VL_SIMPLENN(NET, X, DZDY, RES) evaluates the NET on X and its 
+%   derivatives reusing the structure RES.
 %
 %   This function process networks using the SimpleNN wrapper
 %   format. Such networks are 'simple' in the sense that they consist
@@ -30,7 +34,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   To print or obtain summary of the network structure, use the
 %   VL_SIMPLENN_DISPLAY() function.
 %
-%   VL_SIMPLENN_DISPLAY(..., 'OPT', VAL, ...) takes the following
+%   VL_SIMPLENN(NET, X, DZDY, RES, 'OPT', VAL, ...) takes the following
 %   options:
 %
 %   `Mode`:: `normal`
@@ -52,6 +56,12 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   `Accumulate`:: `false`
 %      Accumulate gradients in back-propagation instead of rewriting
 %      them. This is useful to break the computation in sub-batches.
+%      The gradients are accumulated to the provided RES structure
+%      (i.e. to call VL_SIMPLENN(NET, X, DZDY, RES, ...).
+%
+%   `SkipForward`:: `false`
+%      Reuse the output values from the provided RES structure and compute
+%      only the derivatives (bacward pass).
 %
 %   ## The result format
 %
@@ -206,13 +216,13 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-opts.res = [] ;
 opts.conserveMemory = false ;
 opts.sync = false ;
 opts.mode = 'normal' ;
 opts.accumulate = false ;
 opts.cudnn = true ;
 opts.backPropDepth = +inf ;
+opts.skipForward = false;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -220,6 +230,10 @@ backPropLim = max(n - opts.backPropDepth + 1, 1);
 
 if (nargin <= 2) || isempty(dzdy)
   doder = false ;
+  if opts.skipForward
+    error('simplenn:skipForwardNoBackwPass', ...
+      '`skipForward` valid only when backward pass is computed.');
+  end
 else
   doder = true ;
 end
@@ -242,6 +256,10 @@ end
 gpuMode = isa(x, 'gpuArray') ;
 
 if nargin <= 3 || isempty(res)
+  if opts.skipForward
+    error('simplenn:skipForwardEmptyRes', ...
+    'RES structure must be provided for `skipForward`.');
+  end
   res = struct(...
     'x', cell(1,n+1), ...
     'dzdx', cell(1,n+1), ...
@@ -250,13 +268,24 @@ if nargin <= 3 || isempty(res)
     'time', num2cell(zeros(1,n+1)), ...
     'backwardTime', num2cell(zeros(1,n+1))) ;
 end
-res(1).x = x ;
+
+if opts.skipForward
+  if any(cellfun(@isempty, {res.x}))
+    error('simplenn:skipForwardInvalidRes', ...
+      ['For `skipForward`, all output values in RES must be provided.'...
+      'Output values are removed e.g. when `conserveMemory` is enabled.']);
+  end
+else
+  res(1).x = x ;
+end
+
 
 % -------------------------------------------------------------------------
 %                                                              Forward pass
 % -------------------------------------------------------------------------
 
 for i=1:n
+  if opts.skipForward, break; end;
   l = net.layers{i} ;
   res(i).time = tic ;
   switch l.type

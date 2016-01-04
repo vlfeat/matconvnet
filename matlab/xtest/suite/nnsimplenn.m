@@ -119,5 +119,27 @@ classdef nnsimplenn < nntest
         end
       end
     end
+
+    function skipForward(test)
+      % Verify that the skipForward argument works
+      test.net.layers{end}.class = test.class;
+      res = vl_simplenn(test.net, test.x, 1);
+      res_ = vl_simplenn(test.net, test.x, 1, res, 'skipForward', true);
+      for li = 1:numel(res)
+        test.verifyEqual(res(li).x, res_(li).x);
+        test.verifyEqual(res(li).dzdx, res_(li).dzdx);
+      end
+      % Verify that it throws the specified errors for 'skipForward'
+      test.verifyError(...
+        @() vl_simplenn(test.net, test.x, [], [], 'skipForward', true), ...
+        'simplenn:skipForwardNoBackwPass');
+      test.verifyError(...
+        @() vl_simplenn(test.net, test.x, 1, [], 'skipForward', true), ...
+        'simplenn:skipForwardEmptyRes');
+      res(end).x = [];
+      test.verifyError(...
+        @() vl_simplenn(test.net, test.x, 1, res, 'skipForward', true), ...
+        'simplenn:skipForwardInvalidRes');
+    end
   end
 end
