@@ -26,6 +26,7 @@ enum {
   opt_prefetch,
   opt_preallocate,
   opt_verbose,
+  opt_fixed_dims
 } ;
 
 /* options */
@@ -34,6 +35,7 @@ vlmxOption  options [] = {
   {"Prefetch",         0,   opt_prefetch           },
   {"Preallocate",      1,   opt_preallocate        },
   {"Verbose",          0,   opt_verbose            },
+  {"FixedDims",        0,   opt_fixed_dims         },
   {0,                  0,   0                      }
 } ;
 
@@ -91,7 +93,21 @@ void reader_function(void* reader_)
     task_t & thisTask = tasks[taskIndex] ;
 
     tasksMutex.unlock() ;
-    thisTask.image = reader->read(thisTask.name.c_str(), thisTask.image.memory) ;
+    if (thisTask.image.error == -1) {
+      // fixedDims was used, validate dimensions
+      vl::Image image = reader->readDimensions(thisTask.name.c_str());
+      if (image.error == 0 &&
+          image.height == thisTask.image.height &&
+          image.width == thisTask.image.width &&
+          image.depth == thisTask.image.depth) {
+        // Valid dimensions, read the image (otherwise return with image.error != 0
+        thisTask.image = reader->read(thisTask.name.c_str(), thisTask.image.memory) ;
+      }
+          
+    }
+    else {
+      thisTask.image = reader->read(thisTask.name.c_str(), thisTask.image.memory) ;
+    }
 
     tasksMutex.lock() ;
     thisTask.done = true ;
@@ -171,6 +187,10 @@ void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   bool prefetch = false ;
+  bool fixedDims = false ;
+  int fixedWidth = 0;
+  int fixedHeight = 0;
+  int fixedDepth = 0;
   int requestedNumThreads = -1 ;
   int verbosity = 0 ;
   int opt ;
@@ -197,6 +217,10 @@ void mexFunction(int nout, mxArray *out[],
 
       case opt_prefetch :
         prefetch = true ;
+        break ;
+        
+      case opt_fixed_dims :
+        fixedDims = true ;
         break ;
 
       case opt_preallocate :
@@ -258,15 +282,33 @@ void mexFunction(int nout, mxArray *out[],
       newTask.name = filenames[t] ;
       newTask.done = false ;
       if (preallocate) {
-        newTask.image = readers[0].second->readDimensions(filenames[t].c_str()) ;
-        if (newTask.image.error == 0) {
-          newTask.image.memory = (float*)mxMalloc(sizeof(float)*
-                                                  newTask.image.width*
-                                                  newTask.image.height*
-                                                  newTask.image.depth) ;
-          mexMakeMemoryPersistent(newTask.image.memory) ;
-          newTask.hasMatlabMemory = true ;
+        if (!fixedDims || fixedWidth == 0) {
+          newTask.image = readers[0].second->readDimensions(filenames[t].c_str()) ;
+          if (newTask.image.error == 0) {
+            newTask.image.memory = (float*)mxMalloc(sizeof(float)*
+                                                    newTask.image.width*
+                                                    newTask.image.height*
+                                                    newTask.image.depth) ;
+            if (fixedDims){
+              fixedWidth = newTask.image.width;
+              fixedHeight = newTask.image.height;
+              fixedDepth = newTask.image.depth;
+            }            
+          }
         }
+        else {
+          newTask.image = vl::Image();
+          newTask.image.width = fixedWidth;
+          newTask.image.height = fixedHeight;
+          newTask.image.depth = fixedDepth;
+          newTask.image.memory = (float*)mxMalloc(sizeof(float)*
+                                                  fixedWidth*
+                                                  fixedHeight*
+                                                  fixedDepth) ;
+          newTask.image.error = -1; // Indicate we need to validate dimensions
+        }
+        mexMakeMemoryPersistent(newTask.image.memory) ;
+        newTask.hasMatlabMemory = true ;       
       } else {
         newTask.image = vl::Image() ;
         newTask.hasMatlabMemory = false ;

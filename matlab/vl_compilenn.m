@@ -297,6 +297,7 @@ if opts.verbose > 1
 end
 if opts.debug
   flags.cc{end+1} = '-g' ;
+  flags.link{end+1} = '-g' ;
 else
   flags.cc{end+1} = '-DNDEBUG' ;
 end
