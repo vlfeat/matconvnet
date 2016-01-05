@@ -17,6 +17,7 @@ the terms of the BSD license (see the COPYING file).
 #include "nnconv_cudnn.hpp"
 #include "../datacu.hpp"
 #include <assert.h>
+#include <algorithm>
 
 using namespace vl ;
 
