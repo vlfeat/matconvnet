@@ -205,17 +205,17 @@ void mexFunction(int nout, mxArray *out[],
           mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
         }
         context.getCudaHelper().setCudnnConvolutionFwdPreference
-        ((std::isinf(x) ?
+        ((isinf(x) ?
           CUDNN_CONVOLUTION_FWD_PREFER_FASTEST :
           CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
         context.getCudaHelper().setCudnnConvolutionBwdFilterPreference
-        ((std::isinf(x) ?
+        ((isinf(x) ?
           CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
         context.getCudaHelper().setCudnnConvolutionBwdDataPreference
-        ((std::isinf(x) ?
+        ((isinf(x) ?
           CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
