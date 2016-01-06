@@ -20,11 +20,11 @@ classdef nnconvt < nntest
       m = depth ;
       n = numImages ;
       k = numFilters;
-      x = test.randn(10,12,m,n,'single') ;
-      f = test.randn(3,4,k,m,'single') ;
-      b = test.randn(1,k,'single') ;
+      x = test.randn(10,12,m,n) ;
+      f = test.randn(3,4,k,m) ;
+      b = test.randn(1,k) ;
       y = vl_nnconvt(x,f,b) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy) ;
       test.der(@(x) vl_nnconvt(x,f,b), x, dzdy, dzdx, test.range * 1e-2) ;
       test.der(@(f) vl_nnconvt(x,f,b), f, dzdy, dzdf, test.range * 1e-2) ;
@@ -34,11 +34,11 @@ classdef nnconvt < nntest
     function upsample_crop(test,upx,upy,padx1,pady1,padx2,pady2)
       m = 3 ; n = 2 ; k = 3;
       opts = {'upsample',[upy upx],'crop',[pady1 pady2 padx1 padx2]} ;
-      x = test.randn(5,6,m,n,'single') ;
-      f = test.randn(3,4,k,m,'single') ;
-      b = test.randn(1,k,'single') ;
+      x = test.randn(5,6,m,n) ;
+      f = test.randn(3,4,k,m) ;
+      b = test.randn(1,k) ;
       y = vl_nnconvt(x,f,b,opts{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,opts{:}) ;
       test.der(@(x) vl_nnconvt(x,f,b,opts{:}), x, dzdy, dzdx, test.range * 1e-2) ;
       test.der(@(f) vl_nnconvt(x,f,b,opts{:}), f, dzdy, dzdf, test.range * 1e-2) ;
@@ -51,11 +51,11 @@ classdef nnconvt < nntest
       k = numFilters ;
       n = 3 ;
       opts = {'numgroups',ng} ;
-      x = test.randn(10,12,m*ng,n,'single') ;
-      f = test.randn(3,4,k,m*ng,'single') ;
-      b = test.randn(1,k*ng,'single') ;
+      x = test.randn(10,12,m*ng,n) ;
+      f = test.randn(3,4,k,m*ng) ;
+      b = test.randn(1,k*ng) ;
       y = vl_nnconvt(x,f,b,opts{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,opts{:}) ;
       test.der(@(x) vl_nnconvt(x,f,b,opts{:}), x, dzdy, dzdx, test.range * 1e-2) ;
       test.der(@(f) vl_nnconvt(x,f,b,opts{:}), f, dzdy, dzdf, test.range * 1e-2) ;
@@ -69,13 +69,13 @@ classdef nnconvt < nntest
       n = 4 ;
       k = 3 ;
       fsy = fsx * 3 ;
-      x = test.randn(1,1,m,n,'single') ;
-      f = test.randn(fsy,fsx,k,m,'single') ;
-      b = test.randn(1,k,'single') ;
+      x = test.randn(1,1,m,n) ;
+      f = test.randn(fsy,fsx,k,m) ;
+      b = test.randn(1,k) ;
       croph = floor(crop/2) ;
       opts = {'crop', [croph, crop-croph, croph, crop-croph], 'upsample', [up up]} ;
       y = vl_nnconvt(x,f,b,opts{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       [dzdx,dzdf,dzdb] = vl_nnconvt(x,f,b,dzdy,opts{:}) ;
       test.der(@(x) vl_nnconvt(x,f,b,opts{:}), x, dzdy, dzdx, test.range * 1e-2) ;
       test.der(@(f) vl_nnconvt(x,f,b,opts{:}), f, dzdy, dzdf, test.range * 1e-2) ;
@@ -98,16 +98,16 @@ classdef nnconvt < nntest
       fn = 10 ;
       n = 32 ;
       depth = 32 ;
-      x = test.randn(32,32,depth,n,'single') ;
-      w = test.randn(fh,fw,fn,depth,'single') ;
-      b = test.randn(1,fn,'single') ;
+      x = test.randn(32,32,depth,n) ;
+      w = test.randn(fh,fw,fn,depth) ;
+      b = test.randn(1,fn) ;
 
       for o = 1:numel(opts)
         for v = 1:numel(variants)
           %args = horzcat(variants{v}, opts{o}, {'verbose'}) ;
           args = horzcat(variants{v}, opts{o}) ;
           y = vl_nnconvt(x,w,b,args{:}) ;
-          dzdy = test.randn(size(y),'single') ;
+          dzdy = test.randn(size(y)) ;
           [dzdx,dzdw,dzdb] = vl_nnconvt(x,w,b,dzdy,args{:}) ;
 
           dzdy_ = gather(dzdy) ;

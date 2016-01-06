@@ -15,6 +15,8 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
+#define VL_IMAGE_ERROR_MSG_MAX_LENGTH 256
+
   struct Image
   {
     int width ;
@@ -22,8 +24,9 @@ namespace vl {
     int depth ;
     float * memory ;
     int error ;
+    char errorMessage [VL_IMAGE_ERROR_MSG_MAX_LENGTH] ;
 
-    Image() : width(0), height(0), depth(0), memory(0), error(0) { }
+    Image() : width(0), height(0), depth(0), memory(0), error(0) { errorMessage[0] = 0 ; }
   } ;
 
   class ImageReader

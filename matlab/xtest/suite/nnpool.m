@@ -18,11 +18,11 @@ classdef nnpool < nntest
     padBottom = {0 1 2}
   end
 
-  methods (TestMethodSetup)
+  methods (TestClassSetup)
     function data(test,device)
       % make sure that all elements in x are different. in this way,
       % we can compute numerical derivatives reliably by adding a delta < .5.
-      x = test.randn(15,14,3,2,'single') ;
+      x = test.randn(15,14,3,2) ;
       x(:) = randperm(numel(x))' ;
       test.x = x ;
       test.range = 10 ;
@@ -40,8 +40,10 @@ classdef nnpool < nntest
       pool = [pooly poolx] ;
       args = {'stride',stride,'pad',pad, 'method', 'avg'};
       y = vl_nnpool(x,pool,args{:}) ;
-      y_conv = vl_nnconv(gather(x), ones(pooly,poolx,1,size(x,3), 'single')./poolx./pooly, ...
-                         zeros(1, size(x,3), 'single'), 'stride', stride, ...
+      y_conv = vl_nnconv(gather(x), ...
+                         ones(pooly,poolx,1,size(x,3),test.currentDataType)./poolx./pooly, ...
+                         zeros(1,size(x,3),test.currentDataType), ...
+                         'stride', stride, ...
                          'pad', pad);
       test.eq(y, y_conv, 1e-3); % Does not pass with 1e-4
     end
@@ -51,7 +53,7 @@ classdef nnpool < nntest
       if pad > pool-1, return ; end
       args = {'stride',stride,'pad',pad,'method',type};
       y = vl_nnpool(x,pool,args{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
       test.der(@(x) vl_nnpool(x,pool,args{:}), ...
                x, dzdy, dzdx, test.range * 1e-2) ;
@@ -64,7 +66,7 @@ classdef nnpool < nntest
       pool = [pooly poolx] ;
       args = {'stride',stride,'pad',pad,'method',type};
       y = vl_nnpool(x,pool,args{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
       test.der(@(x) vl_nnpool(x,pool,args{:}), ...
                x, dzdy, dzdx, test.range * 1e-2) ;
@@ -77,7 +79,7 @@ classdef nnpool < nntest
       stride = [stridey stridex] ;
       args = {'stride',stride,'pad',pad,'method',type};
       y = vl_nnpool(x,pool,args{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
       test.der(@(x) vl_nnpool(x,pool,args{:}), ...
                x, dzdy, dzdx, test.range * 1e-2) ;
@@ -90,7 +92,7 @@ classdef nnpool < nntest
       pad = [0 0 padLeft padRight] ;
       args = {'stride',stride,'pad',pad,'method',type};
       y = vl_nnpool(x,pool,args{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
       test.der(@(x) vl_nnpool(x,pool,args{:}), ...
                x, dzdy, dzdx, test.range * 1e-2) ;
@@ -103,7 +105,7 @@ classdef nnpool < nntest
       pad = [padTop padBottom 2 1] ;
       args = {'stride',stride,'pad',pad,'method',type};
       y = vl_nnpool(x,pool,args{:}) ;
-      dzdy = test.randn(size(y),'single') ;
+      dzdy = test.randn(size(y)) ;
       dzdx = vl_nnpool(x,pool,dzdy,args{:}) ;
       test.der(@(x) vl_nnpool(x,pool,args{:}), ...
                x, dzdy, dzdx, test.range * 1e-2) ;

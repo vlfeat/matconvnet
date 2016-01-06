@@ -19,7 +19,7 @@ function [y,mask] = vl_nndropout(x,varargin)
 %   compensation during training. So at test time no alterations are
 %   required.
 
-% Copyright (C) 2014-15 Andrea Vedaldi.
+% Copyright (C) 2014-16 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -38,15 +38,27 @@ end
 
 % determine mask
 mask = opts.mask ;
-scale = single(1 / (1 - opts.rate)) ;
+scale = 1 / (1 - opts.rate) ;
 if backMode && isempty(mask)
   warning('vl_nndropout: when using in backward mode, the mask should be specified') ;
 end
 if isempty(mask)
   if isa(x,'gpuArray')
-    mask = scale * single(gpuArray.rand(size(x)) >= opts.rate) ;
+    switch classUnderlying(x)
+      case 'single'
+        scale = single(scale) ;
+      case 'double'
+        scale = double(scale) ;
+    end
+    mask = scale * (gpuArray.rand(size(x), 'single') >= opts.rate) ;
   else
-    mask = scale * single(rand(size(x)) >= opts.rate) ;
+    switch class(x)
+      case 'single'
+        scale = single(scale) ;
+      case 'double'
+        scale = double(scale) ;
+    end
+    mask = scale * (rand(size(x), 'single') >= opts.rate) ;
   end
 end
 

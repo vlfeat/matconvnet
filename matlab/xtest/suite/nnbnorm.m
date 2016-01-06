@@ -11,14 +11,14 @@ classdef nnbnorm < nntest
       c = cols ;
       nd = numDims ;
       bs = batchSize ;
-      x = test.randn(r, c, nd, bs, 'single') ;
-      g = test.randn(1, 1, nd, 1, 'single');
-      b = test.randn(1, 1, nd, 1, 'single');
-      g = test.randn(nd, 1, 'single');
-      b = test.randn(nd, 1, 'single');
+      x = test.randn(r, c, nd, bs) ;
+      g = test.randn(1, 1, nd, 1) ;
+      b = test.randn(1, 1, nd, 1) ;
+      g = test.randn(nd, 1) ;
+      b = test.randn(nd, 1) ;
 
       y = vl_nnbnorm(x,g,b) ;
-      dzdy = test.randn(size(y), 'single') ;
+      dzdy = test.randn(size(y)) ;
       [dzdx,dzdg,dzdb] = vl_nnbnorm(x,g,b,dzdy) ;
 
       test.der(@(x) vl_nnbnorm(x,g,b), x, dzdy, dzdx, test.range * 1e-2, -1e-3) ;

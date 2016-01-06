@@ -22,7 +22,7 @@ function y = vl_nnpdist(x, x0, p, varargin)
 %   block projected onto DZDY. DZDX and DZDY have the same dimensions
 %   as X and Y, respectively.
 %
-%   VL_NNPDIST(..., 'OPT', VAL, ...) accepts the following options:
+%   VL_NNPDIST(___, 'OPT', VAL, ...) accepts the following options:
 %
 %   `NoRoot`:: `false`
 %      If set to true, compute the P-distance to the P-th power.
@@ -32,8 +32,6 @@ function y = vl_nnpdist(x, x0, p, varargin)
 %      lower boudned by this value. For example, the L2 distance is
 %      not smooth at the origin; this option prevents the
 %      derivative from diverging.
-
-
 
 % Copyright (C) 2015  Karel Lenc and Andrea Vedaldi.
 % All rights reserved.

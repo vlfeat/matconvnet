@@ -3,12 +3,12 @@
 // @author Andrea Vedaldi
 
 /*
- Copyright (C) 2015 Andrea Vedaldi.
- All rights reserved.
+Copyright (C) 2015-16 Andrea Vedaldi.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "data.hpp"
 #include <cassert>
@@ -33,10 +33,10 @@ vl::getErrorMessage(Error error)
 {
   static char const * messages[] = {
     "success",
-    "unsupported error",
-    "cuda error",
-    "cudnn error",
-    "cublas error",
+    "unsupported feature error",
+    "CUDA error",
+    "cuDNN error",
+    "cuBLAS error",
     "out of memory error",
     "out of GPU memory error",
     "unknown error"
@@ -365,50 +365,149 @@ vl::Context::clearAllOnes(Device deviceType)
 }
 
 /* -------------------------------------------------------------------
- * TensorGeometry
+ *                                                         TensorShape
  * ---------------------------------------------------------------- */
 
-vl::TensorGeometry::TensorGeometry()
-: height(0), width(0), depth(0), size(0)
+vl::TensorShape::TensorShape()
+: numDimensions(0)
 { }
 
-vl::TensorGeometry::TensorGeometry(index_t height, index_t width, index_t depth, index_t size)
-: height(height), width(width), depth(depth), size(size)
-{ }
+vl::TensorShape::TensorShape(TensorShape const & t)
+: numDimensions(t.numDimensions)
+{
+  for (unsigned k = 0 ; k < numDimensions ; ++k) {
+    dimensions[k] = t.dimensions[k] ;
+  }
+}
 
-vl::index_t vl::TensorGeometry::getHeight() const { return height ; }
-vl::index_t vl::TensorGeometry::getWidth() const { return width ; }
-vl::index_t vl::TensorGeometry::getDepth() const { return depth ; }
-vl::index_t vl::TensorGeometry::getSize() const { return size ; }
-vl::index_t vl::TensorGeometry::getNumElements() const { return height*width*depth*size ; }
-void vl::TensorGeometry::setHeight(index_t x) { height = x ; }
-void vl::TensorGeometry::setWidth(index_t x) { width = x ; }
-void vl::TensorGeometry::setDepth(index_t x) { depth = x ; }
-void vl::TensorGeometry::setSize(index_t x) { size = x ; }
-bool vl::TensorGeometry::isEmpty() const { return getNumElements() == 0 ; }
+vl::TensorShape::TensorShape(size_t height, size_t width, size_t depth, size_t size)
+: numDimensions(4)
+{
+  dimensions[0] = height ;
+  dimensions[1] = width ;
+  dimensions[2] = depth ;
+  dimensions[3] = size ;
+}
+
+void vl::TensorShape::clear()
+{
+  numDimensions = 0 ;
+}
+
+void vl::TensorShape::setDimension(size_t num, size_t dimension)
+{
+  assert(num + 1 <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  if (num + 1 > numDimensions) {
+    size_t x = (getNumElements() > 0) ;
+    for (size_t k = numDimensions ; k < num ; ++k) {
+      dimensions[k] = x ;
+    }
+    numDimensions = num + 1 ;
+  }
+  dimensions[num] = dimension ;
+}
+
+size_t vl::TensorShape::getDimension(size_t num) const
+{
+  if (num + 1 > numDimensions) {
+    return 1 ;
+  }
+  return dimensions[num] ;
+}
+
+size_t vl::TensorShape::getNumDimensions() const
+{
+  return numDimensions ;
+}
+
+size_t const * vl::TensorShape::getDimensions() const
+{
+  return dimensions ;
+}
+
+size_t vl::TensorShape::getNumElements() const
+{
+  if (numDimensions == 0) {
+    return 0 ;
+  }
+  size_t n = 1 ;
+  for (unsigned k = 0 ; k < numDimensions ; ++k) { n *= dimensions[k] ; }
+  return n ;
+}
+
+size_t vl::TensorShape::getHeight() const { return getDimension(0) ; }
+size_t vl::TensorShape::getWidth() const { return getDimension(1) ; }
+size_t vl::TensorShape::getDepth() const { return getDimension(2) ; }
+size_t vl::TensorShape::getSize() const { return getDimension(3) ; }
+
+void vl::TensorShape::setHeight(size_t x) { setDimension(0,x) ; }
+void vl::TensorShape::setWidth(size_t x) { setDimension(1,x) ; }
+void vl::TensorShape::setDepth(size_t x) { setDimension(2,x) ; }
+void vl::TensorShape::setSize(size_t x) { setDimension(3,x) ; }
+bool vl::TensorShape::isEmpty() const { return getNumElements() == 0 ; }
+
+bool vl::operator== (vl::TensorShape const & a, vl::TensorShape const & b)
+{
+  size_t n = a.getNumDimensions() ;
+  if (b.getNumDimensions() != n) { return false ; }
+  size_t const * adims = a.getDimensions() ;
+  size_t const * bdims = b.getDimensions() ;
+  for (unsigned k =0 ; k < a.getNumDimensions() ; ++k) {
+    if (adims[k] != bdims[k]) { return false ; }
+  }
+  return true ;
+}
+
+void vl::TensorShape::reshape(size_t newNumDimensions)
+{
+  assert(newNumDimensions <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  size_t n = getNumElements() ;
+  if (newNumDimensions > 0) {
+    setDimension(newNumDimensions - 1, 1) ;
+    numDimensions = newNumDimensions ;
+    size_t m = getNumElements() ;
+    if (m) {
+      dimensions[newNumDimensions - 1] *= (n / m) ;
+    } else if (n == 0) {
+      dimensions[newNumDimensions - 1] = 0  ;
+    }
+  } else {
+    numDimensions = newNumDimensions ;
+  }
+}
+
+void vl::TensorShape::reshape(TensorShape const & newShape)
+{
+  operator=(newShape) ;
+}
 
 /* -------------------------------------------------------------------
- * Tensor
+ *                                                              Tensor
  * ---------------------------------------------------------------- */
 
 vl::Tensor::Tensor()
-: TensorGeometry(), memory(NULL), memorySize(0), memoryType(CPU)
+: TensorShape(), dataType(vlTypeFloat),
+  deviceType(CPU), memory(NULL), memorySize(0)
 { }
 
-vl::Tensor::Tensor(float * memory, size_t memorySize, Device memoryType,
-                   vl::TensorGeometry const & geom)
-: TensorGeometry(geom),
-memory(memory), memorySize(memorySize), memoryType(memoryType)
+vl::Tensor::Tensor(TensorShape const & shape, Type dataType,
+                   Device deviceType, void * memory, size_t memorySize)
+: TensorShape(shape),
+dataType(dataType),
+deviceType(deviceType),
+memory(memory), memorySize(memorySize)
 { }
 
-TensorGeometry vl::Tensor::getGeometry() const
+TensorShape vl::Tensor::getShape() const
 {
-  return TensorGeometry(*this) ;
+  return TensorShape(*this) ;
 }
 
-float * vl::Tensor::getMemory() { return memory ; }
-void vl::Tensor::setMemory(float * x) { memory = x ; }
-vl::Device vl::Tensor::getMemoryType() const { return memoryType ; }
+vl::Type vl::Tensor::getDataType() const { return dataType ; }
+void * vl::Tensor::getMemory() { return memory ; }
+void vl::Tensor::setMemory(void * x) { memory = x ; }
+vl::Device vl::Tensor::getDeviceType() const { return deviceType ; }
 bool vl::Tensor::isNull() const { return memory == NULL ; }
 vl::Tensor::operator bool() const { return !isNull() ; }
+
 
