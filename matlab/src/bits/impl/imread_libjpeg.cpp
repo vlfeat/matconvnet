@@ -40,7 +40,6 @@ public:
   vl::Image read(char const * filename, float * memory) ;
   vl::Image readDimensions(char const * filename) ;
 
-
   static void reader_jpeg_error (j_common_ptr cinfo)
   {
     vl::ImageReader::Impl* self = (vl::ImageReader::Impl*) cinfo->err ;
@@ -54,8 +53,6 @@ vl::ImageReader::Impl::Impl()
   decompressor.err = jpeg_std_error(&jpegErrorManager) ;
   jpegErrorManager.error_exit = reader_jpeg_error ;
   jpeg_create_decompress(&decompressor) ;
-  decompressor.out_color_space = JCS_RGB ;
-  decompressor.quantize_colors = FALSE ;
 }
 
 vl::ImageReader::Impl::~Impl()
@@ -90,6 +87,8 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   /* handle LibJPEG errors */
   if (setjmp(onJpegError)) {
     image.error = 1 ;
+    std::snprintf(image.errorMessage,  sizeof(image.errorMessage),
+                  "libjpeg: %s", jpegLastErrorMsg) ;
     goto done ;
   }
 
@@ -100,15 +99,20 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   jpeg_read_header(&decompressor, TRUE) ;
   requiresAbort = true ;
 
-  /* get the output dimension (this may differ from the input if we were to scale the image) */
+  /* figure out if the image is grayscale (depth = 1) or color (depth = 3) */
+  decompressor.quantize_colors = FALSE ;
+  if (decompressor.jpeg_color_space == JCS_GRAYSCALE) {
+    image.depth = 1 ;
+    decompressor.out_color_space = JCS_GRAYSCALE ;
+  }  else {
+    image.depth = 3 ;
+    decompressor.out_color_space = JCS_RGB ;
+  }
+
+  /* get the output dimension */
   jpeg_calc_output_dimensions(&decompressor) ;
   image.width = decompressor.output_width ;
   image.height = decompressor.output_height ;
-  image.depth = decompressor.output_components ;
-
-  if (image.depth == 4 && decompressor.jpeg_color_space == JCS_YCCK) {
-    fprintf(stderr, "libjpeg does not support conversion from YCCK->RGB.\n");
-  }
 
   /* allocate image memory */
   if (memory == NULL) {
@@ -184,6 +188,8 @@ vl::ImageReader::Impl::readDimensions(char const * filename)
   // handle LibJPEG errors
   if (setjmp(onJpegError)) {
     image.error = 1 ;
+    std::snprintf(image.errorMessage,  sizeof(image.errorMessage),
+                  "libjpeg: %s", jpegLastErrorMsg) ;
     goto done ;
   }
 
@@ -194,11 +200,17 @@ vl::ImageReader::Impl::readDimensions(char const * filename)
   jpeg_read_header(&decompressor, TRUE) ;
   requiresAbort = true ;
 
+  /* figure out if the image is grayscale (depth = 1) or color (depth = 3) */
+  if (decompressor.jpeg_color_space == JCS_GRAYSCALE) {
+    image.depth = 1 ;
+  }  else {
+    image.depth = 3 ;
+  }
+
   /* get the output dimension (this may differ from the input if we were to scale the image) */
   jpeg_calc_output_dimensions(&decompressor) ;
   image.width = decompressor.output_width ;
   image.height = decompressor.output_height ;
-  image.depth = decompressor.output_components ;
 
 done:
   if (requiresAbort) { jpeg_abort((j_common_ptr)&decompressor) ; }

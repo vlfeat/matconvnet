@@ -266,6 +266,8 @@ void mexFunction(int nout, mxArray *out[],
                                                   newTask.image.depth) ;
           mexMakeMemoryPersistent(newTask.image.memory) ;
           newTask.hasMatlabMemory = true ;
+        } else {
+
         }
       } else {
         newTask.image = vl::Image() ;
@@ -312,8 +314,12 @@ void mexFunction(int nout, mxArray *out[],
       mxSetCell(out[OUT_IMAGES], t, image_array) ;
     } else {
       char message [1024*4] ;
-      snprintf(message, sizeof(message)/sizeof(char),
-               "could not read image '%s'", tasks[t].name.c_str()) ;
+      int offset = snprintf(message, sizeof(message)/sizeof(char),
+                            "could not read image '%s' %s", tasks[t].name.c_str()) ;
+      if (strlen(image.errorMessage) > 0) {
+        snprintf(message + offset, sizeof(message)/sizeof(char) - offset,
+                 "[%s]", image.errorMessage) ;
+      }
       mexWarnMsgTxt(message) ;
     }
   }

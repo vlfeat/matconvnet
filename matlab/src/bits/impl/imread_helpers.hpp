@@ -56,7 +56,7 @@ namespace vl { namespace impl {
         break ;
       case pixelFormatRGBA:
       case pixelFormatBGRA:
-	  case pixelFormatBGRAasL:
+      case pixelFormatBGRAasL:
         pixelStride = 4 ;
         blockSizeX = 4 ;
         blockSizeY = 4 ;
@@ -99,7 +99,7 @@ namespace vl { namespace impl {
                 r[1 * imagePlaneStride] = (float) pixel[1] ;
                 r[0 * imagePlaneStride] = (float) pixel[2] ;
                 break;
-			  case pixelFormatBGRAasL:
+	      case pixelFormatBGRAasL:
               case pixelFormatL:
                 r[0] = (float) pixel[0] ;
                 break ;
