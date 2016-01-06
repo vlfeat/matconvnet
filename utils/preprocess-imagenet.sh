@@ -64,7 +64,7 @@ function convert_some_im()
             continue ;
         fi
         convert -verbose -quality 90 -resize '256x256^' \
-            "$infile" JPEG:"${outfile}.temp"
+            -colorspace RGB "$infile" JPEG:"${outfile}.temp"
         mv "${outfile}.temp" "$outfile"
     done
 }
@@ -83,7 +83,7 @@ function convert_some_gm()
             continue ;
         fi
         echo convert -verbose "'$infile'" -quality 90 -resize 256x256^ \
-            JPEG:"${outfile}"
+            -colorspace RGB JPEG:"${outfile}"
     done | ${gm} batch -echo on -feedback on -
 }
 export -f convert_some_gm
