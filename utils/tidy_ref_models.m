@@ -37,7 +37,8 @@ for i = 1:numel(models)
 
   fprintf('%s: loading ''%s''\n', mfilename, inPath) ;
   net = load(inPath) ;
-  isDag = isa(net, 'dagnn.DagNN') ;
+  % Cannot use isa('dagnn.DagNN') because it is not an object yet
+  isDag = isfield(net, 'params') ;
 
   if isDag
     net = dagnn.DagNN.loadobj(net) ;

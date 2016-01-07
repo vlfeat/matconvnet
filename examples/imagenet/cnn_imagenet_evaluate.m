@@ -40,7 +40,8 @@ net = load(opts.modelPath) ;
 if isfield(net, 'net') ;
   net = net.net ;
 end
-isDag = isa(net, 'dagnn.DagNN') ;
+% Cannot use isa('dagnn.DagNN') because it is not an object yet
+isDag = isfield(net, 'params') ;
 
 if isDag
   opts.networkType = 'dagnn' ;
