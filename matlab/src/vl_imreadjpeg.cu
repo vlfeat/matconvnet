@@ -267,7 +267,14 @@ void mexFunction(int nout, mxArray *out[],
           mexMakeMemoryPersistent(newTask.image.memory) ;
           newTask.hasMatlabMemory = true ;
         } else {
-
+          char message [1024*4] ;
+          int offset = snprintf(message, sizeof(message)/sizeof(char),
+                                "could not read image '%s'.", newTask.name.c_str()) ;
+          if (strlen(newTask.image.errorMessage) > 0) {
+            snprintf(message + offset, sizeof(message)/sizeof(char) - offset,
+                     "[%s]", newTask.image.errorMessage) ;
+          }
+          mexWarnMsgTxt(message) ;
         }
       } else {
         newTask.image = vl::Image() ;
