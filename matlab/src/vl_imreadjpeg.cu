@@ -315,7 +315,7 @@ void mexFunction(int nout, mxArray *out[],
     } else {
       char message [1024*4] ;
       int offset = snprintf(message, sizeof(message)/sizeof(char),
-                            "could not read image '%s' %s", tasks[t].name.c_str()) ;
+                            "could not read image '%s'.", tasks[t].name.c_str()) ;
       if (strlen(image.errorMessage) > 0) {
         snprintf(message + offset, sizeof(message)/sizeof(char) - offset,
                  "[%s]", image.errorMessage) ;
