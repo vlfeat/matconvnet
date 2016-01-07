@@ -28,7 +28,7 @@ opts.profile = false ;
 
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
-opts.plotEval = true;
+opts.plotStatistics = true;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -107,7 +107,7 @@ for epoch=start+1:opts.numEpochs
     saveState(modelPath(epoch), net, stats) ;
   end
 
-  if opts.plotEval
+  if opts.plotStatistics
     figure(1) ; clf ;
     plots = setdiff(...
       cat(2,...

@@ -41,7 +41,7 @@ opts.cudnn = true ;
 opts.errorFunction = 'multiclass' ;
 opts.errorLabels = {} ;
 opts.plotDiagnostics = false ;
-opts.plotEval = true;
+opts.plotStatistics = true;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -165,7 +165,7 @@ for epoch=start+1:opts.numEpochs
     fprintf('%s: model saved in %.2g s\n', mfilename, toc) ;
   end
 
-  if opts.plotEval
+  if opts.plotStatistics
     figure(1) ; clf ;
     hasError = isa(opts.errorFunction, 'function_handle') ;
     subplot(1,1+hasError,1) ;
