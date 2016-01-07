@@ -18,6 +18,7 @@ the terms of the BSD license (see the COPYING file).
 #include "cudnnhelper.hpp"
 #include "../datacu.hpp"
 #include <assert.h>
+#include <algorithm>
 
 using namespace vl ;
 
@@ -208,14 +209,20 @@ namespace vl { namespace impl {
       if (biases) {
         type alpha = 1.0f ;
         type beta = 1.0f ;
-        CHECK(cudnnAddTensor(handle,
 #if (CUDNN_VERSION < 4000)
+        CHECK(cudnnAddTensor(handle,
                              CUDNN_ADD_SAME_C,
-#endif
                              &alpha,
                              biasesDesc, (type const*)biases.getMemory() + biasesGrpOffset,
                              &beta,
                              outputDesc, (type*)output.getMemory() + outputGrpOffset)) ;
+#else
+        CHECK(cudnnAddTensor(handle,
+                             &alpha,
+                             biasesDesc, (type const*)biases.getMemory() + biasesGrpOffset,
+                             &beta,
+                             outputDesc, (type*)output.getMemory() + outputGrpOffset)) ;
+#endif
       }
     }
 
@@ -461,11 +468,8 @@ namespace vl { namespace impl {
         type beta = 0 ;
 #if (CUDNN_VERSION >= 3000)
         CHECK(
-#if (CUDNN_VERSION >= 4000)
-              cudnnConvolutionBackwardFilter
-#else
-              cudnnConvolutionBackwardFilter_v3
-#endif
+              IF_CUDNN_GE4(cudnnConvolutionBackwardFilter)
+              IF_CUDNN_GE3_LT4(cudnnConvolutionBackwardFilter_v3)
               (handle,
                &alpha,
                dataDesc, (type const*)data.getMemory() + dataGrpOffset,
@@ -494,11 +498,8 @@ namespace vl { namespace impl {
 
 #if (CUDNN_VERSION >= 3000)
         CHECK(
-#if (CUDNN_VERSION >= 4000)
-              cudnnConvolutionBackwardData
-#else
-              cudnnConvolutionBackwardData_v3
-#endif
+              IF_CUDNN_GE4(cudnnConvolutionBackwardData)
+              IF_CUDNN_GE3_LT4(cudnnConvolutionBackwardData_v3)
               (handle,
                &alpha,
                filtersDesc, (type const*)filters.getMemory() + filtersGrpOffset,

@@ -18,7 +18,7 @@ the terms of the BSD license (see the COPYING file).
 #include "cudnnhelper.hpp"
 #include "../datacu.hpp"
 #include <assert.h>
-#include<iostream>
+#include <iostream>
 
 using namespace vl ;
 
@@ -83,14 +83,20 @@ namespace vl { namespace impl {
 
       type alpha = biasesMult ;
       type beta = outputMult ;
-      CHECK(cudnnAddTensor(handle,
 #if (CUDNN_VERSION < 4000)
+      CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_SAME_C,
-#endif
                            &alpha,
                            biasesDesc, biases.getMemory(),
                            &beta,
                            outputDesc, output.getMemory())) ;
+#else
+      CHECK(cudnnAddTensor(handle,
+                           &alpha,
+                           biasesDesc, biases.getMemory(),
+                           &beta,
+                           outputDesc, output.getMemory())) ;
+#endif
       outputMult = 1 ;
     }
 
@@ -107,14 +113,20 @@ namespace vl { namespace impl {
 
       type alpha = dataMult ;
       type beta = outputMult ;
-      CHECK(cudnnAddTensor(handle,
 #if (CUDNN_VERSION < 4000)
+      CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_FULL_TENSOR,
-#endif
                            &alpha,
                            dataDesc, data.getMemory(),
                            &beta,
                            outputDesc, output.getMemory()));
+#else
+      CHECK(cudnnAddTensor(handle,
+                           &alpha,
+                           dataDesc, data.getMemory(),
+                           &beta,
+                           outputDesc, output.getMemory()));
+#endif
     }
 
     /* cleanup */

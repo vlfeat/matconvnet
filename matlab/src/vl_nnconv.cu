@@ -23,9 +23,9 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datacu.hpp"
 #endif
 
-#include <cmath>
 #include <memory>
 #include <assert.h>
+#include <math.h>
 
 /* option codes */
 enum {
