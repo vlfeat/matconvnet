@@ -59,7 +59,8 @@ function vl_compilenn(varargin)
 %      `vl_imreadjpeg`.
 %
 %   `EnableCudnn`:: `false`
-%      Set to `true` to compile CuDNN support.
+%      Set to `true` to compile CuDNN support. See CuDNN
+%      documentation for the Hardware/CUDA version requirements.
 %
 %   `CudnnRoot`:: `'local/'`
 %      Directory containing the unpacked binaries and header files of
@@ -98,9 +99,10 @@ function vl_compilenn(varargin)
 %
 %     | MATLAB version | Release | CUDA Devkit |
 %     |----------------|---------|-------------|
-%     | 2013b          | 2013b   | 5.5         |
-%     | 2014a          | 2014a   | 5.5         |
-%     | 2014b          | 2014b   | 6.0         |
+%     | 8.2            | 2013b   | 5.5         |
+%     | 8.3            | 2014a   | 5.5         |
+%     | 8.4            | 2014b   | 6.0         |
+%     | 8.6            | 2015b   | Latest(7.5) |
 %
 %     A different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
@@ -113,7 +115,7 @@ function vl_compilenn(varargin)
 %     Toolkit 6.5.
 %   * Mac OS X 10.9 and 10.10, MATLAB R2013a and R2013b, Xcode, CUDA
 %     Toolkit 5.5.
-%   * GNU/Linux, MATALB R2014a, gcc, CUDA Toolkit 5.5.
+%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc, CUDA Toolkit 5.5/6.5/7.5.
 %
 %   Furthermore your GPU card must have ComputeCapability >= 2.0 (see
 %   output of `gpuDevice()`) in order to be able to run the GPU code.
@@ -185,7 +187,7 @@ mex_src = {} ;
 
 % Files that are compiled as CPP or CU depending on whether GPU support
 % is enabled.
-if opts.enableGpu, ext = 'cu' ; else, ext='cpp' ; end
+if opts.enableGpu, ext = 'cu' ; else ext='cpp' ; end
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['data.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['datamex.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnconv.' ext]) ;
@@ -252,6 +254,11 @@ if opts.enableGpu
     case 'maci64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib') ;
     case 'glnxa64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib64') ;
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
+  end
+
+  % Set the nvcc method as default for Win platforms
+  if strcmp(arch, 'win64') && isempty(opts.cudaMethod)
+    opts.cudaMethod = 'nvcc';
   end
 
   % Activate the CUDA Devkit
@@ -417,15 +424,17 @@ end
 srcs = horzcat(lib_src,mex_src) ;
 for i = 1:numel(horzcat(lib_src, mex_src))
   [~,~,ext] = fileparts(srcs{i}) ; ext(1) = [] ;
+  objfile = toobj(bld_dir,srcs{i});
   if strcmp(ext,'cu')
     if strcmp(opts.cudaMethod,'nvcc')
-      nvcc_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.nvcc) ;
+      nvcc_compile(opts, srcs{i}, objfile, flags.nvcc) ;
     else
-      mex_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.mexcu) ;
+      mex_compile(opts, srcs{i}, objfile, flags.mexcu) ;
     end
   else
-    mex_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.mexcc) ;
+    mex_compile(opts, srcs{i}, objfile, flags.mexcc) ;
   end
+  assert(exist(objfile, 'file') ~= 0, 'Compilation of %s failed.', objfile);
 end
 
 % Link into MEX files
@@ -554,13 +563,13 @@ function cuda_root = search_cuda_devkit(opts)
 % -------------------------------------------------------------------------
 % This function tries to to locate a working copy of the CUDA Devkit.
 
-opts.verbose && fprintf(['%s:\tCUDA: seraching for the CUDA Devkit' ...
+opts.verbose && fprintf(['%s:\tCUDA: searching for the CUDA Devkit' ...
                     ' (use the option ''CudaRoot'' to override):\n'], mfilename);
 
 % Propose a number of candidate paths for NVCC
 paths = {getenv('MW_NVCC_PATH')} ;
 paths = [paths, which_nvcc(opts)] ;
-for v = {'5.5', '6.0', '6.5', '7.0'}
+for v = {'5.5', '6.0', '6.5', '7.0', '7.5'}
   switch computer('arch')
     case 'glnxa64'
       paths{end+1} = sprintf('/usr/local/cuda-%s/bin/nvcc', char(v)) ;
@@ -590,7 +599,8 @@ index = find([nvcc.isvalid]) ;
 if isempty(index)
   error('Could not find a valid NVCC executable\n') ;
 end
-nvcc = nvcc(index(1)) ;
+[~, newest] = max([nvcc(index).version]);
+nvcc = nvcc(index(newest)) ;
 cuda_root = fileparts(fileparts(nvcc.path)) ;
 
 if opts.verbose

@@ -16,6 +16,25 @@ the terms of the BSD license (see the COPYING file).
 #include "cudnn.h"
 #include "assert.h"
 
+#if (CUDNN_VERSION >= 4000)
+#define IF_CUDNN_GE4(x) x
+#else
+#define IF_CUDNN_GE4(x)
+#endif
+
+#if (CUDNN_VERSION >= 3000)
+#define IF_CUDNN_GE3(x) x
+#else
+#define IF_CUDNN_GE3(x)
+#endif
+
+#if (CUDNN_VERSION >= 3000 & CUDNN_VERSION < 4000)
+#define IF_CUDNN_GE3_LT4(x) x
+#else
+#define IF_CUDNN_GE3_LT4(x)
+#endif
+
+
 namespace vl { namespace impl {
 
   template <vl::Type dataType> struct DataTypeToCudnn { } ;
