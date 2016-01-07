@@ -212,7 +212,7 @@ void mexFunction(int nout, mxArray *out[],
       mexErrMsgTxt("SIZE has neither one nor two elements.") ;
   }
 
-  /* Basic compatibility of Shapeetry */
+  /* Basic compatibility of Shape */
   if (strideX < 1 || strideY < 1) {
     mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
   }
@@ -236,7 +236,7 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("A padding value is larger or equal to the size of the pooling window.") ;
   }
 
-  /* Get the output Shapeetry */
+  /* Get the output Shape */
   vl::TensorShape outputShape((data.getHeight() + (padTop+padBottom) - poolHeight)/strideY + 1,
                               (data.getWidth()  + (padLeft+padRight) - poolWidth)/strideX + 1,
                               data.getDepth(),
