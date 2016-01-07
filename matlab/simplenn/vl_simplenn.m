@@ -269,13 +269,7 @@ if nargin <= 3 || isempty(res)
     'backwardTime', num2cell(zeros(1,n+1))) ;
 end
 
-if opts.skipForward
-  if any(cellfun(@isempty, {res.x}))
-    error('simplenn:skipForwardInvalidRes', ...
-      ['For `skipForward`, all output values in RES must be provided.'...
-      'Output values are removed e.g. when `conserveMemory` is enabled.']);
-  end
-else
+if ~opts.skipForward
   res(1).x = x ;
 end
 
