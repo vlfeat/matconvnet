@@ -46,7 +46,7 @@ classdef nndagnn < nntest
       test.outputs = test.net.getOutputs();
 
       test.x = test.randn(32, 32, 1, 20) ;
-      test.class = test.toDevice(randsample(10, 20, true));
+      test.class = test.toDevice(randi(10, 20, 1));
       test.net.move(device) ;
     end
   end

@@ -41,7 +41,7 @@ classdef nnsimplenn < nntest
       test.net = vl_simplenn_tidy(test.net);
 
       test.x = test.randn(32, 32, 1, 20)/test.range ;
-      test.class = test.toDevice(randsample(10, 20, 'true'));
+      test.class = test.toDevice(randi(10, 20, 1)) ;
       test.net = vl_simplenn_move(test.net, device);
     end
   end
