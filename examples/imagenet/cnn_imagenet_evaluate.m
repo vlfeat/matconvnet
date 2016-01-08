@@ -26,6 +26,7 @@ display(opts);
 
 if exist(opts.imdbPath)
   imdb = load(opts.imdbPath) ;
+  imdb.imageDir = fullfile(opts.dataDir, 'images');
 else
   imdb = cnn_imagenet_setup_data('dataDir', opts.dataDir, 'lite', opts.lite) ;
   mkdir(opts.expDir) ;
