@@ -55,7 +55,6 @@ size=256 # most common
 
 mkdir -p "$ram"/images ;
 rsync -rv --chmod=ugo=rwX "$data"/*devkit* "$ram/"
-tj
 
 function convert_some_im()
 {
