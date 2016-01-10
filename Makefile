@@ -181,6 +181,7 @@ cpp_src+=matlab/src/bits/impl/bnorm_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
+cpp_src+=matlab/src/bits/imread.cpp
 endif
 
 # GPU-specific files
@@ -227,6 +228,12 @@ include Makefile.mex
 else
 include Makefile.nvcc
 endif
+
+matlab/mex/.build/impl/imread.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/impl/imread_quartz.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
+
 
 # --------------------------------------------------------------------
 #                                                        Documentation
