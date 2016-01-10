@@ -43,7 +43,7 @@ namespace vl { namespace impl {
     int blockSizeX ;
     int blockSizeY ;
     int pixelStride ;
-    int imagePlaneStride = shape.width * shape.height ;
+    int imagePlaneStride = (int)shape.width * (int)shape.height ;
     switch (pixelFormat) {
       case pixelFormatL:
         pixelStride = 1 ;
@@ -72,8 +72,8 @@ namespace vl { namespace impl {
     // and recompute silly multiplications in the inner loop
 
     float * const  __restrict imageMemory = image.memory ;
-    int const imageHeight = shape.height ;
-    int const imageWidth = shape.width ;
+    int const imageHeight = (int)shape.height ;
+    int const imageWidth = (int)shape.width ;
 
     for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
@@ -127,7 +127,7 @@ namespace vl { namespace impl {
     int blockSizeX ;
     int blockSizeY ;
     int pixelStride ;
-    int imagePlaneStride = shape.width * shape.height ;
+    int imagePlaneStride = (int)shape.width * (int)shape.height ;
     __m128i shuffleRgb ;
     __m128i const shuffleL = _mm_set_epi8(0xff, 0xff, 0xff,  3,
                                           0xff, 0xff, 0xff,  2,
@@ -204,8 +204,8 @@ namespace vl { namespace impl {
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
     float *  const __restrict imageMemory = image.getMemory() ;
-    int const imageHeight = shape.height ;
-    int const imageWidth = shape.width ;
+    int const imageHeight = (int)shape.height ;
+    int const imageWidth = (int)shape.width ;
 
     for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
       int y = 0 ;
@@ -426,7 +426,7 @@ namespace vl { namespace impl {
        */
       float alpha = (float)inputWidth / outputWidth ;
       float beta = 0.5f * (alpha - 1) ;
-      float filterSupport = filterSize ;
+      float filterSupport = (float)filterSize ;
 
       /* 
        The filter is virtually applied in the target domain u. This is transferred
@@ -436,7 +436,7 @@ namespace vl { namespace impl {
        */
       if (alpha > 1) {
         filterSupport *= alpha ;
-        filterSize = floorf(filterSupport) ;
+        filterSize = (int)floorf(filterSupport) ;
       }
 
       weights = (float*)malloc(sizeof(float) * filterSize * outputWidth) ;
@@ -453,7 +453,7 @@ namespace vl { namespace impl {
          so that there are always filerWidth elements to sum on */
         float u = alpha * v + beta ;
         float mass = 0 ;
-        starts[v] = std::ceil(u - 0.5f * filterSupport) ;
+        starts[v] = (int)std::ceil(u - 0.5f * filterSupport) ;
 
         for (int r = 0 ; r < filterSize ; ++r) {
           int k = r + starts[v] ;
@@ -464,7 +464,7 @@ namespace vl { namespace impl {
           }
           switch (filterType) {
             case kBilinear:
-              h = fmax(0 , 1 - fabsf(delta)) ;
+              h = (std::max)(0.0f, 1.0f - fabsf(delta)) ;
               break ;
             default:
               assert(false) ;
@@ -488,15 +488,15 @@ namespace vl { namespace impl {
   {
     ImageResizeFilter filters(outputHeight, height) ;
     int filterSize = filters.filterSize ;
-    for (int d = 0 ; d < depth ; ++d) {
-      for (int x = 0 ; x < width ; ++x) {
-        for (int y = 0 ; y < outputHeight ; ++y) {
+    for (int d = 0 ; d < (int)depth ; ++d) {
+      for (int x = 0 ; x < (int)width ; ++x) {
+        for (int y = 0 ; y < (int)outputHeight ; ++y) {
           float z = 0 ;
           int begin = filters.starts[y] ;
           float const * weights = filters.weights + filterSize * y ;
           for (int k = begin ; k < begin + filterSize ; ++k) {
             float w = *weights++ ;
-            if (0 <= k & k < height) {
+            if ((0 <= k) & (k < (int)height)) {
               z += input[k] * w ;
             }
           }

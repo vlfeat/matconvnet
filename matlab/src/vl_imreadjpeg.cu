@@ -194,7 +194,7 @@ void delete_readers()
   terminateReaders = true ;
   tasksMutex.unlock() ;
   tasksCondition.notify_all() ;
-  for (int r = 0 ; r < readers.size() ; ++r) {
+  for (int r = 0 ; r < (int)readers.size() ; ++r) {
     readers[r].first->join() ;
     delete readers[r].first ;
     delete readers[r].second ;
@@ -223,7 +223,7 @@ void create_readers(int num, int verbosity)
 }
 
 void delete_tasks() {
-  for (int t = 0 ; t < tasks.size() ; ++t) {
+  for (int t = 0 ; t < (int)tasks.size() ; ++t) {
     if (tasks[t]) { delete tasks[t] ; }
   }
   tasks.clear() ;
@@ -232,7 +232,7 @@ void delete_tasks() {
 void flush_tasks() {
   // wait until all tasks in the current list are complete
   tasksMutex.lock() ;
-  while (numTasksCompleted < tasks.size()) {
+  while (numTasksCompleted < (int)tasks.size()) {
     completedCondition.wait(tasksMutex);
   }
 
@@ -312,7 +312,7 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_num_threads :
-        requestedNumThreads = mxGetScalar(optarg) ;
+        requestedNumThreads = (int)mxGetScalar(optarg) ;
         break ;
     }
   }
@@ -343,7 +343,7 @@ void mexFunction(int nout, mxArray *out[],
 
   // extract filenames as strings
   std::vector<std::string> filenames ;
-  for (i = 0 ; i < mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
+  for (i = 0 ; i < (int)mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
     mxArray* filename_array = mxGetCell(in[IN_FILENAMES], i) ;
     if (!vlmxIsString(filename_array,-1)) {
       mexErrMsgTxt("FILENAMES contains an entry that is not a string.") ;
@@ -355,8 +355,8 @@ void mexFunction(int nout, mxArray *out[],
 
   // check if the cached tasks match the new ones
   bool match = true ;
-  for (int t = 0 ; match & (t < filenames.size()) ; ++t) {
-    if (t >= tasks.size()) {
+  for (int t = 0 ; match & (t < (signed)filenames.size()) ; ++t) {
+    if (t >= (signed)tasks.size()) {
       match = false ;
       break ;
     }
@@ -370,7 +370,7 @@ void mexFunction(int nout, mxArray *out[],
     }
     flush_tasks() ;
     tasksMutex.lock() ;
-    for (int t = 0 ; t < filenames.size() ; ++t) {
+    for (int t = 0 ; t < (signed)filenames.size() ; ++t) {
       Task* newTask(new Task()) ;
       newTask->name = filenames[t] ;
       newTask->done = false ;
@@ -388,8 +388,8 @@ void mexFunction(int nout, mxArray *out[],
             break ;
           case kResizeIsotropic:
           {
-            float scale =  std::max((float)resizeWidth / shape.width,
-                                    (float)resizeHeight / shape.height);
+            float scale = (std::max)((float)resizeWidth / shape.width,
+                                     (float)resizeHeight / shape.height);
             resizedShape.height = roundf(resizedShape.height * scale) ;
             resizedShape.width = roundf(resizedShape.width * scale) ;
             break ;
