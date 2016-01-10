@@ -453,7 +453,7 @@ namespace vl { namespace impl {
          so that there are always filerWidth elements to sum on */
         float u = alpha * v + beta ;
         float mass = 0 ;
-        starts[v] = std::ceilf(u - 0.5f * filterSupport) ;
+        starts[v] = std::ceil(u - 0.5f * filterSupport) ;
 
         for (int r = 0 ; r < filterSize ; ++r) {
           int k = r + starts[v] ;
