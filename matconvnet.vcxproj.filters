@@ -224,6 +224,9 @@
     <ClCompile Include="matlab\src\bits\impl\tinythread.cpp">
       <Filter>matlab\bits\impl</Filter>
     </ClCompile>
+    <ClCompile Include="matlab\src\bits\imread.cpp">
+      <Filter>matlab\bits</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matlab\src\bits\nnsubsample.hpp">
