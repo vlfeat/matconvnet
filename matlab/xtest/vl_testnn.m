@@ -1,6 +1,5 @@
 function vl_testnn(varargin)
 %VL_TESTNN Run MatConvNet test suite 
-%
 % VL_TESTNN('option', value, ...) takes the following options:
 %  `cpu`:: true
 %    Run the CPU tests.
@@ -18,8 +17,11 @@ function vl_testnn(varargin)
 %  `tapFile`:: ''
 %    Output the test results to a file. If a specified file does 
 %    exist it is overwritten.
+%
+%  This function uses the Matlab unit testing framework which was
+%  introduced in Matlab R2013a (v8.1).
 
-% Copyright (C) 2015 Andrea Vedaldi, Karel Lenc.
+% Copyright (C) 2015-16 Andrea Vedaldi, Karel Lenc.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -27,6 +29,8 @@ function vl_testnn(varargin)
 
 opts.cpu = true ;
 opts.gpu = false ;
+opts.single = true ;
+opts.double = false ;
 opts.command = 'nn' ;
 opts.break = false ;
 opts.tapFile = '';
@@ -44,6 +48,12 @@ if opts.cpu & ~opts.gpu
 end
 if opts.gpu & ~opts.cpu
   sel = sel & HasName(ContainsSubstring('gpu')) ;
+end
+if opts.single & ~opts.double
+  sel = sel & HasName(ContainsSubstring('single')) ;
+end
+if opts.double & ~opts.single
+  sel = sel & HasName(ContainsSubstring('double')) ;
 end
 
 % Run tests

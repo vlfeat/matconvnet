@@ -10,9 +10,9 @@ classdef nnpdist < nntest
       w = 17 ;
       d = 4 ;
       n = 5 ;
-      x = test.randn(h,w,d,n,'single') ;
+      x = test.randn(h,w,d,n) ;
       if oneToOne
-        x0 = test.randn(h,w,d,n,'single') ;
+        x0 = test.randn(h,w,d,n) ;
       else
         x0 = test.randn(1,1,d,n) ;
       end

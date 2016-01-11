@@ -4,7 +4,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi.
+Copyright (C) 2015-16 Sebastien Ehrhardt and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -27,7 +27,7 @@ namespace vl {
                   vl::Tensor data,
                   vl::Tensor filters,
                   vl::Tensor biases,
-                  float epsilon) ;
+                  double epsilon) ;
 
   // This version uses the mean and sigma specified
   vl::Error
@@ -48,7 +48,7 @@ namespace vl {
                    vl::Tensor filters,
                    vl::Tensor biases,
                    vl::Tensor derOutput,
-                   float epsilon) ;
+                   double epsilon) ;
 
   vl::Error
   nnbnorm_backward_given_moments(vl::Context& context,
@@ -60,7 +60,7 @@ namespace vl {
                                  vl::Tensor filters,
                                  vl::Tensor biases,
                                  vl::Tensor derOutput,
-                                 float epsilon) ;
+                                 double epsilon) ;
 }
 
 #endif /* defined(__vl__nnbnorm__) */

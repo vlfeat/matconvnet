@@ -15,6 +15,7 @@
 ENABLE_GPU ?=
 ENABLE_CUDNN ?=
 ENABLE_IMREADJPEG ?= yes
+ENABLE_DOUBLE ?= yes
 DEBUG ?=
 ARCH ?= maci64
 
@@ -61,7 +62,8 @@ MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
 MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
 MEXFLAGS = -cxx -largeArrayDims -lmwblas \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
-$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,)
+$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
+$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,)
 MEXFLAGS_CPU = $(MEXFLAGS)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
 SHELL = /bin/bash # sh not good enough
@@ -77,6 +79,7 @@ NVCCFLAGS = \
 -gencode=arch=compute_30,code=\"sm_30,compute_30\" \
 -DENABLE_GPU \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
+$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 -Xcompiler -fPIC
@@ -99,7 +102,7 @@ MEXFLAGS += -v
 NVCCFLAGS += -v
 endif
 
-# Mac OS X Intel
+# Mac OS X
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 comma:=,
 MEXLDFLAGS := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
@@ -107,6 +110,7 @@ MEXLDFLAGS += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/li
 ifeq ($(NVCCVER_LT_70),true)
 MEXLDFLAGS += -stdlib=libstdc++
 endif
+MEXFLAGS_CPU  += CXXFLAGS='$$CXXFLAGS -mmacosx-version-min=10.8'
 MEXFLAGS_NVCC += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 MEXFLAGS_GPU  += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 IMAGELIB_DEFAULT = quartz
@@ -177,6 +181,7 @@ cpp_src+=matlab/src/bits/impl/bnorm_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
+cpp_src+=matlab/src/bits/imread.cpp
 endif
 
 # GPU-specific files
@@ -223,6 +228,12 @@ include Makefile.mex
 else
 include Makefile.nvcc
 endif
+
+matlab/mex/.build/impl/imread.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/impl/imread_quartz.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
+
 
 # --------------------------------------------------------------------
 #                                                        Documentation

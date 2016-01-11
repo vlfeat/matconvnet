@@ -1,4 +1,8 @@
 classdef BatchNorm < dagnn.ElementWise
+  properties
+    numChannels
+  end
+
   methods
     function outputs = forward(obj, inputs, params)
       if strcmp(obj.net.mode, 'test')
@@ -22,6 +26,12 @@ classdef BatchNorm < dagnn.ElementWise
       obj.load(varargin{:}) ;
     end
 
+    function params = initParams(obj)
+      params{1} = ones(obj.numChannels,1,'single') ;
+      params{2} = zeros(obj.numChannels,1,'single') ;
+      params{3} = zeros(obj.numChannels,2,'single') ;             
+    end
+    
     function attach(obj, net, index)
       attach@dagnn.ElementWise(obj, net, index) ;
       p = net.getParamIndex(net.layers(index).params{3}) ;

@@ -7,10 +7,10 @@ classdef nnsimplenn < nntest
   end
 
   methods (TestClassSetup)
-    function initNet(test)
+    function initNet(test, device)
       test.net.layers = {} ;
       test.net.layers{end+1} = struct('type', 'conv', ...
-        'weights', {{randn(5,5,1,20, 'single'), zeros(1, 20, 'single')}}, ...
+        'weights', {{test.randn(5,5,1,20)/test.range, test.zeros(1, 20)}}, ...
         'stride', 1, ...
         'pad', 0) ;
       test.net.layers{end+1} = struct('type', 'pool', ...
@@ -19,7 +19,7 @@ classdef nnsimplenn < nntest
         'stride', 2, ...
         'pad', 0) ;
       test.net.layers{end+1} = struct('type', 'conv', ...
-        'weights', {{randn(5,5,20,50, 'single'),zeros(1,50,'single')}}, ...
+        'weights', {{test.randn(5,5,20,50)/test.range, test.zeros(1,50)}}, ...
         'stride', 1, ...
         'pad', 0) ;
       test.net.layers{end+1} = struct('type', 'pool', ...
@@ -28,27 +28,20 @@ classdef nnsimplenn < nntest
         'stride', 2, ...
         'pad', 0) ;
       test.net.layers{end+1} = struct('type', 'conv', ...
-        'weights', {{randn(4,4,50,500, 'single'),  zeros(1,500,'single')}}, ...
+        'weights', {{test.randn(4,4,50,500)/test.range, test.zeros(1,500)}}, ...
         'stride', 1, ...
         'pad', 0) ;
       test.net.layers{end+1} = struct('type', 'relu') ;
       test.net.layers{end+1} = struct('type', 'conv', ...
-        'weights', {{randn(1,1,500,10, 'single'), zeros(1,10,'single')}}, ...
+        'weights', {{test.randn(1,1,500,10)/test.range, test.zeros(1,10)}}, ...
         'stride', 1, ...
         'pad', 0) ;
       test.net.layers{end+1} = struct('type', 'softmaxloss') ;
       % Fill the missing values
       test.net = vl_simplenn_tidy(test.net);
-    end
-  end
 
-  methods (TestMethodSetup)
-    function data(test, device)
-      test.x = test.randn(32, 32, 1, 20, 'single');
-      test.class = test.toDevice(randsample(10, 20, 'true'));
-    end
-
-    function transferNet(test, device)
+      test.x = test.randn(32, 32, 1, 20)/test.range ;
+      test.class = test.toDevice(randi(10, 20, 1)) ;
       test.net = vl_simplenn_move(test.net, device);
     end
   end
@@ -118,6 +111,26 @@ classdef nnsimplenn < nntest
           test.verifyEmpty(res(ri).dzdx);
         end
       end
+    end
+
+    function skipForward(test)
+      % Verify that the skipForward argument works
+      test.net.layers{end}.class = test.class;
+      res = vl_simplenn(test.net, test.x, 1);
+      res_ = vl_simplenn(test.net, test.x, 1, res, 'skipForward', true);
+      for li = 1:numel(res)
+        % Might still slightly different on GPUs due to
+        % non-deterministic operation order
+        test.eq(res(li).x, res_(li).x);
+        test.eq(res(li).dzdx, res_(li).dzdx);
+      end
+      % Verify that it throws the specified errors for 'skipForward'
+      test.verifyError(...
+        @() vl_simplenn(test.net, test.x, [], [], 'skipForward', true), ...
+        'simplenn:skipForwardNoBackwPass');
+      test.verifyError(...
+        @() vl_simplenn(test.net, test.x, 1, [], 'skipForward', true), ...
+        'simplenn:skipForwardEmptyRes');
     end
   end
 end

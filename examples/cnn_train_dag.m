@@ -28,7 +28,7 @@ opts.profile = false ;
 
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
-opts.plotEval = true;
+opts.plotStatistics = true;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -107,7 +107,7 @@ for epoch=start+1:opts.numEpochs
     saveState(modelPath(epoch), net, stats) ;
   end
 
-  if opts.plotEval
+  if opts.plotStatistics
     figure(1) ; clf ;
     plots = setdiff(...
       cat(2,...
@@ -254,7 +254,7 @@ for p=1:numel(net.params)
       thisLR = net.params(p).learningRate ;
       net.params(p).value = ...
           (1 - thisLR) * net.params(p).value + ...
-          (thisLR/batchSize) * net.params(p).der ;
+          (thisLR/batchSize/net.params(p).fanout) * net.params(p).der ;
 
     case 'gradient'
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;

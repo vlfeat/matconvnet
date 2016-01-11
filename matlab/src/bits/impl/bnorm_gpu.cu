@@ -4,7 +4,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Sebastien Ehrhardt and Andrea Vedaldi.
+Copyright (C) 2015-16 Sebastien Ehrhardt and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -14,6 +14,7 @@ the terms of the BSD license (see the COPYING file).
 #include "bnorm.hpp"
 #include "../datacu.hpp"
 #include "blashelper.hpp"
+#include "sharedmem.cuh"
 #include <assert.h>
 #include <float.h>
 #include <stdint.h>
@@ -281,7 +282,9 @@ __forceinline__ __device__ T matrixSumHelper(T const * matrix, int numRows)
 {
   // One thread block per column to sum
   // Shared memory is per-block, it holds blockSize intermediate reults
-  extern __shared__ T scratch [] ;
+  //extern __shared__ T scratch [] ;
+  SharedMemory<T> smem ;
+  T * scratch = smem.getPointer() ;
   int tid = threadIdx.x ;
   int column = blockIdx.x ;
   int blockSize = blockDim.x ;
@@ -348,7 +351,9 @@ __global__ void accumulate_moments_partial(T * accumulator,
   int planeStride = gridDim.x ;
   int channel = blockIdx.x % numChannels ;
 
-  extern __shared__ T s[] ;
+  //extern __shared__ T s [] ;
+  SharedMemory<T> smem ;
+  T * s = smem.getPointer() ;
   T * mdata = s ;
   T * sdata = mdata + blockSize ;
 
@@ -465,7 +470,9 @@ __global__ void accumulate_ders_partial
   int blockSize = blockDim.x ;
   int planeStride = gridDim.x ;
   int channel = blockIdx.x % numChannels ;
-  extern __shared__ T s[] ;
+  //extern __shared__ T s[] ;
+  SharedMemory<T> smem ;
+  T * s = smem.getPointer() ;
 
   T * mdata = s ;
   T * sdata = mdata + blockSize ;
@@ -586,7 +593,9 @@ __global__ void accumulate_ders_and_moments_partial
   int blockSize = blockDim.x ;
   int planeStride = gridDim.x ;
   int channel = blockIdx.x % numChannels ;
-  extern __shared__ T s[] ;
+  //extern __shared__ T s[] ;
+  SharedMemory<T> smem ;
+  T * s = smem.getPointer() ;
 
   T * mdata = s ;
   T * sdata = mdata + blockSize ;
@@ -791,7 +800,9 @@ __global__ void batch_normalize_backward(T * derData,
 
 namespace vl { namespace impl {
 
-  template<typename T> struct bnorm<vl::GPU, T> {
+  template<typename T>
+  struct bnorm<vl::GPU, T>
+  {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
@@ -804,7 +815,7 @@ namespace vl { namespace impl {
             T const* data,
             T const* multipliers,
             T const* biases,
-            int height, int width, int depth, int size,
+            size_t height, size_t width, size_t depth, size_t size,
             T epsilon)
     {
       cudaError_t status ;
@@ -959,7 +970,7 @@ namespace vl { namespace impl {
                           T const* data,
                           T const* multipliers,
                           T const* biases,
-                          int height, int width, int depth, int size)
+                          size_t height, size_t width, size_t depth, size_t size)
     {
       cudaError_t status ;
       unsigned int planeArea = height * width ;
@@ -1004,7 +1015,7 @@ namespace vl { namespace impl {
              T const* multipliers,
              T const* biases,
              T const* derOutput,
-             int height, int width, int depth, int size,
+             size_t height, size_t width, size_t depth, size_t size,
              T epsilon)
     {
       cudaError_t status = cudaSuccess;
@@ -1110,7 +1121,7 @@ namespace vl { namespace impl {
                            T const* multipliers,
                            T const* biases,
                            T const* derOutput,
-                           int height, int width, int depth, int size,
+                           size_t height, size_t width, size_t depth, size_t size,
                            T epsilon)
     {
       cudaError_t status;
@@ -1191,8 +1202,12 @@ namespace vl { namespace impl {
       status = cudaPeekAtLastError() ;
       return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
     }
-    
+
   } ; // struct bnorm
 } } // namespace vl::impl
 
 template struct vl::impl::bnorm<vl::GPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::bnorm<vl::GPU, double> ;
+#endif

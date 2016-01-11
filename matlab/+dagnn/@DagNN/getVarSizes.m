@@ -29,7 +29,7 @@ for i = 1:2:numel(inputSizes)
   sizes{v} = inputSizes{i+1}(:)' ;
 end
 
-for layer = obj.layers
+for layer = obj.layers(obj.executionOrder)
   in = layer.inputIndexes ;
   out = layer.outputIndexes ;
   sizes(out) = layer.block.getOutputSizes(sizes(in)) ;

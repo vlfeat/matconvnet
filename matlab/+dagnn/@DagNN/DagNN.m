@@ -320,6 +320,15 @@ classdef DagNN < handle
       end
       param = obj.params(idxs);
     end
+
+    function order = getLayerExecutionOrder(obj)
+    %GETLAYEREXECUTIONORDER Get the order in which layers are evaluated
+    %   ORDER = GETLAYEREXECUTIONORDER(obj) returns a vector with
+    %   the indexes of the layers in the order in which they are
+    %   executed. This needs not to be the trivial order 1,2,...,L
+    %   as it depends on the graph topology.
+      order = obj.executionOrder ;
+    end
   end
 
   methods (Static)

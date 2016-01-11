@@ -4,7 +4,7 @@
 // @author Karel Lenc
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -63,32 +63,6 @@ pooling_max_kernel
   }
 }
 
-template<> vl::Error
-vl::impl::pooling_max_forward<vl::GPU, float>(float* pooled,
-                                              float const* data,
-                                              size_t height, size_t width, size_t depth,
-                                              size_t poolHeight, size_t poolWidth,
-                                              size_t strideY, size_t strideX,
-                                              size_t padTop, size_t padBottom,
-                                              size_t padLeft, size_t padRight)
-{
-  int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
-  int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
-  int pooledVolume = pooledWidth * pooledHeight * depth ;
-
-  pooling_max_kernel<float>
-  <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (pooled, data,
-   pooledHeight, pooledWidth, pooledVolume,
-   height, width,
-   poolHeight, poolWidth,
-   strideY, strideX,
-   padTop, padLeft);
-
-  cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
-
 /* ---------------------------------------------------------------- */
 /*                                          pooling_average_forward */
 /* ---------------------------------------------------------------- */
@@ -135,33 +109,6 @@ pooling_average_kernel
   }
 }
 
-template<> vl::Error
-vl::impl::pooling_average_forward<vl::GPU, float>
-(float* pooled,
- float const* data,
- size_t height, size_t width, size_t depth,
- size_t poolHeight, size_t poolWidth,
- size_t strideY, size_t strideX,
- size_t padTop, size_t padBottom,
- size_t padLeft, size_t padRight)
-{
-  int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
-  int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
-  int pooledVolume = pooledWidth * pooledHeight * depth ;
-
-  pooling_average_kernel<float>
-  <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (pooled, data,
-   pooledHeight, pooledWidth, pooledVolume,
-   height, width,
-   poolHeight, poolWidth,
-   strideY, strideX,
-   padTop, padLeft);
-
-  cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
-
 /* ---------------------------------------------------------------- */
 /*                                             pooling_max_backward */
 /* ---------------------------------------------------------------- */
@@ -204,13 +151,27 @@ pooling_max_backward_with_pooled_data
     for (int py = py1; py < py2; ++py) {
       for (int px = px1; px < px2; ++px) {
         gradient += dzdy[py * pooledWidth + px] *
-            (datum == pooled[py * pooledWidth + px]);
+        (datum == pooled[py * pooledWidth + px]);
       }
     }
     dzdx[index] = gradient;
   }
 }
 #endif
+
+// an implementation of atomicAdd() for double (really slow)
+__device__ double atomicAdd(double* address, double val)
+{
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val +
+                                         __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
 
 template<typename T> __global__ void
 pooling_max_backward_kernel
@@ -269,33 +230,6 @@ pooling_max_backward_kernel
   }
 }
 
-template<> vl::Error
-vl::impl::pooling_max_backward<vl::GPU, float>(float* derData,
-                                               float const* data,
-                                               float const* derPooled,
-                                               size_t height, size_t width, size_t depth,
-                                               size_t poolHeight, size_t poolWidth,
-                                               size_t strideY, size_t strideX,
-                                               size_t padTop, size_t padBottom,
-                                               size_t padLeft, size_t padRight)
-{
-  int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
-  int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
-  int pooledVolume = pooledWidth * pooledHeight * depth ;
-
-  pooling_max_backward_kernel<float>
-  <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derData, data, derPooled,
-       pooledHeight, pooledWidth, pooledVolume,
-       height, width,
-       poolHeight, poolWidth,
-       strideY, strideX,
-       padTop, padLeft);
-
-  cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
-
 /* ---------------------------------------------------------------- */
 /*                                         pooling_average_backward */
 /* ---------------------------------------------------------------- */
@@ -350,30 +284,134 @@ pooling_average_backward_kernel(T* derData,
   }
 }
 
-template<> vl::Error
-vl::impl::pooling_average_backward<vl::GPU, float>
-(float* derData,
- float const* derPooled,
- size_t height, size_t width, size_t depth,
- size_t poolHeight, size_t poolWidth,
- size_t strideY, size_t strideX,
- size_t padTop, size_t padBottom,
- size_t padLeft, size_t padRight)
-{
-  int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
-  int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
-  int dataVolume = width * height * depth ;
+/* ---------------------------------------------------------------- */
+/*                                                        Interface */
+/* ---------------------------------------------------------------- */
 
-  pooling_average_backward_kernel<float>
-  <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (derData, derPooled,
-   dataVolume,
-   pooledHeight, pooledWidth,
-   height, width, dataVolume,
-   poolHeight, poolWidth,
-   strideY, strideX,
-   padTop, padLeft);
+namespace vl { namespace impl {
 
-  cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
+  template <typename type>
+  struct pooling_max<vl::GPU, type>
+  {
+    static vl::Error
+    forward(type* pooled,
+            type const* data,
+            size_t height, size_t width, size_t depth,
+            size_t poolHeight, size_t poolWidth,
+            size_t strideY, size_t strideX,
+            size_t padTop, size_t padBottom,
+            size_t padLeft, size_t padRight)
+    {
+      int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
+      int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
+      int pooledVolume = pooledWidth * pooledHeight * depth ;
+
+      pooling_max_kernel<type>
+      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (pooled, data,
+       pooledHeight, pooledWidth, pooledVolume,
+       height, width,
+       poolHeight, poolWidth,
+       strideY, strideX,
+       padTop, padLeft);
+
+      cudaError_t status = cudaPeekAtLastError() ;
+      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    }
+
+    static vl::Error
+    backward(type* derData,
+             type const* data,
+             type const* derOutput,
+             size_t height, size_t width, size_t depth,
+             size_t poolHeight, size_t poolWidth,
+             size_t strideY, size_t strideX,
+             size_t padTop, size_t padBottom,
+             size_t padLeft, size_t padRight)
+    {
+      int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
+      int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
+      int pooledVolume = pooledWidth * pooledHeight * depth ;
+
+      pooling_max_backward_kernel<type>
+      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derData, data, derOutput,
+       pooledHeight, pooledWidth, pooledVolume,
+       height, width,
+       poolHeight, poolWidth,
+       strideY, strideX,
+       padTop, padLeft);
+
+      cudaError_t status = cudaPeekAtLastError() ;
+      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    }
+  } ; // pooling_max
+
+  template <typename type>
+  struct pooling_average<vl::GPU, type>
+  {
+
+    static vl::Error
+    forward(type* pooled,
+            type const* data,
+            size_t height, size_t width, size_t depth,
+            size_t poolHeight, size_t poolWidth,
+            size_t strideY, size_t strideX,
+            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
+      int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
+      int pooledVolume = pooledWidth * pooledHeight * depth ;
+
+      pooling_average_kernel<type>
+      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (pooled, data,
+       pooledHeight, pooledWidth, pooledVolume,
+       height, width,
+       poolHeight, poolWidth,
+       strideY, strideX,
+       padTop, padLeft);
+
+      cudaError_t status = cudaPeekAtLastError() ;
+      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    }
+
+    static vl::Error
+    backward(type* derData,
+             type const* derPooled,
+             size_t height, size_t width, size_t depth,
+             size_t poolHeight, size_t poolWidth,
+             size_t strideY, size_t strideX,
+             size_t padTop, size_t padBottom,
+             size_t padLeft, size_t padRight)
+    {
+      int pooledWidth = (width + (padLeft+padRight) - poolWidth)/strideX + 1 ;
+      int pooledHeight = (height + (padTop+padBottom) - poolHeight)/strideY + 1 ;
+      int dataVolume = width * height * depth ;
+
+      pooling_average_backward_kernel<type>
+      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derData, derPooled,
+       dataVolume,
+       pooledHeight, pooledWidth,
+       height, width, dataVolume,
+       poolHeight, poolWidth,
+       strideY, strideX,
+       padTop, padLeft);
+
+      cudaError_t status = cudaPeekAtLastError() ;
+      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    }
+  } ; // pooling_average
+
+} } ; // namespace vl::impl
+
+// Instantiations
+template struct vl::impl::pooling_max<vl::GPU, float> ;
+template struct vl::impl::pooling_average<vl::GPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::pooling_max<vl::GPU, double> ;
+template struct vl::impl::pooling_average<vl::GPU, double> ;
+#endif
+

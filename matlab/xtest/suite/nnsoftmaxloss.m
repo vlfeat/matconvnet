@@ -14,7 +14,7 @@ classdef nnsoftmaxloss < nntest
         c = reshape([7 2 1],1,1,1,[]) ;
       end
       if weighed
-        c = cat(3, c, test.rand(size(c),'single')) ;
+        c = cat(3, c, test.rand(size(c))) ;
       end
 
       % compare direct and indirect composition; this cannot

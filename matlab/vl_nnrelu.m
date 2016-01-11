@@ -35,14 +35,14 @@ opts = vl_argparse(opts, varargin) ;
 
 if opts.leak == 0
   if nargin <= 1 || isempty(dzdy)
-    y = max(x, single(0)) ;
+    y = max(x, 0) ;
   else
-    y = dzdy .* (x > single(0)) ;
+    y = dzdy .* (x > 0) ;
   end
 else
   if nargin <= 1 || isempty(dzdy)
-    y = x .* (opts.leak + (1 - opts.leak) * single(x > 0)) ;
+    y = x .* (opts.leak + (1 - opts.leak) * (x > 0)) ;
   else
-    y = dzdy .* (opts.leak + (1 - opts.leak) * single(x > 0)) ;
+    y = dzdy .* (opts.leak + (1 - opts.leak) * (x > 0)) ;
   end
 end

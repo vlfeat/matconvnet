@@ -4,7 +4,7 @@
 // @author Karel Lenc
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -152,40 +152,6 @@ pooling_forward_cpu(type* pooled,
   }
 }
 
-template<> vl::Error
-vl::impl::pooling_max_forward<vl::CPU, float>(float* pooled,
-                                              float const* data,
-                                              size_t height, size_t width, size_t depth,
-                                              size_t poolHeight, size_t poolWidth,
-                                              size_t strideY, size_t strideX,
-                                              size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  pooling_forward_cpu<float, acc_max<float> > (pooled,
-                                       data,
-                                       height, width, depth,
-                                       poolHeight, poolWidth,
-                                       strideY, strideX,
-                                       padTop, padBottom, padLeft, padRight) ;
-  return vlSuccess ;
-}
-
-template<> vl::Error
-vl::impl::pooling_average_forward<vl::CPU, float>(float* pooled,
-                                              float const* data,
-                                              size_t height, size_t width, size_t depth,
-                                              size_t poolHeight, size_t poolWidth,
-                                              size_t strideY, size_t strideX,
-                                              size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  pooling_forward_cpu<float, acc_sum<float> > (pooled,
-                                       data,
-                                       height, width, depth,
-                                       poolHeight, poolWidth,
-                                       strideY, strideX,
-                                       padTop, padBottom, padLeft, padRight) ;
-  return vlSuccess ;
-}
-
 /* ---------------------------------------------------------------- */
 /*                                               pooling_*_backward */
 /* ---------------------------------------------------------------- */
@@ -233,37 +199,100 @@ pooling_backward_cpu(type* derData,
   }
 }
 
-template<> vl::Error
-vl::impl::pooling_max_backward<vl::CPU, float>(float* derData,
-                                               float const* data,
-                                               float const* derPooled,
-                                               size_t height, size_t width, size_t depth,
-                                               size_t poolHeight, size_t poolWidth,
-                                               size_t strideY, size_t strideX,
-                                               size_t padTop, size_t padBottom,
-                                               size_t padLeft, size_t padRight)
-{
-  pooling_backward_cpu<float, acc_max<float> > (derData, data, derPooled,
-                                                height, width, depth,
-                                                poolHeight, poolWidth,
-                                                strideY, strideX,
-                                                padTop, padBottom, padLeft, padRight) ;
-  return vlSuccess ;
-}
+/* ---------------------------------------------------------------- */
+/*                                                        Interface */
+/* ---------------------------------------------------------------- */
 
-template<> vl::Error
-vl::impl::pooling_average_backward<vl::CPU, float>(float* derData,
-                                               float const* derOutput,
-                                               size_t height, size_t width, size_t depth,
-                                               size_t poolHeight, size_t poolWidth,
-                                               size_t strideY, size_t strideX,
-                                               size_t padTop, size_t padBottom,
-                                               size_t padLeft, size_t padRight)
-{
-  pooling_backward_cpu<float, acc_sum<float> > (derData, NULL, derOutput,
-                                                height, width, depth,
-                                                poolHeight, poolWidth,
-                                                strideY, strideX,
-                                                padTop, padBottom, padLeft, padRight) ;
-  return vlSuccess ;
-}
+namespace vl { namespace impl {
+
+  template <typename type>
+  struct pooling_max<vl::CPU, type>
+  {
+    static vl::Error
+    forward(type* pooled,
+            type const* data,
+            size_t height, size_t width, size_t depth,
+            size_t poolHeight, size_t poolWidth,
+            size_t strideY, size_t strideX,
+            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      pooling_forward_cpu<type, acc_max<type> > (pooled,
+                                                 data,
+                                                 height, width, depth,
+                                                 poolHeight, poolWidth,
+                                                 strideY, strideX,
+                                                 padTop, padBottom, padLeft, padRight) ;
+      return vlSuccess ;
+    }
+
+    static vl::Error
+    backward(type* derData,
+             type const* data,
+             type const* derOutput,
+             size_t height, size_t width, size_t depth,
+             size_t poolHeight, size_t poolWidth,
+             size_t strideY, size_t strideX,
+             size_t padTop, size_t padBottom,
+             size_t padLeft, size_t padRight)
+    {
+      pooling_backward_cpu<type, acc_max<type> > (derData,
+                                                  data, derOutput,
+                                                  height, width, depth,
+                                                  poolHeight, poolWidth,
+                                                  strideY, strideX,
+                                                  padTop, padBottom, padLeft, padRight) ;
+      return vlSuccess ;
+    }
+  } ; // pooling_max
+
+  template <typename type>
+  struct pooling_average<vl::CPU, type>
+  {
+
+    static vl::Error
+    forward(type* pooled,
+            type const* data,
+            size_t height, size_t width, size_t depth,
+            size_t poolHeight, size_t poolWidth,
+            size_t strideY, size_t strideX,
+            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      pooling_forward_cpu<type, acc_sum<type> > (pooled,
+                                                 data,
+                                                 height, width, depth,
+                                                 poolHeight, poolWidth,
+                                                 strideY, strideX,
+                                                 padTop, padBottom, padLeft, padRight) ;
+      return vlSuccess ;
+    }
+
+    static vl::Error
+    backward(type* derData,
+             type const* derPooled,
+             size_t height, size_t width, size_t depth,
+             size_t poolHeight, size_t poolWidth,
+             size_t strideY, size_t strideX,
+             size_t padTop, size_t padBottom,
+             size_t padLeft, size_t padRight)
+    {
+      pooling_backward_cpu<type, acc_sum<type> > (derData,
+                                                  NULL, derPooled,
+                                                  height, width, depth,
+                                                  poolHeight, poolWidth,
+                                                  strideY, strideX,
+                                                  padTop, padBottom, padLeft, padRight) ;
+      return vlSuccess ;
+    }
+  } ; // pooling_average
+
+} } ; // namespace vl::impl
+
+// Instantiations
+template struct vl::impl::pooling_max<vl::CPU, float> ;
+template struct vl::impl::pooling_average<vl::CPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::pooling_max<vl::CPU, double> ;
+template struct vl::impl::pooling_average<vl::CPU, double> ;
+#endif
+
