@@ -71,7 +71,7 @@ namespace vl { namespace impl {
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
 
-    float * const  __restrict imageMemory = image.memory ;
+    float * const  __restrict imageMemory = image.getMemory() ;
     int const imageHeight = (int)shape.height ;
     int const imageWidth = (int)shape.width ;
 
