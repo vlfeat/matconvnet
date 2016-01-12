@@ -1,9 +1,9 @@
-// @file imread_win.cpp
+// @file imread_gdiplus.cpp
 // @brief Image reader based on Windows GDI+.
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -45,7 +45,7 @@ public:
 
 vl::ImageReader::Impl::Impl()
 {
-	lastErrorMessage[0] = 0;
+  lastErrorMessage[0] = 0;
   GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 }
 
