@@ -355,9 +355,17 @@ for t=1:opts.batchSize:numel(subset)
   fprintf(' [%d/%d]', numDone, batchSize);
   fprintf('\n') ;
 
-  % debug info
-  if opts.plotDiagnostics && numGpus <= 1
-    figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
+  % collect diagnostic statistics
+  if training & opts.plotDiagnostics
+    switchfigure(2) ; clf ;
+    diag = [res.stats] ;
+    barh(horzcat(diag.variation)) ;
+    set(gca,'TickLabelInterpreter', 'none', ...
+      'YTickLabel',horzcat(diag.label), ...
+      'YDir', 'reverse', ...
+      'XScale', 'log', ...
+      'XLim', [1e-5 1]) ;
+    drawnow ;
   end
 
 end
@@ -420,6 +428,27 @@ for l=numel(net.layers):-1:1
         - (1 / batchSize) * res(l).dzdw{j} ;
       net.layers{l}.weights{j} = net.layers{l}.weights{j} + ...
         thisLR * net.layers{l}.momentum{j} ;
+    end
+
+    % if requested, collect some useful stats for debugging
+    if opts.plotDiagnostics
+      variation = [] ;
+      label = '' ;
+      switch net.layers{l}.type
+        case {'conv','convt'}
+          variation = thisLR * mean(abs(net.layers{l}.momentum{j}(:))) ;
+          if j == 1 % fiters
+            base = mean(abs(net.layers{l}.weights{j}(:))) ;
+            label = 'filters' ;
+          else % biases
+            base = mean(abs(res(l+1).x(:))) ;
+            label = 'biases' ;
+          end
+          variation = variation / base ;
+          label = sprintf('%s_%s', net.layers{l}.name, label) ;
+      end
+      res(l).stats.variation(j) = variation ;
+      res(l).stats.label{j} = label ;
     end
   end
 end

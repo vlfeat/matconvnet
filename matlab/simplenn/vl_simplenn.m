@@ -5,7 +5,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   derivative on data X and output derivative DZDY (foward+bacwkard pass).
 %   RES = VL_SIMPLENN(NET, X, [], RES) evaluates the NET on X reusing the
 %   structure RES.
-%   RES = VL_SIMPLENN(NET, X, DZDY, RES) evaluates the NET on X and its 
+%   RES = VL_SIMPLENN(NET, X, DZDY, RES) evaluates the NET on X and its
 %   derivatives reusing the structure RES.
 %
 %   This function process networks using the SimpleNN wrapper
@@ -265,6 +265,7 @@ if nargin <= 3 || isempty(res)
     'dzdx', cell(1,n+1), ...
     'dzdw', cell(1,n+1), ...
     'aux', cell(1,n+1), ...
+    'stats', cell(1,n+1), ...
     'time', num2cell(zeros(1,n+1)), ...
     'backwardTime', num2cell(zeros(1,n+1))) ;
 end
