@@ -2,7 +2,7 @@
 # author: Andrea Vedaldi
 # brief: matconvnet makefile for mex files
 
-# Copyright (C) 2014-15 Andrea Vedaldi
+# Copyright (C) 2014-16 Andrea Vedaldi
 # All rights reserved.
 #
 # This file is part of the VLFeat library and is made available under
@@ -44,7 +44,7 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta17
+VER = 1.0-beta18
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync

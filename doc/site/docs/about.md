@@ -23,6 +23,17 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta18 (January 2015).
+
+    **New features**
+
+    * DOUBLE support. All `vl_nn*` commands now work with either
+      DOUBLE or SINGLE (FLOAT) data types.
+
+    * VL_IMREADJPEG() can now resize images.
+
+    * More thourough unit testing and several bugfixes.
+
 -   1.0-beta17 (December 2015).
 
     **New features**
