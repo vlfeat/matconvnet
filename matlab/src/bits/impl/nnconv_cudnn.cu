@@ -1,9 +1,9 @@
-// @file nnconv_blas.cu
+// @file nnconv_cudnn.cu
 // @brief Convolution block CuDNN-based implementation.
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -528,7 +528,7 @@ namespace vl { namespace impl {
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
     if (derBiasesDescInitialized) { cudnnDestroyTensorDescriptor(derBiasesDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    return context.passError(error, "nnconv_backward_cudnn") ;
+    return context.passError(error, __func__) ;
   }
 
 } }
