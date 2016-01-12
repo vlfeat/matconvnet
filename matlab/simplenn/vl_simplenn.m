@@ -345,7 +345,10 @@ for i=1:n
       end
 
     case 'pdist'
-      res(i+1) = vl_nnpdist(res(i).x, l.p, 'noRoot', l.noRoot, 'epsilon', l.epsilon) ;
+      res(i+1).x = vl_nnpdist(res(i).x, l.class, l.p, ...
+        'noRoot', l.noRoot, ...
+        'epsilon', l.epsilon, ...
+        'aggregate', l.aggregate) ;
 
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
@@ -456,8 +459,12 @@ if doder
         dzdw{3} = dzdw{3} * size(res(i).x,4) ;
 
       case 'pdist'
-        res(i).dzdx = vl_nnpdist(res(i).x, l.p, res(i+1).dzdx, ...
-                                 'noRoot', l.noRoot, 'epsilon', l.epsilon) ;
+        res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...
+          l.p, res(i+1).dzdx, ...
+          'noRoot', l.noRoot, ...
+          'epsilon', l.epsilon, ...
+          'aggregate', l.aggregate) ;
+
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
 

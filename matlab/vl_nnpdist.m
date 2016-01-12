@@ -3,7 +3,7 @@ function y = vl_nnpdist(x, x0, p, varargin)
 %   VL_NNPDIST(X, X0, P) computes the P distance raised of each feature
 %   vector in X to the corresponding feature vector in X0:
 %
-%     Y(i,j,1) = (SUM_d (X(i,j,d) - X0(i,j,d))^P)^1/P
+%     Y(i,j,1) = (SUM_d (X(i,j,d) - X0(i,j,d))^P)^(1/P)
 %
 %   X0 should have the same size as X; the outoput Y has the same
 %   height and width as X, but depth equal to 1. Optionally, X0 can
@@ -15,7 +15,7 @@ function y = vl_nnpdist(x, x0, p, varargin)
 %
 %     Y(i,j,1) = SUM_d (X(i,j,d) - X0(i,j,d))^P
 %
-%   For example, `vn_nnpdist(x, x0, 2, 'noRoot', true)` computes the
+%   For example, `vl_nnpdist(x, x0, 2, 'noRoot', true)` computes the
 %   squared L2 distance.
 %
 %   DZDX = VL_NNPDISTP(X, X0, P, DZDY) computes the derivative of the
@@ -32,6 +32,10 @@ function y = vl_nnpdist(x, x0, p, varargin)
 %      lower boudned by this value. For example, the L2 distance is
 %      not smooth at the origin; this option prevents the
 %      derivative from diverging.
+%
+%   `Aggregate`:: false
+%      Instead of returning one scalar for each spatial location in
+%      the inputs, sum all of them into a single scalar.
 
 % Copyright (C) 2015  Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
@@ -45,6 +49,7 @@ function y = vl_nnpdist(x, x0, p, varargin)
 
 opts.noRoot = false ;
 opts.epsilon = 1e-6 ;
+opts.aggregate = false ;
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
@@ -69,18 +74,21 @@ if ~opts.noRoot
     else
       y = sum(abs(d).^p,3).^(1/p) ;
     end
+    if opts.aggregate
+      y = sum(sum(y)) ;
+    end
   else
     if p == 1
       y = bsxfun(@times, dzdy, sign(d)) ;
     elseif p == 2
       y = max(sum(d.*d,3), opts.epsilon).^(-0.5) ;
-      y = bsxfun(@times, dzdy .* y,  d) ;
+      y = bsxfun(@times, bsxfun(@times, dzdy, y),  d) ;
     elseif p < 1
       y = sum(abs(d).^p,3).^((1-p)/p) ;
-      y = bsxfun(@times, dzdy .* y, max(abs(d), opts.epsilon).^(p-1) .* sign(d)) ;
+      y = bsxfun(@times, bsxfun(@times, dzdy, y), max(abs(d), opts.epsilon).^(p-1) .* sign(d)) ;
     else
       y = max(sum(abs(d).^p,3), opts.epsilon).^((1-p)/p) ;
-      y = bsxfun(@times, dzdy .* y, abs(d).^(p-1) .* sign(d)) ;
+      y = bsxfun(@times, bsxfun(@times, dzdy, y), abs(d).^(p-1) .* sign(d)) ;
     end
   end
 else
@@ -91,6 +99,9 @@ else
       y = sum(d.*d,3) ;
     else
       y = sum(abs(d).^p,3) ;
+    end
+    if opts.aggregate
+      y = sum(sum(y)) ;
     end
   else
     if p == 1
