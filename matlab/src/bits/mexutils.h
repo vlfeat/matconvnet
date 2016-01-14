@@ -28,6 +28,7 @@ the terms of the BSD license (see the COPYING file).
 // Add some missing functions from C99
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
+#define roundf(x) (float)(int)(x+0.5f)
 #endif
 #endif
 
