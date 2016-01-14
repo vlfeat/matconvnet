@@ -24,7 +24,7 @@ the terms of the BSD license (see the COPYING file).
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
-#if _MSC_VER < 1900
+#if _MSC_VER < 1800
 // Add some missing functions from C99
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
