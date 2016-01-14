@@ -33,7 +33,7 @@ recognition, and text detection are available.
 
 > **New:** [1.0-beta18](about.md#changes) adds support fod DOUBLE data
 > type. [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) can now resize
-> images. This version also contains numberous bugfixes.
+> images. This version also contains numerous bugfixes.
 >
 > **New:** [1.0-beta17](about.md#changes) tidies up the library in
 > many ways. It also improves how batch normalization is
