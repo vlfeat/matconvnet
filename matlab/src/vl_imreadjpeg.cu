@@ -176,7 +176,7 @@ void reader_function(void* reader_)
       }
     }
 
-    if (thisTask.error == vl::vlSuccess & thisTask.requireResize) {
+    if ((thisTask.error == vl::vlSuccess) && thisTask.requireResize) {
       vl::impl::resizeImage(thisTask.resizedImage, thisTask.inputImage) ;
     }
 

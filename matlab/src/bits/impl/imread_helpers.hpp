@@ -405,7 +405,7 @@ namespace vl { namespace impl {
       free(starts) ;
     }
 
-    ImageResizeFilter(int outputWidth, int inputWidth, FilterType filterType = kBilinear)
+    ImageResizeFilter(size_t outputWidth, size_t inputWidth, FilterType filterType = kBilinear)
     {
       filterSize = 0 ;
       switch (filterType) {
