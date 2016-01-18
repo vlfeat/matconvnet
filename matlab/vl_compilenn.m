@@ -97,26 +97,29 @@ function vl_compilenn(varargin)
 %     from NVIDIA. Note that each MATLAB version requires a
 %     particular CUDA Devkit version:
 %
-%     | MATLAB version | Release | CUDA Devkit |
-%     |----------------|---------|-------------|
-%     | 8.2            | 2013b   | 5.5         |
-%     | 8.3            | 2014a   | 5.5         |
-%     | 8.4            | 2014b   | 6.0         |
-%     | 8.6            | 2015b   | Latest(7.5) |
+%     | MATLAB version | Release | CUDA Devkit  |
+%     |----------------|---------|--------------|
+%     | 8.2            | 2013b   | 5.5          |
+%     | 8.3            | 2014a   | 5.5          |
+%     | 8.4            | 2014b   | 6.0          |
+%     | 8.6            | 2015b   | Latest(>7.0) |
 %
 %     A different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
 %
 %   The following configurations have been tested successfully:
 %
-%   * Windows 7 x64, MATLAB R2014a, Visual C++ 2010 and CUDA Toolkit
-%     6.5 (unable to compile with Visual C++ 2013).
+%   * Windows 7 x64, MATLAB R2014a, Visual C++ 2010, 2013 and CUDA Toolkit
+%     6.5. VS 2015 CPU version only (not supported by CUDA Toolkit yet).
 %   * Windows 8 x64, MATLAB R2014a, Visual C++ 2013 and CUDA
 %     Toolkit 6.5.
 %   * Mac OS X 10.9 and 10.10, MATLAB R2013a and R2013b, Xcode, CUDA
 %     Toolkit 5.5.
-%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc, CUDA Toolkit 5.5/6.5/7.5.
+%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
 %
+%   Compilation on Windows with MinGW compiler (the default mex compiler in
+%   Matlab) is not supported. For Windows, please reconfigure mex to use
+%   Visual Studio C/C++ compiler.
 %   Furthermore your GPU card must have ComputeCapability >= 2.0 (see
 %   output of `gpuDevice()`) in order to be able to run the GPU code.
 %   To change the compute capabilities, for `mex` `CudaMethod` edit
@@ -130,7 +133,7 @@ function vl_compilenn(varargin)
 %   code](http://mathworks.com/help/distcomp/run-mex-functions-containing-cuda-code.html),
 %   `vl_setup()`, `vl_imreadjpeg()`.
 
-% Copyright (C) 2014-15 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2014-16 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
