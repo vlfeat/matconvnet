@@ -10,17 +10,17 @@ This chapter reviews fundamental concepts of CNNs as needed to understand how to
 
 A \emph{Convolutional Neural Network} (CNN) is a function $g$ mapping data $\bx$, for example an image, to an output vector $\by$. The function $g=f_L \circ \dots \circ f_1$ is the composition of a sequence of simpler functions $f_l$, which we  call \emph{computational blocks} or \emph{layers}.  Let $\bx_1,\bx_2,\dots,\bx_L$ be the outputs of each layer in the network, and let $\bx_0=\bx$ denote the network input. Each output $\bx_l = f_l(\bx_{l-1};\bw_l)$ is computed from the previous output $\bx_{l-1}$  by applying the function $f_l$ with parameters $\bw_l$. The data flowing through the network has a spatial structure; namely,  $\bx_l\in\mathbb{R}^{H_l \times W_l \times D_l}$ is a 3D array whose first two dimensions are interpreted as spatial coordinates (it therefore represents a feature field).  A fourth non-singleton dimension in the array allows processing \emph{batches} of images in parallel, which is important for efficiency. The network is called \emph{convolutional} because the functions $f_l$ act as local and translation invariant operators (i.e. non-linear filters). 
 
-\matlab includes a variety of  building blocks, contained in the !matlab/! directory, such as !vl_nnconv! (convolution), !vl_nnconvt! (convolution transpose or deconvolution), !vl_nnpool! (max and average pooling), !vl_nnrelu! (ReLU activation), !vl_nnsigmoid! (sigmoid activation), !vl_nnsoftmax! (softmax operator), !vl_nnloss! (classification log-loss), !vl_nnbnorm! (batch normalization), !vl_nnspnorm! (spatial normalization), !vl_nnnormalize! (locar response normalization -- LRN), or !vl_nnpdist! ($p$-distance).  The library of blocks is sufficiently extensive that many interesting state-of-the-art network can be implemented and learned using the toolbox, or even ported from other toolboxes such as Caffe.
+\matlab includes a variety of  building blocks, contained in the !matlab/! directory, such as !vl_nnconv! (convolution), !vl_nnconvt! (convolution transpose or deconvolution), !vl_nnpool! (max and average pooling), !vl_nnrelu! (ReLU activation), !vl_nnsigmoid! (sigmoid activation), !vl_nnsoftmax! (softmax operator), !vl_nnloss! (classification log-loss), !vl_nnbnorm! (batch normalization), !vl_nnspnorm! (spatial normalization), !vl_nnnormalize! (locar response normalization -- LRN), or !vl_nnpdist! ($p$-distance).  The library of blocks is sufficiently extensive that many interesting state-of-the-art networks can be implemented and learned using the toolbox, or even ported from other toolboxes such as Caffe.
 
 CNNs are used as classifiers or regressors. In the example of \autoref{f:demo}, the output $\hat \by = f(\bx)$ is a vector of probabilities, one for each of a 1,000 possible image labels (dog, cat, trilobite, ...).  If $\by$ is the true label of image $\bx$, we can measure the CNN performance by a loss function $\ell_\by(\hat \by)  \in \mathbb{R}$ which assigns a penalty to classification errors. The CNN parameters can then be tuned or \emph{learned} to minimise this loss averaged over a large dataset of labelled example images.
 
-Learning generally uses a variant of \emph{stochastic gradient descent} (SGD). While this is an efficient method (for this type of problems), networks may contain several million parameters and need to be trained on millions of images; thus, efficiency is a paramount in \matlab design, as further discussed in \autoref{s:speed}. SGD requires also to compute the CNN derivatives, as explained in the next section.
+Learning generally uses a variant of \emph{stochastic gradient descent} (SGD). While this is an efficient method (for this type of problems), networks may contain several million parameters and need to be trained on millions of images; thus, efficiency is a paramount in \matlab design, as further discussed in \autoref{s:speed}. SGD also requires to compute the CNN derivatives, as explained in the next section.
 
 % ------------------------------------------------------------------
 \section{CNN topologies}\label{s:cnn-topology}
 % ------------------------------------------------------------------
 
-In the simplest case, computational blocks form a simple chain; however, more complex topologies are possible and in fact very useful in certain applications. This section discusses such configurations and introduce a graphical notation to visualize them.
+In the simplest case, computational blocks form a simple chain; however, more complex topologies are possible and in fact very useful in certain applications. This section discusses such configurations and introduces a graphical notation to visualize them.
 
 % ------------------------------------------------------------------
 \subsection{Simple networks}\label{s:cnn-simple}
@@ -68,7 +68,7 @@ Given an input $\bx_0$, evaluating the network is a simple matter of evaluating 
 
 A moment's thought reveals that one is not limited in chaining blocks one after another; it only suffices that, when a block has to be evaluated, all its input have been evaluated prior to it. This is always possible provided that blocks are interconnected in a \emph{directed acyclic graph}, or DAG.
 
-In order to visualize DAGSs, it is useful to introduce additional nodes for the network variables,  as in the following example:
+In order to visualize DAGs, it is useful to introduce additional nodes for the network variables,  as in the following example:
 \begin{center}
 \begin{tikzpicture}[auto, node distance=0.4cm]
  \matrix (m) [matrix of math nodes, 
@@ -124,7 +124,7 @@ In order to visualize DAGSs, it is useful to introduce additional nodes for the 
 Here boxes denote functions and circles variables (parameters are treated as a special kind of variables). In the example, $\bx_0$ and $\bx_4$ are the inputs of the CNN and $\bx_6$ and $\bx_7$ the outputs. Functions can take any number of inputs (e.g. $f_3$ and $f_5$ take two) and have any number of outputs (e.g. $f_4$ has two). There are a few noteworthy properties of this graph:
 
 \begin{enumerate}
-\item The graph is bipartite, in the sense that arrows always go from boxes to circles and circles to boxes. 
+\item The graph is bipartite, in the sense that arrows always go from boxes to circles and from circles to boxes. 
 \item Functions can have any number of inputs or outputs; variables and parameters can have an arbitrary number of outputs; variables have at most one input.
 \item While there is usually one parameter per function, the same parameter can feed into two or more functions, and therefore be \emph{shared} among them.
 \item Since the graph is acyclic, the CNN can be evaluated by sorting the functions and computing them one after another (in the example evaluating $f_1,f_2,f_3,f_4$ and then $f_5$ in this order would work).
@@ -160,13 +160,13 @@ In order to understand backpropagation, consider first a simple CNN terminating 
 \draw [to] (wL.north) -- (fL.south) {};
 \end{tikzpicture}
 \end{center}
-In learning, we are computing in determining the gradient of the loss $z$ with respect to each parameter:
+In learning, we are computing the gradient of the loss $z$ with respect to each parameter:
 \[
 \frac{dz}{d\bw_l} = 
 \frac{d}{d\bw_l}
 \left[\ell_\by \circ f_L(\cdot;\bw_L) \circ ... \circ 
 f_2(\cdot;\bw_2) \circ f_1(\bx_0;\bw_1)\right]
-\]
+\].
 By applying the chain rule, we find that this can be rewritten as
 \[\label{e:chain-rule}
 \frac{dz}{d\bw_l} 
@@ -177,7 +177,7 @@ By applying the chain rule, we find that this can be rewritten as
 \frac{d\vv f_{l+1}(\bx_{l};\bw_{l+1})}{d(\vv\bx_{l})^\top}
 \frac{d\vv f_l(\bx_{l-1};\bw_{l})}{d\bw_l^\top}
 \]
-where the derivatives are computed at the working point determined by the input $\bx_0$ and the current value of the parameters. It is convenient to rewrite this expression in term of variables only, leaving the functional dependencies implicit:
+where the derivatives are computed at the working point determined by the input $\bx_0$ and the current value of the parameters. It is convenient to rewrite this expression in terms of variables only, leaving the functional dependencies implicit:
 \[\label{e:chain-rule}
 \frac{dz}{d\bw_l} 
 = 
@@ -186,12 +186,12 @@ where the derivatives are computed at the working point determined by the input 
 \dots
 \frac{d\vv\bx_{l+1}}{d(\vv\bx_{l})^\top}
 \frac{d\vv\bx_{l}}{d\bw_l^\top}
-\]
-The $\vv$ symbol is the vectorization operator, which simply reshape its tensor argument to a column vector. This notation for the derivatives is taken from~\cite{kinghorn96integrals} and is used throughout this document.
+\].
+The $\vv$ symbol is the vectorization operator, which simply reshapes its tensor argument to a column vector. This notation for the derivatives is taken from~\cite{kinghorn96integrals} and is used throughout this document.
 
-Note that this expression involves computing and multiplying the Jacobians of all building block from level $L$ back to level $l$.  Unfortunately intermediate Jacobians such as $d\vv \bx_l / d(\vv \bx_{l-1})^\top$ are extremely large $H_l W_l D_l  \times H_{l-1} W_{l-1} D_{l-1}$ matrices (often worth GBs of data), which makes the naive application of the chain rule unfeasible.
+Note that this expression involves computing and multiplying the Jacobians of all building block from level $L$ back to level $l$.  Unfortunately intermediate Jacobians such as $d\vv \bx_l / d(\vv \bx_{l-1})^\top$ are extremely large $H_l W_l D_l  \times H_{l-1} W_{l-1} D_{l-1}$ matrices (often worth GBs of data), which makes the naive application of the chain rule infeasible.
 
-The trick is to notice that only the intermediate but unneded Jacobians are so large; in fact, since the loss $z$ is a scalar value, the target derivatives $dz / d\bw_l$ have the same dimensions as $\bw_l$. The key idea of backpropagation is a way to organize the computation in order to avoid the explicit computation of the intermediate large matrices.
+The trick is to notice that only the intermediate but unneeded Jacobians are so large; in fact, since the loss $z$ is a scalar value, the target derivatives $dz / d\bw_l$ have the same dimensions as $\bw_l$. The key idea of backpropagation is a way to organize the computation in order to avoid the explicit computation of the intermediate large matrices.
 
 This is best seen by focusing on an intermediate layer $f$ with parameter $\bw$, as follows:
 \begin{center}
@@ -207,7 +207,7 @@ This is best seen by focusing on an intermediate layer $f$ with parameter $\bw$,
 \draw [to] (bz.east) -- (z.west) {};
 \end{tikzpicture}
 \end{center}
-Here the function $h$ lumps together all layers of the network from $f$ to the scalar output $z$ (loss). The derivatives of $h \circ f$ with respect to the data and parameters can be rewritten as:
+Here the function $h$ lumps all layers of the network from $f$ to the scalar output $z$ (loss) together. The derivatives of $h \circ f$ with respect to the data and parameters can be rewritten as:
 \begin{equation}\label{e:backprop-core}
 \frac{dz}{d(\vv \bx)^\top}
 =
@@ -226,23 +226,23 @@ The key in implementing backpropagation then is to implement for each building b
 	\item \textbf{Forward mode.} This mode takes the input data $\bx$ and parameter $\bw$ and computes the output variable $\by$.
 	\item \textbf{Backward mode.} This mode takes the input data $\bx$,  the parameter $\bw$, and the output derivative $dz / d \by$ and computes the parameter derivative $dz / d \bw$ as well as the input derivative $dz / d \bx$. Crucially, in this step the required intermediate Jacobian is never \emph{explicitly} computed.
 \end{itemize}
- This is best illustrated with an example. Consider a layer $f$ such as the convolution operator implemented by !vl_nnconv!. In the so called ``forward'' mode, one calls the function as !y = vl_nnconv(x,w,[])! to convolve input !x! and obtain output !y!. In the ``backward mode'', one calls ![dzdx, dzdw] = vl_nnconv(x,w,[],dzdy)!.  As explained above, !dzdx!, !dzdw!, and !dzdy! have the same dimension of !x!, !w!, and !y!. In this manner, the computation of larger Jacobians is encapsulated in the function call and never carried explicitly. Another way of looking at this is that, instead of computing a derivative such as $d\by/d\bw$, one always computes a projection of the type $\langle dz/d\by, d\by/d\bw\rangle$.
+ This is best illustrated with an example. Consider a layer $f$ such as the convolution operator implemented by !vl_nnconv!. In the so called ``forward'' mode, one calls the function as !y = vl_nnconv(x,w,[])! to convolve input !x! and obtain output !y!. In the ``backward mode'', one calls ![dzdx, dzdw] = vl_nnconv(x,w,[],dzdy)!.  As explained above, !dzdx!, !dzdw!, and !dzdy! have the same dimension of !x!, !w!, and !y!. In this manner, the computation of larger Jacobians is encapsulated in the function call and never carried out explicitly. Another way of looking at this is that, instead of computing a derivative such as $d\by/d\bw$, one always computes a projection of the type $\langle dz/d\by, d\by/d\bw\rangle$.
 
 % ------------------------------------------------------------------
 \subsection{Backpropagation in DAGs}\label{s:dag}
 % ------------------------------------------------------------------
 
-Backpropagation can be applied to network with a DAG topology as well. Given a DAG, one can always sort the variables in such a way that they can be computed in sequence, by evaluating the corresponding function:
+Backpropagation can be applied to a network with a DAG topology as well. Given a DAG, one can always sort the variables in such a way that they can be computed in sequence, by evaluating the corresponding function:
 \[
 \bx_1 = f_1(\bx_0),
 \quad
-\bx_2 = f_2(\bx_1,\bx_0),
+\bx_2 = f_2(\bx_0,\bx_1),
 \quad
 ...,
 \quad
-\bx_L = f_L(\bx_1,\dots,\bx_{L-1}).
+\bx_L = f_L(\bx_0,\dots,\bx_{L-1}).
 \]
-Here we made two inconsequential assumptions. The first one is that each block $f_l$ produces exactly one variable $\bx_l$ as output; if a block produces two or more, we can reduce back to this situation by replicating a block as needed. The second assumption is that each block in the sequence take as (direct) input \emph{all} previous variables; this is a ``worst case'' scenario as in practice the dependency is usually limited to a few. Note also that parameters can be seen as special cases of variables.
+Here we made two inconsequential assumptions. The first one is that each block $f_l$ produces exactly one variable $\bx_l$ as output; if a block produces two or more, we can reduce back to this situation by replicating a block as needed. The second assumption is that each block in the sequence takes as (direct) input \emph{all} previous variables; this is a ``worst case'' scenario as in practice the dependency is usually limited to a few. Note also that parameters can be seen as special cases of variables.
 
 To work out the network output derivatives with respect to any intermediate variable, consider the sequence of functions:
 \[
@@ -260,7 +260,7 @@ To work out the network output derivatives with respect to any intermediate vari
   \bx_L &= h_1(\bx_0)  &&= h_2(\bx_0, f_1(\bx_0)).
   \end{aligned}
 \]
-The functions $\bx_L= h_l(\bx_0,\dots,\bx_{l-1})$ can be interpreted as the evaluation of a new DAG obtaining by \emph{clamping} variables $\bx_0,\dots,\bx_{l-1}$ to some arbitrary value and computing the remaining variables as before. This amounts to deleting all functions $f_1,\dots,f_{l-1}$ from the graph and treating $\bx_0,\dots,\bx_{l-1}$ as inputs to the DAG. Below we emphasise this functional dependency by the alternative notation $\bx_L|\bx_0,\dots,\bx_{l-1}$.
+The functions $\bx_L= h_l(\bx_0,\dots,\bx_{l-1})$ can be interpreted as the evaluation of a new DAG obtained by \emph{clamping} variables $\bx_0,\dots,\bx_{l-1}$ to some arbitrary value and computing the remaining variables as before. This amounts to deleting all functions $f_1,\dots,f_{l-1}$ from the graph and treating $\bx_0,\dots,\bx_{l-1}$ as inputs to the DAG. Below we emphasise this functional dependency by the alternative notation $\bx_L|\bx_0,\dots,\bx_{l-1}$.
 
 We can now take the derivative as follows:
 \begin{align*}
@@ -284,7 +284,7 @@ We can now take the derivative as follows:
 \frac{d\vv h_{l+1}}{d(\vv \bx_l)^\top}
 \frac{d\vv f_l}{d(\vv \bx_0)^\top}
 \end{align*}
-where we implicitly set $h_{L+1}(\bx_0,\dots,\bx_L) = \bx_L$. Hence we see that the derivative of the network output $\bx_L$ w.r.t. the input $\bx_0$ is obtained as a linear combination of terms. Each term involves the derivatives of one of the blocks $f_l$ with respect to the input $\bx_0$ and the derivative of a function $h_{l+1}$ with respect to the variable $\bx_l$.
+where we implicitly set $h_{L+1}(\bx_0,\dots,\bx_L) = \bx_L$. Hence we see that the derivatives of the network output $\bx_L$ w.r.t. the input $\bx_0$ is obtained as a linear combination of terms. Each term involves the derivatives of one of the blocks $f_l$ with respect to the input $\bx_0$ and the derivative of a function $h_{l+1}$ with respect to the variable $\bx_l$.
 
 In this process we are required to compute the derivative of functions $h_{l+1}$ with respect to the last variable $\bx_l$ while keeping $\bx_0,\dots,\bx_{l-1}$ fixed as parameters. For example
 \[
@@ -296,7 +296,7 @@ In this process we are required to compute the derivative of functions $h_{l+1}$
 \frac{d\vv h_{l+1}}{d(\vv \bx_l)^\top}
 \frac{d\vv f_l}{d(\vv \bx_1)^\top}.
 \]
-computes the derivative of the network with respect to $\bx_1$ while clamping $\bx_0$ to the current working point. In general, the derivatives with respect all intermediate nodes are given by:
+computes the derivative of the network with respect to $\bx_1$ while clamping $\bx_0$ to the current working point. In general, the derivatives with respect to all intermediate nodes are given by:
 \begin{equation}\label{e:backprop-dag}
 \frac{d \vv \bx_L|\bx_0,\dots,\bx_{l}}{d(\vv \bx_l)^\top}
 =
@@ -311,7 +311,7 @@ While this may seem fairly complicated, it is in fact a minor variation of the a
 
 In more detail, in order to compute ${d (\vv h_{l+1})}/{d(\vv \bx_l)^\top}$ in \eqref{e:backprop-dag} back propagation should:
 \begin{enumerate}
-    \item Identify all the blocks that have $\bx_l$ as input. In the most general case, this are all the blocks $f_{k}(\bx_0,\dots,\bx_l,\dots,\bx_{k-1})$ such that $k > l$.
+    \item Identify all the blocks that have $\bx_l$ as input. In the most general case, these are all the blocks $f_{k}(\bx_0,\dots,\bx_l,\dots,\bx_{k-1})$ such that $k > l$.
     \item For each such block $f_{k}$:
 	\begin{enumerate}
 	\item Retrieve the $d(\vv h_{k+1} )/d(\vv \bx_{k})^\top$ computed at a previous step.
@@ -320,9 +320,9 @@ In more detail, in order to compute ${d (\vv h_{l+1})}/{d(\vv \bx_l)^\top}$ in \
 	\end{enumerate}
 \end{enumerate}
 
-While this procedure is correct, it is also not very convenient to implement as it requires to visiting block $f_k$ again for each of its input variables, every time running its corresponding ``backward mode'' routine, but for a different parameter. Instead, it is generally much more efficient to compute all the derivatives of a block in one step. This can be done by rearranging the algorithm slightly, backtracking over blocks instead of variables:
+While this procedure is correct, it is also not very convenient to implement as it requires to visit block $f_k$ again for each of its input variables, every time running its corresponding ``backward mode'' routine, but for a different parameter. Instead, it is generally much more efficient to compute all the derivatives of a block in one step. This can be done by rearranging the algorithm slightly, backtracking over blocks instead of variables:
 \begin{enumerate}
-\item Start by initialising all derivatives ${d (\vv h_{l+1})}/{d(\vv \bx_l)^\top}$ $l=1,\dots,L-1$ to zero. For $l=L$ set the derivative to 1 (this corresponds to the auxiliary function $h_{L+1}(\bx_0,\dots,\bx_L) = \bx_L$ defined above).
+\item Start by initialising all derivatives ${d (\vv h_{l+1})}/{d(\vv \bx_l)^\top}$, $l=1,\dots,L-1$ to zero. For $l=L$ set the derivative to 1 (this corresponds to the auxiliary function $h_{L+1}(\bx_0,\dots,\bx_L) = \bx_L$ defined above).
 \item For all blocks $f_k$, $k=L,L-1,\dots,1$ in backward order:
 \begin{enumerate}
 	\item For all the block's inputs $\bx_l$, $l < k$:

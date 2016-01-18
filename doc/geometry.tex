@@ -10,12 +10,12 @@ This chapter looks at the geometry of the CNN input-output mapping.
 
 In this section we are interested in understanding how components in a CNN depend on components in the layers before it, and in particular on components of the input.  Since CNNs can incorporate blocks that perform complex operations, such as for example cropping their inputs based on data-dependent terms (e.g. Fast R-CNN), this information is generally available only at ``run time'' and cannot be uniquely determined given only the structure of the network. Furthermore, blocks can implement complex operations that are difficult to characterise in simple terms. Therefore, the analysis will be necessarily limited in scope.
 
-We consider here blocks such as convolutions for which one can deterministically establish dependency chains between network components. We also assume that all the inputs and outputs $\bx$ are in the usual form of spatial maps, and therefore indexed as $x_{i,j,d,k}$ where $i,j$ are spatial coordinates.
+We consider blocks such as convolutions for which one can deterministically establish dependency chains between network components. We also assume that all the inputs $\bx$ and outputs $\by$ are in the usual form of spatial maps, and therefore indexed as $x_{i,j,d,k}$ where $i,j$ are spatial coordinates.
 
 Consider a layer $\by = f(\bx)$. We are interested in establishing which components of $\bx$ influence which components of $\by$. We also assume that this relation can be expressed in terms of a sliding rectangular window field, called \emph{receptive field}. This means that the output component  $y_{i'', j''}$ depends only on the input components $x_{i,j}$ where $(i,j) \in \Omega(i'', j'') $ (note that feature channels are implicitly coalesced in this discussion). The set $\Omega(i'',j'')$ is a rectangle defined as follows:
 \begin{align}\label{e:receptive}
-     i &\in \alpha_h (i'' -1) + \beta_h + [- \frac{\Delta_h-1}{2}, \frac{\Delta_h-1}{2}] \\
-     j &\in \alpha_v (j'' -1) + \beta_v + [- \frac{\Delta_v-1}{2}, \frac{\Delta_v-1}{2}]
+     i &\in \alpha_h (i'' -1) + \beta_h + \left[- \frac{\Delta_h-1}{2}, \frac{\Delta_h-1}{2}\right] \\
+     j &\in \alpha_v (j'' -1) + \beta_v + \left[- \frac{\Delta_v-1}{2}, \frac{\Delta_v-1}{2}\right]
 \end{align}
 where $(\alpha_h,\alpha_v)$ is the \emph{stride}, $(\beta_h,\beta_v)$ the offset, and $(\Delta_h, \Delta_v)$ the \emph{receptive field size}.
 
@@ -30,9 +30,8 @@ It suffices to reason in 1D.  Let $H'$ bet the vertical filter dimension, $S_h$ 
  x_i : i
  &\in
  [1, H'] + S_h (i'' - 1) - P_h^-
- \\
-&=
-[-\frac{H'-1}{2}, \frac{H'-1}{2}] + S_h (i''-1) - P_h^- + \frac{H'+1}{2}.
+=
+\left[-\frac{H'-1}{2}, \frac{H'-1}{2}\right] + S_h (i''-1) - P_h^- + \frac{H'+1}{2}.
 \end{align*}
 Hence
 \[
@@ -79,7 +78,7 @@ H'' = \left\lceil
   \right\rceil
   + 1.
 \]
-This is the same formula as above of filters, but with the ceil instead of floor operator. Note that in practice $P_h^- = P_h^+ = P_h$ since Caffe does not support asymmetric padding. 
+This is the same formula as for above filters, but with the ceil instead of floor operator. Note that in practice $P_h^- = P_h^+ = P_h$ since Caffe does not support asymmetric padding. 
 
 Unfortunately, it gets more complicated. Using the formula above, it can happen that the last padding application is completely outside the input image and Caffe tries to avoid it. This requires
 \begin{equation}\label{e:pooling-caffe-constr}
@@ -90,7 +89,7 @@ Unfortunately, it gets more complicated. Using the formula above, it can happen 
   H'' \leq \frac{H - 1 + P_h^-}{S_h} + 1.	
 \end{equation}
 
-Using the fact that for integer $a,b$, one has $\lceil a/b \rceil = \lfloor (a+b-1)/b \rfloor$, we can rewrite the expression for $H''$ as follows
+Using the fact that for integers $a,b$, one has $\lceil a/b \rceil = \lfloor (a+b-1)/b \rfloor$, we can rewrite the expression for $H''$ as follows
 \begin{align*}
 H'' = \left\lceil 
   \frac{H - H' + P_h^- + P_h^+}{S_h}
@@ -187,7 +186,7 @@ Note that, due to rounding, it is not possible to express this set tightly in th
 \Delta_h = \frac{H' -1}{U_h} + 1.
 \]
 
-Next, we want to determine the height $H''$ of the output $\by$ of convolution transpose as a function of the heigh $H$ of the input $\bx$ and the other parameters. Swapping input and output in  \autoref{e:filtered-height} results in the constraint:
+Next, we want to determine the height $H''$ of the output $\by$ of convolution transpose as a function of the heigh $H$ of the input $\bx$ and the other parameters. Swapping input and output in  \eqref{e:filtered-height} results in the constraint:
 \[
 H = 1+ \left\lfloor \frac{H'' - H' + C_h^- + C_h^+}{U_h} \right\rfloor.
 \]
@@ -195,7 +194,7 @@ If $H$ is now given as input, it is not possible to recover $H''$ uniquely from 
 \[
    S_h (H-1) +H' -  C_h^- - C_h^+ \leq H'' < S_h H +H' -  C_h^- - C_h^+.
 \]
-This is due to the fact that due to the fact that $U_h$ acts as a downsampling factor in the standard convolution direction and some of the samples to the right of the convolution input $\by$ may be ignored by the filter (see also \autoref{f:conv} and \autoref{f:convt}).
+This is due to the fact that $U_h$ acts as a downsampling factor in the standard convolution direction and some of the samples to the right of the convolution input $\by$ may be ignored by the filter (see also \autoref{f:conv} and \autoref{f:convt}).
 
 Since the height of $\by$ is then determined up to $S_h$ samples, and since the extra samples would be ignored by the computation and stay zero, we choose the tighter definition and set
 \[
@@ -208,7 +207,7 @@ H'' =  U_h (H-1) +H' -  C_h^- - C_h^+.
 
 Suppose we have determined that a later $\by = f(\bx)$ has a receptive field transformation $(\alpha_h,\beta_h,\Delta_h)$ (along one spatial slice). Now suppose we are given a block $\bx = g(\by)$ which is the ``transpose'' of $f$, just like the convolution transpose layer is the transpose of the convolution layer. By this, we mean that, if $y_{i''}$ depends on $x_{i}$ due to $f$, then $x_{i}$ depends on $y_{i''}$ due to $g$.
 
-Note that, by definition of receptive fields, $f$ relates the  inputs and outputs index pairs $(i,i'')$ given by \autoref{e:receptive}, which can be rewritten as
+Note that, by definition of receptive fields, $f$ relates the  inputs and outputs index pairs $(i,i'')$ given by \eqref{e:receptive}, which can be rewritten as
 \[
 - \frac{\Delta_h-1}{2} \leq  i - \alpha_h (i'' -1) - \beta_h \leq\frac{\Delta_h-1}{2}.
 \]
@@ -244,7 +243,7 @@ Using the formulas just found, we can obtain the RF transformation for convoluti
 \\
 \hat \Delta_h &= \frac{H' + S_h - 1}{S_h} = \frac{H' -1}{S_h} + 1.
 \end{align*}
-Hence we find again the formulas found in \autoref{s:receptive-convolution-transpose}.
+Hence we find again the formulas obtained in \autoref{s:receptive-convolution-transpose}.
 \end{example}
 
 
@@ -252,7 +251,7 @@ Hence we find again the formulas found in \autoref{s:receptive-convolution-trans
 \section{Composing receptive fields}\label{s:receptive-composing}
 % ------------------------------------------------------------------
 
-Suppose now to compose two layers $h = g \circ f$ with receptive fields $(\alpha_f, \beta_f, \Delta_f)$ and $(\alpha_g, \beta_g, \Delta_g)$ (once again we consider only a 1D slice in the vertical direction, the horizontal one being the same). The goal is to compute the receptive field of $h$.
+Consider now the composition of two layers $h = g \circ f$ with receptive fields $(\alpha_f, \beta_f, \Delta_f)$ and $(\alpha_g, \beta_g, \Delta_g)$ (once again we consider only a 1D slice in the vertical direction, the horizontal one being the same). The goal is to compute the receptive field of $h$.
 
 To do so, pick a sample $i_g$ in the domain of $g$. The first and last sample $i_f$ in the domain of $f$ to affect $i_g$ are given by:
 \[
@@ -268,7 +267,7 @@ Substituting one relation into the other, we see that the first and last sample 
  \\
 &= \alpha_f\alpha_g (i_h-1)
  + \alpha_f \beta_g - 1 + \beta_f
- \pm \frac{\alpha_f (\Delta_g - 1) + \Delta_f -1}{2}
+ \pm \frac{\alpha_f (\Delta_g - 1) + \Delta_f -1}{2}.
 \end{align*}
 We conclude that
 \[
@@ -276,16 +275,16 @@ We conclude that
 \qquad
 \beta_h =  \alpha_f (\beta_g - 1) + \beta_f,
 \qquad
-\Delta_h = \alpha_f (\Delta_g - 1) + \Delta_f
+\Delta_h = \alpha_f (\Delta_g - 1) + \Delta_f.
 \]
 
 % ------------------------------------------------------------------
 \section{Overlaying receptive fields}\label{s:receptive-overlying}
 % ------------------------------------------------------------------
 
-Consider now the combination $h(f(\bx_1), g(\bx_2))$ where the domain of $f$ and $g$ are the same. Given the rule above, it is possible to compute how each output sample $i_h$ depends on each input sample $i_f$ through the $f$ and on each input sample $i_g$ through $g$. Suppose that this gives receptive fields $(\alpha_{hf}, \beta_{hf}, \Delta_{hf})$ and $(\alpha_{hg}, \beta_{hg}, \Delta_{hg})$ respectively. Now assume that the domain of $f$ and $g$ coincide, i.e. $\bx = \bx_1 = \bx_2$. The goal is to determine the combined receptive field.
+Consider now the combination $h(f(\bx_1), g(\bx_2))$ where the domains of $f$ and $g$ are the same. Given the rule above, it is possible to compute how each output sample $i_h$ depends on each input sample $i_f$ through $f$ and on each input sample $i_g$ through $g$. Suppose that this gives receptive fields $(\alpha_{hf}, \beta_{hf}, \Delta_{hf})$ and $(\alpha_{hg}, \beta_{hg}, \Delta_{hg})$ respectively. Now assume that the domain of $f$ and $g$ coincide, i.e. $\bx = \bx_1 = \bx_2$. The goal is to determine the combined receptive field.
 
-This is only possible if, and only if, $\alpha = \alpha_{hg} = \alpha_{hf}$. Only in this case, in fact, it is possible to find a sliding window receptive field that tightly encloses the receptive field due to $g$ and $f$ at all points according to formulas~\eqref{e:receptive}. We say that these two receptive fields are \emph{compatbile}. The range of input samples $i = i_f = i_g$ that affect any output sample $i_h$ is then given by
+This is only possible if, and only if, $\alpha = \alpha_{hg} = \alpha_{hf}$. Only in this case, in fact, it is possible to find a sliding window receptive field that tightly encloses the receptive field due to $g$ and $f$ at all points according to formulas~\eqref{e:receptive}. We say that these two receptive fields are \emph{compatible}. The range of input samples $i = i_f = i_g$ that affect any output sample $i_h$ is then given by
 \begin{align*}
 	  i_\text{max}&=
   \alpha (i_h- 1) + a, & a = \min
