@@ -281,7 +281,7 @@ start = tic ;
 
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: %3d/%3d: ', mode, epoch, ...
-          fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
+          fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
   numDone = 0 ;
   error = [] ;
