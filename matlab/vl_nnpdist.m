@@ -36,6 +36,11 @@ function y = vl_nnpdist(x, x0, p, varargin)
 %   `Aggregate`:: false
 %      Instead of returning one scalar for each spatial location in
 %      the inputs, sum all of them into a single scalar.
+%
+%   `InstanceWeights``:: `[]`
+%      Optionally weight individual instances. This parameter can be
+%      eigther a scalar or a weight mask, one for each pixel in the
+%      input tensor.
 
 % Copyright (C) 2015  Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
@@ -50,6 +55,7 @@ function y = vl_nnpdist(x, x0, p, varargin)
 opts.noRoot = false ;
 opts.epsilon = 1e-6 ;
 opts.aggregate = false ;
+opts.instanceWeights = [] ;
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
@@ -65,6 +71,10 @@ end
 
 d = bsxfun(@minus, x, x0) ;
 
+if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
+  dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
+end
+
 if ~opts.noRoot
   if isempty(dzdy)
     if p == 1
@@ -73,9 +83,6 @@ if ~opts.noRoot
       y = sqrt(sum(d.*d,3)) ;
     else
       y = sum(abs(d).^p,3).^(1/p) ;
-    end
-    if opts.aggregate
-      y = sum(sum(y)) ;
     end
   else
     if p == 1
@@ -100,9 +107,6 @@ else
     else
       y = sum(abs(d).^p,3) ;
     end
-    if opts.aggregate
-      y = sum(sum(y)) ;
-    end
   else
     if p == 1
       y = bsxfun(@times, dzdy, sign(d)) ;
@@ -113,5 +117,14 @@ else
     else
       y = bsxfun(@times, p * dzdy, abs(d).^(p-1) .* sign(d)) ;
     end
+  end
+end
+
+if isempty(dzdy)
+  if ~isempty(opts.instanceWeights)
+    y = bsxfun(@times, opts.instanceWeights, y) ;
+  end
+  if opts.aggregate
+    y = sum(sum(y)) ;
   end
 end
