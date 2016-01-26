@@ -97,6 +97,8 @@ for l = 1:numel(net.layers)
         'p', 2, ...
         'epsilon', 1e-3, ...
         'instanceWeights', []} ];
+    otherwise
+      defaults = {} ;
   end
 
   for i = 1:2:numel(defaults)
