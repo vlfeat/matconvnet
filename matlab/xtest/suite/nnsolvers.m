@@ -10,18 +10,17 @@ classdef nnsolvers < nntest
   end
 
   methods (TestClassSetup)
-    function data(test)
+    function data(test, dataType)
       % synthetic data, 2 classes of gaussian samples with different means
-      test.range = 2 ;  % set standard deviation of test.randn()
       sz = [15, 10, 5] ;  % input size
-      x1 = test.randn([sz, 100]) ;  % place mean at the origin
-      x2 = bsxfun(@plus, test.randn(sz), test.randn([sz, 100])) ;  % place mean randomly
+      x1 = 2 * randn([sz, 100], dataType) ;  % place mean at the origin
+      x2 = bsxfun(@plus, 2 * randn(sz, dataType), 2 * randn([sz, 100], dataType)) ;  % place mean randomly
       
       test.imdb.x = cat(4, x1, x2) ;
-      test.imdb.y = [test.ones(100, 1); 2 * test.ones(100, 1)] ;
+      test.imdb.y = [ones(100, 1, dataType); 2 * ones(100, 1, dataType)] ;
       
-      test.init_w = 1e-3 * test.randn([sz, 2]) ;  % initial parameters
-      test.init_b = test.zeros([2, 1]) ;
+      test.init_w = 1e-3 * randn([sz, 2], dataType) ;  % initial parameters
+      test.init_b = zeros([2, 1], dataType) ;
     end
   end
 
@@ -67,7 +66,7 @@ classdef nnsolvers < nntest
         'solver',solver, 'batchSize', 10, 'numEpochs',1, 'continue', false, ...
         'gpus', gpus, 'plotStatistics', false) ;
 
-      test.verifyLessThan(info.train.error(1), 0.3);
+      test.verifyLessThan(info.train.error(1), 0.35);
       test.verifyLessThan(info.train.objective, 0.45);
     end
   end
