@@ -15,6 +15,8 @@ opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
+opts.solver = 'sgd' ;
+opts.solverOpts = struct('rho',0.95, 'epsilon',1e-8) ;  % AdaGrad uses epsilon, AdaDelta uses both
 opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
@@ -61,6 +63,14 @@ if numGpus > 1
   end
 elseif numGpus == 1
   gpuDevice(opts.gpus)
+end
+
+% setup solver function
+if isstr(opts.solver)
+  opts.solver = str2func(['solver_' opts.solver]) ;
+  if isequal(opts.solver, @solver_sgd)
+    opts.solverOpts = struct('momentum', opts.momentum) ;  % backward compatibility
+  end
 end
 
 % -------------------------------------------------------------------------
@@ -142,15 +152,12 @@ function stats = process_epoch(net, state, opts, mode)
 % -------------------------------------------------------------------------
 
 if strcmp(mode,'train')
-  state.momentum = num2cell(zeros(1, numel(net.params))) ;
+  state.solver = cell(1, numel(net.params)) ;
 end
 
 numGpus = numel(opts.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
-  if strcmp(mode,'train')
-    state.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
-  end
 end
 if numGpus > 1
   mmap = map_gradients(opts.memoryMapFile, net, numGpus) ;
@@ -257,12 +264,16 @@ for p=1:numel(net.params)
           (thisLR/batchSize/net.params(p).fanout) * net.params(p).der ;
 
     case 'gradient'
+      % compute gradient, with weight decay
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;
       thisLR = state.learningRate * net.params(p).learningRate ;
-      state.momentum{p} = opts.momentum * state.momentum{p} ...
-        - thisDecay * net.params(p).value ...
-        - (1 / batchSize) * net.params(p).der ;
-      net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
+      
+      grad = (1 / batchSize) * net.params(p).der + thisDecay * net.params(p).value;
+      
+      % call solver function to update weights
+      [net.params(p).value, state.solver{p}] = ...
+          opts.solver(net.params(p).value, state.solver{p}, ...
+          grad, opts.solverOpts, thisLR) ;
 
     case 'otherwise'
       error('Unknown training method ''%s'' for parameter ''%s''.', ...

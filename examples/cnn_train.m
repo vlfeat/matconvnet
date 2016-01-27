@@ -113,7 +113,7 @@ end
 if isstr(opts.solver)
   opts.solver = str2func(['solver_' opts.solver]) ;
   if isequal(opts.solver, @solver_sgd)
-    opts.solverOpts = struct('momentum', opts.momentum) ;  % backwards compatibility
+    opts.solverOpts = struct('momentum', opts.momentum) ;  % backward compatibility
   end
 end
 
