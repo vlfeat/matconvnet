@@ -23,6 +23,8 @@ opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
+opts.solver = 'sgd' ;
+opts.solverOpts = struct('rho',0.95, 'epsilon',1e-8) ;  % AdaGrad uses epsilon, AdaDelta uses both
 opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
@@ -65,7 +67,7 @@ if ~evaluateMode
     if isfield(net.layers{i}, 'weights')
       J = numel(net.layers{i}.weights) ;
       for j=1:J
-        net.layers{i}.momentum{j} = zeros(size(net.layers{i}.weights{j}), 'single') ;
+        net.layers{i}.state{j} = [] ;
       end
       if ~isfield(net.layers{i}, 'learningRate')
         net.layers{i}.learningRate = ones(1, J, 'single') ;
@@ -104,6 +106,14 @@ if isstr(opts.errorFunction)
       if isempty(opts.errorLabels), opts.errorLabels = {'binerr'} ; end
     otherwise
       error('Unknown error function ''%s''.', opts.errorFunction) ;
+  end
+end
+
+% setup solver function
+if isstr(opts.solver)
+  opts.solver = str2func(['solver_' opts.solver]) ;
+  if isequal(opts.solver, @solver_sgd)
+    opts.solverOpts = struct('momentum', opts.momentum) ;  % backwards compatibility
   end
 end
 
@@ -419,15 +429,15 @@ for l=numel(net.layers):-1:1
         (1-thisLR) * net.layers{l}.weights{j} + ...
         (thisLR/batchSize) * res(l).dzdw{j} ;
     else
-      % standard gradient training
+      % compute gradient, with weight decay
       thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
       thisLR = lr * net.layers{l}.learningRate(j) ;
-      net.layers{l}.momentum{j} = ...
-        opts.momentum * net.layers{l}.momentum{j} ...
-        - thisDecay * net.layers{l}.weights{j} ...
-        - (1 / batchSize) * res(l).dzdw{j} ;
-      net.layers{l}.weights{j} = net.layers{l}.weights{j} + ...
-        thisLR * net.layers{l}.momentum{j} ;
+      grad = (1 / batchSize) * res(l).dzdw{j} + thisDecay * net.layers{l}.weights{j};
+      
+      % call solver function to update weights
+      [net.layers{l}.weights{j}, net.layers{l}.state{j}] = ...
+          opts.solver(net.layers{l}.weights{j}, net.layers{l}.state{j}, ...
+          grad, opts.solverOpts, thisLR) ;
     end
 
     % if requested, collect some useful stats for debugging
@@ -436,7 +446,8 @@ for l=numel(net.layers):-1:1
       label = '' ;
       switch net.layers{l}.type
         case {'conv','convt'}
-          variation = thisLR * mean(abs(net.layers{l}.momentum{j}(:))) ;
+          assert(isequal(opts.solver, @solver_sgd))
+          variation = thisLR * mean(abs(net.layers{l}.state{j}(:))) ;
           if j == 1 % fiters
             base = mean(abs(net.layers{l}.weights{j}(:))) ;
             label = 'filters' ;
