@@ -18,7 +18,7 @@ classdef nntest < matlab.unittest.TestCase
 
   methods (TestClassSetup)
     function generators(test, device, dataType)
-      range = 128 ;
+      range = test.range ;
       test.currentDevice = device ;
       test.currentDataType = dataType ;
       switch dataType
