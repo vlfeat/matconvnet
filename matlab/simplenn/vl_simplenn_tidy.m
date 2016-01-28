@@ -19,16 +19,16 @@ function tnet = vl_simplenn_tidy(net)
 tnet = struct('layers', {{}}, 'meta', struct()) ;
 
 % copy meta information in net.meta subfield
+if isfield(net, 'meta')
+  tnet.meta = net.meta ;
+end
+
 if isfield(net, 'classes')
   tnet.meta.classes = net.classes ;
 end
 
 if isfield(net, 'normalization')
   tnet.meta.normalization = net.normalization ;
-end
-
-if isfield(net, 'meta')
-  tnet.meta = net.meta ;
 end
 
 % copy layers
