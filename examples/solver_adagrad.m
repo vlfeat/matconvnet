@@ -8,4 +8,4 @@ end
 
 g_sqr = g_sqr + grad.^2 ;
 
-weights = weights - lr * grad ./ (sqrt(g_sqr) + opts.epsilon);
+weights = weights - lr * grad ./ sqrt(g_sqr + opts.epsilon) ;
