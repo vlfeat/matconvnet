@@ -117,8 +117,8 @@ IMAGELIB_DEFAULT = quartz
 NVCCFLAGS += -Xcompiler -mssse3,-ffast-math,-mmacosx-version-min=10.9
 MEXFLAGS_CPU += CXXFLAGS='$$CXXFLAGS -mmacosx-version-min=10.9'
 MEXFLAGS_GPU += CXXFLAGS='$$CXXFLAGS -Xcompiler -mmacosx-version-min=10.9'
-MEXFLAGS_CPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops'
-MEXFLAGS_GPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops'
+MEXFLAGS_CPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -mssse3 -ffast-math'
+MEXFLAGS_GPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler -mssse3,-ffast-math'
 
 LDFLAGS_GPU := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
 LDFLAGS_GPU += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib",)

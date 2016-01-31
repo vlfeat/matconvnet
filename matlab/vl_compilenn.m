@@ -382,9 +382,9 @@ switch arch
   case {'maci64'}
     flags.nvcc{end+1} = '-Xcompiler -mssse3,-ffast-math,-mmacosx-version-min=10.9' ;
     flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -mmacosx-version-min=10.9' ;
-    flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
+    flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ffast-math' ;
     flags.mexcu{end+1} = 'CXXFLAGS=$CXXFLAGS -Xcompiler -mmacosx-version-min=10.9' ;
-    flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops' ;
+    flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ffast-math' ;
 
     flags.link{end+1} = 'LDFLAGS=$LDFLAGS -mmacosx-version-min=10.9' ;
 
