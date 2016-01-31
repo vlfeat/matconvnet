@@ -309,8 +309,10 @@ if opts.debug
 else
   flags.cc{end+1} = '-DNDEBUG' ;
 end
-if opts.enableGpu, flags.cc{end+1} = '-DENABLE_GPU' ; end
-if opts.enableCudnn,
+if opts.enableGpu
+  flags.cc{end+1} = '-DENABLE_GPU' ;
+end
+if opts.enableCudnn
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
   flags.cc{end+1} = ['-I' opts.cudnnIncludeDir] ;
 end
@@ -351,9 +353,13 @@ flags.link{end+1} = '-largeArrayDims' ;
 flags.mexcc = flags.cc ;
 flags.mexcc{end+1} = '-largeArrayDims' ;
 flags.mexcc{end+1} = '-cxx' ;
+if strcmp(arch, 'maci64')
+  flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -mmacosx-version-min=10.9' ;
+  flags.link{end+1} = 'LDFLAGS=$LDFLAGS -mmacosx-version-min=10.9' ;
+end
 if strcmp(arch, 'maci64') && opts.enableGpu && cuver < 70000
   % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
-  % Clang libc++. This should go away in the future.
+  % clang libc++. This should go away in the future.
   flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
   flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
   if  ~verLessThan('matlab', '8.5.0')
@@ -391,7 +397,7 @@ if opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
   flags.nvcc{end+1} = '-Xcompiler' ;
   switch arch
     case {'maci64', 'glnxa64'}
-      flags.nvcc{end+1} = '-fPIC' ;
+      flags.nvcc{end+1} = '-fPIC,-mmacosx-version-min=10.9' ;
     case 'win64'
       flags.nvcc{end+1} = '/MD' ;
       check_clpath(); % check whether cl.exe in path

@@ -60,7 +60,7 @@
             CC="$NVCC"
             MW_SDK_TEMP="find `xcode-select -print-path` -name MacOSX10.9.sdk"
             MW_SDKROOT=`$MW_SDK_TEMP`
-            MACOSX_DEPLOYMENT_TARGET='10.8'
+            MACOSX_DEPLOYMENT_TARGET='10.9'
             ARCHS='x86_64'
             CFLAGS="-gencode=arch=compute_20,code=sm_21 -gencode=arch=compute_30,code=\\\"sm_30,compute_30\\\" -m 64 -I$TMW_ROOT/toolbox/distcomp/gpu/extern/include --compiler-options -fno-common,-arch,$ARCHS,-isysroot.$MW_SDKROOT,-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET,-fexceptions"
             CLIBS="$MLIBS -lmwgpu -lcudart"
