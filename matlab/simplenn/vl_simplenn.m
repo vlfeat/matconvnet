@@ -226,6 +226,7 @@ opts.skipForward = false;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
+assert(opts.backPropDepth > 0, 'Invalid `backPropDepth` value (!>0)');
 backPropLim = max(n - opts.backPropDepth + 1, 1);
 
 if (nargin <= 2) || isempty(dzdy)
@@ -360,13 +361,14 @@ for i=1:n
   end
 
   % optionally forget intermediate results
-  forget = opts.conserveMemory & ~(doder & n >= backPropLim) ;
+  needsBProp = doder && i >= backPropLim;
+  forget = opts.conserveMemory && ~needsBProp ;
   if i > 1
     lp = net.layers{i-1} ;
     % forget RELU input, even for BPROP
-    forget = forget & (~doder | (strcmp(l.type, 'relu') & ~lp.precious)) ;
-    forget = forget & ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
-    forget = forget & ~lp.precious ;
+    forget = forget && (~needsBProp || (strcmp(l.type, 'relu') && ~lp.precious)) ;
+    forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
+    forget = forget && ~lp.precious ;
   end
   if forget
     res(i).x = [] ;
@@ -384,7 +386,7 @@ end
 
 if doder
   res(n+1).dzdx = dzdy ;
-  for i=n:-1:max(1, n-opts.backPropDepth+1)
+  for i=n:-1:backPropLim
     l = net.layers{i} ;
     res(i).backwardTime = tic ;
     switch l.type
