@@ -495,4 +495,8 @@ if doder
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;
   end
+  if i > 1 && i == backPropLim && opts.conserveMemory && ~net.layers{i}.precious
+    res(i).dzdx = [] ;
+    res(i).x = [] ;
+  end
 end
