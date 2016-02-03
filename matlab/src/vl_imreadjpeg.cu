@@ -4,7 +4,7 @@
  **/
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi.
+Copyright (C) 2014-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -69,6 +69,11 @@ public:
   : vl::Image(im), hasMatlabMemory(im.hasMatlabMemory), isMemoryOwner(false)
   { }
 
+  ~ImageBuffer()
+  {
+    clear() ;
+  }
+
   ImageBuffer & operator = (ImageBuffer const & imb)
   {
     clear() ;
@@ -87,9 +92,9 @@ public:
         free(memory) ;
       }
     }
-    vl::Image::clear() ;
     isMemoryOwner = false ;
     hasMatlabMemory = false ;
+    vl::Image::clear() ;
   }
 
   float * relinquishMemory()
@@ -131,6 +136,12 @@ struct Task
   vl::Error error ;
   bool requireResize ;
   char errorMessage [TASK_ERROR_MSG_MAX_LEN] ;
+
+  Task() { }
+
+private:
+  Task(Task const &) ;
+  Task & operator= (Task const &) ;
 } ;
 
 typedef std::vector<Task*> Tasks ;
@@ -176,7 +187,7 @@ void reader_function(void* reader_)
       }
     }
 
-    if (thisTask.error == vl::vlSuccess & thisTask.requireResize) {
+    if ((thisTask.error == vl::vlSuccess) && thisTask.requireResize) {
       vl::impl::resizeImage(thisTask.resizedImage, thisTask.inputImage) ;
     }
 
@@ -324,8 +335,6 @@ void mexFunction(int nout, mxArray *out[],
   // prepare reader tasks
   create_readers(requestedNumThreads, verbosity) ;
 
-
-
   if (verbosity) {
     mexPrintf("vl_imreadjpeg: numThreads = %d, prefetch = %d\n",
               readers.size(), prefetch) ;
@@ -404,8 +413,9 @@ void mexFunction(int nout, mxArray *out[],
             newTask->error = resizedImage.init(resizedShape, true) ;
           }
         } else {
-          newTask->error = inputImage.init(shape, true) ;
-          resizedImage = inputImage ; // alias
+          newTask->error = resizedImage.init(shape, true) ;
+          // alias: remark: resized image will be asked to release memory so it *must* be the owner
+          inputImage  = resizedImage ;
         }
       } else {
         strncpy(newTask->errorMessage, readers[0].second->getLastErrorMessage(), TASK_ERROR_MSG_MAX_LEN) ;

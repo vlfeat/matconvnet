@@ -59,7 +59,7 @@ error = vl::impl::nnconv_cudnn<dataType>::forward \
  padTop, padBottom, \
  padLeft, padRight) ;
 
-#define DISPATCHCUDNN2(deviceType) \
+#define DISPATCHCUDNN2() \
 switch (dataType) { \
 case vlTypeFloat : DISPATCHCUDNN(vlTypeFloat) ; break ; \
 IF_DOUBLE(case vlTypeDouble : DISPATCHCUDNN(vlTypeDouble) ; break ;) \

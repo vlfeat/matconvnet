@@ -20,6 +20,10 @@ the terms of the BSD license (see the COPYING file).
 #define STRINGIZE_HELPER(x) #x
 #define FILELINE STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__)
 
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
 #if ENABLE_DOUBLE
 #define IF_DOUBLE(x) x
 #else

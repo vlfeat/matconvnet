@@ -6,7 +6,7 @@ This chapters describes the individual computational blocks supported by \matcon
 
 The function implementing each block is capable of working in the backward direction as well, in order to compute derivatives. This is done by passing a third optional argument !dzdy! representing the derivative of the output of the network with respect to $\by$; in this case, the function returns the derivatives ![dzdx,dzdw] = vl_nn<block>(x,w,dzdy)! with respect to the input data and parameters. The arrays !dzdx!, !dzdy! and !dzdw! have the same dimensions of !x!, !y! and !w! respectively (see \autoref{s:back}).
 
-Different functions may use a slightly different syntax, as needed: many functions can take additional optional arguments, specified as a property-value pairs; some do not have parameters  !w! (e.g. a rectified linear unit); others can take multiple inputs and parameters, in which case there may be more than one !x!, !w!, !dzdx!, !dzdy! or !dzdw!. See the rest of the chapter and MATLAB inline help for details on the syntax.\footnote{Other parts of the library will wrap these functions into objects with a perfectly uniform interface; however, the low-level functions aim at providing a straightforward and obvious interface even if this means differing slightly from block to block.}
+Different functions may use a slightly different syntax, as needed: many functions can take additional optional arguments, specified as property-value pairs; some do not have parameters  !w! (e.g. a rectified linear unit); others can take multiple inputs and parameters, in which case there may be more than one !x!, !w!, !dzdx!, !dzdy! or !dzdw!. See the rest of the chapter and MATLAB inline help for details on the syntax.\footnote{Other parts of the library will wrap these functions into objects with a perfectly uniform interface; however, the low-level functions aim at providing a straightforward and obvious interface even if this means differing slightly from block to block.}
 
 The rest of the chapter describes the blocks implemented in \matconvnet, with a particular focus on their analytical definition. Refer instead to MATLAB inline help for further details on the syntax.
 
@@ -58,11 +58,11 @@ In this expression, the array $\bx$ is implicitly extended with zeros as needed.
 \]
 Note that the padded input must be at least as large as the filters: $H +P_h^- + P_h^+ \geq H'$, otherwise an error is thrown.
 
-\paragraph{Receptive field size and geometric transformations.} Very often it is useful to relate geometrically the indexes of the various array to the input data (usually images) in term of coordinate transformations and size of the receptive field (i.e. of the image region that affects an output). This is derived in \autoref{s:receptive-simple-filters}.
+\paragraph{Receptive field size and geometric transformations.} Very often it is useful to geometrically relate the indexes of the various array to the input data (usually images) in terms of coordinate transformations and size of the receptive field (i.e. of the image region that affects an output). This is derived in \autoref{s:receptive-simple-filters}.
 
-\paragraph{Fully connected layers.} In other libraries, a \emph{fully connected blocks or layers} are linear functions where each output dimension depends on all the input dimensions. \matconvnet does not distinguishes between fully connected layers and convolutional blocks. Instead, the former is a special case of the latter obtained when the output map $\by$ has dimensions $W''=H''=1$. Internally, !vl_nnconv! handle this case more efficiently when possible.
+\paragraph{Fully connected layers.} In other libraries, \emph{fully connected blocks or layers} are linear functions where each output dimension depends on all the input dimensions. \matconvnet does not distinguish between fully connected layers and convolutional blocks. Instead, the former is a special case of the latter obtained when the output map $\by$ has dimensions $W''=H''=1$. Internally, !vl_nnconv! handles this case more efficiently when possible.
 
-\paragraph{Filter groups.} For additional flexibility, !vl_nnconv! allows to group channels of the input array $\bx$ and apply to each group different subsets of filters. To use this feature, specify as input a bank  of $D''$ filters $\bff\in\real^{H'\times W'\times D'\times D''}$ such that $D'$ divides the number of input dimensions $D$. These are treated as $g=D/D'$ filter groups; the first group is applied to dimensions $d=1,\dots,D'$ of the input $\bx$; the second group to dimensions $d=D'+1,\dots,2D'$ and so on. Note that the output is still an array $\by\in\real^{H''\times W''\times D''}$.
+\paragraph{Filter groups.} For additional flexibility, !vl_nnconv! allows to group channels of the input array $\bx$ and apply different subsets of filters to each group. To use this feature, specify as input a bank  of $D''$ filters $\bff\in\real^{H'\times W'\times D'\times D''}$ such that $D'$ divides the number of input dimensions $D$. These are treated as $g=D/D'$ filter groups; the first group is applied to dimensions $d=1,\dots,D'$ of the input $\bx$; the second group to dimensions $d=D'+1,\dots,2D'$ and so on. Note that the output is still an array $\by\in\real^{H''\times W''\times D''}$.
 
 An application of grouping is implementing the Krizhevsky and Hinton network~\cite{krizhevsky12imagenet} which uses two such streams. Another application is sum pooling; in the latter case, one can specify $D$ groups of $D'=1$ dimensional filters identical filters of value 1 (however, this is considerably slower than calling the dedicated pooling function as given in \autoref{s:pooling}).
 
@@ -73,7 +73,7 @@ An application of grouping is implementing the Krizhevsky and Hinton network~\ci
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=0.7\textwidth]{figures/svg/convt}
-	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied in a sliding-window, in a pattern that is the transpose of \autoref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represented crops $C_-=2$ and $C_+=3$ which are discarded.  The samples of $x$ involved in the calculation of a sample of $y$ are shown with arrow. Note that, differently from \autoref{f:conv}, there is not any samples to the right of $\by$ which is not involved in a convolution operation. This is because the width $H''$ of the output $\by$, which given $H'$ can be determined up to $U_h$ samples, is selected to be the smallest possible.}\label{f:convt}
+	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied in a sliding-window, in a pattern that is the transpose of \autoref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represent crops with $C_-=2$ and $C_+=3$ which are discarded.  The samples of $x$ involved in the calculation of a sample of $y$ are shown with arrow. Note that, differently from \autoref{f:conv}, there are no samples to the right of $\by$ which are involved in a convolution operation. This is because the width $H''$ of the output $\by$, which given $H'$ can be determined up to $U_h$ samples, is selected to be the smallest possible.}\label{f:convt}
 \end{figure}
 
 The \emph{convolution transpose} block (sometimes referred to as ``deconvolution'') is the transpose of the convolution block described in \autoref{s:convolution}. In \matconvnet, convolution transpose is  implemented by the function !vl_nnconvt!. 
@@ -86,7 +86,7 @@ In order to understand convolution transpose, let:
 \]
 be the input tensor, filters, and output tensors. Imagine operating in the reverse direction by using the filter bank $\bff$ to convolve the output $\by$ to obtain the input $\bx$, using the definitions given in~\autoref{s:convolution} for the convolution operator; since convolution is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$. This process is illustrated for a 1D slice in \autoref{f:convt}.
 
-There are two important applications of convolution transpose The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
+There are two important applications of convolution transpose. The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
 
 Convolution transpose can be expressed in closed form in the following rather unwieldy expression (derived in \autoref{s:impl-convolution-transpose}):
 \begin{multline}\label{e:convt}
@@ -119,9 +119,9 @@ The height of the output array $\by$ is given by
 \[
   H'' = S_h (H - 1) + H' -P^-_h - P^+_h.
 \]
-A similar formula holds true for the width. These formulas are derived in \autoref{s:receptive-convolution-transpose} along with expression for the receptive field of the operator.
+A similar formula holds true for the width. These formulas are derived in \autoref{s:receptive-convolution-transpose} along with an expression for the receptive field of the operator.
 
-We now illustrate the action of convolution transpose in an example (see also \autoref{f:convt}).  Consider a 1D slice in the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where the index $i''$ is chose such that $S_h$ divides $i''-1$; according to~\eqref{e:convt}, this sample is obtained as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ (note that the order is reversed). The weights are the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ subsampled with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output sampled is obtained as a weighted combination of the same elements of the input $x$ that were used to compute $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
+We now illustrate the action of convolution transpose in an example (see also \autoref{f:convt}).  Consider a 1D slice in the vertical direction, assume that the crop parameters are zero, and that $S_h>1$. Consider the output sample $y_{i''}$ where the index $i''$ is chosen such that $S_h$ divides $i''-1$; according to~\eqref{e:convt}, this sample is obtained as a weighted summation of $x_{i'' / S_h},x_{i''/S_h-1},...$ (note that the order is reversed). The weights are the filter elements $f_1$, $f_{S_h}$,$f_{2S_h},\dots$ subsampled with a step of $S_h$. Now consider computing the element $y_{i''+1}$; due to the rounding in the quotient operation $q(i'',S_h)$, this output sample is obtained as a weighted combination of the same elements of the input $x$ that were used to compute $y_{i''}$; however, the filter weights are now shifted by one place to the right: $f_2$, $f_{S_h+1}$,$f_{2S_h+1}$, $\dots$. The same is true for $i''+2, i'' + 3,\dots$ until we hit $i'' + S_h$. Here the cycle restarts after shifting $\bx$ to the right by one place. Effectively, convolution transpose works as an \emph{interpolating filter}.
 
 % ------------------------------------------------------------------
 \section{Spatial pooling}\label{s:pooling}
@@ -136,7 +136,7 @@ resulting in an output of size $\by\in\real^{H''\times W'' \times D}$, similar t
 y_{i''j''d} = \frac{1}{W'H'}
 \sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i'-1,j''+j'-1,d}.
 \]
-Detailed calculation of the derivatives are provided in \autoref{s:impl-pooling}.
+Detailed calculation of the derivatives is provided in \autoref{s:impl-pooling}.
 
 \paragraph{Padding and stride.} Similar to the convolution operator of \autoref{s:convolution}, !vl_nnpool! supports padding the input; however, the effect is different from padding in the convolutional block as pooling regions straddling the image boundaries are cropped. For max pooling, this is equivalent to extending the input data with $-\infty$; for sum pooling, this is similar to padding with zeros, but the normalization factor at the boundaries is smaller to account for the smaller integration area.
 
@@ -180,7 +180,7 @@ See \autoref{s:impl-ccnormalization} for implementation details.
 \subsection{Batch normalization}\label{s:bnorm}
 % ------------------------------------------------------------------
 
-!vl_nnbnorm! implements batch normalization~\cite{ioffe2015}. Batch normalization is somewhat different from other neural network blocks in that it performs computation across images/feature maps in a batch (whereas most blocks process different images/feature maps individually). !y = vl_nnbnorm(x, w, b)! normalizes each channel of the feature map $\mathbf{x}$ averaging over spatial locations and batch instances. Let $T$ the batch size; then
+!vl_nnbnorm! implements batch normalization~\cite{ioffe2015}. Batch normalization is somewhat different from other neural network blocks in that it performs computation across images/feature maps in a batch (whereas most blocks process different images/feature maps individually). !y = vl_nnbnorm(x, w, b)! normalizes each channel of the feature map $\mathbf{x}$ averaging over spatial locations and batch instances. Let $T$ be the batch size; then
 \[
 \mathbf{x}, \mathbf{y} \in \mathbb{R}^{H \times W \times K \times T},
 \qquad\mathbf{w} \in \mathbb{R}^{K},
@@ -200,7 +200,7 @@ See \autoref{s:impl-bnorm} for implementation details.
 \subsection{Spatial normalization}\label{s:spnorm}
 % ------------------------------------------------------------------
 
-!vl_nnspnorm! implements spatial normalization. Spatial normalization operator acts on different feature channels independently and rescales each input feature by the energy of the features in a local neighborhood . First, the energy of the features is evaluated in a neighbourhood $W'\times H'$
+!vl_nnspnorm! implements spatial normalization. The spatial normalization operator acts on different feature channels independently and rescales each input feature by the energy of the features in a local neighbourhood . First, the energy of the features in a neighbourhood $W'\times H'$ is evaluated
 \[
 n_{i''j''d}^2 = \frac{1}{W'H'}
 \sum_{1\leq i' \leq H', 1 \leq j' \leq W'} x^2_{
@@ -212,7 +212,7 @@ In practice, the factor $1/W'H'$ is adjusted at the boundaries to account for th
 \[
 y_{i''j''d} = \frac{1}{(1 + \alpha n_{i''j''d}^2)^\beta} x_{i''j''d}.
 \]
-See \autoref{s:spnorm} for implementation details.
+See \autoref{s:impl-spnorm} for implementation details.
 
 % ------------------------------------------------------------------
 \subsection{Softmax}\label{s:softmax}
@@ -254,7 +254,7 @@ where $c$ is the ground-truth class. See \autoref{s:impl-sfloss} for implementat
 \subsection{$p$-distance}\label{s:pdistance}
 % ------------------------------------------------------------------
 
-The !vl_nnpdist! function computes the $p$-th power $p$-distance between the vectors in the input data $\bx$ and a target $\bar\bx$:
+The !vl_nnpdist! function computes the $p$-distance between the vectors in the input data $\bx$ and a target $\bar\bx$:
 \[
   y_{ij} = \left(\sum_d |x_{ijd} - \bar x_{ijd}|^p\right)^\frac{1}{p}
 \]

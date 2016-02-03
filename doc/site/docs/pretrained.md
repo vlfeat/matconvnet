@@ -158,7 +158,7 @@ ILSVRC challenge data.
 
     The following models have been trained using MatConvNet (beta17)
     and batch normalization using the code in the `examples/imagenet`
-    directory:
+    directory, and using the ILSVRC 2012 data:
 
     - [imagenet-matconvnet-vgg-f](models/imagenet-matconvnet-vgg-f.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-f.svg)
     - [imagenet-matconvnet-vgg-m](models/imagenet-matconvnet-vgg-m.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-m.svg)

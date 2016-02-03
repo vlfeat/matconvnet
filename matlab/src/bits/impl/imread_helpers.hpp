@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -405,7 +405,7 @@ namespace vl { namespace impl {
       free(starts) ;
     }
 
-    ImageResizeFilter(int outputWidth, int inputWidth, FilterType filterType = kBilinear)
+    ImageResizeFilter(size_t outputWidth, size_t inputWidth, FilterType filterType = kBilinear)
     {
       filterSize = 0 ;
       switch (filterType) {

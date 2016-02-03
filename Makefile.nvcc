@@ -7,18 +7,18 @@
 
 ifneq ($(ENABLE_GPU),)
 
-matlab/mex/.build/%.o : matlab/src/bits/%.cu matlab/mex/.build/.stamp
+matlab/mex/.build/%.o : matlab/src/%.cu matlab/mex/.build/.stamp
 	$(NVCC) $(NVCCFLAGS) \
 	"$(<)" -c -o "$(@)" $(nvcc_filter)
 
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu $(cpp_tgt) $(cu_tgt)
 	$(NVCC) $(NVCCFLAGS) -Xcompiler -fPIC \
 	"$(<)" -c -o "matlab/mex/.build/$(*).o" $(nvcc_filter)
-	$(MEX) $(MEXFLAGS_NVCC) "matlab/mex/.build/$(*).o" -output "$(@)" $(cpp_tgt) $(cu_tgt)
+	$(MEX) $(MEXFLAGS_GPU_LINK) "matlab/mex/.build/$(*).o" -output "$(@)" $(cpp_tgt) $(cu_tgt)
 
 endif
 
-matlab/mex/.build/%.o : matlab/src/bits/%.cpp matlab/mex/.build/.stamp
+matlab/mex/.build/%.o : matlab/src/%.cpp matlab/mex/.build/.stamp
 	$(MEX) -c $(MEXFLAGS_CPU) "$(<)"
 	mv -f "$(notdir $(@))" "$(@)"
 

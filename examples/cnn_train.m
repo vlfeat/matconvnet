@@ -90,10 +90,12 @@ end
 if exist(opts.memoryMapFile), delete(opts.memoryMapFile) ; end
 
 % setup error calculation function
+hasError = true ;
 if isstr(opts.errorFunction)
   switch opts.errorFunction
     case 'none'
       opts.errorFunction = @error_none ;
+      hasError = false ;
     case 'multiclass'
       opts.errorFunction = @error_multiclass ;
       if isempty(opts.errorLabels), opts.errorLabels = {'top1err', 'top5err'} ; end
@@ -166,8 +168,7 @@ for epoch=start+1:opts.numEpochs
   end
 
   if opts.plotStatistics
-    figure(1) ; clf ;
-    hasError = isa(opts.errorFunction, 'function_handle') ;
+    switchfigure(1) ; clf ;
     subplot(1,1+hasError,1) ;
     if ~evaluateMode
       semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ;
@@ -217,9 +218,11 @@ if size(labels,3) == 2
   labels(:,:,2,:) = [] ;
 end
 
+m = min(5, size(predictions,3)) ;
+
 error = ~bsxfun(@eq, predictions, labels) ;
 err(1,1) = sum(sum(sum(mass .* error(:,:,1,:)))) ;
-err(2,1) = sum(sum(sum(mass .* min(error(:,:,1:5,:),[],3)))) ;
+err(2,1) = sum(sum(sum(mass .* min(error(:,:,1:m,:),[],3)))) ;
 
 % -------------------------------------------------------------------------
 function err = error_binary(opts, labels, res)
@@ -237,16 +240,18 @@ err = zeros(0,1) ;
 function  [net_cpu,stats,prof] = process_epoch(opts, getBatch, epoch, subset, learningRate, imdb, net_cpu)
 % -------------------------------------------------------------------------
 
-% move CNN to GPU as needed
+% move the CNN to GPU (if needed)
 numGpus = numel(opts.gpus) ;
 if numGpus >= 1
   net = vl_simplenn_move(net_cpu, 'gpu') ;
+  one = gpuArray(single(1)) ;
 else
   net = net_cpu ;
   net_cpu = [] ;
+  one = single(1) ;
 end
 
-% validation mode if learning rate is zero
+% assume validation mode if the learning rate is zero
 training = learningRate > 0 ;
 if training
   mode = 'train' ;
@@ -256,7 +261,7 @@ else
   evalMode = 'test' ;
 end
 
-% profile
+% turn on the profiler (if needed)
 if opts.profile
   if numGpus <= 1
     prof = profile('info') ;
@@ -269,12 +274,6 @@ if opts.profile
   end
 end
 
-numGpus = numel(opts.gpus) ;
-if numGpus >= 1
-  one = gpuArray(single(1)) ;
-else
-  one = single(1) ;
-end
 res = [] ;
 mmap = [] ;
 stats = [] ;
@@ -282,7 +281,7 @@ start = tic ;
 
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: %3d/%3d: ', mode, epoch, ...
-          fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
+          fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
   numDone = 0 ;
   error = [] ;
@@ -340,7 +339,7 @@ for t=1:opts.batchSize:numel(subset)
     end
   end
 
-  % print learning statistics
+  % collect and print learning statistics
   time = toc(start) ;
   stats = sum([stats,[0 ; error]],2); % works even when stats=[]
   stats(1) = time ;
@@ -356,13 +355,22 @@ for t=1:opts.batchSize:numel(subset)
   fprintf(' [%d/%d]', numDone, batchSize);
   fprintf('\n') ;
 
-  % debug info
-  if opts.plotDiagnostics && numGpus <= 1
-    figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
+  % collect diagnostic statistics
+  if training & opts.plotDiagnostics
+    switchfigure(2) ; clf ;
+    diag = [res.stats] ;
+    barh(horzcat(diag.variation)) ;
+    set(gca,'TickLabelInterpreter', 'none', ...
+      'YTickLabel',horzcat(diag.label), ...
+      'YDir', 'reverse', ...
+      'XScale', 'log', ...
+      'XLim', [1e-5 1]) ;
+    drawnow ;
   end
 
 end
 
+% switch off the profiler
 if opts.profile
   if numGpus <= 1
     prof = profile('info') ;
@@ -375,6 +383,7 @@ else
   prof = [] ;
 end
 
+% bring the network back to CPU
 if numGpus >= 1
   net_cpu = vl_simplenn_move(net, 'cpu') ;
 else
@@ -420,6 +429,27 @@ for l=numel(net.layers):-1:1
       net.layers{l}.weights{j} = net.layers{l}.weights{j} + ...
         thisLR * net.layers{l}.momentum{j} ;
     end
+
+    % if requested, collect some useful stats for debugging
+    if opts.plotDiagnostics
+      variation = [] ;
+      label = '' ;
+      switch net.layers{l}.type
+        case {'conv','convt'}
+          variation = thisLR * mean(abs(net.layers{l}.momentum{j}(:))) ;
+          if j == 1 % fiters
+            base = mean(abs(net.layers{l}.weights{j}(:))) ;
+            label = 'filters' ;
+          else % biases
+            base = mean(abs(res(l+1).x(:))) ;
+            label = 'biases' ;
+          end
+          variation = variation / base ;
+          label = sprintf('%s_%s', net.layers{l}.name, label) ;
+      end
+      res(l).stats.variation(j) = variation ;
+      res(l).stats.label{j} = label ;
+    end
   end
 end
 
@@ -461,3 +491,14 @@ list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
 tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
 epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
 epoch = max([epoch 0]) ;
+
+% -------------------------------------------------------------------------
+function switchfigure(n)
+% -------------------------------------------------------------------------
+if get(0,'CurrentFigure') ~= n
+  try
+    set(0,'CurrentFigure',n) ;
+  catch
+    figure(n) ;
+  end
+end
