@@ -193,42 +193,66 @@ ILSVRC challenge data.
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
-|                         model|top-1 err.|top-5 err.|  images/s|
-|------------------------------|----------|----------|----------|
-|               matconvnet-alex|      41.8|      19.2|     547.3|
-|              matconvnet-vgg-s|      37.0|      15.8|     337.4|
-|              matconvnet-vgg-m|      36.9|      15.5|     422.8|
-|              matconvnet-vgg-f|      41.4|      19.1|     658.8|
-|    matconvnet-vgg-verydeep-16|      28.3|       9.5|      79.1|
-|                     caffe-ref|      42.4|      19.6|     336.7|
-|                    caffe-alex|      42.6|      19.6|     332.2|
-|                         vgg-s|      36.7|      15.3|     321.7|
-|                         vgg-m|      37.3|      15.9|     404.3|
-|                         vgg-f|      41.1|      18.8|     661.6|
-|                     vgg-m-128|      40.8|      18.4|     388.5|
-|                    vgg-m-1024|      37.8|      16.1|     406.9|
-|                    vgg-m-2048|      37.1|      15.8|     401.6|
-|               vgg-verydeep-19|      28.7|       9.9|      60.9|
-|               vgg-verydeep-16|      28.5|       9.9|      73.9|
-|                 googlenet-dag|      32.2|      11.6|     231.4|
+* 2016 models:
+
+    |                         model|top-1 err.|top-5 err.|  images/s|
+    |------------------------------|----------|----------|----------|
+    |                 resnet-50-dag|      26.6|       8.6|     141.3|
+    |                resnet-101-dag|      25.0|       7.9|     100.8|
+    |                resnet-152-dag|      24.5|       7.6|      74.6|
+
+* 2015 models:
+
+    |                         model|top-1 err.|top-5 err.|  images/s|
+    |------------------------------|----------|----------|----------|
+    |    matconvnet-vgg-verydeep-16|      28.3|       9.5|     161.8|
+    |               vgg-verydeep-19|      28.7|       9.9|     135.6|
+    |               vgg-verydeep-16|      28.5|       9.9|     161.2|
+    |                 googlenet-dag|      32.2|      11.6|     291.3|
+
+    Please note that GoogLeNet is the Princeton's version.
+
+* 2014 models:
+
+    |                         model|top-1 err.|top-5 err.|  images/s|
+    |------------------------------|----------|----------|----------|
+    |              matconvnet-vgg-s|      37.0|      15.8|     470.5|
+    |              matconvnet-vgg-m|      36.9|      15.5|     663.5|
+    |              matconvnet-vgg-f|      41.4|      19.1|     768.1|
+    |                         vgg-s|      36.7|      15.3|     476.7|
+    |                         vgg-m|      37.3|      15.9|     599.1|
+    |                         vgg-f|      41.1|      18.8|     745.9|
+    |                     vgg-m-128|      40.8|      18.4|     600.7|
+    |                    vgg-m-1024|      37.8|      16.1|     604.5|
+    |                    vgg-m-2048|      37.1|      15.8|     610.1|
+
+* 2013 models
+
+    |                         model|top-1 err.|top-5 err.|  images/s|
+    |------------------------------|----------|----------|----------|
+    |               matconvnet-alex|      41.8|      19.2|     702.6|
+    |                     caffe-ref|      42.4|      19.6|     392.2|
+    |                    caffe-alex|      42.6|      19.6|     387.4|
+
 
 Important notes:
 
-* The model trained using MatConvNet are slightly better than the
-  original, probably due to the use of batch normalization during
+* Some of the models trained using MatConvNet are slightly better than
+  the original, probably due to the use of batch normalization during
   training.
 
-* Error rates are computed on a single centre-crop and are therefore
-  higher than what reported in some publications, where multiple
-  evaluations per image are combined.
+* Error rates are computed on a **single centre-crop** and are
+  therefore higher than what reported in some publications, where
+  multiple evaluations per image are combined. Likewise, no model
+  ensembles are evaluated.
 
 * The **evaluation speed** was measured on a 12-cores machine using a
-  single NVIDIA Titan Black GPU, MATLAB R2015a, and CuDNN v4;
-  performance varies hugely depending on the network but also on how
-  the data was preprocessed; for example, `caffe-ref` and `caffe-alex`
-  should be as fast as `matconvnet-alex`, but they are not since
-  images were pre-processed in such a way that MATLAB had to call
-  `imresize` for each input image for the Caffe models.
+  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v4; performance
+  varies hugely depending on the network but also on how the data was
+  preprocessed; for example, `caffe-ref` and `caffe-alex` should be as
+  fast as `matconvnet-alex`, but they are not since images were
+  pre-processed in such a way that MATLAB had to call `imresize` for
+  each input image for the Caffe models.
 
 * The GoogLeNet model performance is a little lower than expected (the
   model should be on par or a little better than VGG-VD). This network
