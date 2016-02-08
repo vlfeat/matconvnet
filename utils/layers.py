@@ -554,7 +554,7 @@ class CaffeDeconvolution(CaffeConv):
         mlayer = super(CaffeDeconvolution, self).toMatlab()
         mlayer['type'][0] = u'dagnn.ConvTranspose'
         mlayer['block'][0] = dictToMatlabStruct(
-            {'has_bias': self.bias_term,
+            {'hasBias': self.bias_term,
              'size': row(size),
              'upsample': row(self.stride),
              'crop': row(self.pad)})
