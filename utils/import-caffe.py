@@ -132,6 +132,14 @@ parser.add_argument('--preproc',
                     nargs='?',
                     default='caffe',
                     help='Variant of image preprocessing to use (use ? to get a list)')
+parser.add_argument('--simplify',
+                    dest='simplify',
+                    action='store_true',
+                    help='Apply simplifications')
+parser.add_argument('--no-simplify',
+                    dest='simplify',
+                    action='store_false',
+                    help='Do not apply simplifications')
 parser.add_argument('--remove-dropout',
                     dest='remove_dropout',
                     action='store_true',
@@ -161,6 +169,7 @@ parser.add_argument('--output-format',
 parser.set_defaults(transpose=True)
 parser.set_defaults(remove_dropout=False)
 parser.set_defaults(remove_loss=False)
+parser.set_defaults(simplify=True)
 args = parser.parse_args()
 
 print 'Caffe varaint set to', args.caffe_variant
@@ -615,6 +624,31 @@ if args.remove_dropout:
     layer = cmodel.layers[name]
     if type(layer) is CaffeSoftMaxLoss:
       print "Removing loss layer ", name
+      cmodel.renameVar(layer.outputs[0], layer.inputs[0])
+      cmodel.removeLayer(name)
+
+# Simplifications
+if args.simplify:
+  # BatchNorm followed by Scale
+  layerNames = cmodel.layers.keys()
+  for name in layerNames:
+    layer = cmodel.layers[name]
+    if type(layer) is CaffeScale:
+      if len(layer.inputs) > 1:
+        continue # the scaling factor is an input, not a parameter
+      if len(cmodel.getLayersWithInput(layer.inputs[0])) > 1:
+        continue # other layers use the same input
+      parentNames = cmodel.getLayersWithOutput(layer.inputs[0])
+      if len(parentNames) != 1: continue
+      parent = cmodel.layers[parentNames[0]]
+      if type(parent) is not CaffeBatchNorm: continue
+      print "Simplifying scale layer \'{}\'".format(name)
+      smult = cmodel.params[layer.params[0]]
+      sbias = cmodel.params[layer.params[1]]
+      mult = cmodel.params[parent.params[0]]
+      bias = cmodel.params[parent.params[1]]
+      mult.value = mult.value * smult.value
+      bias.value = smult.value * bias.value + sbias.value
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 
