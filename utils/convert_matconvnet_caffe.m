@@ -44,8 +44,14 @@ for idx = 1:length(net.layers)
     end
     
     % copy old filters,biases notation to weights
-    if isfield(net.layers{idx}, 'filters')        
+    if isfield(net.layers{idx}, 'filters')
         net.layers{idx}.weights = {net.layers{idx}.filters net.layers{idx}.biases};
+    end
+    
+    if isfield(net.layers{idx}, 'weights')
+        % Move GPU data back to CPU memory
+        net.layers{idx}.weights{1} = gather(net.layers{idx}.weights{1});
+        net.layers{idx}.weights{2} = gather(net.layers{idx}.weights{2});
     end
     
     % mark dropout layers for deletion (not needed at test time)
