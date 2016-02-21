@@ -18,9 +18,9 @@ SCRIPTPATH=`pwd`
 popd > /dev/null
 
 converter="python $SCRIPTPATH/import-caffe.py"
-data="$SCRIPTPATH/../data"
+data="$SCRIPTPATH/../data/models-import"
 
-mkdir -pv "$data"/{tmp/caffe,tmp/resnet,models}
+mkdir -pv "$data/tmp/resnet"
 
 function get()
 {
@@ -40,7 +40,7 @@ get "$RESNET_URL"
 for t in 50 101 152
 do
     base="$data/tmp/resnet"
-    out="$data/models/imagenet-resnet-$t-dag.mat"
+    out="$data/imagenet-resnet-$t-dag.mat"
     cdata=--caffe-data="$base/ResNet-$t-model.caffemodel"
 
     if test -f "$out" -a -z "$overwrite"
