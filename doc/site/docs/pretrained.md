@@ -118,6 +118,17 @@ PASCAL VOC category definitions.
 These modesl are trained to perform classification in the ImageNet
 ILSVRC challenge data.
 
+-   **ResNet** models imported from the
+    [MSRC version](https://github.com/KaimingHe/deep-residual-networks).
+
+    > 'Deep Residual Learning for Image Recognition', K. He, X. Zhang,
+    S. Ren and J. Sun, ICCV, 2015
+    ([paper](http://arxiv.org/pdf/1512.03385.pdf)).
+
+    -  [imagenet-resnet-50-dag](models/imagenet-resnet-50-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-resnet-50-dag.svg)
+    -  [imagenet-resnet-101-dag](models/imagenet-resnet-101-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-resnet-101-dag.svg)
+    -  [imagenet-resnet-152-dag](models/imagenet-resnet-152-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-resnet-152-dag.svg)
+
 -   **GoogLeNet** model imported from the
     [Princeton version](http://vision.princeton.edu/pvt/GoogLeNet/)
     [*DagNN format*].
