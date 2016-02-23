@@ -31,6 +31,26 @@ function convert_matconvnet_caffe(net, base_output_filename, test_img)
 
 [~, name] = fileparts(base_output_filename);
 
+% convert GPU network to CPU
+for idx = 1:length(net.layers)
+    if isfield(net.layers{idx}, 'weights')
+        net.layers{idx}.weights{1} = gather(net.layers{idx}.weights{1});
+        net.layers{idx}.weights{2} = gather(net.layers{idx}.weights{2});
+    end
+    if isfield(net.layers{idx}, 'filters')
+        net.layers{idx}.filters = gather(net.layers{idx}.filters);
+    end
+    if isfield(net.layers{idx}, 'filtersMomentum')
+        net.layers{idx}.filtersMomentum = gather(net.layers{idx}.filtersMomentum);
+    end
+    if isfield(net.layers{idx}, 'biases')
+        net.layers{idx}.biases = gather(net.layers{idx}.biases);
+    end
+    if isfield(net.layers{idx}, 'biasesMomentum')
+        net.layers{idx}.biasesMomentum = gather(net.layers{idx}.biasesMomentum);
+    end
+end
+
 % pre-processing stuff
 if ismember(net.layers{end}.type, {'softmaxloss', 'weightedsoftmaxloss'})
     net.layers{end}.type = 'softmax';
@@ -304,6 +324,18 @@ if gpu_mode
         if isfield(net.layers{idx}, 'weights')
             net.layers{idx}.weights{1} = gpuArray(net.layers{idx}.weights{1});
             net.layers{idx}.weights{2} = gpuArray(net.layers{idx}.weights{2});
+        end
+        if isfield(net.layers{idx}, 'filters')
+            net.layers{idx}.filters = gpuArray(net.layers{idx}.filters);
+        end
+        if isfield(net.layers{idx}, 'filtersMomentum')
+            net.layers{idx}.filtersMomentum = gpuArray(net.layers{idx}.filtersMomentum);
+        end
+        if isfield(net.layers{idx}, 'biases')
+            net.layers{idx}.biases = gpuArray(net.layers{idx}.biases);
+        end
+        if isfield(net.layers{idx}, 'biasesMomentum')
+            net.layers{idx}.biasesMomentum = gpuArray(net.layers{idx}.biasesMomentum);
         end
     end
     test_img = gpuArray(test_img);
