@@ -179,16 +179,17 @@ if opts.profile
   end
 end
 
-stats.time = 0 ;
-stats.num = 0 ;
 subset = state.(mode) ;
 start = tic ;
 num = 0 ;
+stats.num = 0 ; % return something even if subset = []
+stats.time = 0 ;
 
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: %3d/%3d:', mode, state.epoch, ...
           fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
+
   for s=1:opts.numSubBatches
     % get this image batch and prefetch the next
     batchStart = t + (labindex-1) + (s-1) * numlabs ;
@@ -237,8 +238,8 @@ for t=1:opts.batchSize:numel(subset)
 
   % print learning statistics
   time = toc(start) ;
-  stats.num = n ;
   stats.time = time ;
+  stats.num = num ; % processed on this GPU
   speed = n/time ;
   fprintf(' %.1f Hz', speed) ;
 
