@@ -40,6 +40,7 @@ classdef BatchNorm < dagnn.ElementWise
       attach@dagnn.ElementWise(obj, net, index) ;
       p = net.getParamIndex(net.layers(index).params{3}) ;
       net.params(p).trainMethod = 'average' ;
+      net.params(p).learningRate = 0.01 ;
     end
   end
 end
