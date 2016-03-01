@@ -104,19 +104,23 @@ fprintf(fid, 'input_dim: %d\n\n', im_size(2));
 
 dummy_data = zeros(im_size, 'single'); % Keep track of data size at each layer;
 
+is_fully_connected = false(size(net.layers));
 for idx = 1:length(net.layers)
     % write layers
     fprintf(fid,'layer {\n');
     fprintf(fid,'  name: "%s"\n', net.layers{idx}.name); % Layer name
+    layer_input_size = size(dummy_data);
     switch net.layers{idx}.type
         case 'conv'
-            if size(net.layers{idx}.weights{1},1) > 1 || ...
-                    size(net.layers{idx}.weights{1},2) > 1
+            filter_h = size(net.layers{idx}.weights{1},1);
+            filter_w = size(net.layers{idx}.weights{1},2);
+            if filter_h < layer_input_size(1) || ...
+               filter_w < layer_input_size(2)
                 % Convolution layer
                 fprintf(fid, '  type: "Convolution"\n');
                 write_order(fid, net.layers, idx);
                 fprintf(fid, '  convolution_param {\n');
-                write_kernel(fid, [size(net.layers{idx}.weights{1},1), size(net.layers{idx}.weights{1},2)]);
+                write_kernel(fid, [filter_h, filter_w]);
                 fprintf(fid, '    num_output: %d\n', size(net.layers{idx}.weights{1},4));
                 write_stride(fid, net.layers{idx});
                 if isfield(net.layers{idx}, 'pad') && length(net.layers{idx}.pad) == 4
@@ -127,7 +131,6 @@ for idx = 1:length(net.layers)
                     end
                 end
                 write_pad(fid, net.layers{idx});
-                layer_input_size = size(dummy_data);
                 num_groups = layer_input_size(3) / size(net.layers{idx}.weights{1},3);
                 assert(mod(num_groups,1) == 0);
                 if num_groups > 1
@@ -135,24 +138,28 @@ for idx = 1:length(net.layers)
                 end
                 
                 fprintf(fid, '  }\n');
-            else
+            elseif filter_h == layer_input_size(1) && filter_w == layer_input_size(2)
+                is_fully_connected(idx) = true;
                 % Fully connected layer
                 fprintf(fid, '  type: "InnerProduct"\n');
                 write_order(fid, net.layers, idx);
-                fprintf(fid, '  inner_product_param {\n');                
-                fprintf(fid, '    num_output: %d\n', size(net.layers{idx}.weights{1},4));                
+                fprintf(fid, '  inner_product_param {\n');
+                fprintf(fid, '    num_output: %d\n', size(net.layers{idx}.weights{1},4));
                 fprintf(fid, '  }\n');
+            else
+                error('Filter size (%d,%d) is larger than input size (%d,%d)', ...
+                    filter_h, filter_w, layer_input_size(1), layer_input_size(2))
             end
-            
-        case 'relu'            
+
+        case 'relu'
             fprintf(fid, '  type: "ReLU"\n');
             write_order(fid, net.layers, idx);
-            
+
         case 'Sigmoid'
             fprintf(fid, '  type: "ReLU"\n');
             write_order(fid, net.layers, idx);     
-            
-        case 'pool'            
+
+        case 'pool'
             fprintf(fid, '  type: "Pooling"\n');
             % Check padding compatability with caffe. See:
             % http://www.vlfeat.org/matconvnet/matconvnet-manual.pdf
@@ -170,16 +177,15 @@ for idx = 1:length(net.layers)
             if length(net.layers{idx}.pool) == 1
                 net.layers{idx}.pool = repmat(net.layers{idx}.pool, 1, 2);
             end
-            
+
             support = net.layers{idx}.pool;
             stride = net.layers{idx}.stride;
             pad = net.layers{idx}.pad;
-            layer_input_size = size(dummy_data);           
             compatability_pad_y = ceil((layer_input_size(1)-support(1)) / stride(1)) * stride(1) ...
                 + support(1) - layer_input_size(1);
             compatability_pad_x = ceil((layer_input_size(2)-support(2)) / stride(2)) * stride(2) ...
                 + support(2) - layer_input_size(2);
-            
+
             if pad(2) ~= pad(1) + compatability_pad_y || ...
                     pad(4) ~= pad(3) + compatability_pad_x
                 % Padding is not compatible with Caffe
@@ -191,7 +197,7 @@ for idx = 1:length(net.layers)
 
             
             write_order(fid, net.layers, idx);
-            fprintf(fid, '  pooling_param {\n'); 
+            fprintf(fid, '  pooling_param {\n');
             switch (net.layers{idx}.method)
                 case 'max'
                     caffe_pool = 'MAX';
@@ -204,9 +210,9 @@ for idx = 1:length(net.layers)
             write_kernel(fid, net.layers{idx}.pool);
             write_stride(fid, net.layers{idx});
             write_pad(fid, net.layers{idx});
-            fprintf(fid, '  }\n');                                    
+            fprintf(fid, '  }\n');
             
-        case 'normalize' 
+        case 'normalize'
             % MATLAB param = [local_size, kappa, alpha/local_size, beta]
             fprintf(fid, '  type: "LRN"\n');
             write_order(fid, net.layers, idx);
@@ -217,13 +223,13 @@ for idx = 1:length(net.layers)
             fprintf(fid, '    beta: %f\n', net.layers{idx}.param(4));
             fprintf(fid, '  }\n');
             
-        case 'softmax'            
+        case 'softmax'
             fprintf(fid, '  type: "Softmax"\n');
             write_order(fid, net.layers, idx);    
             
         otherwise
             error('Unknow layer type: %s', net.layers{idx}.type);
-    end    
+    end
     fprintf(fid,'}\n\n');
     
     layer = struct('layers', {net.layers(idx)});
@@ -237,7 +243,7 @@ fclose(fid);
 caffe.set_mode_cpu();
 caffe_net = caffe.Net(prototxt_filename,'test');
 first_conv = true;
-for idx = 1:length(net.layers)    
+for idx = 1:length(net.layers)
     layer_type = net.layers{idx}.type;
     layer_name = net.layers{idx}.name;
     switch layer_type
@@ -251,9 +257,9 @@ for idx = 1:length(net.layers)
                 end
                 first_conv = false; % Do this only for first convolution;
             end
-            if size(weights,1) == 1 && size(weights,2) == 1
+            if is_fully_connected(idx)
                 % Fully connected layer, squeeze to 2 dims
-                weights = squeeze(weights);
+                weights = reshape(weights,[], size(weights,4));
             end
             caffe_net.layers(layer_name).params(1).set_data(weights); % set weights
             caffe_net.layers(layer_name).params(2).set_data(net.layers{idx}.weights{2}(:)); % set bias        
@@ -261,8 +267,7 @@ for idx = 1:length(net.layers)
                 % No weights - nothing to do                
         otherwise
             error('Unknown layer type %s', layer_type)
-    end            
-            
+    end
 end
 model_filename = [base_output_filename '.caffemodel'];
 caffe_net.save(model_filename);
