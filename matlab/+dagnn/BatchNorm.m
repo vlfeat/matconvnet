@@ -1,10 +1,18 @@
 classdef BatchNorm < dagnn.ElementWise
+  properties
+    numChannels
+    epsilon = 1e-4
+  end
+
   methods
     function outputs = forward(obj, inputs, params)
       if strcmp(obj.net.mode, 'test')
-        outputs{1} = vl_nnbnorm(inputs{1}, params{1}, params{2}, 'moments', params{3}) ;
+        outputs{1} = vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
+                                'moments', params{3}, ...
+                                'epsilon', obj.epsilon) ;
       else
-        outputs{1} = vl_nnbnorm(inputs{1}, params{1}, params{2}) ;
+        outputs{1} = vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
+                                'epsilon', obj.epsilon) ;
       end
     end
 
@@ -20,6 +28,12 @@ classdef BatchNorm < dagnn.ElementWise
     % ---------------------------------------------------------------------
     function obj = BatchNorm(varargin)
       obj.load(varargin{:}) ;
+    end
+
+    function params = initParams(obj)
+      params{1} = ones(obj.numChannels,1,'single') ;
+      params{2} = zeros(obj.numChannels,1,'single') ;
+      params{3} = zeros(obj.numChannels,2,'single') ;
     end
 
     function attach(obj, net, index)

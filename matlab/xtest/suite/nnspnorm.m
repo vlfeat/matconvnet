@@ -6,7 +6,7 @@ classdef nnspnorm < nntest
       d = 4 ;
       n = 5 ;
       param = [3, 3, 0.1, 0.75] ;
-      x = test.randn(h,w,d,n,'single') ;
+      x = test.randn(h,w,d,n) ;
       y = vl_nnspnorm(x, param) ;
       dzdy = test.rand(h, w, d, n) ;
       dzdx = vl_nnspnorm(x, param, dzdy) ;

@@ -4,7 +4,7 @@
 // @author Karel Lenc
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -15,106 +15,76 @@ the terms of the BSD license (see the COPYING file).
 #include <cstring>
 #include <iostream>
 
-/* ---------------------------------------------------------------- */
-/*                                                subsample forward */
-/* ---------------------------------------------------------------- */
 
-template<typename T> void
-subsample_forward_cpu(T* subsampled,
-                      T const* data,
-                      size_t width,
-                      size_t height,
-                      size_t depth,
-                      size_t strideX,
-                      size_t strideY,
-                      size_t padLeft,
-                      size_t padRight,
-                      size_t padTop,
-                      size_t padBottom)
-{
-  int subsampledWidth = (width + (padLeft + padRight) - 1)/strideX + 1 ;
-  int subsampledHeight = (height + (padTop + padBottom) - 1)/strideY + 1 ;
-  for (int z = 0; z < depth; ++z) {
-    for (int y = 0; y < subsampledHeight; ++y) {
-      for (int x = 0; x < subsampledWidth; ++x) {
-        int x1 = x * (signed)strideX - (signed)padLeft ;
-        int y1 = y * (signed)strideY - (signed)padTop ;
-        T value = 0 ;
-        if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-          value = data[y1 * width + x1] ;
+namespace vl { namespace impl {
+
+  template <typename type>
+  struct subsample<vl::CPU, type>
+  {
+
+    static vl::Error
+    forward(vl::Context& context,
+            type* output,
+            type const* data,
+            size_t height, size_t width, size_t depth,
+            size_t strideY, size_t strideX,
+            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      int outputWidth = (width + (padLeft + padRight) - 1)/strideX + 1 ;
+      int outputHeight = (height + (padTop + padBottom) - 1)/strideY + 1 ;
+      for (int z = 0; z < depth; ++z) {
+        for (int x = 0; x < outputWidth; ++x) {
+          for (int y = 0; y < outputHeight; ++y) {
+            int x1 = x * (signed)strideX - (signed)padLeft ;
+            int y1 = y * (signed)strideY - (signed)padTop ;
+            type value = 0 ;
+            if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
+              value = data[x1 * height + y1] ;
+            }
+            output[x * outputHeight + y] = value ;
+          }
         }
-        subsampled[y * subsampledWidth + x] = value ;
+        data += width*height ;
+        output += outputWidth*outputHeight ;
       }
+      return vlSuccess ;
     }
-    data += width*height ;
-    subsampled += subsampledWidth*subsampledHeight ;
-  }
-}
 
-template <> vl::Error
-vl::impl::subsample_forward<vl::CPU, float>(vl::Context& context,
-                                            float* subsampled,
-                                            float const* data,
-                                            size_t height, size_t width, size_t depth,
-                                            size_t strideY, size_t strideX,
-                                            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  subsample_forward_cpu<float>(subsampled, data,
-                               height, width, depth,
-                               strideY, strideX,
-                               padTop, padBottom, padLeft, padRight) ;
-  return vlSuccess ;
-}
+    static vl::Error
+    backward(vl::Context& context,
+             type* derData,
+             type const* derOutput,
+             size_t height, size_t width, size_t depth,
+             size_t strideY, size_t strideX,
+             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      int outputWidth = (width + (padLeft + padRight) - 1)/strideX + 1 ;
+      int outputHeight = (height + (padTop + padBottom) - 1)/strideY + 1 ;
 
+      memset(derData, 0, sizeof(type) * width * height * depth) ;
 
-/* ---------------------------------------------------------------- */
-/*                                               subsample backward */
-/* ---------------------------------------------------------------- */
-
-template<typename T> void
-subsample_backward_cpu(T* dzdx,
-                       T const* dzdy,
-                       size_t width,
-                       size_t height,
-                       size_t depth,
-                       size_t strideX,
-                       size_t strideY,
-                       size_t padLeft,
-                       size_t padRight,
-                       size_t padTop,
-                       size_t padBottom)
-{
-  int subsampledWidth = (width + (padLeft + padRight) - 1)/strideX + 1 ;
-  int subsampledHeight = (height + (padTop + padBottom) - 1)/strideY + 1 ;
-
-  memset(dzdx, 0, sizeof(T) * width * height * depth) ;
-
-  for (int z = 0; z < depth; ++z) {
-    for (int py = 0; py < subsampledHeight; ++py) {
-      for (int px = 0; px < subsampledWidth; ++px) {
-        int x1 = px * (int)strideX - (int)padLeft ;
-        int y1 = py * (int)strideY - (int)padTop ;
-        if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-          dzdx[y1 * width + x1] = dzdy[py * subsampledWidth + px] ;
+      for (int z = 0; z < depth; ++z) {
+        for (int px = 0; px < outputWidth; ++px) {
+          for (int py = 0; py < outputHeight; ++py) {
+            int x1 = px * (int)strideX - (int)padLeft ;
+            int y1 = py * (int)strideY - (int)padTop ;
+            if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
+              derData[x1 * height + y1] = derOutput[px * outputHeight + py] ;
+            }
+          }
         }
+        derData += width*height ;
+        derOutput += outputWidth*outputHeight ;
       }
+      return vlSuccess ;
     }
-    dzdx += width*height ;
-    dzdy += subsampledWidth*subsampledHeight ;
-  }
-}
+  } ;
 
-template <> vl::Error
-vl::impl::subsample_backward<vl::CPU, float>(vl::Context& context,
-                                             float* derData,
-                                             float const* derSubsampled,
-                                             size_t height, size_t width, size_t depth,
-                                             size_t strideY, size_t strideX,
-                                             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  subsample_backward_cpu<float>(derData, derSubsampled,
-                                height, width, depth,
-                                strideY, strideX,
-                                padTop, padBottom, padLeft, padRight) ;
-  return vlSuccess ;
-}
+} }
+
+// Instantiations
+template struct vl::impl::subsample<vl::CPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::subsample<vl::CPU, double> ;
+#endif

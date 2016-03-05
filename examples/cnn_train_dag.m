@@ -28,6 +28,7 @@ opts.profile = false ;
 
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
+opts.plotStatistics = true;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -71,7 +72,7 @@ modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
 
 start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
-  fprintf('resuming by loading epoch %d\n', start) ;
+  fprintf('%s: resuming by loading epoch %d\n', mfilename, start) ;
   [net, stats] = loadState(modelPath(start)) ;
 end
 
@@ -106,32 +107,34 @@ for epoch=start+1:opts.numEpochs
     saveState(modelPath(epoch), net, stats) ;
   end
 
-  figure(1) ; clf ;
-  plots = setdiff(...
-    cat(2,...
-        fieldnames(stats.train)', ...
-        fieldnames(stats.val)'), {'num', 'time'}) ;
-  for p = plots
-    p = char(p) ;
-    values = zeros(0, epoch) ;
-    leg = {} ;
-    for f = {'train', 'val'}
-      f = char(f) ;
-      if isfield(stats.(f), p)
-        tmp = [stats.(f).(p)] ;
-        values(end+1,:) = tmp(1,:)' ;
-        leg{end+1} = f ;
+  if opts.plotStatistics
+    figure(1) ; clf ;
+    plots = setdiff(...
+      cat(2,...
+      fieldnames(stats.train)', ...
+      fieldnames(stats.val)'), {'num', 'time'}) ;
+    for p = plots
+      p = char(p) ;
+      values = zeros(0, epoch) ;
+      leg = {} ;
+      for f = {'train', 'val'}
+        f = char(f) ;
+        if isfield(stats.(f), p)
+          tmp = [stats.(f).(p)] ;
+          values(end+1,:) = tmp(1,:)' ;
+          leg{end+1} = f ;
+        end
       end
+      subplot(1,numel(plots),find(strcmp(p,plots))) ;
+      plot(1:epoch, values','o-') ;
+      xlabel('epoch') ;
+      title(p) ;
+      legend(leg{:}) ;
+      grid on ;
     end
-    subplot(1,numel(plots),find(strcmp(p,plots))) ;
-    plot(1:epoch, values','o-') ;
-    xlabel('epoch') ;
-    title(p) ;
-    legend(leg{:}) ;
-    grid on ;
+    drawnow ;
+    print(1, modelFigPath, '-dpdf') ;
   end
-  drawnow ;
-  print(1, modelFigPath, '-dpdf') ;
 end
 
 % -------------------------------------------------------------------------
@@ -215,7 +218,7 @@ for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: %3d/%3d: %.1f Hz', ...
     mode, ...
     state.epoch, ...
-    fix(t/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize), ...
+    fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize), ...
     stats.num/stats.time * max(numGpus, 1)) ;
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
     f = char(f) ;
@@ -251,7 +254,7 @@ for p=1:numel(net.params)
       thisLR = net.params(p).learningRate ;
       net.params(p).value = ...
           (1 - thisLR) * net.params(p).value + ...
-          (thisLR/batchSize) * net.params(p).der ;
+          (thisLR/batchSize/net.params(p).fanout) * net.params(p).der ;
 
     case 'gradient'
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;

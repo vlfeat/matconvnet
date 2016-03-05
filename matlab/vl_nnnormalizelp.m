@@ -5,11 +5,10 @@ function y = vl_nnnormalizelp(x,dzdy,varargin)
 %
 %       Y(i,j,k) = X(i,j,k) / sum_q (X(i,j,q).^p + epsilon)^(1/p)
 %
-%
-%   DZDX = VLN_NNORMALIZELP(X, DZDY) computes the derivative of the
+%   DZDX = VL_NNNORMALIZELP(X, DZDY) computes the derivative of the
 %   function with respect to X projected onto DZDY.
 %
-%   Options:
+%   VL_NNNORMALIZE(___, 'opts', val, ...) takes the following options:
 %
 %   `p`:: 2
 %      The exponent of the Lp norm. Warning: currently only even
@@ -18,6 +17,8 @@ function y = vl_nnnormalizelp(x,dzdy,varargin)
 %   `epsilon`: 0.01
 %      The constant added to the sum of p-powers before taking the
 %      1/p square root (see the formula above).
+%
+%   See also: VL_NNNORMALIZE().
 
 opts.epsilon = 1e-2 ;
 opts.p = 2 ;

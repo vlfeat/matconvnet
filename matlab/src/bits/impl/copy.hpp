@@ -1,6 +1,14 @@
 // @file copy.hpp
-// @brief Copy data
+// @brief Copy and other data operations
 // @author Andrea Vedaldi
+
+/*
+Copyright (C) 2015-16 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef __vl__copy__
 #define __vl__copy__
@@ -9,23 +17,13 @@
 
 namespace vl { namespace impl {
 
-  template <vl::Device dev, typename type> vl::Error
-  copy(type * dest,
-       type const * src,
-       size_t numElements) ;
-
-  template<> vl::Error
-  copy<vl::CPU, float> (float * dest,
-                        float const * src,
-                        size_t numElements) ;
-
-#if ENABLE_GPU
-  template<> vl::Error
-  copy<vl::GPU, float> (float * dest,
-                        float const * src,
-                        size_t numElements) ;
-#endif
-
+  template <vl::Device dev, typename type>
+  struct operations
+  {
+    typedef type data_type ;
+    static vl::Error copy(data_type * dest, data_type const * src, size_t numElements) ;
+    static vl::Error fill(data_type * dest, size_t numElements, data_type value) ;
+  } ;
 } }
 
 #endif /* defined(__vl__copy__) */

@@ -2,7 +2,11 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %VL_SIMPLENN  Evaluate a SimpleNN network.
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
-%   derivative on data X and output derivative DZDY.
+%   derivative on data X and output derivative DZDY (foward+bacwkard pass).
+%   RES = VL_SIMPLENN(NET, X, [], RES) evaluates the NET on X reusing the
+%   structure RES.
+%   RES = VL_SIMPLENN(NET, X, DZDY, RES) evaluates the NET on X and its
+%   derivatives reusing the structure RES.
 %
 %   This function process networks using the SimpleNN wrapper
 %   format. Such networks are 'simple' in the sense that they consist
@@ -30,7 +34,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   To print or obtain summary of the network structure, use the
 %   VL_SIMPLENN_DISPLAY() function.
 %
-%   VL_SIMPLENN_DISPLAY(..., 'OPT', VAL, ...) takes the following
+%   VL_SIMPLENN(NET, X, DZDY, RES, 'OPT', VAL, ...) takes the following
 %   options:
 %
 %   `Mode`:: `normal`
@@ -43,7 +47,8 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %      Aggressively delete intermediate results. This in practice has
 %      a very small performance hit and allows training much larger
 %      models. However, it can be useful to disable it for
-%      debugging.
+%      debugging. It is also possible to preserve individual layer outputs
+%      by setting `net.layers{...}.precious` to `true`.
 %
 %   `CuDNN`:: `true`
 %      Use CuDNN when available.
@@ -51,6 +56,12 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   `Accumulate`:: `false`
 %      Accumulate gradients in back-propagation instead of rewriting
 %      them. This is useful to break the computation in sub-batches.
+%      The gradients are accumulated to the provided RES structure
+%      (i.e. to call VL_SIMPLENN(NET, X, DZDY, RES, ...).
+%
+%   `SkipForward`:: `false`
+%      Reuse the output values from the provided RES structure and compute
+%      only the derivatives (bacward pass).
 %
 %   ## The result format
 %
@@ -205,19 +216,24 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-opts.res = [] ;
 opts.conserveMemory = false ;
 opts.sync = false ;
 opts.mode = 'normal' ;
 opts.accumulate = false ;
 opts.cudnn = true ;
 opts.backPropDepth = +inf ;
+opts.skipForward = false;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
+backPropLim = max(n - opts.backPropDepth + 1, 1);
 
 if (nargin <= 2) || isempty(dzdy)
   doder = false ;
+  if opts.skipForward
+    error('simplenn:skipForwardNoBackwPass', ...
+      '`skipForward` valid only when backward pass is computed.');
+  end
 else
   doder = true ;
 end
@@ -240,21 +256,31 @@ end
 gpuMode = isa(x, 'gpuArray') ;
 
 if nargin <= 3 || isempty(res)
+  if opts.skipForward
+    error('simplenn:skipForwardEmptyRes', ...
+    'RES structure must be provided for `skipForward`.');
+  end
   res = struct(...
     'x', cell(1,n+1), ...
     'dzdx', cell(1,n+1), ...
     'dzdw', cell(1,n+1), ...
     'aux', cell(1,n+1), ...
+    'stats', cell(1,n+1), ...
     'time', num2cell(zeros(1,n+1)), ...
     'backwardTime', num2cell(zeros(1,n+1))) ;
 end
-res(1).x = x ;
+
+if ~opts.skipForward
+  res(1).x = x ;
+end
+
 
 % -------------------------------------------------------------------------
 %                                                              Forward pass
 % -------------------------------------------------------------------------
 
 for i=1:n
+  if opts.skipForward, break; end;
   l = net.layers{i} ;
   res(i).time = tic ;
   switch l.type
@@ -320,7 +346,11 @@ for i=1:n
       end
 
     case 'pdist'
-      res(i+1) = vl_nnpdist(res(i).x, l.p, 'noRoot', l.noRoot, 'epsilon', l.epsilon) ;
+      res(i+1).x = vl_nnpdist(res(i).x, l.class, l.p, ...
+        'noRoot', l.noRoot, ...
+        'epsilon', l.epsilon, ...
+        'aggregate', l.aggregate, ...
+        'instanceWeights', l.instanceWeights) ;
 
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
@@ -330,15 +360,19 @@ for i=1:n
   end
 
   % optionally forget intermediate results
-  forget = opts.conserveMemory ;
-  forget = forget & (~doder || strcmp(l.type, 'relu')) ;
-  forget = forget & ~(strcmp(l.type, 'loss') || strcmp(l.type, 'softmaxloss')) ;
-  forget = forget & (~isfield(l, 'rememberOutput') || ~l.rememberOutput) ;
+  forget = opts.conserveMemory & ~(doder & n >= backPropLim) ;
+  if i > 1
+    lp = net.layers{i-1} ;
+    % forget RELU input, even for BPROP
+    forget = forget & (~doder | (strcmp(l.type, 'relu') & ~lp.precious)) ;
+    forget = forget & ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
+    forget = forget & ~lp.precious ;
+  end
   if forget
     res(i).x = [] ;
   end
 
-  if gpuMode & opts.sync
+  if gpuMode && opts.sync
     wait(gpuDevice) ;
   end
   res(i).time = toc(res(i).time) ;
@@ -365,7 +399,7 @@ if doder
 
       case 'convt'
         [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
-          vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
+          vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
           'crop', l.crop, ...
           'upsample', l.upsample, ...
           'numGroups', l.numGroups, ...
@@ -427,8 +461,13 @@ if doder
         dzdw{3} = dzdw{3} * size(res(i).x,4) ;
 
       case 'pdist'
-        res(i).dzdx = vl_nnpdist(res(i).x, l.p, res(i+1).dzdx, ...
-                                 'noRoot', l.noRoot, 'epsilon', l.epsilon) ;
+        res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...
+          l.p, res(i+1).dzdx, ...
+          'noRoot', l.noRoot, ...
+          'epsilon', l.epsilon, ...
+          'aggregate', l.aggregate, ...
+          'instanceWeights', l.instanceWeights) ;
+
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
 
@@ -445,10 +484,11 @@ if doder
         end
         dzdw = [] ;
     end
-    if opts.conserveMemory
+    if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
       res(i+1).dzdx = [] ;
+      res(i+1).x = [] ;
     end
-    if gpuMode & opts.sync
+    if gpuMode && opts.sync
       wait(gpuDevice) ;
     end
     res(i).backwardTime = toc(res(i).backwardTime) ;

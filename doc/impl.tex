@@ -8,7 +8,7 @@ This chapter contains calculations and details.
 \section{Convolution}\label{s:impl-convolution}
 % ------------------------------------------------------------------
 
-It is often convenient to express the convolution operation in matrix form. To this end, let $\phi(\bx)$ the \verb!im2row! operator, extracting all $W' \times H'$ patches from the map $\bx$ and storing them as rows of a $(H''W'') \times (H'W'D)$ matrix. Formally, this operator is given by:
+It is often convenient to express the convolution operation in matrix form. To this end, let $\phi(\bx)$ be the \verb!im2row! operator, extracting all $W' \times H'$ patches from the map $\bx$ and storing them as rows of a $(H''W'') \times (H'W'D)$ matrix. Formally, this operator is given by:
 \[
    [\phi(\bx)]_{pq} \underset{(i,j,d)=t(p,q)}{=} x_{ijd}
 \]
@@ -89,7 +89,7 @@ where $X\in\real^{(H'W')\times D}$ is the matrix obtained by reshaping $\bx$. No
 \section{Convolution transpose}\label{s:impl-convolution-transpose}
 % ------------------------------------------------------------------
 
-In order to understand the definition of convolution transpose, let $\by$ obtained from $\bx$ by the convolution operator as defined in \autoref{s:convolution} (including padding and downsampling).  Since this is a linear operation, it can be rewritten as $\vv \by = M \vv\bx$ for a suitable matrix $M$; convolution transpose computes instead $\vv \bx = M^\top \vv \by$.  While this is simple to describe in term of matrices, what happens in term of indexes is tricky. In order to derive a formula for the convolution transpose, start from standard convolution (for a 1D signal):
+In order to understand the definition of convolution transpose, let $\by$ to be obtained from $\bx$ by the convolution operator as defined in \autoref{s:convolution} (including padding and downsampling).  Since this is a linear operation, it can be rewritten as $\vv \by = M \vv\bx$ for a suitable matrix $M$; convolution transpose computes instead $\vv \bx = M^\top \vv \by$.  While this is simple to describe in term of matrices, what happens in term of indexes is tricky. In order to derive a formula for the convolution transpose, start from standard convolution (for a 1D signal):
 \[
    y_{i''} = \sum_{i'=1}^{H'} f_{i'} x_{S (i''-1) + i' - P_h^-}, 
    \quad
@@ -156,7 +156,7 @@ The size $H''$ of the output of convolution transpose is obtained in \autoref{s:
 \section{Spatial pooling}\label{s:impl-pooling}
 % ------------------------------------------------------------------
 
-Since max pooling simply select for each output element an input element, the relation can be expressed in matrix form as
+Since max pooling simply selects for each output element an input element, the relation can be expressed in matrix form as
 $
     \vv\by = S(\bx) \vv \bx
 $
@@ -222,7 +222,7 @@ In matrix notation:
 \[
 \frac{dz}{d\bx} = \frac{dz}{d\by} \odot 
 \by \odot 
-(\mathbf{1}\mathbf{1}^\top - \by).
+(\bone\bone^\top - \by).
 \]
 
 % ------------------------------------------------------------------
@@ -230,7 +230,7 @@ In matrix notation:
 % ------------------------------------------------------------------
 
 % ------------------------------------------------------------------
-\subsection{Cross-channel normalization}\label{s:impl-ccnormalization}
+\subsection{Local response normalization (LRN)}\label{s:impl-ccnormalization}
 % ------------------------------------------------------------------
 
 The derivative is easily computed as:
@@ -253,7 +253,7 @@ where
 \subsection{Batch normalization}\label{s:impl-bnorm}
 % ------------------------------------------------------------------
 
-The derivative of the of the network output $z$ with respect to the multipliers $w_k$ and biases $b_k$ is given by
+The derivative of the network output $z$ with respect to the multipliers $w_k$ and biases $b_k$ is given by
 \begin{align*}
 	\frac{dz}{dw_k} &= \sum_{i''j''k''t''}
 \frac{dz}{d y_{i''j''k''t''}} 
@@ -277,7 +277,7 @@ The derivative of the network output $z$ with respect to the block input $x$ is 
 \frac{dz}{d y_{i''j''k''t''}} 
 \frac{d y_{i''j''k''t''}}{d x_{ijkt}}.
 \]
-Since feature channels are processed independently, all terms with $k''\not=k$ are null. Hence
+Since feature channels are processed independently, all terms with $k''\not=k$ are zero. Hence
 \[
 \frac{dz}{dx_{ijkt}} = \sum_{i''j''t''}
 \frac{dz}{d y_{i''j''kt''}} 
@@ -348,7 +348,7 @@ i.e.
 \frac{1}{HWT}
 \sum_{i''j''kt''}
 \frac{dz}{d y_{i''j''kt''}} 
-\frac{x_{i''j''kt''} - \mu_k}{\sqrt{\sigma^2_k + \epsilon}}
+\frac{x_{i''j''kt''} - \mu_k}{\sqrt{\sigma^2_k + \epsilon}}.
 \end{align*}
 We can identify some of these terms with the ones computed as derivatives of bnorm with respect to $w_k$ and $\mu_k$:
 \begin{align*}
@@ -365,14 +365,14 @@ We can identify some of these terms with the ones computed as derivatives of bno
 \,
 \frac{1}{HWT}
 \frac{dz}{dw_k}
-\right)
+\right).
 \end{align*}
 
 % ------------------------------------------------------------------
 \subsection{Spatial normalization}\label{s:impl-spnorm}
 % ------------------------------------------------------------------
 
-The neighborhood norm $n^2_{i''j''d}$ can be computed by applying average pooling to $x_{ijd}^2$ using \verb!vl_nnpool! with a $W'\times H'$ pooling region, top padding $\lfloor \frac{H'-1}{2}\rfloor$, bottom padding $H'-\lfloor \frac{H-1}{2}\rfloor-1$, and similarly for the horizontal padding.
+The neighbourhood norm $n^2_{i''j''d}$ can be computed by applying average pooling to $x_{ijd}^2$ using \verb!vl_nnpool! with a $W'\times H'$ pooling region, top padding $\lfloor \frac{H'-1}{2}\rfloor$, bottom padding $H'-\lfloor \frac{H-1}{2}\rfloor-1$, and similarly for the horizontal padding.
 
 The derivative of spatial normalization can be obtained as follows:
 \begin{align*}
@@ -427,7 +427,7 @@ Note that the summation can be computed as the derivative of the
 \subsection{Softmax}\label{s:impl-softmax}
 % ------------------------------------------------------------------
 
-Care must be taken in evaluating the exponential in order to avoid underflow or overflow. The simplest way to do so is to divide from numerator and denominator by the maximum value:
+Care must be taken in evaluating the exponential in order to avoid underflow or overflow. The simplest way to do so is to divide the numerator and denominator by the exponential of the maximum value:
 \[
  y_{ijk} = \frac{e^{x_{ijk} - \max_d x_{ijd}}}{\sum_{t=1}^D e^{x_{ijt}- \max_d x_{ijd}}}.
 \]
@@ -458,7 +458,7 @@ y_{ijd}
 \frac{dz}{d y_{ijk}} y_{ijk}.
 \right).
 \]
-In matrix for:
+In matrix form:
 \[
   \frac{dz}{dX} = Y \odot \left(\frac{dz}{dY} 
   - \left(\frac{dz}{dY} \odot Y\right) \bone\bone^\top\right)
@@ -476,7 +476,7 @@ $\bx$ and $\by$. Note that the numerical implementation of this expression is st
 
 The derivative is
 \[
-\frac{dz}{dx_{ijd}} = - \frac{dz}{dy} \frac{1}{x_{ijc}} \delta_{\{d = c\}}.
+\frac{dz}{dx_{ijd}} = - \frac{dz}{dy} \frac{1}{x_{ijc}} \delta_{d = c}.
 \]
 
 % ------------------------------------------------------------------
@@ -486,7 +486,7 @@ The derivative is
 The derivative is given by
 \[
 \frac{dz}{dx_{ijd}} 
-= - \frac{dz}{dy} \left(\delta_{d=c} - y_{ijc}\right)
+= - \frac{dz}{dy} \left(\delta_{d=c} - y_{ijd}\right)
 \]
 where $y_{ijc}$ is the output of the softmax layer. In matrix form:
 \[

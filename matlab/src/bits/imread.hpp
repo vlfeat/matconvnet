@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -13,17 +13,41 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __vl__imread__
 #define __vl__imread__
 
+#include "data.hpp"
+
 namespace vl {
 
-  struct Image
-  {
-    int width ;
-    int height ;
-    int depth ;
-    float * memory ;
-    int error ;
+#define VL_IMAGE_ERROR_MSG_MAX_LENGTH 256
 
-    Image() : width(0), height(0), depth(0), memory(0), error(0) { }
+  struct ImageShape
+  {
+    size_t height ;
+    size_t width ;
+    size_t depth ;
+
+    ImageShape() ;
+    ImageShape(size_t height, size_t width, size_t depth) ;
+    ImageShape(ImageShape const & im) ;
+    ImageShape & operator = (ImageShape const & im) ;
+    bool operator == (ImageShape const & im) ;
+
+    size_t getNumElements() const ;
+    void clear() ;
+  } ;
+
+  class Image
+  {
+  public:
+    Image() ;
+    Image(Image const & im) ;
+    Image(ImageShape const & shape, float * memory = NULL) ;
+    ImageShape const & getShape() const ;
+    float * getMemory() const ;
+    void clear() ;
+
+  protected:
+    ImageShape shape ;
+    float * memory ;
   } ;
 
   class ImageReader
@@ -31,8 +55,9 @@ namespace vl {
   public:
     ImageReader() ;
     ~ImageReader() ;
-    Image read(char const * fileName, float * memory = 0) ;
-    Image readDimensions(char const * fileName) ;
+    vl::Error readShape(ImageShape & image, char const * fileName) ;
+    vl::Error readPixels(float * memory, char const * fileName) ;
+    char const * getLastErrorMessage() const ;
 
   private:
     class Impl ;

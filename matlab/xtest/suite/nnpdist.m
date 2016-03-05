@@ -3,32 +3,41 @@ classdef nnpdist < nntest
     oneToOne = {false, true}
     noRoot = {false, true}
     p = {.5 1 2 3}
+    aggregate = {false, true}
   end
   methods (Test)
-    function basic(test,oneToOne, noRoot, p)
-      h = 13 ;
-      w = 17 ;
+    function basic(test,oneToOne, noRoot, p, aggregate)
+      if aggregate
+        % make it smaller to avoid numerical derivative issues with
+        % float
+        h = 3 ;
+        w = 2 ;
+      else
+        h = 13 ;
+        w = 17 ;
+      end
       d = 4 ;
       n = 5 ;
-      x = test.randn(h,w,d,n,'single') ;
+      x = test.randn(h,w,d,n) ;
       if oneToOne
-        x0 = test.randn(h,w,d,n,'single') ;
+        x0 = test.randn(h,w,d,n) ;
       else
         x0 = test.randn(1,1,d,n) ;
       end
-      y = vl_nnpdist(x, x0, p, 'noRoot',noRoot) ;
+      opts = {'noRoot', noRoot, 'aggregate', aggregate} ;
 
-      % make sure they are not too close in anyd dimension as
-      % this may be a problem for the finite difference
-      % dereivatives as one could approach0 which is not
-      % differentiable for some p-norms
+      y = vl_nnpdist(x, x0, p, opts{:}) ;
 
-      s = abs(bsxfun(@minus, x, x0)) < 5*test.range*1e-3 ;
+      % make sure they are not too close in any dimension as this may be a
+      % problem for the finite difference dereivatives as one could
+      % approach 0 which is not differentiable for some p-norms
+
+      s = abs(bsxfun(@minus, x, x0)) < test.range*1e-1 ;
       x(s) = x(s) + 5*test.range ;
 
-      dzdy = test.rand(h, w, 1, n) ;
-      dzdx = vl_nnpdist(x,x0,p,dzdy,'noRoot',noRoot) ;
-      test.der(@(x) vl_nnpdist(x,x0,p,'noRoot',noRoot), x, dzdy, dzdx, test.range * 1e-4) ;
+      dzdy = test.rand(size(y)) ;
+      dzdx = vl_nnpdist(x,x0,p,dzdy,opts{:}) ;
+      test.der(@(x) vl_nnpdist(x,x0,p,opts{:}), x, dzdy, dzdx, test.range * 1e-3) ;
     end
   end
 end

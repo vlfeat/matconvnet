@@ -40,6 +40,7 @@ net = load(opts.modelPath) ;
 if isfield(net, 'net') ;
   net = net.net ;
 end
+% Cannot use isa('dagnn.DagNN') because it is not an object yet
 isDag = isfield(net, 'params') ;
 
 if isDag

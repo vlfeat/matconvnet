@@ -9,16 +9,18 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 opts.modelType = 'lenet' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.expDir = fullfile('data', sprintf('cifar-%s', opts.modelType)) ;
+opts.expDir = fullfile(vl_rootnn, 'data', ...
+  sprintf('cifar-%s', opts.modelType)) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.dataDir = fullfile('data','cifar') ;
+opts.dataDir = fullfile(vl_rootnn, 'data','cifar') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.whitenData = true ;
 opts.contrastNormalization = true ;
 opts.networkType = 'simplenn' ;
 opts.train = struct() ;
 opts = vl_argparse(opts, varargin) ;
+if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % -------------------------------------------------------------------------
 %                                                    Prepare model and data

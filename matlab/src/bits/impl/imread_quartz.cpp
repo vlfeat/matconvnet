@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -23,18 +23,35 @@ the terms of the BSD license (see the COPYING file).
 /* ---------------------------------------------------------------- */
 
 #define check(x) \
-if (!(x)) { image.error = 1 ; goto done ; }
+if (!(x)) { error = vl::vlErrorUnknown ; goto done ; }
+
+#define ERR_MSG_MAX_LEN 1024
+
+struct vl::ImageReader::Impl
+{
+  char lastErrorMessage [ERR_MSG_MAX_LEN] ;
+  Impl() { lastErrorMessage[0] = 0 ; }
+} ;
 
 vl::ImageReader::ImageReader()
-: impl(NULL)
+: impl(new Impl())
 { }
 
 vl::ImageReader::~ImageReader()
-{ }
-
-vl::Image
-vl::ImageReader::read(const char * fileName, float * memory)
 {
+  delete(impl) ;
+}
+
+const char * vl::ImageReader::getLastErrorMessage() const
+{
+  return impl->lastErrorMessage ;
+}
+
+vl::Error
+vl::ImageReader::readPixels(float * memory, const char * fileName)
+{
+  vl::Error error = vl::vlSuccess ;
+
   // intermediate buffer
   char unsigned * pixels = NULL ;
   int bytesPerPixel ;
@@ -50,12 +67,10 @@ vl::ImageReader::read(const char * fileName, float * memory)
   CGColorSpaceRef colorSpaceRef = NULL ;
 
   // initialize the image as null
-  Image image ;
-  image.width = 0 ;
-  image.height = 0 ;
-  image.depth = 0 ;
-  image.memory = NULL ;
-  image.error = 0 ;
+  ImageShape shape ;
+  shape.width = 0 ;
+  shape.height = 0 ;
+  shape.depth = 0 ;
 
   // get file
   url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)fileName, strlen(fileName), false) ;
@@ -72,13 +87,13 @@ vl::ImageReader::read(const char * fileName, float * memory)
   sourceColorSpaceRef = CGImageGetColorSpace(imageRef) ;
   check(sourceColorSpaceRef) ;
 
-  image.width = CGImageGetWidth(imageRef);
-  image.height = CGImageGetHeight(imageRef);
-  image.depth = CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
-  check(image.depth == 1 || image.depth == 3) ;
+  shape.width = CGImageGetWidth(imageRef);
+  shape.height = CGImageGetHeight(imageRef);
+  shape.depth = CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
+  check(shape.depth == 1 || shape.depth == 3) ;
 
   // decode image to L (8 bits per pixel) or RGBA (32 bits per pixel)
-  switch (image.depth) {
+  switch (shape.depth) {
     case 1:
       colorSpaceRef = CGColorSpaceCreateDeviceGray();
       bytesPerPixel = 1 ;
@@ -96,37 +111,33 @@ vl::ImageReader::read(const char * fileName, float * memory)
        pixels[3] = A
        */
       break ;
-
   }
   check(colorSpaceRef) ;
 
-  bytesPerRow = image.width * bytesPerPixel ;
-  pixels = (char unsigned*)malloc(image.height * bytesPerRow) ;
+  bytesPerRow = shape.width * bytesPerPixel ;
+  pixels = (char unsigned*)malloc(shape.height * bytesPerRow) ;
   check(pixels) ;
 
   contextRef = CGBitmapContextCreate(pixels,
-                                     image.width, image.height,
+                                     shape.width, shape.height,
                                      8, bytesPerRow,
                                      colorSpaceRef,
                                      bitmapInfo) ;
   check(contextRef) ;
 
-  CGContextDrawImage(contextRef, CGRectMake(0, 0, image.width, image.height), imageRef);
+  CGContextDrawImage(contextRef, CGRectMake(0, 0, shape.width, shape.height), imageRef);
 
   // copy pixels to MATLAB format
-  if (memory == NULL) {
-    image.memory = (float*)malloc(image.height * image.width * image.depth * sizeof(float)) ;
-    check(image.memory) ;
-  } else {
-    image.memory = memory ;
-  }
-  switch (image.depth) {
-    case 3:
-      vl::impl::imageFromPixels<impl::pixelFormatRGBA>(image, pixels, image.width * bytesPerPixel) ;
-      break ;
-    case 1:
-      vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, image.width * bytesPerPixel) ;
-      break ;
+  {
+    Image image(shape, memory) ;
+    switch (shape.depth) {
+      case 3:
+        vl::impl::imageFromPixels<impl::pixelFormatRGBA>(image, pixels, shape.width * bytesPerPixel) ;
+        break ;
+      case 1:
+        vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, shape.width * bytesPerPixel) ;
+        break ;
+    }
   }
 
 done:
@@ -136,12 +147,14 @@ done:
   if (imageRef) { CFRelease(imageRef) ; }
   if (imageSourceRef) { CFRelease(imageSourceRef) ; }
   if (url) { CFRelease(url) ; }
-  return image ;
+  return error ;
 }
 
-vl::Image
-vl::ImageReader::readDimensions(const char * fileName)
+vl::Error
+vl::ImageReader::readShape(vl::ImageShape & shape, const char * fileName)
 {
+  vl::Error error = vl::vlSuccess ;
+
   // intermediate buffer
   char unsigned * rgba = NULL ;
 
@@ -149,15 +162,10 @@ vl::ImageReader::readDimensions(const char * fileName)
   CFURLRef url = NULL ;
   CGImageSourceRef imageSourceRef = NULL ;
   CGImageRef imageRef = NULL ;
-  CGColorSpaceRef colorSpaceRef = NULL ;
+  CGColorSpaceRef sourceColorSpaceRef = NULL ;
 
   // initialize the image as null
-  Image image ;
-  image.width = 0 ;
-  image.height = 0 ;
-  image.depth = 0 ;
-  image.memory = NULL ;
-  image.error = 0 ;
+  shape.clear() ;
 
   // get file
   url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)fileName, strlen(fileName), false) ;
@@ -171,18 +179,17 @@ vl::ImageReader::readDimensions(const char * fileName)
   imageRef = CGImageSourceCreateImageAtIndex(imageSourceRef, 0, NULL);
   check(imageRef) ;
 
-  colorSpaceRef = CGColorSpaceCreateDeviceRGB();
-  check(colorSpaceRef) ;
+  sourceColorSpaceRef = CGImageGetColorSpace(imageRef) ;
+  check(sourceColorSpaceRef) ;
 
-  image.width = CGImageGetWidth(imageRef);
-  image.height = CGImageGetHeight(imageRef);
-  image.depth = CGColorSpaceGetNumberOfComponents(colorSpaceRef) ;
-  check(image.depth == 1 || image.depth == 3) ;
+  shape.width = CGImageGetWidth(imageRef);
+  shape.height = CGImageGetHeight(imageRef);
+  shape.depth = CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
+  check(shape.depth == 1 || shape.depth == 3) ;
 
 done:
-  if (colorSpaceRef) { CFRelease(colorSpaceRef) ; }
   if (imageRef) { CFRelease(imageRef) ; }
   if (imageSourceRef) { CFRelease(imageSourceRef) ; }
   if (url) { CFRelease(url) ; }
-  return image ;
+  return error ;
 }

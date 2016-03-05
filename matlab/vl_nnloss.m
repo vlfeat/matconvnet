@@ -46,7 +46,7 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %     error derivative is flat; therefore this loss is useful for
 %     assessment, but not for training a model.
 %
-%  Top-K classification error:: `topkerror`
+%   Top-K classification error:: `topkerror`
 %     L(X,c) = (rank X(c) in X <= K). The top rank is the one with
 %     highest score. For K=1, this is the same as the
 %     classification error. K is controlled by the `topK` option.
@@ -116,6 +116,8 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %   TopK:: 5
 %     Top-K value for the top-K error. Note that K should not
 %     exceed the number of labels.
+%
+%   See also: VL_NNSOFTMAX().
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
 % All rights reserved.
@@ -140,6 +142,16 @@ if numel(c) == inputSize(4)
   c = repmat(c, inputSize(1:2)) ;
 end
 
+if isa(X,'gpuArray')
+  dataType = classUnderlying(X) ;
+else
+  dataType = class(X) ;
+end
+switch dataType
+  case 'double', toClass = @(x) double(x) ;
+  case 'single', toClass = @(x) single(x) ;
+end
+
 % --------------------------------------------------------------------
 % Spatial weighting
 % --------------------------------------------------------------------
@@ -155,7 +167,7 @@ switch lower(opts.loss)
     assert(labelSize(3) == 1) ;
 
     % null labels denote instances that should be skipped
-    instanceWeights = single(c(:,:,1,:) ~= 0) ;
+    instanceWeights = toClass(c(:,:,1,:) ~= 0) ;
 
   case {'binaryerror', 'binarylog', 'logistic', 'hinge'}
     binary = true ;
@@ -164,7 +176,7 @@ switch lower(opts.loss)
     assert(labelSize(3) == inputSize(3)) ;
 
     % null labels denote instances that should be skipped
-    instanceWeights = single(c ~= 0) ;
+    instanceWeights = toClass(c ~= 0) ;
 
   otherwise
     error('Unknown loss ''%s''.', opts.loss) ;
@@ -195,7 +207,7 @@ if nargin <= 2 || isempty(dzdy)
   switch lower(opts.loss)
     case 'classerror'
       [~,chat] = max(X,[],3) ;
-      t = single(c ~= chat) ;
+      t = toClass(c ~= chat) ;
     case 'topkerror'
       [~,predictions] = sort(X,3,'descend') ;
       t = 1 - sum(bsxfun(@eq, c, predictions(:,:,1:opts.topK,:)), 3) ;
@@ -212,7 +224,7 @@ if nargin <= 2 || isempty(dzdy)
       Q(ci) = -inf ;
       t = max(0, 1 - X(ci) + max(Q,[],3)) ;
     case 'binaryerror'
-      t = single(sign(X - opts.threshold) ~= c) ;
+      t = toClass(sign(X - opts.threshold) ~= c) ;
     case 'binarylog'
       t = -log(c.*(X-0.5) + 0.5) ;
     case 'logistic'
@@ -267,7 +279,7 @@ end
 function y = zerosLike(x)
 % --------------------------------------------------------------------
 if isa(x,'gpuArray')
-  y = gpuArray.zeros(size(x),'single') ;
+  y = gpuArray.zeros(size(x),classUnderlying(x)) ;
 else
-  y = zeros(size(x),'single') ;
+  y = zeros(size(x),'like',x) ;
 end

@@ -28,6 +28,29 @@ if ~isDag
   net = simpleRemoveMomentum(net) ;
 end
 
+% Switch to use MatConvNet default memory limit for CuDNN (512 MB)
+if ~isDag
+  for l = simpleFindLayersOfType(net, 'conv')
+    net.layers{l}.opts = removeCuDNNMemoryLimit(net.layers{l}.opts) ;
+  end
+else
+  for name = dagFindLayersOfType(net, 'dagnn.Conv')
+    l = net.getLayerIndex(char(name)) ;
+    net.layers(l).block.opts = removeCuDNNMemoryLimit(net.layers(l).block.opts) ;
+  end
+end
+
+% -------------------------------------------------------------------------
+function opts = removeCuDNNMemoryLimit(opts)
+% -------------------------------------------------------------------------
+remove = false(1, numel(opts)) ;
+for i = 1:numel(opts)
+  if isstr(opts{i}) && strcmp(lower(opts{i}), 'CudnnWorkspaceLimit')
+    remove([i i+1]) = true ;
+  end
+end
+opts = opts(~remove) ;
+
 % -------------------------------------------------------------------------
 function net = simpleRemoveMomentum(net)
 % -------------------------------------------------------------------------
