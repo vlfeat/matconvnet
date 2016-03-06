@@ -71,6 +71,7 @@ end
 % -------------------------------------------------------------------------
 
 d = bsxfun(@minus, x, x0) ;
+d(isnan(x0)) = 0;
 
 if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
   dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
