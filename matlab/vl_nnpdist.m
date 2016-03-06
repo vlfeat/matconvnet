@@ -64,6 +64,7 @@ end
 % -------------------------------------------------------------------------
 
 d = bsxfun(@minus, x, x0) ;
+d(isnan(x0)) = 0;
 
 if ~opts.noRoot
   if isempty(dzdy)
