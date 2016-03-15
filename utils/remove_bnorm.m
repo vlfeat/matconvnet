@@ -29,20 +29,24 @@ end
 net2.layers(bnorm_layers) = [];
 
 if isfield(net,'meta') && isfield(net.meta, 'inputSize')
-    T = 10;
-    maxErr = zeros(T,numel(net2.layers)+1);
-    avgErr = zeros(T,numel(net2.layers)+1);
-    for t = 1 : T
-        data = rand(net.meta.inputSize,'single');
-        res = vl_simplenn(net, data, [], [], 'mode', 'test');
-        res(bnorm_layers) = [];
-        res2 = vl_simplenn(net2, data, [], [], 'mode', 'test');
-        assert(numel(res)==numel(res2))
-        for i = 1 : numel(res)
-            maxErr(t,i) = max(abs(res(i).x(:)-res2(i).x(:)));
-            avgErr(t,i) = mean(abs(res(i).x(:)-res2(i).x(:)));
-        end
+    
+    netA = net;
+    netB = net2;
+    if ismember(net.layers{end}.type,{'pdist','softmaxloss','loss'})
+        netA.layers(end) = [];
+        netB.layers(end) = [];
     end
-    fprintf('Maximum error: %g\n' ,max(maxErr(:)));
-    fprintf('Mean error: %g\n' ,mean(avgErr(:)));
+    
+    data = rand([netA.meta.inputSize 128],'single');
+    res = vl_simplenn(netA, data, [], [], 'mode', 'test');
+    res(bnorm_layers) = [];
+    res2 = vl_simplenn(netB, data, [], [], 'mode', 'test');
+    assert(numel(res)==numel(res2))
+    err = cell(size(res));
+    for i = 1 : numel(res)
+        err{i} = abs(res(i).x(:)-res2(i).x(:));
+    end
+    err = vertcat(err{:});    
+    fprintf('Maximum error: %g\n' ,max(err));
+    fprintf('Mean error: %g\n' ,mean(err));
 end
