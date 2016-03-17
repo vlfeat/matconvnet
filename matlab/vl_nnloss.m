@@ -1,4 +1,4 @@
-function Y = vl_nnloss(X,c,dzdy,varargin)
+function Y = vl_nnloss(X,c,varargin)
 %VL_NNLOSS CNN categorical or attribute loss.
 %   Y = VL_NNLOSS(X, C) computes the loss incurred by the prediction
 %   scores X given the categorical labels C.
@@ -124,6 +124,13 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+
+if nargin > 2 && ~ischar(varargin{1})  % passed in dzdy
+  dzdy = varargin{1} ;
+  varargin(1) = [] ;
+else
+  dzdy = [] ;
+end
 
 opts.instanceWeights = [] ;
 opts.classWeights = [] ;
