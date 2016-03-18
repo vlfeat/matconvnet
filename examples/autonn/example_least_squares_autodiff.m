@@ -20,7 +20,7 @@ b = Param('value', 0.01 * randn(3, 1, 'single')) ;
 prediction = w * x + b ;
 
 % compute least-squares loss
-loss = sum(sum((prediction - y).^2, 1), 2) ;
+loss = sum(sum((prediction - y).^2)) ;
 
 % assign names based on workspace variables, and compile net
 Layer.autoNames() ;
