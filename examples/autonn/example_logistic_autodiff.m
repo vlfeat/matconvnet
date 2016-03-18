@@ -5,26 +5,25 @@ run(fullfile(fileparts(mfilename('fullpath')),...
 
 % load simple data
 s = load('fisheriris.mat') ;
-data_x = single(s.meas.') ;  % features-by-samples matrix
+data_x = single(reshape(s.meas.', 1, 1, 4, [])) ;  % features in 3rd channel
 [~, ~, data_y] = unique(s.species) ;  % convert strings to class labels
 
 
 
-% define inputs and params
+% define inputs
 x = Input() ;
 y = Input() ;
-w = Param('value', 0.01 * randn(3, 4, 'single')) ;
-b = Param('value', 0.01 * randn(3, 1, 'single')) ;
 
-% combine them using math operators, which define the prediction
-prediction = w * x + b ;
+% predict using a conv layer. create and initialize params automatically
+prediction = vl_nnconv(x, 'size', [1, 1, 4, 3]) ;
 
-% reshape into a 4D tensor (which softmaxloss expects) and compute loss
-loss = vl_nnsoftmaxloss(reshape(prediction, {1, 1, 3, []}), y) ;
+% define loss, and classification error
+loss = vl_nnsoftmaxloss(prediction, y) ;
+error = vl_nnloss(prediction, y, 'loss','classerror') ;
 
 % assign names based on workspace variables, and compile net
 Layer.autoNames() ;
-net = Net(loss) ;
+net = Net(loss + error) ;
 
 
 
@@ -32,27 +31,33 @@ net = Net(loss) ;
 lr = 1e-3 ;
 outputs = zeros(1, 100) ;
 rng(0) ;
+params = [net.params.idx] ;
 
 for iter = 1:100,
   % draw minibatch
   idx = randperm(numel(data_y), 50) ;
   
-  net.setValue(x, data_x(:,idx)) ;
-  net.setValue(y, data_y(idx)) ;
+  net.setInputs('x', data_x(:,:,:,idx), 'y', data_y(idx)) ;
   
   % evaluate network
   net.eval(1) ;
   
   % update weights
-  net.setValue(w, net.getValue(w) - lr * net.getDer(w)) ;
-  net.setValue(b, net.getValue(b) - lr * net.getDer(b)) ;
+  w = net.getValue(params) ;
+  dw = net.getDer(params) ;
   
-  % plot loss
-  outputs(iter) = net.getValue(loss) ;
+  for k = 1:numel(params),
+    w{k} = w{k} - lr * dw{k} ;
+  end
+  
+  net.setValue(params, w) ;
+  
+  % plot error
+  outputs(iter) = net.getValue(error) / numel(idx) ;
 end
 
 figure(3) ;
 plot(outputs) ;
-xlabel('Iteration') ; ylabel('Loss') ;
+xlabel('Iteration') ; ylabel('Error') ;
 
 loss

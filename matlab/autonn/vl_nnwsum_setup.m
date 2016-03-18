@@ -18,7 +18,7 @@ function inputs = vl_nnwsum_setup(layer)
   for i = 1 : numel(layer.inputs) - 2
     in = layer.inputs{i} ;
     if isa(in, 'Layer') && isequal(in.func, @vl_nnwsum)
-      merged_inputs = [merged_inputs, in.inputs] ;  %#ok<*AGROW>
+      merged_inputs = [merged_inputs, in.inputs(1:end-2)] ;  %#ok<*AGROW>
       merged_weights = [merged_weights, weights(i) * in.inputs{end}] ;
       valid(i) = false ;
     end
