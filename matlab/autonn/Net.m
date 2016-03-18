@@ -64,8 +64,11 @@ classdef Net < handle
           % store remaining arguments (constants)
           net.layers(k).args = args ;
           
-          % figure out position of derivative argument: it's right before the
-          % first string (property-value pair), or at the end if there's none.
+          % store function handle for backward mode
+          net.layers(k).bwdFunc = der(net.layers(k).func) ;
+          
+          % figure out position of derivative argument: it's right before
+          % the first string (property-value pair), or at the end if none.
           for a = 0:numel(args)
             if a < numel(args) && ischar(args{a + 1})
               break
@@ -77,11 +80,11 @@ classdef Net < handle
           net.layers(k).bwdArgs = [args(1:a), {[]}, args(a + 1 : end)] ;
           
           % figure out the number of returned values in bwd mode.
-          % assume that the function in bwd mode returns derivatives for all
-          % inputs until the last Layer input (e.g. if the 3rd input has
-          % class Layer, and others are constants, assume there will be at
-          % least 3 output derivatives). also Inputs don't count since their
-          % derivatives can be ignored.
+          % assume that the function in bwd mode returns derivatives for
+          % all inputs until the last Layer input (e.g. if the 3rd input
+          % has class Layer, and others are constants, assume there will be
+          % at least 3 output derivatives). also Inputs don't count since
+          % their derivatives can be ignored.
           if isempty(objs{k}.numInputDer)
             net.layers(k).numInputDer = max([0, net.layers(k).inputArgPos(inputHasDer)]) ;
           else  % manual override
@@ -161,7 +164,7 @@ classdef Net < handle
           
           % call the layer's function in bwd mode
           inputDer = cell(1, layer.numInputDer) ;
-          [inputDer{:}] = layer.func(args{:}) ;
+          [inputDer{:}] = layer.bwdFunc(args{:}) ;
           
           % sum derivatives. note some inputDer may be ignored (because
           % they're not input layers, just constant arguments).

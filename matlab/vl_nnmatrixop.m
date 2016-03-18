@@ -12,7 +12,7 @@ function [y, db] = vl_nnmatrixop(a, b, op, dy)
       db = a.' * dy ;
       
     elseif isequal(op, @mrdivide)
-      % note: @mldivide is just @mrdivide with swapped inputs (see constructor)
+      % note: @mldivide is just @mrdivide with swapped inputs (see vl_nnmatrixop_setup)
       da = dy / b ;
       db = [] ;
       error('Not implemented.') ;

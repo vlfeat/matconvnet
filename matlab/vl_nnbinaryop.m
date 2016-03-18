@@ -13,7 +13,7 @@ function [y, db] = vl_nnbinaryop(a, b, op, dy)
       db = bsxfun(@times, a, dy) ;
 
     elseif isequal(op, @rdivide)
-      % note: @ldivide is just @rdivide with swapped inputs (see Layer)
+      % note: @ldivide is just @rdivide with swapped inputs (see vl_nnbinaryop_setup)
       da = bsxfun(@rdivide, dy, b) ;
       db = -dy .* bsxfun(@rdivide, a, b .^ 2) ;
 

@@ -86,13 +86,13 @@ classdef Layer < handle
     
     % overloaded native Matlab functions
     function y = reshape(obj, varargin)
-      y = Layer(vl_nnnative('reshape'), obj, varargin{:}) ;
+      y = Layer(@reshape, obj, varargin{:}) ;
     end
     function y = sum(obj, varargin)
-      y = Layer(vl_nnnative('sum'), obj, varargin{:}) ;
+      y = Layer(@sum, obj, varargin{:}) ;
     end
     function y = mean(obj, varargin)
-      y = Layer(vl_nnnative('mean'), obj, varargin{:}) ;
+      y = Layer(@mean, obj, varargin{:}) ;
     end
     
     % overloaded math operators. any additions, negative signs and scalar
