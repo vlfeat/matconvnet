@@ -94,6 +94,12 @@ classdef Layer < handle
     function y = mean(obj, varargin)
       y = Layer(@mean, obj, varargin{:}) ;
     end
+    function y = max(obj, varargin)
+      y = Layer(@max, obj, varargin{:}) ;
+    end
+    function y = min(obj, varargin)
+      y = Layer(@min, obj, varargin{:}) ;
+    end
     
     % overloaded math operators. any additions, negative signs and scalar
     % factors are merged into a single vl_nnwsum by the Layer constructor.
