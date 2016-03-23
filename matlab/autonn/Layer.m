@@ -2,11 +2,12 @@ classdef Layer < handle
 
   properties (SetAccess = private, GetAccess = public)  % not setable after construction, to ensure a proper call graph (no cycles)
     inputs = {}  % list of inputs, either constants or other Layers
-    func = []  % main function being called
+    testInputs = 'same'  % list of inputs used in test mode, may be different
   end
   
   properties
-    precious = false  % whether to keep output value and derivatives, for this layer
+    func = []  % main function being called
+    testFunc = []  % function called in test mode (empty to use the same as in normal mode; 'none' to disable, e.g. dropout)
     name = []  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
   end
@@ -25,11 +26,23 @@ classdef Layer < handle
       obj.func = func ;
       obj.inputs = varargin(:)' ;
       
-      % call setup function if needed
+      % call setup function if needed. it can change the inputs list (not
+      % allowed for outside functions, to preserve call graph structure).
       setup_func = [func2str(func) '_setup'] ;
       if exist(setup_func, 'file')
         setup_func = str2func(setup_func) ;
-        obj.inputs = setup_func(obj) ;
+        
+        % accept between 0 and 2 return values
+        out = cell(1, nargout(setup_func)) ;
+        [out{:}] = setup_func(obj) ;
+        
+        if numel(out) >= 1  % changed inputs
+          obj.inputs = out{1} ;
+        end
+        
+        if numel(out) >= 2  % changed test mode inputs
+          obj.testInputs = out{2} ;
+        end
       end
     end
     

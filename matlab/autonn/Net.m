@@ -1,104 +1,144 @@
 classdef Net < handle
-  properties
-    conserveMemory = true
-  end
-  
-  properties %(Access = protected)
-    layers = []
+  properties (SetAccess = protected, GetAccess = public)
+    forward = []  % forward pass function calls
+    backward = []  % backward pass function calls
+    test = []  % test mode function calls
+    vars = {}  % cell array of variables and their derivatives
     inputs = []  % struct of network's Inputs, indexed by name
     params = []  % list of Params
-    
-    nonParams = []  % complement of the list of Params
-    order = []
   end
 
   methods
     function net = Net(root)
-      % figure out the forward execution order, and list layer objects
+      % figure out the execution order, and list layer objects
       root.resetOrder() ;
       objs = root.buildOrder({}) ;
       
-      % store function call info of layer objects in net.layers struct
-      net.layers(numel(objs)).value = [] ;  % output value
-      net.layers(numel(objs)).der = [] ;  % output derivative
+      % indexes of callable layer objects (not Inputs or Params)
+      idx = find(cellfun(@(o) ~isa(o, 'Input') && ~isa(o, 'Param'), objs)) ;
+      
+      % allocate memory
+      net.forward = Net.initStruct(numel(idx), 'func', 'name', ...
+          'args', 'inputVars', 'inputArgPos', 'outputVar') ;
+      net.test = net.forward ;
+      net.backward = Net.initStruct(numel(idx), 'func', 'name', ...
+          'args', 'inputVars', 'inputArgPos', 'numInputDer') ;
+      
+      net.vars = cell(2 * numel(objs), 1) ;
+      
+      numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
+      net.params = Net.initStruct(numParams, 'name', 'idx', 'weightDecay', 'learningRate') ;
       net.inputs = struct() ;
       
-      for k = 1:numel(objs)
-        % store function handle and name
-        net.layers(k).func = objs{k}.func ;
-        net.layers(k).name = objs{k}.name ;
-        
-        if isa(objs{k}, 'Input')
-          % an input, allow it to be searched by name
-          if isempty(objs{k}.name)  % assign a name automatically
-            objs{k}.name = sprintf('input%i', numel(fieldnames(net.inputs)) + 1) ;
+      % first, handle Inputs and Params
+      p = 1 ;
+      for i = 1:numel(objs)
+        obj = objs{i} ;
+        if isa(obj, 'Input')
+          % an input, store its var index by name
+          if isempty(obj.name)  % assign a name automatically
+            obj.name = sprintf('input%i', numel(fieldnames(net.inputs)) + 1) ;
           end
-          assert(~isfield(net.inputs, objs{k}.name), 'An input with the same name already exists.') ;
-          net.inputs.(objs{k}.name) = k ;
+          assert(~isfield(net.inputs, obj.name), 'An input with the same name already exists.') ;
+          net.inputs.(obj.name) = i ;
           
-        elseif isa(objs{k}, 'Param')
-          % a learnable parameter, store them sequentially
-          net.params(end+1).idx = k ;
-          net.params(end).weightDecay = objs{k}.weightDecay ;
-          net.params(end).learningRate = objs{k}.learningRate ;
-          net.layers(k).value = objs{k}.value ;  % initial value
-          
-        else
-          % store input layer indexes and their position in arguments list
-          net.layers(k).inputLayerIdx = [] ;
-          net.layers(k).inputArgPos = [] ;
-          net.layers(k).inputIsConst = [] ;
-          args = objs{k}.inputs ;
-          inputHasDer = false(0, 1) ;
-          
-          for a = 1:numel(args)
-            if isa(args{a}, 'Layer')
-              net.layers(k).inputLayerIdx(end+1) = args{a}.idx ;
-              net.layers(k).inputArgPos(end+1) = a ;
-              inputHasDer(end+1) = isa(args{a}, 'Param') || ...
-                ~isempty(net.layers(args{a}.idx).inputLayerIdx) ;  %#ok<AGROW>
-              args{a} = [] ;
-            end
-          end
-          
-          % store remaining arguments (constants)
-          net.layers(k).args = args ;
-          
-          % store function handle for backward mode
-          net.layers(k).bwdFunc = der(net.layers(k).func) ;
-          
-          % figure out position of derivative argument: it's right before
-          % the first string (property-value pair), or at the end if none.
-          for a = 0:numel(args)
-            if a < numel(args) && ischar(args{a + 1})
-              break
-            end
-          end
-          net.layers(k).derArgPos = a + 1 ;
-          
-          % store args for backward mode, with an empty slot for der arg
-          net.layers(k).bwdArgs = [args(1:a), {[]}, args(a + 1 : end)] ;
-          
-          % figure out the number of returned values in bwd mode.
-          % assume that the function in bwd mode returns derivatives for
-          % all inputs until the last Layer input (e.g. if the 3rd input
-          % has class Layer, and others are constants, assume there will be
-          % at least 3 output derivatives). also Inputs don't count since
-          % their derivatives can be ignored.
-          if isempty(objs{k}.numInputDer)
-            net.layers(k).numInputDer = max([0, net.layers(k).inputArgPos(inputHasDer)]) ;
-          else  % manual override
-            net.layers(k).numInputDer = objs{k}.numInputDer ;
-          end
+        elseif isa(obj, 'Param')
+          % a learnable parameter, store them in a list
+          net.params(p).idx = i ;
+          net.params(p).name = obj.name ;
+          net.params(p).weightDecay = obj.weightDecay ;
+          net.params(p).learningRate = obj.learningRate ;
+          net.vars{2 * i - 1} = obj.value ;  % set initial value
+          p = p + 1 ;
         end
       end
       
-      % store the sequence of indexes of layers with callable functions
-      % (so Inputs and Params, though they hold values/der., are skipped).
-      net.order = find(~cellfun('isempty', {net.layers.func})) ;
+      % store functions for forward pass
+      layer = [] ;
+      for k = 1:numel(idx)
+        obj = objs{idx(k)} ;
+        layer.func = obj.func ;
+        layer.name = obj.name ;
+        layer.outputVar = 2 * idx(k) - 1 ;
+        net.forward(k) = Net.parseArgs(layer, obj.inputs) ;
+      end
       
-      % store list of non-Param layers, used to clear their derivatives
-      net.nonParams = find(cellfun(@(o) ~isa(o, 'Param'), objs)) ;
+      % store functions for backward pass
+      layer = [] ;
+      for k = numel(idx) : -1 : 1
+        obj = objs{idx(k)} ;
+        
+        % add backward function to execution order
+        layer.func = der(obj.func) ;
+        layer.name = obj.name ;
+        layer = Net.parseArgs(layer, obj.inputs) ;
+        
+        % figure out position of derivative argument: it's right before
+        % the first string (property-value pair), or at the end if none.
+        args = layer.args ;
+        for lastInput = 0:numel(args)
+          if lastInput < numel(args) && ischar(args{lastInput + 1})
+            break
+          end
+        end
+        
+        % figure out the number of returned values in bwd mode.
+        % assume that the function in bwd mode returns derivatives for
+        % all inputs until the last Layer input (e.g. if the 3rd input
+        % has class Layer, and others are constants, assume there will be
+        % at least 3 output derivatives).
+        if isempty(obj.numInputDer)
+          layer.numInputDer = max([0, layer.inputArgPos]) ;
+        else  % manual override
+          layer.numInputDer = obj.numInputDer ;
+        end
+        
+        % store args for backward mode, with an empty slot for der arg
+        layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
+        
+        % position of der arg
+        layer.inputArgPos(end+1) = lastInput + 1 ;
+        
+        % its var index: it's the output derivative for the current layer
+        layer.inputVars(end+1) = 2 * idx(k) ;
+        
+        net.backward(numel(idx) - k + 1) = layer ;
+      end
+      
+      % store functions for test mode
+      layer = [] ;
+      for k = 1:numel(idx)
+        obj = objs{idx(k)} ;
+        
+        % add to execution order
+        layer.name = obj.name ;
+        layer.outputVar = 2 * idx(k) - 1 ;
+        
+        % default is to use the same arguments
+        if isequal(obj.testInputs, 'same')
+          args = obj.inputs ;
+        else
+          args = obj.testInputs ;
+        end
+        
+        if isempty(obj.testFunc)
+          % default is to call the same function as in normal mode
+          layer.func = obj.func ;
+          
+        elseif isequal(obj.testFunc, 'none')
+          % layer is pass-through in test mode (e.g. dropout).
+          % we don't fully eliminate the layer in test mode because that
+          % would require special handling of in/out var indexes.
+          layer.func = @deal ;
+          args = args{1} ;  % only deal first input
+          
+        else
+          % some other function
+          layer.func = obj.testFunc ;
+        end
+        
+        net.test(k) = Net.parseArgs(layer, args) ;
+      end
     end
     
     function move(net, device)
@@ -111,73 +151,80 @@ classdef Net < handle
         otherwise, error('Unknown device ''%s''.', device) ;
       end
       
-      for k = 1:numel(net.layers)
-        net.layers(k).value = moveOp(net.layers(k).value) ;
-        net.layers(k).der = moveOp(net.layers(k).der) ;
-      end
+      net.vars = cellfun(moveOp, net.vars, 'UniformOutput',false) ;
     end
     
-    function eval(net, derOutput, accumulateParamDers, lastLayer)
+    function eval(net, mode, derOutput, accumulateParamDers)
+      if nargin < 2
+        mode = 'normal' ;
+      end
+      if nargin < 3
+        derOutput = 1 ;
+      end
       if nargin < 4
-        order = net.order ;
-      else  % only evaluate until the specified layer index
-        order = net.order(1 : find(net.order == lastLayer, 1)) ;
+        accumulateParamDers = false ;
       end
       
-      % use local variable for efficiency
-      layers = net.layers ;   %#ok<*PROPLC> % disable MLint's complaints
-      net.layers = {} ;  % allow Matlab to release memory in 'layers'
+      % use local variables for efficiency
+      vars = net.vars ;
+      net.vars = {} ;  % allows Matlab to release memory when needed
+      
+      switch mode
+      case {'normal', 'forward'}  % forward and backward
+        forward = net.forward ;   %#ok<*PROPLC> % disable MLint's complaints
+      case 'test'  % test mode
+        forward = net.test ;
+      otherwise
+        error('Unknown mode ''%s''.', mode) ;
+      end
       
       % forward pass
-      for k = order
-        % populate missing values in the function arguments with the outputs
-        % of input layers
-        layer = layers(k) ;
+      for k = 1:numel(forward)
+        layer = forward(k) ;
         args = layer.args ;
-        args(layer.inputArgPos) = {layers(layer.inputLayerIdx).value} ;
-        
-        % call the layer's function and store the result
-        layers(k).value = layer.func(args{:}) ;
+        args(layer.inputArgPos) = vars(layer.inputVars) ;
+        vars{layer.outputVar} = layer.func(args{:}) ;
       end
       
       % backward pass
-      if nargin > 1 && ~isempty(derOutput)
-        % clear all derivatives
-        if nargin < 3 || ~accumulateParamDers
-          [layers.der] = deal(0) ;
-        else  % clear all derivatives except for Params'
-          [layers(net.nonParams).der] = deal(0) ;
+      if strcmp(mode, 'normal')
+        % clear all derivatives. derivatives are even-numbered vars.
+        clear = repmat([false; true], numel(vars) / 2, 1);
+        if accumulateParamDers  % except for params (e.g. to implement sub-batches)
+          clear([net.params.idx] * 2) = false ;
         end
+        [vars(clear)] = deal({0}) ;
         
         % set root layer's output derivative
-        layers(end).der = derOutput ;
+        assert(~isempty(derOutput), 'Must specify non-empty output derivatives for normal mode.')
+        vars{end} = derOutput ;
         
-        for k = order(end:-1:1)
-          % populate function arguments with outputs of input layers, and
-          % the derivative argument (making the function run in bwd mode)
-          layer = layers(k) ;
-          args = layer.bwdArgs ;
-          inputIdx = layer.inputLayerIdx ;
+        backward = net.backward ;
+        
+        for k = 1:numel(backward)
+          % populate function arguments with input vars and derivatives
+          layer = backward(k) ;
+          args = layer.args ;
+          inputArgPos = layer.inputArgPos ;
+          args(inputArgPos) = vars(layer.inputVars) ;
           
-          args(layer.inputArgPos) = {layers(inputIdx).value} ;
-          args{layer.derArgPos} = layer.der ;
+          % call function and collect outputs
+          out = cell(1, layer.numInputDer) ;
+          [out{:}] = layer.func(args{:}) ;
           
-          % call the layer's function in bwd mode
-          inputDer = cell(1, layer.numInputDer) ;
-          [inputDer{:}] = layer.bwdFunc(args{:}) ;
-          
-          % sum derivatives. note some inputDer may be ignored (because
-          % they're not input layers, just constant arguments).
-          for i = find(layer.inputArgPos <= numel(inputDer))
-            layers(inputIdx(i)).der = layers(inputIdx(i)).der + ...
-                inputDer{layer.inputArgPos(i)} ;
+          % sum derivatives. the derivative var corresponding to each input
+          % comes right next to it in the vars list. note that some outputs
+          % may be ignored (because they're not input layers, just constant
+          % arguments).
+          inputDers = layer.inputVars(1:end-1) + 1 ;  % last input is dzdy, doesn't count
+          for i = find(inputArgPos <= numel(out))
+            vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;
           end
         end
       end
       
-      net.layers = layers ;
+      net.vars = vars ;
     end
-    
     
     function value = getValue(net, layer)
       if ~isnumeric(layer)
@@ -185,9 +232,9 @@ classdef Net < handle
         layer = layer.idx ;
       end
       if isscalar(layer)
-        value = net.layers(layer).value ;
+        value = net.vars{2 * layer - 1} ;
       else
-        value = {net.layers(layer).value} ;
+        value = net.vars(2 * layer - 1) ;
       end
     end
     
@@ -198,9 +245,9 @@ classdef Net < handle
         layer = layer.idx ;
       end
       if isscalar(layer)
-        der = net.layers(layer).der ;
+        der = net.vars{2 * layer} ;
       else
-        der = {net.layers(layer).der} ;
+        der = net.vars(2 * layer) ;
       end
     end
     
@@ -210,9 +257,9 @@ classdef Net < handle
         layer = layer.idx ;
       end
       if isscalar(layer)
-        net.layers(layer).value = value ;
+        net.vars{2 * layer - 1} = value ;
       else
-        [net.layers(layer).value] = deal(value{:}) ;
+        net.vars(2 * layer - 1) = value ;
       end
     end
     
@@ -222,36 +269,122 @@ classdef Net < handle
         layer = layer.idx ;
       end
       if isscalar(layer)
-        net.layers(layer).der = der ;
+        net.vars{2 * layer} = der ;
       else
-        [net.layers(layer).der] = deal(der{:}) ;
+        net.vars(2 * layer) = der ;
       end
     end
     
     function setInputs(net, varargin)
       for i = 1 : 2 : numel(varargin) - 1
-        net.layers(net.inputs.(varargin{i})).value = varargin{i+1} ;
+        net.vars{2 * net.inputs.(varargin{i}) - 1} = varargin{i+1} ;
+      end
+    end
+    
+    function displayVars(net)
+      % get information on each var, and corresponding derivative
+      n = numel(net.vars) / 2 ;
+      assert(n ~= 0, 'NET.VARS is empty.') ;
+      type = cell(n, 1) ;
+      names = cell(n, 1) ;
+      funcs = cell(n, 1) ;
+      
+      % vars that correspond to inputs
+      inputNames = fieldnames(net.inputs);
+      for k = 1:numel(inputNames)
+        idx = net.inputs.(inputNames{k}) ;
+        type{idx} = 'Input' ;
+        names{idx} = inputNames{k} ;
+      end
+      
+      % vars that correspond to params
+      [type{[net.params.idx]}] = deal('Param') ;
+      names([net.params.idx]) = {net.params.name} ;
+      
+      % vars that correspond to layer outputs
+      idx = ([net.forward.outputVar] + 1) / 2 ;
+      [type{idx}] = deal('Layer') ;
+      names(idx) = {net.forward.name} ;
+      funcs(idx) = cellfun(@func2str, {net.forward.func}, 'UniformOutput', false) ;
+      
+      % get Matlab to print the values nicely (e.g. "[50x1 double]")
+      values = strsplit(evalc('disp(net.vars)'), '\n') ;
+      values = cellfun(@strtrim, values, 'UniformOutput', false) ;
+      
+      % now print out the info as a table
+      str = repmat(' ', n + 1, 1) ;
+      str = [str, char('Type', type{:})] ;
+      str(:,end+1:end+2) = ' ' ;
+      str = [str, char('Function', funcs{:})] ;
+      str(:,end+1:end+2) = ' ' ;
+      str = [str, char('Name', names{:})] ;
+      str(:,end+1:end+2) = ' ' ;
+      str = [str, char('Value', values{1 : 2 : 2 * n})] ;
+      str(:,end+1:end+2) = ' ' ;
+      str = [str, char('Derivative', values{2 : 2 : 2 * n})] ;
+      
+      disp(str) ;
+    end
+    
+    function display(net, name)
+      if nargin < 2
+        name = inputname(1) ;
+      end
+      fprintf('\n%s = \n', name) ;
+      disp(net) ;
+      
+      if ~isempty(name)
+        fprintf('  <a href="matlab:%s.displayVars()">Display variables</a>\n\n', name) ;
       end
     end
     
     function s = saveobj(net)
-      s.conserveMemory = net.conserveMemory ;
-      s.layers = net.layers ;
+      s.forward = net.forward ;
+      s.backward = net.backward ;
+      s.test = net.test ;
+      s.vars = net.vars ;
       s.inputs = net.inputs ;
       s.params = net.params ;
-      s.nonParams = net.nonParams ;
-      s.order = net.order ;
     end
   end
   
   methods (Static)
     function net = loadobj(s)
-      net.conserveMemory = s.conserveMemory ;
-      net.layers = s.layers ;
+      net.forward = s.forward ;
+      net.backward = s.backward ;
+      net.test = s.test ;
+      net.vars = s.vars ;
       net.inputs = s.inputs ;
       net.params = s.params ;
-      net.nonParams = s.nonParams ;
-      net.order = s.order ;
+    end
+  end
+  
+  methods (Static, Access = private)
+    function layer = parseArgs(layer, args)
+      % helper function to parse a layer's arguments, storing the constant
+      % arguments (args), non-constant var indexes (inputVars), and their
+      % positions in the arguments list (inputArgPos).
+      inputLayers = [] ;
+      inputArgPos = [] ;
+      for a = 1:numel(args)
+        if isa(args{a}, 'Layer')
+          inputLayers(end+1) = args{a}.idx ;  %#ok<*AGROW>
+          inputArgPos(end+1) = a ;
+          args{a} = [] ;
+        end
+      end
+      layer.args = args ;
+      layer.inputVars = 2 * inputLayers - 1 ;
+      layer.inputArgPos = inputArgPos ;
+      layer = orderfields(layer) ;  % have a consistent field order, to not botch assignments
+    end
+    
+    function s = initStruct(n, varargin)
+      % helper function to initialize a struct with given fields and size.
+      % note fields are sorted in ASCII order (important when assigning
+      % structs).
+      varargin(2,:) = {cell(1, n)} ;
+      s = orderfields(struct(varargin{:})) ;
     end
   end
 end

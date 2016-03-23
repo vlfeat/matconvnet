@@ -41,7 +41,7 @@ for iter = 1:100,
   net.setValue(y, data_y(idx)') ;
   
   % evaluate network
-  net.eval(1) ;
+  net.eval() ;
   
   % update weights
   net.setValue(w, net.getValue(w) - lr * net.getDer(w)) ;
@@ -56,3 +56,4 @@ plot(outputs) ;
 xlabel('Iteration') ; ylabel('Loss') ;
 
 loss
+net

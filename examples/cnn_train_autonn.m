@@ -27,7 +27,7 @@ opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
 
 opts.derOutputs = 1 ;
-opts.statsIdx = -1 ;  %list of layers that are stats (loss, error), or -1 for automatic
+opts.statsLayers = -1 ;  %list of layers that are stats (loss, error), or -1 for automatic
 opts.plotStatistics = true ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -50,16 +50,14 @@ end
 stats = [] ;
 
 % by default, compute stats for loss layers
-if isequal(opts.statsIdx, -1)
-  layers = net.layers ;  %work around Net.subsref issue: http://www.mathworks.com/matlabcentral/answers/57562
-  opts.statsIdx = find(cellfun(@(f) isequal(f, @vl_nnloss) || ...
-    isequal(f, @vl_nnsoftmaxloss), {layers.func})) ;
-  clear layers ;
+if isequal(opts.statsLayers, -1)
+  opts.statsLayers = find(cellfun(@(f) isequal(f, @vl_nnloss) || ...
+    isequal(f, @vl_nnsoftmaxloss), {net.forward.func})) ;
 end
 % assign names automatically if needed
-for i = 1:numel(opts.statsIdx)
-  if isempty(net.layers(opts.statsIdx(i)).name)
-    net.layers(opts.statsIdx(i)).name = sprintf('stat%i', i) ;
+for i = 1:numel(opts.statsLayers)
+  if isempty(net.forward(opts.statsLayers(i)).name)
+    net.forward(opts.statsLayers(i)).name = sprintf('stat%i', i) ;
   end
 end
 
@@ -172,10 +170,9 @@ else
   mmap = [] ;
 end
 
-statsAccum = zeros(numel(opts.statsIdx), 1) ;
-layers = net.layers ;  %work around Net.subsref issue
-statsNames = {layers(opts.statsIdx).name} ;
-clear layers ;
+statsAccum = zeros(numel(opts.statsLayers), 1) ;
+statsNames = {net.forward(opts.statsLayers).name} ;
+statsVars = [net.forward(opts.statsLayers).outputVar] ;
 
 subset = state.(mode) ;
 start = tic ;
@@ -207,16 +204,14 @@ for t=1:opts.batchSize:numel(subset)
     end
 
     if strcmp(mode, 'train')
-%       net.mode = 'normal' ;
-      net.eval(opts.derOutputs, s ~= 1) ;
+      net.eval('normal', opts.derOutputs, s ~= 1) ;
     else
-%       net.mode = 'test' ;
-      net.eval() ;
+      net.eval('test') ;
     end
     
     % accumulate learning stats
-    for k = 1:numel(opts.statsIdx)
-      statsAccum(k) = statsAccum(k) + gather(net.layers(opts.statsIdx(k)).value) ;
+    for k = 1:numel(opts.statsLayers)
+      statsAccum(k) = statsAccum(k) + gather(net.vars{statsVars(k)}) ;
     end
   end
 
@@ -238,7 +233,7 @@ for t=1:opts.batchSize:numel(subset)
     fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize), ...
     num/time * max(numGpus, 1)) ;
 
-  for i = 1:numel(opts.statsIdx)
+  for i = 1:numel(opts.statsLayers)
     fprintf(' %s:', statsNames{i}) ;
     fprintf(' %.3f', statsAccum(i) / num) ;
   end
@@ -248,7 +243,7 @@ end
 % return structure with statistics
 stats.time = time ;
 stats.num = num ;
-for s = 1:numel(opts.statsIdx)
+for s = 1:numel(opts.statsLayers)
   stats.(statsNames{s}) = statsAccum(s) / num ;
 end
 
@@ -257,9 +252,11 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
-for p=1:numel(net.params)
-  layerIdx = net.params(p).idx ;
+params = [net.params.idx] ;
+w = net.getValue(params) ;
+dw = net.getDer(params) ;
 
+for p=1:numel(net.params)
   % bring in gradients from other GPUs if any
   if ~isempty(mmap)
     error('Not implemented.') ;
@@ -268,7 +265,7 @@ for p=1:numel(net.params)
     for g = setdiff(1:numGpus, labindex)
       tmp = tmp + mmap.Data(g).(net.params(p).name) ;
     end
-    net.layers(layerIdx).der = net.layers(layerIdx).der + tmp ;
+    net.vars{varIdx} = net.vars{varIdx} + tmp ;
   else
     numGpus = 1 ;
   end
@@ -285,9 +282,9 @@ for p=1:numel(net.params)
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;
       thisLR = state.learningRate * net.params(p).learningRate ;
       state.momentum{p} = opts.momentum * state.momentum{p} ...
-        - thisDecay * net.layers(layerIdx).value ...
-        - (1 / batchSize) * net.layers(layerIdx).der ;
-      net.layers(layerIdx).value = net.layers(layerIdx).value + thisLR * state.momentum{p} ;
+        - thisDecay * w{p} ...
+        - (1 / batchSize) * dw{p} ;
+      w{p} = w{p} + thisLR * state.momentum{p} ;
 
 %     case 'otherwise'
 %       error('Unknown training method ''%s'' for parameter ''%s''.', ...
@@ -295,6 +292,8 @@ for p=1:numel(net.params)
 %         net.params(p).name) ;
 %   end
 end
+
+net.setValue(params, w) ;
 
 % -------------------------------------------------------------------------
 function mmap = map_gradients(fname, net, numGpus)

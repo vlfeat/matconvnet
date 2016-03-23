@@ -19,6 +19,9 @@ function inputs = vl_nndropout_setup(layer)
   
   % vl_nndropout doesn't return a derivative for the mask
   layer.numInputDer = 1 ;
+  
+  % remove layer in test mode
+  layer.testFunc = 'none' ;
 
 end
 
