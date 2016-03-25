@@ -9,22 +9,29 @@ function inputs = vl_nnwsum_setup(layer)
   assert(strcmp(layer.inputs{end-1}, 'weights') && ...
     numel(layer.inputs{end}) == numel(layer.inputs) - 2) ;
 
-  weights = layer.inputs{end}(:)' ;
-  valid = true(1, numel(layer.inputs) - 2) ;
-  merged_inputs = {} ;
-  merged_weights = [] ;
-
-  % iterate all inputs except for the 'weights' property
-  for i = 1 : numel(layer.inputs) - 2
-    in = layer.inputs{i} ;
+  % separate inputs to the sum, and weights
+  inputs = layer.inputs(1:end-2) ;
+  origWeights = layer.inputs{end} ;
+  weights = cell(size(inputs)) ;
+  
+  for k = 1 : numel(inputs)
+    in = inputs{k} ;
     if isa(in, 'Layer') && isequal(in.func, @vl_nnwsum)
-      merged_inputs = [merged_inputs, in.inputs(1:end-2)] ;  %#ok<*AGROW>
-      merged_weights = [merged_weights, weights(i) * in.inputs{end}] ;
-      valid(i) = false ;
+      % merge weights and store results
+      inputs{k} = in.inputs(1:end-2) ;
+      weights{k} = origWeights(k) * in.inputs{end} ;
+    else
+      % any other input (Layer or constant), wrap it in a single cell
+      inputs{k} = {in} ;
+      weights{k} = origWeights(k) ;
     end
   end
 
-  weights = [weights(valid), merged_weights] ;
-  inputs = [layer.inputs(valid), merged_inputs, {'weights', weights}] ;
+  % merge the results in order
+  inputs = [inputs{:}] ;
+  weights = [weights{:}] ;
+  
+  % append weights as a property
+  inputs = [inputs, {'weights', weights}] ;
 end
 
