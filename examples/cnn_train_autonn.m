@@ -180,7 +180,7 @@ end
 
 statsAccum = zeros(numel(opts.stats), 1) ;
 statsNames = {net.forward(opts.stats).name} ;
-stats = [net.forward(opts.stats).outputVar] ;
+statsVars = [net.forward(opts.stats).outputVar] ;
 
 % assign names automatically if needed
 for i = 1:numel(statsNames)
@@ -226,7 +226,7 @@ for t=1:opts.batchSize:numel(subset)
     
     % accumulate learning stats
     for k = 1:numel(opts.stats)
-      statsAccum(k) = statsAccum(k) + gather(net.vars{stats(k)}) ;
+      statsAccum(k) = statsAccum(k) + gather(net.vars{statsVars(k)}) ;
     end
   end
 
