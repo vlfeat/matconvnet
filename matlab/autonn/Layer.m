@@ -151,6 +151,13 @@ classdef Layer < handle
       c = Layer(@vl_nnbinaryop, a, b, @power) ;
     end
     
+    function y = transpose(a)
+      y = Layer(@vl_nnmatrixop, a, [], @transpose) ;
+    end
+    function y = ctranspose(a)
+      y = Layer(@vl_nnmatrixop, a, [], @ctranspose) ;
+    end
+    
     function c = mtimes(a, b)
       c = Layer(@vl_nnmatrixop, a, b, @mtimes) ;
     end

@@ -54,12 +54,6 @@ if isequal(opts.statsLayers, -1)
   opts.statsLayers = find(cellfun(@(f) isequal(f, @vl_nnloss) || ...
     isequal(f, @vl_nnsoftmaxloss), {net.forward.func})) ;
 end
-% assign names automatically if needed
-for i = 1:numel(opts.statsLayers)
-  if isempty(net.forward(opts.statsLayers(i)).name)
-    net.forward(opts.statsLayers(i)).name = sprintf('stat%i', i) ;
-  end
-end
 
 % setup GPUs
 numGpus = numel(opts.gpus) ;
@@ -173,6 +167,13 @@ end
 statsAccum = zeros(numel(opts.statsLayers), 1) ;
 statsNames = {net.forward(opts.statsLayers).name} ;
 statsVars = [net.forward(opts.statsLayers).outputVar] ;
+
+% assign names automatically if needed
+for i = 1:numel(statsNames)
+  if isempty(statsNames{i})
+    statsNames{i} = sprintf('stat%i', i) ;
+  end
+end
 
 subset = state.(mode) ;
 start = tic ;

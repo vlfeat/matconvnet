@@ -4,10 +4,20 @@ function [y, db] = vl_nnmatrixop(a, b, op, dy)
 
   if nargin < 4
     % forward function. cannot use singleton expansion for matrix ops
-    y = op(a, b) ;
+    if isempty(b)
+      y = op(a) ;
+    else
+      y = op(a, b) ;
+    end
   else
     % backward function
-    if isequal(op, @mtimes)
+    if isequal(op, @transpose)
+      da = dy.' ;
+      
+    elseif isequal(op, @ctranspose)
+      da = dy' ;
+      
+    elseif isequal(op, @mtimes)
       da = dy * b.' ;
       db = a.' * dy ;
       
