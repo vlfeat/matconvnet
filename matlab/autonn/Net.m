@@ -14,7 +14,7 @@ classdef Net < handle
       root.resetOrder() ;
       objs = root.buildOrder({}) ;
       
-      % indexes of callable layer objects (not Inputs or Params)
+      % indexes of callable Layer objects (not Inputs or Params)
       idx = find(cellfun(@(o) ~isa(o, 'Input') && ~isa(o, 'Param'), objs)) ;
       
       % allocate memory
@@ -24,10 +24,13 @@ classdef Net < handle
       net.backward = Net.initStruct(numel(idx), 'func', 'name', ...
           'args', 'inputVars', 'inputArgPos', 'numInputDer') ;
       
+      % there is one var for the output of each Layer in objs; plus another
+      % to hold its derivative. note if a Layer has multiple outputs, they
+      % can be stored as a nested cell array in the appropriate var.
       net.vars = cell(2 * numel(objs), 1) ;
       
       numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
-      net.params = Net.initStruct(numParams, 'name', 'idx', 'weightDecay', 'learningRate') ;
+      net.params = Net.initStruct(numParams, 'name', 'var', 'weightDecay', 'learningRate') ;
       net.inputs = struct() ;
       
       % first, handle Inputs and Params
@@ -48,7 +51,7 @@ classdef Net < handle
           net.params(p).name = obj.name ;
           net.params(p).weightDecay = obj.weightDecay ;
           net.params(p).learningRate = obj.learningRate ;
-          net.vars{2 * i - 1} = obj.value ;  % set initial value
+          net.vars{net.params(p).var} = obj.value ;  % set initial value
           p = p + 1 ;
         end
       end
@@ -138,16 +141,6 @@ classdef Net < handle
         end
         
         net.test(k) = Net.parseArgs(layer, args) ;
-      end
-      
-      % now, reassign friendlier indexes to the Layer objects, so that
-      % they map exactly to the corresponding elements of net.forward/
-      % backward/test. note Inputs/Params will have idx = 0.
-      for i = 1:numel(objs)
-        objs{i}.idx = 0 ;
-      end
-      for k = 1:numel(idx)
-        objs{idx(k)}.idx = k ;
       end
     end
     
@@ -250,7 +243,7 @@ classdef Net < handle
     function value = getValue(net, var)
       if ~isnumeric(var)
         assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = net.forward(var.idx).outputVar ;
+        var = var.outputVar ;
       end
       if isscalar(var)
         value = net.vars{var} ;
@@ -263,7 +256,7 @@ classdef Net < handle
     function der = getDer(net, var)
       if ~isnumeric(var)
         assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = net.forward(var.idx).outputVar ;
+        var = var.outputVar ;
       end
       if isscalar(var)
         der = net.vars{var + 1} ;
@@ -275,7 +268,7 @@ classdef Net < handle
     function setValue(net, var, value)
       if ~isnumeric(var)
         assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = net.forward(var.idx).outputVar ;
+        var = var.outputVar ;
       end
       if isscalar(var)
         net.vars{var} = value ;
@@ -287,7 +280,7 @@ classdef Net < handle
     function setDer(net, var, der)
       if ~isnumeric(var)
         assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = net.forward(var.idx).outputVar ;
+        var = var.outputVar ;
       end
       if isscalar(var)
         net.vars{var + 1} = der ;
@@ -319,8 +312,8 @@ classdef Net < handle
       end
       
       % vars that correspond to params
-      [type{[net.params.var]}] = deal('Param') ;
       idx = ([net.params.var] + 1) / 2 ;
+      [type{idx}] = deal('Param') ;
       names(idx) = {net.params.name} ;
       
       % vars that correspond to layer outputs
@@ -386,17 +379,17 @@ classdef Net < handle
       % helper function to parse a layer's arguments, storing the constant
       % arguments (args), non-constant var indexes (inputVars), and their
       % positions in the arguments list (inputArgPos).
-      inputLayers = [] ;
+      inputVars = [] ;
       inputArgPos = [] ;
       for a = 1:numel(args)
         if isa(args{a}, 'Layer')
-          inputLayers(end+1) = args{a}.idx ;  %#ok<*AGROW>
+          inputVars(end+1) = args{a}.outputVar ;  %#ok<*AGROW>
           inputArgPos(end+1) = a ;
           args{a} = [] ;
         end
       end
       layer.args = args ;
-      layer.inputVars = 2 * inputLayers - 1 ;
+      layer.inputVars = inputVars ;
       layer.inputArgPos = inputArgPos ;
       layer = orderfields(layer) ;  % have a consistent field order, to not botch assignments
     end

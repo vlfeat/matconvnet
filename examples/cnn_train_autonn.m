@@ -27,7 +27,7 @@ opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
 
 opts.derOutputs = 1 ;
-opts.statsLayers = -1 ;  %list of layers that are stats (loss, error), or -1 for automatic
+opts.stats = 'losses' ;  %list of layers that are stats (loss, error), their names, or 'losses' for automatic
 opts.plotStatistics = true ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -49,10 +49,24 @@ if ~evaluateMode
 end
 stats = [] ;
 
-% by default, compute stats for loss layers
-if isequal(opts.statsLayers, -1)
-  opts.statsLayers = find(cellfun(@(f) isequal(f, @vl_nnloss) || ...
+if isequal(opts.stats, 'losses')
+  % by default, compute stats for loss layers. store their indexes.
+  opts.stats = find(cellfun(@(f) isequal(f, @vl_nnloss) || ...
     isequal(f, @vl_nnsoftmaxloss), {net.forward.func})) ;
+else
+  % store indexes of the given stats layers (either objects or by name)
+  assert(iscell(opts.stats)) ;
+  names = {net.forward.name} ;
+  stats = zeros(numel(opts.stats), 1) ;
+  for i = 1 : numel(opts.stats)
+    s = opts.stats{i} ;
+    if isa(s, 'Layer')
+      s = s.name ;
+    end
+    stats(i) = find(strcmp(names, s), 1) ;
+    assert(~isempty(stats(i)), sprintf('Layer ''%s'' not found.', stats(i))) ;
+  end
+  opts.stats = stats ;
 end
 
 % setup GPUs
@@ -164,9 +178,9 @@ else
   mmap = [] ;
 end
 
-statsAccum = zeros(numel(opts.statsLayers), 1) ;
-statsNames = {net.forward(opts.statsLayers).name} ;
-statsVars = [net.forward(opts.statsLayers).outputVar] ;
+statsAccum = zeros(numel(opts.stats), 1) ;
+statsNames = {net.forward(opts.stats).name} ;
+stats = [net.forward(opts.stats).outputVar] ;
 
 % assign names automatically if needed
 for i = 1:numel(statsNames)
@@ -211,8 +225,8 @@ for t=1:opts.batchSize:numel(subset)
     end
     
     % accumulate learning stats
-    for k = 1:numel(opts.statsLayers)
-      statsAccum(k) = statsAccum(k) + gather(net.vars{statsVars(k)}) ;
+    for k = 1:numel(opts.stats)
+      statsAccum(k) = statsAccum(k) + gather(net.vars{stats(k)}) ;
     end
   end
 
@@ -234,7 +248,7 @@ for t=1:opts.batchSize:numel(subset)
     fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize), ...
     num/time * max(numGpus, 1)) ;
 
-  for i = 1:numel(opts.statsLayers)
+  for i = 1:numel(opts.stats)
     fprintf(' %s:', statsNames{i}) ;
     fprintf(' %.3f', statsAccum(i) / num) ;
   end
@@ -244,7 +258,7 @@ end
 % return structure with statistics
 stats.time = time ;
 stats.num = num ;
-for s = 1:numel(opts.statsLayers)
+for s = 1:numel(opts.stats)
   stats.(statsNames{s}) = statsAccum(s) / num ;
 end
 

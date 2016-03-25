@@ -31,7 +31,7 @@ net = Net(loss + error) ;
 lr = 1e-3 ;
 outputs = zeros(1, 100) ;
 rng(0) ;
-params = [net.params.idx] ;
+params = [net.params.var] ;
 
 for iter = 1:100,
   % draw minibatch

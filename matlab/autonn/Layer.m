@@ -13,7 +13,7 @@ classdef Layer < handle
   end
   
   properties (SetAccess = {?Net}, GetAccess = public)
-    idx = 0  % index of this layer in the Net, used only during its construction
+    outputVar = 0  % index of the output var in a Net, used during its construction
   end
   
   methods
@@ -229,7 +229,7 @@ classdef Layer < handle
   
   methods (Access = {?Net, ?Layer})
     function resetOrder(obj)
-      obj.idx = 0 ;
+      obj.outputVar = 0 ;
       for i = 1:numel(obj.inputs)  % recurse on inputs
         if isa(obj.inputs{i}, 'Layer')
           obj.inputs{i}.resetOrder() ;
@@ -240,14 +240,16 @@ classdef Layer < handle
     function layers = buildOrder(obj, layers)
       % recurse on inputs with unassigned indexes (not on the list yet)
       for i = 1:numel(obj.inputs)
-        if isa(obj.inputs{i}, 'Layer') && obj.inputs{i}.idx == 0
+        if isa(obj.inputs{i}, 'Layer') && obj.inputs{i}.outputVar == 0
           layers = obj.inputs{i}.buildOrder(layers) ;
         end
       end
       
       % add self to the execution order, after all inputs are there
       layers{end+1} = obj ;
-      obj.idx = numel(layers) ;
+      
+      % assign an output var sequentially, leaving slots for derivatives
+      obj.outputVar = numel(layers) * 2 - 1 ;
     end
   end
   
