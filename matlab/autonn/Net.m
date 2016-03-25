@@ -40,11 +40,11 @@ classdef Net < handle
             obj.name = sprintf('input%i', numel(fieldnames(net.inputs)) + 1) ;
           end
           assert(~isfield(net.inputs, obj.name), 'An input with the same name already exists.') ;
-          net.inputs.(obj.name) = i ;
+          net.inputs.(obj.name) = 2 * i - 1 ;
           
         elseif isa(obj, 'Param')
           % a learnable parameter, store them in a list
-          net.params(p).idx = i ;
+          net.params(p).var = 2 * i - 1 ;
           net.params(p).name = obj.name ;
           net.params(p).weightDecay = obj.weightDecay ;
           net.params(p).learningRate = obj.learningRate ;
@@ -139,6 +139,16 @@ classdef Net < handle
         
         net.test(k) = Net.parseArgs(layer, args) ;
       end
+      
+      % now, reassign friendlier indexes to the Layer objects, so that
+      % they map exactly to the corresponding elements of net.forward/
+      % backward/test. note Inputs/Params will have idx = 0.
+      for i = 1:numel(objs)
+        objs{i}.idx = 0 ;
+      end
+      for k = 1:numel(idx)
+        objs{idx(k)}.idx = k ;
+      end
     end
     
     function move(net, device)
@@ -191,7 +201,7 @@ classdef Net < handle
         % clear all derivatives. derivatives are even-numbered vars.
         clear = repmat([false; true], numel(vars) / 2, 1);
         if accumulateParamDers  % except for params (e.g. to implement sub-batches)
-          clear([net.params.idx] * 2) = false ;
+          clear([net.params.var] + 1) = false ;  % next var is the derivative
         end
         [vars(clear)] = deal({0}) ;
         
@@ -208,17 +218,28 @@ classdef Net < handle
           inputArgPos = layer.inputArgPos ;
           args(inputArgPos) = vars(layer.inputVars) ;
           
-          % call function and collect outputs
-          out = cell(1, layer.numInputDer) ;
-          [out{:}] = layer.func(args{:}) ;
-          
-          % sum derivatives. the derivative var corresponding to each input
-          % comes right next to it in the vars list. note that some outputs
-          % may be ignored (because they're not input layers, just constant
-          % arguments).
-          inputDers = layer.inputVars(1:end-1) + 1 ;  % last input is dzdy, doesn't count
-          for i = find(inputArgPos <= numel(out))
-            vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;
+          if isequal(layer.func, @slice)
+            % special case, indexing. the derivative update is sparse.
+            % args = {input, slicing indexes, output derivative}.
+            inputDer = layer.inputVars(1) + 1 ;  % index of input derivative var
+            if isequal(vars{inputDer}, 0)  % must initialize with the right size
+              vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
+            end
+            vars{inputDer}(args{2}{:}) = vars{inputDer}(args{2}{:}) + args{3} ;
+            
+          else
+            % call function and collect outputs
+            out = cell(1, layer.numInputDer) ;
+            [out{:}] = layer.func(args{:}) ;
+            
+            % sum derivatives. the derivative var corresponding to each
+            % input comes right next to it in the vars list. note that some
+            % outputs may be ignored (because they're not input layers,
+            % just constant arguments).
+            inputDers = layer.inputVars(1:end-1) + 1 ;  % last input is dzdy, doesn't count
+            for i = find(inputArgPos <= numel(out))
+              vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;
+            end
           end
         end
       end
@@ -226,58 +247,58 @@ classdef Net < handle
       net.vars = vars ;
     end
     
-    function value = getValue(net, layer)
-      if ~isnumeric(layer)
-        assert(isa(layer, 'Layer'), 'LAYER must either be layer indexes or a Layer object.') ;
-        layer = layer.idx ;
+    function value = getValue(net, var)
+      if ~isnumeric(var)
+        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
+        var = net.forward(var.idx).outputVar ;
       end
-      if isscalar(layer)
-        value = net.vars{2 * layer - 1} ;
+      if isscalar(var)
+        value = net.vars{var} ;
       else
-        value = net.vars(2 * layer - 1) ;
+        value = net.vars(var) ;
       end
     end
     
     
-    function der = getDer(net, layer)
-      if ~isnumeric(layer)
-        assert(isa(layer, 'Layer'), 'LAYER must either be layer indexes or a Layer object.') ;
-        layer = layer.idx ;
+    function der = getDer(net, var)
+      if ~isnumeric(var)
+        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
+        var = net.forward(var.idx).outputVar ;
       end
-      if isscalar(layer)
-        der = net.vars{2 * layer} ;
+      if isscalar(var)
+        der = net.vars{var + 1} ;
       else
-        der = net.vars(2 * layer) ;
+        der = net.vars(var + 1) ;
       end
     end
     
-    function setValue(net, layer, value)
-      if ~isnumeric(layer)
-        assert(isa(layer, 'Layer'), 'LAYER must either be layer indexes or a Layer object.') ;
-        layer = layer.idx ;
+    function setValue(net, var, value)
+      if ~isnumeric(var)
+        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
+        var = net.forward(var.idx).outputVar ;
       end
-      if isscalar(layer)
-        net.vars{2 * layer - 1} = value ;
+      if isscalar(var)
+        net.vars{var} = value ;
       else
-        net.vars(2 * layer - 1) = value ;
+        net.vars(var) = value ;
       end
     end
     
-    function setDer(net, layer, der)
-      if ~isnumeric(layer)
-        assert(isa(layer, 'Layer'), 'LAYER must either be layer indexes or a Layer object.') ;
-        layer = layer.idx ;
+    function setDer(net, var, der)
+      if ~isnumeric(var)
+        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
+        var = net.forward(var.idx).outputVar ;
       end
-      if isscalar(layer)
-        net.vars{2 * layer} = der ;
+      if isscalar(var)
+        net.vars{var + 1} = der ;
       else
-        net.vars(2 * layer) = der ;
+        net.vars(var + 1) = der ;
       end
     end
     
     function setInputs(net, varargin)
       for i = 1 : 2 : numel(varargin) - 1
-        net.vars{2 * net.inputs.(varargin{i}) - 1} = varargin{i+1} ;
+        net.vars{net.inputs.(varargin{i})} = varargin{i+1} ;
       end
     end
     
@@ -292,14 +313,15 @@ classdef Net < handle
       % vars that correspond to inputs
       inputNames = fieldnames(net.inputs);
       for k = 1:numel(inputNames)
-        idx = net.inputs.(inputNames{k}) ;
+        idx = (net.inputs.(inputNames{k}) + 1) / 2 ;
         type{idx} = 'Input' ;
         names{idx} = inputNames{k} ;
       end
       
       % vars that correspond to params
-      [type{[net.params.idx]}] = deal('Param') ;
-      names([net.params.idx]) = {net.params.name} ;
+      [type{[net.params.var]}] = deal('Param') ;
+      idx = ([net.params.var] + 1) / 2 ;
+      names(idx) = {net.params.name} ;
       
       % vars that correspond to layer outputs
       idx = ([net.forward.outputVar] + 1) / 2 ;

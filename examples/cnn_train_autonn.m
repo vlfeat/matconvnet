@@ -253,7 +253,7 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
-params = [net.params.idx] ;
+params = [net.params.var] ;
 w = net.getValue(params) ;
 dw = net.getDer(params) ;
 

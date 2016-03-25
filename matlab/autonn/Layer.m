@@ -172,6 +172,15 @@ classdef Layer < handle
     end
     
     
+    % overloaded indexing
+    function varargout = subsref(a, s)
+      if strcmp(s(1).type, '()')
+        varargout{1} = Layer(@slice, a, s.subs) ;
+      else
+        [varargout{1:nargout}] = builtin('subsref', a, s) ;
+      end
+    end
+    
     function display(obj, name)
       % show hyperlinks in command window, allowing one to interactively
       % traverse the network. note that the builtin disp is unchanged.
