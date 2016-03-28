@@ -58,40 +58,133 @@ net = vl_simplenn_tidy(net) ;
 obj.meta = net.meta ;
 
 for l = 1:numel(net.layers)
-  inputs = {sprintf('x%d',l-1)} ;
-  outputs = {sprintf('x%d',l)} ;
-
-  params = struct(...
+    inputs = {sprintf('x%d',l-1)} ;
+    outputs = {sprintf('x%d',l)} ;
+    
+    params = struct(...
         'name', {}, ...
         'value', {}, ...
         'learningRate', [], ...
         'weightDecay', []) ;
-  if isfield(net.layers{l}, 'name')
-    name = net.layers{l}.name ;
-  else
-    name = sprintf('layer%d',l) ;
-  end
-
-  switch net.layers{l}.type
-    case {'conv', 'convt'}
-      sz = size(net.layers{l}.weights{1}) ;
-      hasBias = ~isempty(net.layers{l}.weights{2}) ;
-      params(1).name = sprintf('%sf',name) ;
-      params(1).value = net.layers{l}.weights{1} ;
-      if hasBias
-        params(2).name = sprintf('%sb',name) ;
-        params(2).value = net.layers{l}.weights{2} ;
-      end
-      if isfield(net.layers{l},'learningRate')
-        params(1).learningRate = net.layers{l}.learningRate(1) ;
-        if hasBias
-          params(2).learningRate = net.layers{l}.learningRate(2) ;
+    if isfield(net.layers{l}, 'name')
+        name = net.layers{l}.name ;
+    else
+        name = sprintf('layer%d',l) ;
+    end
+    
+    switch net.layers{l}.type
+        case {'conv', 'convt'}
+            sz = size(net.layers{l}.weights{1}) ;
+            hasBias = ~isempty(net.layers{l}.weights{2}) ;
+            params(1).name = sprintf('%sf',name) ;
+            params(1).value = net.layers{l}.weights{1} ;
+            if hasBias
+                params(2).name = sprintf('%sb',name) ;
+                params(2).value = net.layers{l}.weights{2} ;
+            end
+            if isfield(net.layers{l},'learningRate')
+                params(1).learningRate = net.layers{l}.learningRate(1) ;
+                if hasBias
+                    params(2).learningRate = net.layers{l}.learningRate(2) ;
+                end
+            end
+            if isfield(net.layers{l},'weightDecay')
+                params(1).weightDecay = net.layers{l}.weightDecay(1) ;
+                if hasBias
+                    params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+                end
+            end
+            switch net.layers{l}.type
+                case 'conv'
+                    block = Conv() ;
+                    block.size = sz ;
+                    block.pad = net.layers{l}.pad ;
+                    block.stride = net.layers{l}.stride ;
+                case 'convt'
+                    block = ConvTranspose() ;
+                    block.size = sz ;
+                    block.upsample = net.layers{l}.upsample ;
+                    block.crop = net.layers{l}.crop ;
+                    block.numGroups = net.layers{l}.numGroups ;
+            end
+            block.hasBias = hasBias ;
+            block.opts = net.layers{l}.opts ;
+            
+        case 'pool'
+            block = Pooling() ;
+            block.method = net.layers{l}.method ;
+            block.poolSize = net.layers{l}.pool ;
+            block.pad = net.layers{l}.pad ;
+            block.stride = net.layers{l}.stride ;
+            block.opts = net.layers{l}.opts ;
+            
+        case {'normalize', 'lrn'}
+            block = LRN() ;
+            block.param = net.layers{l}.param ;
+            
+        case {'dropout'}
+            block = DropOut() ;
+            block.rate = net.layers{l}.rate ;
+            
+        case {'relu'}
+            block = ReLU() ;
+            block.leak = net.layers{l}.leak ;
+            
+        case {'sigmoid'}
+            block = Sigmoid() ;
+            
+        case {'softmax'}
+            block = SoftMax() ;
+            
+        case {'pdist'}
+            block = dagnn.PDist( ...
+                'p', net.layers{l}.p, ...
+                'noRoot', net.layers{l}.noRoot, ...
+                'epsilon', net.layers{l}.epsilon, ...
+                'aggregate', net.layers{l}.aggregate) ;
+            
+        case {'softmaxloss'}
+            block = Loss('loss', 'softmaxlog') ;
+            % The loss has two inputs
+            inputs{2} = getNewVarName(obj, 'label') ;
+            
+        case {'bnorm'}
+            block = BatchNorm() ;
+            params(1).name = sprintf('%sm',name) ;
+            params(1).value = net.layers{l}.weights{1} ;
+            params(2).name = sprintf('%sb',name) ;
+            params(2).value = net.layers{l}.weights{2} ;
+            params(3).name = sprintf('%sx',name) ;
+            params(3).value = net.layers{l}.weights{3} ;
+            if isfield(net.layers{l},'learningRate')
+                params(1).learningRate = net.layers{l}.learningRate(1) ;
+                params(2).learningRate = net.layers{l}.learningRate(2) ;
+                params(3).learningRate = net.layers{l}.learningRate(3) ;
+            end
+            if isfield(net.layers{l},'weightDecay')
+                params(1).weightDecay = net.layers{l}.weightDecay(1) ;
+                params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+                params(3).weightDecay = 0 ;
+            end
+            
+        otherwise
+            error([net.layers{l}.type ' is unsupported']) ;
+    end
+    
+    obj.addLayer(...
+        name, ...
+        block, ...
+        inputs, ...
+        outputs, ...
+        {params.name}) ;
+    
+    for p = 1:numel(params)
+        pindex = obj.getParamIndex(params(p).name) ;
+        if ~isempty(params(p).value)
+            obj.params(pindex).value = params(p).value ;
         end
-      end
-      if isfield(net.layers{l},'weightDecay')
-        params(1).weightDecay = net.layers{l}.weightDecay(1) ;
-        if hasBias
-          params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+        if ~isempty(params(p).learningRate)
+            obj.params(pindex).learningRate = params(p).learningRate ;
         end
       end
       switch net.layers{l}.type
@@ -177,13 +270,6 @@ for l = 1:numel(net.layers)
     if ~isempty(params(p).value)
       obj.params(pindex).value = params(p).value ;
     end
-    if ~isempty(params(p).learningRate)
-      obj.params(pindex).learningRate = params(p).learningRate ;
-    end
-    if ~isempty(params(p).weightDecay)
-      obj.params(pindex).weightDecay = params(p).weightDecay ;
-    end
-  end
 end
 
 % --------------------------------------------------------------------
@@ -191,22 +277,22 @@ end
 % --------------------------------------------------------------------
 
 if opts.canonicalNames
-  for l = 1:numel(obj.layers)
-    if l == 1
-      obj.renameVar(obj.layers(l).inputs{1}, 'input') ;
+    for l = 1:numel(obj.layers)
+        if l == 1
+            obj.renameVar(obj.layers(l).inputs{1}, 'input') ;
+        end
+        if isa(obj.layers(l).block, 'dagnn.SoftMax')
+            obj.renameVar(obj.layers(l).outputs{1}, getNewVarName(obj, 'prob')) ;
+            obj.renameVar(obj.layers(l).inputs{1}, getNewVarName(obj, 'prediction')) ;
+        end
+        if isa(obj.layers(l).block, 'dagnn.Loss')
+            obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
+            if isempty(regexp(obj.layers(l).inputs{1}, '^prob.*'))
+                obj.renameVar(obj.layers(l).inputs{1}, ...
+                    getNewVarName(obj, 'prediction')) ;
+            end
+        end
     end
-    if isa(obj.layers(l).block, 'dagnn.SoftMax')
-      obj.renameVar(obj.layers(l).outputs{1}, getNewVarName(obj, 'prob')) ;
-      obj.renameVar(obj.layers(l).inputs{1}, getNewVarName(obj, 'prediction')) ;
-    end
-    if isa(obj.layers(l).block, 'dagnn.Loss')
-      obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
-      if isempty(regexp(obj.layers(l).inputs{1}, '^prob.*'))
-        obj.renameVar(obj.layers(l).inputs{1}, ...
-                      getNewVarName(obj, 'prediction')) ;
-      end
-    end
-  end
 end
 
 % --------------------------------------------------------------------
@@ -215,6 +301,6 @@ function name = getNewVarName(obj, prefix)
 t = 0 ;
 name = prefix ;
 while any(strcmp(name, {obj.vars.name}))
-  t = t + 1 ;
-  name = sprintf('%s%d', prefix, t) ;
+    t = t + 1 ;
+    name = sprintf('%s%d', prefix, t) ;
 end
