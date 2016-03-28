@@ -23,7 +23,16 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta18 (January 2015).
+-   1.0-beta19 (February 2016).
+
+    **New features**
+
+    * Support for ResNet models.
+
+    * Improved the `import-caffe.py` script for compatibility with
+      newever versions of Caffe.
+
+-   1.0-beta18 (January 2016).
 
     **New features**
 

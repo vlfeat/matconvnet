@@ -409,7 +409,7 @@ switch arch
     end
 
   case {'glnxa64'}
-    flags.nvcc{end+1} = '-Xcompiler -mssse3,-ffast-math' ;
+    flags.nvcc{end+1} = '-Xcompiler -fpic,-mssse3,-ffast-math' ;
     flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
     flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops' ;
 

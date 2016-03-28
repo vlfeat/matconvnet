@@ -44,7 +44,7 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta18
+VER = 1.0-beta19
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync

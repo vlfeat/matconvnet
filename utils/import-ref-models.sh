@@ -19,9 +19,9 @@ SCRIPTPATH=`pwd`
 popd > /dev/null
 
 converter="python $SCRIPTPATH/import-caffe.py"
-data="$SCRIPTPATH/../data"
+data="$SCRIPTPATH/../data/models-import"
 
-mkdir -p "$data"/{tmp/vgg,tmp/caffe,models}
+mkdir -p "$data/tmp/"{vgg,caffe}
 overwrite=no
 
 # --------------------------------------------------------------------
@@ -55,7 +55,7 @@ then
     synset=(caffe caffe)
 
     for ((i=0;i<${#in[@]};++i)); do
-        out="$data/models/imagenet-vgg-${out[i]}.mat"
+        out="$data/imagenet-vgg-${out[i]}.mat"
         if test ! -e "$out" -o "$overwrite" = yes ; then
             $converter \
                 --output-format=simplenn \
@@ -99,7 +99,7 @@ then
     synset=(caffe vgg vgg vgg vgg vgg)
 
     for ((i=0;i<${#in[@]};++i)); do
-        out="$data/models/imagenet-vgg-${out[i]}.mat"
+        out="$data/imagenet-vgg-${out[i]}.mat"
         if test ! -e "$out" -o "$overwrite" = yes ; then
             $converter \
                 --output-format=simplenn \
@@ -140,7 +140,7 @@ if true
 then
     base=$data/tmp/caffe
 
-    out=$data/models/imagenet-caffe-alex.mat
+    out=$data/imagenet-caffe-alex.mat
     test ! -e "$out" -o "$overwrite" = yes && \
         $converter \
         --output-format=simplenn \
@@ -154,7 +154,7 @@ then
         "$base/alexnet_deploy.prototxt" \
         "$out"
 
-    out=$data/models/imagenet-caffe-ref.mat
+    out=$data/imagenet-caffe-ref.mat
     test ! -e "$out" -o "$overwrite" = yes && \
         $converter \
         --output-format=simplenn \
