@@ -82,7 +82,7 @@ for epoch=start+1:opts.numEpochs
   state.epoch = epoch ;
   state.learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   state.train = opts.train(randperm(numel(opts.train))) ; % shuffle
-  state.val = opts.val ;
+  state.val = opts.val(randperm(numel(opts.val))) ;
   state.imdb = imdb ;
 
   if numGpus <= 1
