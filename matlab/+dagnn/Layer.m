@@ -117,6 +117,9 @@ classdef Layer < handle
       % compute derivatives of inputs and paramerters
       [derInputs, derParams] = obj.backward ...
         (inputs, {net.params(par).value}, derOutputs) ;
+      if ~iscell(derInputs) || numel(derInputs) ~= numel(in)
+        error('Invalid derivatives returned by layer "%s".', layer.name);
+      end
 
       % accumuate derivatives
       for i = 1:numel(in)
