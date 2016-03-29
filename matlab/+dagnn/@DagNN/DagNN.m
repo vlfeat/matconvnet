@@ -263,10 +263,10 @@ classdef DagNN < handle
           error('Invalid layer indexes.');
         end
       else
-        assert(ischar(layerName), 'Layer name must be string or number.');
+        if ischar(layerName), layerName = {layerName}; end;
         idxs = obj.getLayerIndex(layerName);
         if any(isnan(idxs))
-          error('Invalid layer name `[%s]`', ...
+          error('Invalid layer name `%s`', ...
             strjoin(layerName(isnan(idxs)), ', '));
         end
       end
@@ -287,10 +287,10 @@ classdef DagNN < handle
           error('Invalid var indexes.');
         end
       else
-        assert(ischar(varName), 'Variable name must be string or number.');
+        if ischar(varName), varName = {varName}; end;
         idxs = obj.getVarIndex(varName);
         if any(isnan(idxs))
-          error('Invalid variable name `[%s]`', ...
+          error('Invalid variable name `%s`', ...
             strjoin(varName(isnan(idxs)), ', '));
         end
       end
@@ -311,10 +311,10 @@ classdef DagNN < handle
           error('Invalid param indexes.');
         end
       else
-        assert(ischar(paramName), 'Param name must be string or number.');
+        if ischar(paramName), paramName = {paramName}; end;
         idxs = obj.getParamIndex(paramName);
         if any(isnan(idxs))
-          error('Invalid param name `[%s]`', ...
+          error('Invalid param name `%s`', ...
             strjoin(paramName(isnan(idxs)), ', '));
         end
       end
