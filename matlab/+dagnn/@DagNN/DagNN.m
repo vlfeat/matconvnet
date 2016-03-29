@@ -124,7 +124,7 @@ classdef DagNN < handle
     s = saveobj(obj)
 
     % Manipualte the DagNN
-    addLayer(obj, name, block, inputs, outputs, params)
+    addLayer(obj, name, block, inputs, outputs, params, varargin)
     removeLayer(obj, name)
     setLayerInputs(obj, leyer, inputs)
     setLayerOutput(obj, layer, outputs)
