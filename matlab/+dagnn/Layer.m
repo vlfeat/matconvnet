@@ -83,7 +83,11 @@ classdef Layer < handle
 
       % call the simplified interface
       outputs = obj.forward(inputs, {net.params(par).value}) ;
-      [net.vars(out).value] = deal(outputs{:}) ;
+      if numel(out) == 1 % speeds up a bit the most used case
+        net.vars(out).value = outputs{1};
+      else
+        [net.vars(out).value] = deal(outputs{:}) ;
+      end
     end
 
     function backwardAdvanced(obj, layer)
