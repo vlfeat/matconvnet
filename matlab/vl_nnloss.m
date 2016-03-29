@@ -142,15 +142,7 @@ if numel(c) == inputSize(4)
   c = repmat(c, inputSize(1:2)) ;
 end
 
-if isa(X,'gpuArray')
-  dataType = classUnderlying(X) ;
-else
-  dataType = class(X) ;
-end
-switch dataType
-  case 'double', toClass = @(x) double(x) ;
-  case 'single', toClass = @(x) single(x) ;
-end
+hasIgnoreLabel = any(c == 0);
 
 % --------------------------------------------------------------------
 % Spatial weighting
@@ -159,31 +151,37 @@ end
 labelSize = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
 assert(isequal(labelSize(1:2), inputSize(1:2))) ;
 assert(labelSize(4) == inputSize(4)) ;
+instanceWeights = [];
 switch lower(opts.loss)
   case {'classerror', 'topkerror', 'log', 'softmaxlog', 'mhinge', 'mshinge'}
-    binary = false ;
-
     % there must be one categorical label per prediction vector
     assert(labelSize(3) == 1) ;
 
-    % null labels denote instances that should be skipped
-    instanceWeights = toClass(c(:,:,1,:) ~= 0) ;
+    if hasIgnoreLabel
+      % null labels denote instances that should be skipped
+      instanceWeights = cast(c(:,:,1,:) ~= 0, 'like', c) ;
+    end
 
   case {'binaryerror', 'binarylog', 'logistic', 'hinge'}
-    binary = true ;
 
     % there must be one categorical label per prediction scalar
     assert(labelSize(3) == inputSize(3)) ;
 
-    % null labels denote instances that should be skipped
-    instanceWeights = toClass(c ~= 0) ;
+    if hasIgnoreLabel
+      % null labels denote instances that should be skipped
+      instanceWeights = cast(c ~= 0, 'like', c) ;
+    end
 
   otherwise
     error('Unknown loss ''%s''.', opts.loss) ;
 end
 
 if ~isempty(opts.instanceWeights)
-  instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
+  if hasIgnoreLabel
+    instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
+  else
+    instanceWeights = opts.instanceWeights;
+  end
 end
 
 % --------------------------------------------------------------------
@@ -207,7 +205,7 @@ if nargin <= 2 || isempty(dzdy)
   switch lower(opts.loss)
     case 'classerror'
       [~,chat] = max(X,[],3) ;
-      t = toClass(c ~= chat) ;
+      t = cast(c ~= chat, 'like', c) ;
     case 'topkerror'
       [~,predictions] = sort(X,3,'descend') ;
       t = 1 - sum(bsxfun(@eq, c, predictions(:,:,1:opts.topK,:)), 3) ;
@@ -224,7 +222,7 @@ if nargin <= 2 || isempty(dzdy)
       Q(ci) = -inf ;
       t = max(0, 1 - X(ci) + max(Q,[],3)) ;
     case 'binaryerror'
-      t = toClass(sign(X - opts.threshold) ~= c) ;
+      t = cast(sign(X - opts.threshold) ~= c, 'like', c) ;
     case 'binarylog'
       t = -log(c.*(X-0.5) + 0.5) ;
     case 'logistic'
@@ -235,9 +233,15 @@ if nargin <= 2 || isempty(dzdy)
     case 'hinge'
       t = max(0, 1 - c.*X) ;
   end
-  Y = instanceWeights(:)' * t(:) ;
+  if ~isempty(instanceWeights)
+    Y = instanceWeights(:)' * t(:) ;
+  else
+    Y = sum(t(:));
+  end
 else
-  dzdy = dzdy * instanceWeights ;
+  if ~isempty(instanceWeights)
+    dzdy = dzdy * instanceWeights ;
+  end
   switch lower(opts.loss)
     case {'classerror', 'topkerror'}
       Y = zerosLike(X) ;
