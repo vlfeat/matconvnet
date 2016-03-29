@@ -346,10 +346,15 @@ for i=1:n
       end
 
     case 'pdist'
+        if ~isfield(l, 'normed'), l.normed = false; end;
+        if ~isfield(l, 'hinge'), l.hinge = 0; end;
+        
       res(i+1).x = vl_nnpdist(res(i).x, l.class, l.p, ...
         'noRoot', l.noRoot, ...
         'epsilon', l.epsilon, ...
-        'aggregate', l.aggregate) ;
+        'aggregate', l.aggregate, ...
+        'normed', l.normed, ...
+        'hinge', l.hinge) ;
 
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;

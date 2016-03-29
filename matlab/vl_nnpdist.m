@@ -50,6 +50,8 @@ function y = vl_nnpdist(x, x0, p, varargin)
 opts.noRoot = false ;
 opts.epsilon = 1e-6 ;
 opts.aggregate = false ;
+opts.normed = false ;
+opts.hinge = 0;
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
@@ -65,6 +67,8 @@ end
 
 d = bsxfun(@minus, x, x0) ;
 d(isnan(x0)) = 0;
+d(abs(d) < opts.hinge) = 0;
+if opts.normed, d = bsxfun(@rdivide, d, (x0+~x0)); end;
 
 if ~opts.noRoot
   if isempty(dzdy)
