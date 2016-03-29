@@ -181,8 +181,12 @@ classdef Layer < handle
     %  to the previous call.
       s = dagnn.Layer.argsToStruct(varargin{:}) ;
       for f = fieldnames(s)'
-        f = char(f) ;
-        obj.(f) = s.(f) ;
+        fc = char(f) ;
+        if ~isprop(obj, fc)
+          error('No property `%s` for a layer of type `%s`.', ...
+            fc, class(obj));
+        end;
+        obj.(fc) = s.(fc) ;
       end
     end
 
