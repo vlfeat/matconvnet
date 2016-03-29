@@ -59,10 +59,10 @@ opts.instanceWeights = [] ;
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
-  opts = vl_argparse(opts, varargin(2:end)) ;
+  opts = vl_argparse(opts, varargin(2:end), 'nonrecursive') ;
 else
   dzdy = [] ;
-  opts = vl_argparse(opts, varargin) ;
+  opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 end
 
 % -------------------------------------------------------------------------

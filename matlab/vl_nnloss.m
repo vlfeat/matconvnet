@@ -130,7 +130,7 @@ opts.classWeights = [] ;
 opts.threshold = 0 ;
 opts.loss = 'softmaxlog' ;
 opts.topK = 5 ;
-opts = vl_argparse(opts,varargin) ;
+opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
 inputSize = [size(X,1) size(X,2) size(X,3) size(X,4)] ;
 
