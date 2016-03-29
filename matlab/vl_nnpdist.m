@@ -57,6 +57,8 @@ opts.noRoot = false ;
 opts.epsilon = 1e-6 ;
 opts.aggregate = false ;
 opts.instanceWeights = [] ;
+opts.normed = false ;
+opts.hinge = 0;
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
@@ -72,6 +74,8 @@ end
 
 d = bsxfun(@minus, x, x0) ;
 d(isnan(x0)) = 0;
+d(abs(d) < opts.hinge) = 0;
+if opts.normed, d = bsxfun(@rdivide, d, (x0+~x0)); end;
 
 if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
   dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
