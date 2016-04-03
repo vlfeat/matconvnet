@@ -115,6 +115,9 @@ for idx = 1:length(net.layers)
     fprintf(fid,'layer {\n');
     fprintf(fid,'  name: "%s"\n', net.layers{idx}.name); % Layer name
     layer_input_size = size(dummy_data);
+    if length(layer_input_size) == 2
+        layer_input_size(3) = 1;
+    end
     switch net.layers{idx}.type
         case 'conv'
             filter_h = size(net.layers{idx}.weights{1},1);
