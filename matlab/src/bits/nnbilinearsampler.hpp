@@ -1,0 +1,35 @@
+// @file nnbilinearsampler.hpp
+// @brief Bilinear Sampling block
+// @author Ankush Gupta
+
+/*
+Copyright (C) 2016 Ankush Gupta.
+All rights reserved.
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
+
+#ifndef __vl__nnbilinearsampler__
+#define __vl__nnbilinearsampler__
+
+#include "data.hpp"
+#include <stdio.h>
+
+namespace vl {
+
+  vl::Error
+  nnbilinearsampler_forward(vl::Context& context,
+                                vl::Tensor output,
+                                vl::Tensor data,
+                                vl::Tensor grid) ;
+
+  vl::Error
+  nnbilinearsampler_backward(vl::Context& context,
+                                   vl::Tensor derData,
+                                   vl::Tensor derGrid,
+                                   vl::Tensor data, 
+                                   vl::Tensor grid,
+                                   vl::Tensor derOutput);
+}
+
+#endif /* defined(__vl__nnpooling__) */
