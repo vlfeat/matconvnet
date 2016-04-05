@@ -269,11 +269,9 @@ end
 % turn on the profiler (if needed)
 if opts.profile
   if numGpus <= 1
-    prof = profile('info') ;
     profile clear ;
     profile on ;
   else
-    prof = mpiprofile('info') ;
     mpiprofile reset ;
     mpiprofile on ;
   end
@@ -285,7 +283,7 @@ stats = [] ;
 start = tic ;
 
 for t=1:opts.batchSize:numel(subset)
-  fprintf('%s: epoch %02d: %3d/%3d: ', mode, epoch, ...
+  fprintf('%s: epoch %02d: %3d/%3d:', mode, epoch, ...
           fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
   numDone = 0 ;
@@ -298,7 +296,7 @@ for t=1:opts.batchSize:numel(subset)
     [im, labels] = getBatch(imdb, batch) ;
 
     if opts.prefetch
-      if s==opts.numSubBatches
+      if s == opts.numSubBatches
         batchStart = t + (labindex-1) + opts.batchSize ;
         batchEnd = min(t+2*opts.batchSize-1, numel(subset)) ;
       else
@@ -332,27 +330,28 @@ for t=1:opts.batchSize:numel(subset)
 
   % gather and accumulate gradients across labs
   if training
-    if numGpus <= 1
-      [net,res] = accumulate_gradients(opts, learningRate, batchSize, net, res) ;
-    else
-      if isempty(mmap)
-        mmap = map_gradients(opts.memoryMapFile, net, res, numGpus) ;
-      end
+    if numGpus > 1 && isempty(map)
+      mmap = map_gradients(opts.memoryMapFile, net, res, numGpus) ;
+    end
+    if numGpus > 1
       write_gradients(mmap, net, res) ;
       labBarrier() ;
-      [net,res] = accumulate_gradients(opts, learningRate, batchSize, net, res, mmap) ;
     end
+    [net,res] = accumulate_gradients(opts, learningRate, batchSize, net, res, mmap) ;
   end
+
+  % number of images processed so far (on all GPUs)
+  n = t + batchSize - 1 ;
 
   % collect and print learning statistics
   time = toc(start) ;
   stats = sum([stats,[0 ; error]],2); % works even when stats=[]
   stats(1) = time ;
-  n = t + batchSize - 1 ; % number of images processed overall
   speed = n/time ;
-  fprintf('%.1f Hz%s\n', speed) ;
+  fprintf(' %.1f Hz', speed) ;
 
-  m = n / max(1,numlabs) ; % num images processed on this lab only
+  % num images processed on this lab only
+  m = n / max(1,numlabs) ;
   fprintf(' obj:%.3g', stats(2)/m) ;
   for i=1:numel(opts.errorLabels)
     fprintf(' %s:%.3g', opts.errorLabels{i}, stats(i+2)/m) ;
@@ -374,10 +373,13 @@ for t=1:opts.batchSize:numel(subset)
       'XLim', [1e-5 1]) ;
     drawnow ;
   end
-
 end
 
 % switch off the profiler
+if ~isempty(mmap)
+  unmap_gradients(mmap) ;
+end
+
 if opts.profile
   if numGpus <= 1
     prof = profile('info') ;
@@ -400,7 +402,7 @@ end
 % -------------------------------------------------------------------------
 function [net,res] = accumulate_gradients(opts, lr, batchSize, net, res, mmap)
 % -------------------------------------------------------------------------
-if nargin >= 6
+if nargin >= 6 & ~isempty(mmap)
   numGpus = numel(mmap.Data) ;
 else
   numGpus = 1 ;
@@ -412,11 +414,10 @@ for l=numel(net.layers):-1:1
     % accumualte gradients from multiple labs (GPUs) if needed
     if numGpus > 1
       tag = sprintf('l%d_%d',l,j) ;
-      tmp = zeros(size(mmap.Data(labindex).(tag)), 'single') ;
       for g = setdiff(1:numGpus, labindex)
-        tmp = tmp + mmap.Data(g).(tag) ;
+        tmp = gpuArray(mmap.Data(g).(tag)) ;
+        res(l).dzdw{j} = res(l).dzdw{j} + tmp ;
       end
-      res(l).dzdw{j} = res(l).dzdw{j} + tmp ;
     end
 
     if j == 3 && strcmp(net.layers{l}.type, 'bnorm')
@@ -480,7 +481,11 @@ if ~exist(fname) && (labindex == 1)
   fclose(f) ;
 end
 labBarrier() ;
-mmap = memmapfile(fname, 'Format', format, 'Repeat', numGpus, 'Writable', true) ;
+mmap = memmapfile(fname, ...
+                  'Format', format, ...
+                  'Repeat', numGpus, ...
+                  'Writable', true) ;
+
 
 % -------------------------------------------------------------------------
 function write_gradients(mmap, net, res)
@@ -490,6 +495,10 @@ for i=1:numel(net.layers)
     mmap.Data(labindex).(sprintf('l%d_%d',i,j)) = gather(res(i).dzdw{j}) ;
   end
 end
+
+% -------------------------------------------------------------------------
+function unmap_gradients(mmap)
+% -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
 function epoch = findLastCheckpoint(modelDir)

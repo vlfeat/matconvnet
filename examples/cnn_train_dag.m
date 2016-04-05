@@ -86,13 +86,17 @@ for epoch=start+1:opts.numEpochs
   state.imdb = imdb ;
 
   if numGpus <= 1
-    stats.train(epoch) = process_epoch(net, state, opts, 'train') ;
+    [stats.train(epoch),prof] = process_epoch(net, state, opts, 'train') ;
     stats.val(epoch) = process_epoch(net, state, opts, 'val') ;
+    if opts.profile
+      profview(0,prof) ;
+      keyboard ;
+    end
   else
     savedNet = net.saveobj() ;
     spmd
       net_ = dagnn.DagNN.loadobj(savedNet) ;
-      stats_.train = process_epoch(net_, state, opts, 'train') ;
+      [stats_.train, prof_] = process_epoch(net_, state, opts, 'train') ;
       stats_.val = process_epoch(net_, state, opts, 'val') ;
       if labindex == 1, savedNet_ = net_.saveobj() ; end
     end
@@ -100,6 +104,10 @@ for epoch=start+1:opts.numEpochs
     stats__ = accumulateStats(stats_) ;
     stats.train(epoch) = stats__.train ;
     stats.val(epoch) = stats__.val ;
+    if opts.profile
+      mpiprofile('viewer', [prof_{:,1}]) ;
+      keyboard ;
+    end
     clear net_ stats_ stats__ savedNet_ ;
   end
 
@@ -138,13 +146,15 @@ for epoch=start+1:opts.numEpochs
 end
 
 % -------------------------------------------------------------------------
-function stats = process_epoch(net, state, opts, mode)
+function [stats, prof] = process_epoch(net, state, opts, mode)
 % -------------------------------------------------------------------------
 
+% initialize empty momentum
 if strcmp(mode,'train')
   state.momentum = num2cell(zeros(1, numel(net.params))) ;
 end
 
+% move CNN  to GPU as needed
 numGpus = numel(opts.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
@@ -158,6 +168,17 @@ else
   mmap = [] ;
 end
 
+% profile
+if opts.profile
+  if numGpus <= 1
+    profile clear ;
+    profile on ;
+  else
+    mpiprofile reset ;
+    mpiprofile on ;
+  end
+end
+
 stats.time = 0 ;
 stats.num = 0 ;
 subset = state.(mode) ;
@@ -165,8 +186,9 @@ start = tic ;
 num = 0 ;
 
 for t=1:opts.batchSize:numel(subset)
+  fprintf('%s: epoch %02d: %3d/%3d:', mode, state.epoch, ...
+          fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
-
   for s=1:opts.numSubBatches
     % get this image batch and prefetch the next
     batchStart = t + (labindex-1) + (s-1) * numlabs ;
@@ -210,16 +232,16 @@ for t=1:opts.batchSize:numel(subset)
     state = accumulate_gradients(state, net, opts, batchSize, mmap) ;
   end
 
+  % number of images processed so far (on all GPUs)
+  n = t + batchSize - 1 ;
+
   % print learning statistics
   time = toc(start) ;
-  stats.num = num ;
-  stats.time = toc(start) ;
+  stats.num = n ;
+  stats.time = time ;
+  speed = n/time ;
+  fprintf(' %.1f Hz', speed) ;
 
-  fprintf('%s: epoch %02d: %3d/%3d: %.1f Hz', ...
-    mode, ...
-    state.epoch, ...
-    fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize), ...
-    stats.num/stats.time * max(numGpus, 1)) ;
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
     f = char(f) ;
     fprintf(' %s:', f) ;
@@ -228,24 +250,40 @@ for t=1:opts.batchSize:numel(subset)
   fprintf('\n') ;
 end
 
+if ~isempty(mmap)
+  unmap_gradients(mmap) ;
+end
+
+if opts.profile
+  if numGpus <= 1
+    prof = profile('info') ;
+    profile off ;
+  else
+    prof = mpiprofile('info');
+    mpiprofile off ;
+  end
+else
+  prof = [] ;
+end
+
 net.reset() ;
 net.move('cpu') ;
 
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
+numGpus = numel(opts.gpus) ;
+otherGpus = setdiff(1:numGpus, labindex) ;
+
 for p=1:numel(net.params)
 
-  % bring in gradients from other GPUs if any
-  if ~isempty(mmap)
-    numGpus = numel(mmap.Data) ;
-    tmp = zeros(size(mmap.Data(labindex).(net.params(p).name)), 'single') ;
-    for g = setdiff(1:numGpus, labindex)
-      tmp = tmp + mmap.Data(g).(net.params(p).name) ;
+  % accumualte gradients from multiple labs (GPUs) if needed
+  if numGpus > 1
+    tag = net.params(p).name ;
+    for g = otherGpus
+      tmp = gpuArray(mmap.Data(g).(tag)) ;
+      net.params(p).der = net.params(p).der + tmp ;
     end
-    net.params(p).der = net.params(p).der + tmp ;
-  else
-    numGpus = 1 ;
   end
 
   switch net.params(p).trainMethod
@@ -297,6 +335,10 @@ function write_gradients(mmap, net)
 for i=1:numel(net.params)
   mmap.Data(labindex).(net.params(i).name) = gather(net.params(i).der) ;
 end
+
+% -------------------------------------------------------------------------
+function unmap_gradients(mmap)
+% -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
 function stats = accumulateStats(stats_)
