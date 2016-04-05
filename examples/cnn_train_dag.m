@@ -3,7 +3,7 @@ function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 %    CNN_TRAIN_DAG() is similar to CNN_TRAIN(), but works with
 %    the DagNN wrapper instead of the SimpleNN wrapper.
 
-% Copyright (C) 2014-15 Andrea Vedaldi.
+% Copyright (C) 2014-16 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -23,6 +23,7 @@ opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
+opts.randomSeed = 0 ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
 
@@ -49,20 +50,6 @@ if ~evaluateMode
 end
 stats = [] ;
 
-% setup GPUs
-numGpus = numel(opts.gpus) ;
-if numGpus > 1
-  if isempty(gcp('nocreate')),
-    parpool('local',numGpus) ;
-    spmd, gpuDevice(opts.gpus(labindex)), end
-  end
-  if exist(opts.memoryMapFile)
-    delete(opts.memoryMapFile) ;
-  end
-elseif numGpus == 1
-  gpuDevice(opts.gpus)
-end
-
 % -------------------------------------------------------------------------
 %                                                        Train and validate
 % -------------------------------------------------------------------------
@@ -78,14 +65,27 @@ end
 
 for epoch=start+1:opts.numEpochs
 
-  % train one epoch
+  % Set the random seed based on the epoch and opts.randomSeed.
+  % This is important for reproducibility, including when training
+  % is restarted from a checkpoint.
+
+  rng(epoch + opts.randomSeed) ;
+
+  % Prepare GPUs. For very large models, matlabpool may time out
+  % when the model is checkpointed. Thus we restart it if needed
+  % at the beginning of each epoch.
+
+  prepareGPUs(opts) ;
+
+  % Train for one epoch.
+
   state.epoch = epoch ;
   state.learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   state.train = opts.train(randperm(numel(opts.train))) ; % shuffle
   state.val = opts.val(randperm(numel(opts.val))) ;
   state.imdb = imdb ;
 
-  if numGpus <= 1
+  if numel(opts.gpus) <= 1
     [stats.train(epoch),prof] = process_epoch(net, state, opts, 'train') ;
     stats.val(epoch) = process_epoch(net, state, opts, 'val') ;
     if opts.profile
@@ -403,3 +403,26 @@ list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
 tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
 epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
 epoch = max([epoch 0]) ;
+
+% -------------------------------------------------------------------------
+function prepareGPUs(opts)
+% -------------------------------------------------------------------------
+numGpus = numel(opts.gpus) ;
+if numGpus > 1
+  pool = gcp('nocreate') ;
+  if ~isempty(pool) && pool.NumWorkers ~= numGpus
+    delete(pool) ;
+  end
+  pool = gcp('nocreate') ;
+  if isempty(pool)
+    parpool('local', numGpus) ;
+  end
+  spmd
+    gpuDevice(opts.gpus(labindex))
+  end
+  if exist(opts.memoryMapFile)
+    delete(opts.memoryMapFile) ;
+  end
+elseif numGpus == 1
+  gpuDevice(opts.gpus)
+end
