@@ -1,4 +1,4 @@
-classdef DagNN < handle
+classdef DagNN < matlab.mixin.Copyable
 %DagNN Directed acyclic graph neural network
 %   DagNN is a CNN wrapper alternative to SimpleNN. It is object
 %   oriented and allows constructing networks with a directed acyclic
@@ -36,8 +36,17 @@ classdef DagNN < handle
 %      This flag tells whether the DagNN resides in CPU or GPU
 %      memory. Use the `DagNN.move()` function to move the DagNN
 %      between devices.
+%
+%   The DagNN is copyable handle, i.e. allows to create a deep copy using
+%   `copy` operator `deep_copy = copy(dagnet);`. In all cases the deep copy
+%   is located in CPU memory (i.e. is transfered from GPU before copy).
+%   Remark: As a side effect the original network is being reset (all
+%   variables are cleared) and only the network structure and parameters
+%   are copied.
+%
+%   See Also: matlab.mixin.Copyable
 
-% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2015-2016 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -372,6 +381,13 @@ classdef DagNN < handle
         'learningRate', {1}, ...
         'weightDecay', {1}) ;
       obj.paramNames.(name) = p ;
+    end
+  end
+
+  methods (Access = protected)
+    function cp = copyElement(obj)
+      % Create a deep copy of the network
+      cp = dagnn.DagNN.loadobj(obj.saveobj());
     end
   end
 end
