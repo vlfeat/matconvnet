@@ -169,6 +169,8 @@ for epoch=start+1:opts.numEpochs
 
   if opts.plotStatistics
     switchfigure(1) ; clf ;
+    tic ;
+    fprintf('%s: printing figure\n', mfilename) ;
     subplot(1,1+hasError,1) ;
     if ~evaluateMode
       semilogy(1:epoch, info.train.objective, '.-', 'linewidth', 2) ;
@@ -195,8 +197,11 @@ for epoch=start+1:opts.numEpochs
       title('error') ;
     end
     drawnow ;
+    fprintf('%s: saving figure\n', mfilename) ;
     print(1, modelFigPath, '-dpdf') ;
+    fprintf('%s: figure done in %.2g s\n', mfilename, toc) ;
   end
+
 end
 
 % -------------------------------------------------------------------------
