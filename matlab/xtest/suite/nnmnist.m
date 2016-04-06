@@ -22,6 +22,9 @@ classdef nnmnist < nntest
       end
       trainOpts = struct('numEpochs', 1, 'continue', false, 'gpus', gpus, ...
         'plotStatistics', false);
+      if strcmp(networkType, 'simplenn')
+        trainOpts.errorLabels = {'error', 'top5err'} ;
+      end
       [~, info] = cnn_mnist('train', trainOpts, 'networkType', networkType);
       test.verifyLessThan(info.train.top1err, 0.08);
       test.verifyLessThan(info.val.top1err, 0.025);
