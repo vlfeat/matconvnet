@@ -7,7 +7,7 @@ if nargin == 3
   return
 end
 
-if nargin < 1
+if nargin < 2
   rate = 0.5 ;
 end
 
@@ -20,7 +20,7 @@ if isa(x,'gpuArray')
     case 'double'
       scale = double(scale) ;
   end
-  mask = scale * (gpuArray.rand(size(x), 'single') >= opts.rate) ;
+  mask = scale * (gpuArray.rand(size(x), 'single') >= rate) ;
 else
   switch class(x)
     case 'single'
