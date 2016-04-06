@@ -1,4 +1,4 @@
-function [net, info] = cnn_train(net, imdb, getBatch, varargin)
+function [net, stats] = cnn_train(net, imdb, getBatch, varargin)
 %CNN_TRAIN  An example implementation of SGD for training CNNs
 %    CNN_TRAIN() is an example learner implementing stochastic
 %    gradient descent with momentum to train a CNN. It can be used
