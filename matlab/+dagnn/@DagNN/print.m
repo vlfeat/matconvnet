@@ -28,9 +28,9 @@ function str = print(obj, inputSizes, varargin)
 %      of each variables from each input.
 %
 %   `Format`:: 'ascii'
-%      Choose between `ascii`, `latex`, `csv`, 'graphplot', and `dot`.
-%      The first three format print tables; `graphplot` uses the plot function
-%      for a `digraph` (supported in Matlab >R2015b) and the last one
+%      Choose between `ascii`, `latex`, `csv`, 'digraph', and `dot`.
+%      The first three format print tables; `digraph` uses the plot function
+%      for a `digraph` (supported in MATLAB>=R2015b) and the last one
 %      prints a graph  in `dot` format. In case of zero outputs, it
 %      attmepts to compile and visualise the dot graph using `dot` command
 %      and `display` (Linux) or `open` (Mac OSX) on your system.
@@ -79,8 +79,8 @@ if strcmpi(opts.format,'dot')
   return ;
 end
 
-if strcmpi(opts.format,'graphplot')
-  str = printGraphPlot(obj, varSizes) ;
+if strcmpi(opts.format,'digraph')
+  str = printdigraph(obj, varSizes) ;
   return ;
 end
 
@@ -302,10 +302,10 @@ end
 end
 
 % -------------------------------------------------------------------------
-function h = printGraphPlot(net, varSizes)
+function h = printdigraph(net, varSizes)
 % -------------------------------------------------------------------------
 if exist('digraph') ~= 2
-  error('Matlab graph support not present.');
+  error('MATLAB graph support not present.');
 end
 s = []; t = []; w = [];
 varsNames = {net.vars.name};
