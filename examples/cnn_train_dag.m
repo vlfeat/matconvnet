@@ -9,8 +9,6 @@ function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-% Todo: save momentum with checkpointing (a waste?)
-
 opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
 opts.batchSize = 256 ;
@@ -41,13 +39,14 @@ if isnan(opts.train), opts.train = [] ; end
 %                                                            Initialization
 % -------------------------------------------------------------------------
 
-state.getBatch = getBatch ;
 evaluateMode = isempty(opts.train) ;
 if ~evaluateMode
   if isempty(opts.derOutputs)
     error('DEROUTPUTS must be specified when training.\n') ;
   end
 end
+
+state.getBatch = getBatch ;
 stats = [] ;
 
 % -------------------------------------------------------------------------
@@ -108,7 +107,7 @@ for epoch=start+1:opts.numEpochs
       mpiprofile('viewer', [prof_{:,1}]) ;
       keyboard ;
     end
-    clear net_ stats_ stats__ savedNet_ ;
+    clear net_ stats_ stats__ savedNet savedNet_ ;
   end
 
   if ~evaluateMode
@@ -116,7 +115,7 @@ for epoch=start+1:opts.numEpochs
   end
 
   if opts.plotStatistics
-    figure(1) ; clf ;
+    switchFigure(1) ; clf ;
     plots = setdiff(...
       cat(2,...
       fieldnames(stats.train)', ...
@@ -240,7 +239,7 @@ for t=1:opts.batchSize:numel(subset)
   time = toc(start) ;
   stats.time = time ;
   stats.num = num ; % processed on this GPU
-  speed = n/time ;
+  speed = n/time ; % processed on all GPUs
   fprintf(' %.1f Hz', speed) ;
 
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
@@ -328,7 +327,10 @@ if ~exist(fname) && (labindex == 1)
   fclose(f) ;
 end
 labBarrier() ;
-mmap = memmapfile(fname, 'Format', format, 'Repeat', numGpus, 'Writable', true) ;
+mmap = memmapfile(fname, ...
+                  'Format', format, ...
+                  'Repeat', numGpus, ...
+                  'Writable', true) ;
 
 % -------------------------------------------------------------------------
 function write_gradients(mmap, net)
@@ -403,6 +405,17 @@ list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
 tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
 epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
 epoch = max([epoch 0]) ;
+
+% -------------------------------------------------------------------------
+function switchFigure(n)
+% -------------------------------------------------------------------------
+if get(0,'CurrentFigure') ~= n
+  try
+    set(0,'CurrentFigure',n) ;
+  catch
+    figure(n) ;
+  end
+end
 
 % -------------------------------------------------------------------------
 function prepareGPUs(opts)
