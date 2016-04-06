@@ -5,11 +5,12 @@ classdef Layer < handle
     testInputs = 'same'  % list of inputs used in test mode, may be different
   end
   
-  properties
+  properties (SetAccess = public, GetAccess = public)
     func = []  % main function being called
     testFunc = []  % function called in test mode (empty to use the same as in normal mode; 'none' to disable, e.g. dropout)
     name = []  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
+    meta = []  % optional meta properties
   end
   
   properties (SetAccess = {?Net}, GetAccess = public)

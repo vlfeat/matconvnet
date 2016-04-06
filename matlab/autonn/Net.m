@@ -7,9 +7,15 @@ classdef Net < handle
     inputs = []  % struct of network's Inputs, indexed by name
     params = []  % list of Params
   end
+  properties (SetAccess = public, GetAccess = public)
+    meta = []  % optional meta properties
+  end
 
   methods
     function net = Net(root)
+      % copy meta properties
+      net.meta = root.meta ;
+      
       % figure out the execution order, and list layer objects
       root.resetOrder() ;
       objs = root.buildOrder({}) ;
