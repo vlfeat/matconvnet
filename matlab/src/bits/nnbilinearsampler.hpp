@@ -1,5 +1,5 @@
 // @file nnbilinearsampler.hpp
-// @brief Bilinear Sampling block
+// @brief Bilinear sampler block
 // @author Ankush Gupta
 
 /*
@@ -16,20 +16,19 @@ the terms of the BSD license (see the COPYING file).
 #include <stdio.h>
 
 namespace vl {
-
   vl::Error
   nnbilinearsampler_forward(vl::Context& context,
-                                vl::Tensor output,
-                                vl::Tensor data,
-                                vl::Tensor grid) ;
+                            vl::Tensor output,
+                            vl::Tensor data,
+                            vl::Tensor grid) ;
 
   vl::Error
   nnbilinearsampler_backward(vl::Context& context,
-                                   vl::Tensor derData,
-                                   vl::Tensor derGrid,
-                                   vl::Tensor data, 
-                                   vl::Tensor grid,
-                                   vl::Tensor derOutput);
+                             vl::Tensor derData,
+                             vl::Tensor derGrid,
+                             vl::Tensor data,
+                             vl::Tensor grid,
+                             vl::Tensor derOutput) ;
 }
 
-#endif /* defined(__vl__nnpooling__) */
+#endif /* defined(__vl__nnbilinearsampler__) */

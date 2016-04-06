@@ -1,6 +1,5 @@
-# Compile using a mix of NVCC and MEX In particular, it compiles MEX
-# files using NVCC then MEX; in this manner the CUDA Devkit needs not
-# matching MATLAB version.
+# Compiles by using NVCC for compliation and MEX for linking;
+# in this manner the CUDA Devkit does not need to match MATLAB's version.
 
 # Prefer .cu over .cpp and .c when GPU is enabled; this rule must come
 # before the following ones.

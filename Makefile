@@ -181,13 +181,13 @@ cpp_src+=matlab/src/bits/nnsubsample.$(ext)
 cpp_src+=matlab/src/bits/nnpooling.$(ext)
 cpp_src+=matlab/src/bits/nnnormalize.$(ext)
 cpp_src+=matlab/src/bits/nnbnorm.$(ext)
-cpp_src+=matlab/src/bits/nnbilinearsampler.cu
-mex_src+=matlab/src/vl_nnbilinearsampler.cu
+cpp_src+=matlab/src/bits/nnbilinearsampler.$(ext)
 mex_src+=matlab/src/vl_nnconv.$(ext)
 mex_src+=matlab/src/vl_nnconvt.$(ext)
 mex_src+=matlab/src/vl_nnpool.$(ext)
 mex_src+=matlab/src/vl_nnnormalize.$(ext)
 mex_src+=matlab/src/vl_nnbnorm.$(ext)
+mex_src+=matlab/src/vl_nnbilinearsampler.$(ext)
 ifdef ENABLE_IMREADJPEG
 mex_src+=matlab/src/vl_imreadjpeg.cpp
 endif
@@ -199,6 +199,7 @@ cpp_src+=matlab/src/bits/impl/copy_cpu.cpp
 cpp_src+=matlab/src/bits/impl/pooling_cpu.cpp
 cpp_src+=matlab/src/bits/impl/normalize_cpu.cpp
 cpp_src+=matlab/src/bits/impl/bnorm_cpu.cpp
+cpp_src+=matlab/src/bits/impl/bilinearsampler_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
@@ -213,8 +214,8 @@ cpp_src+=matlab/src/bits/impl/copy_gpu.cu
 cpp_src+=matlab/src/bits/impl/pooling_gpu.cu
 cpp_src+=matlab/src/bits/impl/normalize_gpu.cu
 cpp_src+=matlab/src/bits/impl/bnorm_gpu.cu
-cpp_src+=matlab/src/bits/datacu.cu
 cpp_src+=matlab/src/bits/impl/bilinearsampler_gpu.cu
+cpp_src+=matlab/src/bits/datacu.cu
 ifdef ENABLE_CUDNN
 cpp_src+=matlab/src/bits/impl/nnconv_cudnn.cu
 cpp_src+=matlab/src/bits/impl/nnpooling_cudnn.cu
