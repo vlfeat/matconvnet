@@ -108,7 +108,11 @@ while ~isempty(currentVars)
                     'learningRate', [params.learningRate], ...
                     'weightDecay', [params.weightDecay], ...
                     'stride', block.stride, ...
-                    'pad', block.pad) ;
+                    'pad', block.pad, ...
+                    'opts', {block.opts}) ;
+                if numel(net.layers{end}.weights)==1
+                    net.layers{end}.weights{2} = [];
+                end
             case 'dagnn.ReLU'
                 net.layers{end+1} = struct('type', 'relu', ...
                     'leak', block.leak) ;
@@ -131,5 +135,6 @@ while ~isempty(currentVars)
     end
 end
 
+net = vl_simplenn_tidy(net);
 end
 
