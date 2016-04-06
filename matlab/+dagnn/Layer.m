@@ -83,10 +83,8 @@ classdef Layer < handle
 
       % call the simplified interface
       outputs = obj.forward(inputs, {net.params(par).value}) ;
-      if numel(out) == 1 % speeds up a bit the most used case
-        net.vars(out).value = outputs{1};
-      else
-        [net.vars(out).value] = deal(outputs{:}) ;
+      for oi = 1:numel(out)
+        net.vars(out(oi)).value = outputs{oi};
       end
     end
 
