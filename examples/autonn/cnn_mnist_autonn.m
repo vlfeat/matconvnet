@@ -6,6 +6,7 @@ run(fullfile(fileparts(mfilename('fullpath')),...
 
 % opts.modelType = 'mlp' ;
 opts.modelType = 'lenet' ;
+opts.batchNormalization = false ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 sfx = opts.modelType ;
@@ -19,7 +20,7 @@ opts.train.batchSize = 100 ;
 opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
-opts.train.learningRate = 0.00001 ;  %0.001 ;
+opts.train.learningRate = 0.00001 ;
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts = vl_argparse(opts, varargin) ;
@@ -40,11 +41,14 @@ end
 rng('default') ;
 rng(0) ;
 
+bn = opts.batchNormalization ;
+
 images = Input() ;
 labels = Input() ;
 
 switch opts.modelType
 case 'mlp'  % multi-layer perceptron
+  
   x = vl_nnconv(images, 'size', [28, 28, 1, 100]) ;
   x = vl_nnrelu(x) ;
   x = vl_nnconv(x, 'size', [1, 1, 100, 100]) ;
@@ -53,11 +57,15 @@ case 'mlp'  % multi-layer perceptron
   x = vl_nnconv(x, 'size', [1, 1, 100, 10]) ;
     
 case 'lenet'  % LeNet
+  
   x = vl_nnconv(images, 'size', [5, 5, 1, 20]) ;
+  if bn, x = vl_nnbnorm(x) ; end
   x = vl_nnpool(x, 2, 'stride', 2) ;
   x = vl_nnconv(x, 'size', [5, 5, 20, 50]) ;
+  if bn, x = vl_nnbnorm(x) ; end
   x = vl_nnpool(x, 2, 'stride', 2) ;
   x = vl_nnconv(x, 'size', [4, 4, 50, 500]) ;
+  if bn, x = vl_nnbnorm(x) ; end
   x = vl_nnrelu(x) ;
   x = vl_nnconv(x, 'size', [1, 1, 500, 10]) ;
   

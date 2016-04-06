@@ -1,9 +1,9 @@
-function [y, dzdg, dzdb, moments] = vl_nnbnorm_autonn(x, g, b, moments, mode, varargin)
+function [y, dzdg, dzdb, moments] = vl_nnbnorm_autonn(x, g, b, moments, test, varargin)
 %VL_NNBNORM_AUTONN
 %   VL_NNBNORM has a non-standard interface (returns a derivative for the
 %   moments, even though they are not an input), so we must wrap it.
-%   This also supports nice features like setting the parameter sizes
-%   automatically (e.g. building a net with VL_NNBNORM(X) is valid).
+%   This also lets us supports nice features like setting the parameter
+%   sizes automatically (e.g. building a net with VL_NNBNORM(X) is valid).
 
   % use number of channels in X to extend scalar (i.e. default) params to
   % the correct size
@@ -21,7 +21,10 @@ function [y, dzdg, dzdb, moments] = vl_nnbnorm_autonn(x, g, b, moments, mode, va
     end
   end
 
-  if strcmp(mode, 'normal')
+  if test
+    % test mode, pass in moments
+    y = vl_nnbnorm(x, g, b, 'moments', moments, varargin{:}) ;
+  else
     if numel(varargin) >= 1 && isnumeric(varargin{1})
       % backward mode
       [y, dzdg, dzdb, moments] = vl_nnbnorm(x, g, b, varargin{:}) ;
@@ -29,9 +32,6 @@ function [y, dzdg, dzdb, moments] = vl_nnbnorm_autonn(x, g, b, moments, mode, va
       % forward
       y = vl_nnbnorm(x, g, b, varargin{:}) ;
     end
-  else
-    % test mode, pass in moments
-    y = vl_nnbnorm(x, g, b, 'moments', moments, varargin{:}) ;
   end
 
 end

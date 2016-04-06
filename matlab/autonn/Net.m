@@ -105,6 +105,10 @@ classdef Net < handle
         % store args for backward mode, with an empty slot for der arg
         layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
         
+        % modify argument positions according to the new empty slot
+        next = layer.inputArgPos > lastInput ;
+        layer.inputArgPos(next) = layer.inputArgPos(next) + 1 ;
+        
         % position of der arg
         layer.inputArgPos(end+1) = lastInput + 1 ;
         
@@ -139,7 +143,7 @@ classdef Net < handle
           % we don't fully eliminate the layer in test mode because that
           % would require special handling of in/out var indexes.
           layer.func = @deal ;
-          args = args{1} ;  % only deal first input
+          args = args(1) ;  % only deal first input
           
         else
           % some other function
