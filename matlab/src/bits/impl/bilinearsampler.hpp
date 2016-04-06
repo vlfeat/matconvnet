@@ -7,30 +7,29 @@
 // defines the dispatcher for CUDA kernels:
 namespace vl { namespace impl {
 
+  template<vl::Device dev, typename type>
   struct bilinearsampler {
 
     static vl::Error
-    forward(float* output,
-            float const* data,
-            float const* grid,
-            size_t outHeight, size_t outWidth,
-            size_t nBatch_grid,
-            size_t inHeight, size_t inWidth,
-            size_t nChannels, size_t nBatch_data) ;            
+    forward(Context& context,
+            type* output,
+            type const* data,
+            type const* grid,
+            size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
+            size_t inHeight, size_t inWidth, size_t inCardinality) ;
 
 
     static vl::Error
-    backward(float* derData,
-             float* derGrid,
-             float const* data,
-             float const* grid,
-             float const* derOutput,
-             size_t outHeight, size_t outWidth,
-             size_t nBatch_grid,
-             size_t inHeight, size_t inWidth,
-             size_t nChannels,
-             size_t nBatch_data) ;
+    backward(Context& context,
+             type* derData,
+             type* derGrid,
+             type const* data,
+             type const* grid,
+             type const* derOutput,
+             size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
+             size_t inHeight, size_t inWidth, size_t inCardinality) ;
   } ;
+
 } }
 
-#endif /* defined(VL_POOLING_H) */
+#endif /* defined(VL_BILINEARSAMPLER_H) */

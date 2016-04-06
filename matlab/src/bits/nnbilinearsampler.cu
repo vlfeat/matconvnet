@@ -1,9 +1,10 @@
 // @file nnbilinearsampler.cu
-// @brief Bilinear Sampler block
+// @brief Bilinear sampler block (definition)
 // @author Ankush Gupta
+// @author Andrea Vedaldi
 
 /*
-Copyright (C) 2016 Ankush Gupta.
+Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -13,91 +14,116 @@ the terms of the BSD license (see the COPYING file).
 #include "nnbilinearsampler.hpp"
 #include "impl/bilinearsampler.hpp"
 
-#include <cstdio>
-
-//#if ENABLE_GPU
+#if ENABLE_GPU
 #include "datacu.hpp"
-//#endif
+#endif
 
+#include <cstdio>
 #include <assert.h>
 
 using namespace vl ;
 
+/* ---------------------------------------------------------------- */
+/*                                        nnbilinearsampler_forward */
+/* ---------------------------------------------------------------- */
+
+#define DISPATCH(deviceType,type) \
+error = vl::impl::bilinearsampler<deviceType,type>::forward \
+(context, \
+(type*) output.getMemory(), \
+(type const*) data.getMemory(), \
+(type const*) grid.getMemory(), \
+output.getHeight(), output.getWidth(), output.getDepth(), output.getSize(), \
+data.getHeight(), data.getWidth(), data.getSize());
+
+#define DISPATCH2(deviceType) \
+switch (dataType) { \
+case vlTypeFloat : DISPATCH(deviceType, float) ; break ; \
+IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, double) ; break ;) \
+default: assert(false) ; return vlErrorUnknown ; \
+}
 
 vl::Error
 vl::nnbilinearsampler_forward(Context& context,
                               Tensor output,
                               Tensor data,
-                              Tensor grid) {
-
-  vl::Error status = vlSuccess ;
-  vl::Device deviceType = output.getDeviceType() ;
+                              Tensor grid)
+{
+  vl::Error error = vlSuccess ;
   vl::Type dataType = output.getDataType() ;
 
-  switch (deviceType) {
+  switch (output.getDeviceType())
+  {
     default:
       assert(false);
-      return vl::vlErrorUnknown;
+      error = vl::vlErrorUnknown ;
+      break ;
 
     case vl::CPU:
-      assert(false);
-      return vl::vlErrorUnsupported;
+      DISPATCH2(vl::CPU) ;
+      break ;
 
+#if ENABLE_GPU
     case vl::GPU:
-
-      status = vl::impl::bilinearsampler::forward((float*) output.getMemory(),
-                                        (float const*) data.getMemory(),
-                                        (float const*) grid.getMemory(),
-                                        output.getHeight(), output.getWidth(),
-                                        output.getSize(),
-                                        data.getHeight(), data.getWidth(),
-                                        data.getDepth(), data.getSize());
-      if (status==vlErrorCuda) {
-        context.setError(context.getCudaHelper().catchCudaError(__func__));
+      DISPATCH2(vl::GPU) ;
+      if (error == vlErrorCuda) {
+        context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break;
+#endif
   }
-
-  return context.passError(status, "nnbilinearsampler_forward");
+  return context.passError(error, __func__);
 }
 
+/* ---------------------------------------------------------------- */
+/*                                       nnbilinearsampler_backward */
+/* ---------------------------------------------------------------- */
+
+#undef DISPATCH
+#define DISPATCH(deviceType,type) \
+error = vl::impl::bilinearsampler<deviceType,type>::backward \
+(context, \
+(type*) derData.getMemory(), \
+(type *) derGrid.getMemory(), \
+(type const*) data.getMemory(), \
+(type const*) grid.getMemory(), \
+(type const*) derOutput.getMemory(), \
+derOutput.getHeight(), derOutput.getWidth(), derOutput.getDepth(), derOutput.getSize(), \
+data.getHeight(), data.getWidth(), data.getSize());
+
 vl::Error
-vl::nnbilinearsampler_backward( Context& context,
-                                Tensor derData,
-                                Tensor derGrid,
-                                Tensor data,
-                                Tensor grid,
-                                Tensor derOutput)
+vl::nnbilinearsampler_backward(Context& context,
+                               Tensor derData,
+                               Tensor derGrid,
+                               Tensor data,
+                               Tensor grid,
+                               Tensor derOutput)
 {
-  vl::Error status = vlSuccess ;
+  vl::Error error = vlSuccess ;
   vl::Device deviceType = derOutput.getDeviceType() ;
   vl::Type dataType = derOutput.getDataType() ;
 
-  switch (deviceType) {
+  switch (derOutput.getDeviceType())
+  {
     default:
       assert(false);
-      return vl::vlErrorUnknown;
+      error = vl::vlErrorUnknown ;
+      break ;
 
     case vl::CPU:
-      assert(false);
-      return vl::vlErrorUnsupported;
+      DISPATCH2(vl::CPU) ;
+      break ;
 
+#if ENABLE_GPU
     case vl::GPU:
-      status = vl::impl::bilinearsampler::backward((float*) derData.getMemory(),
-                                         (float *) derGrid.getMemory(),
-                                         (float const*) data.getMemory(),
-                                         (float const*) grid.getMemory(),
-                                         (float const*) derOutput.getMemory(),
-                                         derOutput.getHeight(), derOutput.getWidth(),
-                                         derOutput.getSize(),
-                                         data.getHeight(), data.getWidth(),
-                                         data.getDepth(), data.getSize());
-      if (status == vlErrorCuda) {
-        context.setError(context.getCudaHelper().catchCudaError("bilinearsampler_*::backward"));
+      DISPATCH2(vl::GPU) ;
+      if (error == vlErrorCuda) {
+        context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break;
+#endif
   }
-  return context.passError(status, "nnbilinearsampler_backward");
+  return context.passError(error, __func__);
 }
 
 

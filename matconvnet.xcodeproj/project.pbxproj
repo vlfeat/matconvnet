@@ -41,6 +41,7 @@
 		2DE27163197A5531001768CA /* vl_imreadjpeg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DE27162197A5531001768CA /* vl_imreadjpeg.cpp */; };
 		2DF07B701AAB7A5C001A3943 /* imread_quartz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */; };
 		2DF07B721AAB9160001A3943 /* imread_libjpeg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */; };
+		2DF0C6261CB55813005BEF89 /* bilinearsampler_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF0C6251CB55813005BEF89 /* bilinearsampler_cpu.cpp */; };
 		2DF897C11C4182CE002C7EB9 /* imread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF897C01C4182CE002C7EB9 /* imread.cpp */; };
 /* End PBXBuildFile section */
 
@@ -251,6 +252,13 @@
 		2DF07B6E1AAA4068001A3943 /* imread.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = imread.hpp; path = matlab/src/bits/imread.hpp; sourceTree = "<group>"; };
 		2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imread_quartz.cpp; path = matlab/src/bits/impl/imread_quartz.cpp; sourceTree = "<group>"; };
 		2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imread_libjpeg.cpp; path = matlab/src/bits/impl/imread_libjpeg.cpp; sourceTree = "<group>"; };
+		2DF0C61F1CB54C2B005BEF89 /* bilinearsampler_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = bilinearsampler_gpu.cu; path = matlab/src/bits/impl/bilinearsampler_gpu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2DF0C6201CB54C2B005BEF89 /* bilinearsampler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = bilinearsampler.hpp; path = matlab/src/bits/impl/bilinearsampler.hpp; sourceTree = "<group>"; };
+		2DF0C6211CB54C3E005BEF89 /* vl_nnbilinearsampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnbilinearsampler.m; path = matlab/vl_nnbilinearsampler.m; sourceTree = "<group>"; };
+		2DF0C6221CB54CA8005BEF89 /* vl_nnbilinearsampler.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnbilinearsampler.cu; path = matlab/src/vl_nnbilinearsampler.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2DF0C6231CB54CBA005BEF89 /* nnbilinearsampler.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler.cu; path = matlab/src/bits/nnbilinearsampler.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2DF0C6241CB54CBA005BEF89 /* nnbilinearsampler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbilinearsampler.hpp; path = matlab/src/bits/nnbilinearsampler.hpp; sourceTree = "<group>"; };
+		2DF0C6251CB55813005BEF89 /* bilinearsampler_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = bilinearsampler_cpu.cpp; path = matlab/src/bits/impl/bilinearsampler_cpu.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnpool.cu; path = matlab/src/vl_nnpool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DF61A991AB5925900ED9A1F /* vl_imreadjpeg.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_imreadjpeg.cu; path = matlab/src/vl_imreadjpeg.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DF897C01C4182CE002C7EB9 /* imread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imread.cpp; path = matlab/src/bits/imread.cpp; sourceTree = "<group>"; };
@@ -284,6 +292,7 @@
 		2D375DBD18A7F796008A97EE /* src */ = {
 			isa = PBXGroup;
 			children = (
+				2DF0C6221CB54CA8005BEF89 /* vl_nnbilinearsampler.cu */,
 				2D375DCE18A84923008A97EE /* bits */,
 				2D6D0420196A892E00022E96 /* config */,
 				2DE27162197A5531001768CA /* vl_imreadjpeg.cpp */,
@@ -325,6 +334,8 @@
 				2DF07B6E1AAA4068001A3943 /* imread.hpp */,
 				2DF897C01C4182CE002C7EB9 /* imread.cpp */,
 				2D528BA41A8284C6006EC40A /* mexutils.h */,
+				2DF0C6231CB54CBA005BEF89 /* nnbilinearsampler.cu */,
+				2DF0C6241CB54CBA005BEF89 /* nnbilinearsampler.hpp */,
 				2D80792D1AEF94650040BC14 /* nnbnorm.cpp */,
 				2D80792E1AEF94650040BC14 /* nnbnorm.cu */,
 				2D80792F1AEF94650040BC14 /* nnbnorm.hpp */,
@@ -365,6 +376,9 @@
 		2D479D071A88AE0400826D48 /* impl */ = {
 			isa = PBXGroup;
 			children = (
+				2DF0C61F1CB54C2B005BEF89 /* bilinearsampler_gpu.cu */,
+				2DF0C6251CB55813005BEF89 /* bilinearsampler_cpu.cpp */,
+				2DF0C6201CB54C2B005BEF89 /* bilinearsampler.hpp */,
 				2D4E88271C37FAB80074DDEE /* sharedmem.cuh */,
 				2D479D091A88AF4300826D48 /* blashelper.hpp */,
 				2D0958DA1C3A938500553C8A /* cudnnhelper.hpp */,
@@ -565,6 +579,7 @@
 				2D1ECF5419CDE63200F4A122 /* vl_argparse.m */,
 				2D19E6781AB2171800D4FF0C /* vl_compilenn.m */,
 				2D19E6791AB2171800D4FF0C /* vl_imreadjpeg.m */,
+				2DF0C6211CB54C3E005BEF89 /* vl_nnbilinearsampler.m */,
 				2D416C731B39E1C60092638E /* vl_nnbnorm.m */,
 				2D433A1A1BAC4AEC00D31E69 /* vl_nnconcat.m */,
 				2D375DBB18A7F790008A97EE /* vl_nnconv.m */,
@@ -728,6 +743,7 @@
 				2D14F00C1B02AB9800A8F33D /* nnbias.cpp in Sources */,
 				2D7B113C1A8BDB3C00A3D8A0 /* nnnormalize.cpp in Sources */,
 				2DF07B721AAB9160001A3943 /* imread_libjpeg.cpp in Sources */,
+				2DF0C6261CB55813005BEF89 /* bilinearsampler_cpu.cpp in Sources */,
 				2D2A74F71A88D73900C372A4 /* copy_cpu.cpp in Sources */,
 				2DE27163197A5531001768CA /* vl_imreadjpeg.cpp in Sources */,
 				2D9DC1CC1A209EBF0053CB7D /* vl_nnconv.cpp in Sources */,

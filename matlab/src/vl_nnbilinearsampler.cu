@@ -16,7 +16,10 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datamex.hpp"
 #include "bits/nnbilinearsampler.hpp"
 
+#if ENABLE_GPU
 #include "bits/datacu.hpp"
+#endif
+
 #include <assert.h>
 
 /* option codes */
@@ -118,16 +121,16 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
   }
 
-  /* Basic compatibility of Shape */
+  /* Basic compatibility of shape */
   const int inHeight = data.getHeight(); // spatial dimension 1
   const int inWidth = data.getWidth(); // spatial dimension 2
   const int inDepth = data.getDepth(); // number of channels
   const int inBatch = data.getSize(); // batch-size
 
-  // grid dimensions
-  const int gridHeight = grid.getHeight(); // *OUTPUT* spatial dimension
-  const int gridWidth = grid.getWidth(); // *OUTPUT* spatial dimension 2
-  const int gridDepth = grid.getDepth(); // number of channels :: should be 2
+  /* Grid dimensions: note that the grid uses the first dimension as channels */
+  const int gridHeight = grid.getWidth(); // *OUTPUT* spatial dimension
+  const int gridWidth = grid.getDepth(); // *OUTPUT* spatial dimension 2
+  const int gridDepth = grid.getHeight(); // number of channels :: should be 2
   const int gridBatch = grid.getSize(); // should be DIVISIBLE by inBatch
 
   if (gridDepth != 2) {
