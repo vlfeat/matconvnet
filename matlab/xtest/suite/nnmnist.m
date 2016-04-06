@@ -26,8 +26,8 @@ classdef nnmnist < nntest
         trainOpts.errorLabels = {'error', 'top5err'} ;
       end
       [~, info] = cnn_mnist('train', trainOpts, 'networkType', networkType);
-      test.verifyLessThan(info.train.top1err, 0.08);
-      test.verifyLessThan(info.val.top1err, 0.025);
+      test.verifyLessThan(info.train.error, 0.08);
+      test.verifyLessThan(info.val.error, 0.025);
     end
   end
 end
