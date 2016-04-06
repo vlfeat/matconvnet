@@ -1,6 +1,6 @@
 classdef nnmnist < nntest
   properties (TestParameter)
-    networkType = {'simplenn', 'dagnn'}
+    networkType = {'dagnn', 'simplenn'}
   end
 
   methods (TestClassSetup)
@@ -23,8 +23,8 @@ classdef nnmnist < nntest
       trainOpts = struct('numEpochs', 1, 'continue', false, 'gpus', gpus, ...
         'plotStatistics', false);
       [~, info] = cnn_mnist('train', trainOpts, 'networkType', networkType);
-      test.verifyLessThan(info.train.error, 0.08);
-      test.verifyLessThan(info.val.error, 0.025);
+      test.verifyLessThan(info.train.top1err, 0.08);
+      test.verifyLessThan(info.val.top1err, 0.025);
     end
   end
 end
