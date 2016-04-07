@@ -47,64 +47,63 @@ forward_backward
   for (int n = 0 ; n < outCardinality ; ++n) {
     for (int c = 0 ; c < outDepth ; ++c) {
       type const * end = grid + 2 * outWidth * outHeight ;
-      derGrid -= 2 ;
       while (grid < end) {
         type py = *grid++ ;
         type px = *grid++ ;
-        derGrid += 2 ;
 
         py = (py + 1.0) / 2.0 * (inHeight - 1) ;
         px = (px + 1.0) / 2.0 * (inWidth - 1) ;
         const int sx = floor(px);
         const int sy = floor(py);
 
+        type acc = 0 ;
         type dy ;
         if (backward) {
           dy = *derOutput++ ;
         }
-
-        // skip if out of range
-        if (sy < -1 || sy > inHeight - 1 || sx < -1 || sx > inWidth - 1) {
-          if (!backward) {
-            *output++ = 0 ;
-          }
-          continue ;
+        if (backwardGrid) {
+          derGrid[0] = 0 ;
+          derGrid[1] = 0 ;
         }
 
-        // get the interpolation weights
-        const type wx = px - sx ;
-        const type wy = py - sy ;
+        // todo: check boundary conditions in other frameworks and make
+        // them the same
+        if (0 <= sy && sy < inHeight && 0 <= sx && sx < inWidth) {
+          // get the interpolation weights
+          const type wx = px - sx ;
+          const type wy = py - sy ;
 
-        // add the weighted sum to the output
-        type acc = 0;
-
-        #pragma unroll
-        for (int j=0; j < 2; j++) {
           #pragma unroll
-          for (int i=0; i < 2; i++) {
-            int ssy = sy + i ;
-            int ssx = sx + j ;
-            if (ssy < 0 || ssy > inHeight - 1 || ssx < 0 || ssx > inWidth - 1) {
-              continue ;
-            }
-            type wwx = (1-j)*(1-wx) + j*wx ;
-            type wwy = (1-i)*(1-wy) + i*wy ;
-            type ww = wwx * wwy ;
-            if (!backward) {
-              acc += ww * data[ssy + ssx * inHeight];
-            } else {
-              if (backwardData) {
-                derData[ssy + ssx * inHeight] += ww * dy ;
+          for (int j=0; j < 2; j++) {
+            #pragma unroll
+            for (int i=0; i < 2; i++) {
+              int ssy = sy + i ;
+              int ssx = sx + j ;
+              if (ssy < 0 || ssy > inHeight - 1 || ssx < 0 || ssx > inWidth - 1) {
+                continue ;
               }
-              if (backwardGrid) {
-                derGrid[0] += wwy * dy ;
-                derGrid[1] += wwx * dy ;
+              type wwx = (1-j)*(1-wx) + j*wx ;
+              type wwy = (1-i)*(1-wy) + i*wy ;
+              type ww = wwx * wwy ;
+              if (!backward) {
+                acc += ww * data[ssy + ssx * inHeight];
+              } else {
+                if (backwardData) {
+                  derData[ssy + ssx * inHeight] += ww * dy ;
+                }
+                if (backwardGrid) {
+                  derGrid[0] += wwy * dy ;
+                  derGrid[1] += wwx * dy ;
+                }
               }
             }
           }
         }
         if (!backward) {
           *output++ = acc ;
+        }
+        if (backwardGrid) {
+          derGrid += 2 ;
         }
       }
       // next channel
