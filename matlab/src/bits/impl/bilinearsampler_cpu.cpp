@@ -7,34 +7,36 @@
 #include <string.h>
 
 // use a template to define both given similarities
-template<typename type, bool backward>
+template<typename type, bool backwardData, bool backwardGrid>
 static vl::Error
-forward_backward_data
+forward_backward
 (vl::Context& context,
- type* output, // null in backward
- type* derData, // null in forward
- type const* data, // null in backward
+ type* output,
+ type* derData,
+ type* derGrid,
+ type const* data,
  type const* grid,
- type const* derOutput, // null in forward
+ type const* derOutput,
  size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
  size_t inHeight, size_t inWidth, size_t inCardinality)
 {
   vl::Error error = vl::vlSuccess ;
 
+  bool backward = backwardData | backwardGrid ;
+
+  // common conditions
   assert(grid) ;
   assert(divides(inCardinality, outCardinality)) ;
 
   // forward conditions
   assert(backward || data) ;
   assert(backward || output) ;
-  assert(backward || derData == NULL) ;
-  assert(backward || derOutput == NULL) ;
 
   // backward conditions
-  assert(!backward || data == NULL) ;
-  assert(!backward || output == NULL) ;
-  assert(!backward || derData) ;
   assert(!backward || derOutput) ;
+  assert(!backwardData || derData) ;
+  assert(!backwardGrid || derGrid) ;
+  assert(!backwardGrid || data) ;
 
   int groupSize = outCardinality / inCardinality ;
 
@@ -45,9 +47,11 @@ forward_backward_data
   for (int n = 0 ; n < outCardinality ; ++n) {
     for (int c = 0 ; c < outDepth ; ++c) {
       type const * end = grid + 2 * outWidth * outHeight ;
+      derGrid -= 2 ;
       while (grid < end) {
         type py = *grid++ ;
         type px = *grid++ ;
+        derGrid += 2 ;
 
         py = (py + 1.0) / 2.0 * (inHeight - 1) ;
         px = (px + 1.0) / 2.0 * (inWidth - 1) ;
@@ -71,25 +75,31 @@ forward_backward_data
         const type wx = px - sx ;
         const type wy = py - sy ;
 
-        // add the weighted sum to the output:
-        int ssx, ssy;
+        // add the weighted sum to the output
         type acc = 0;
 
-        // get the number of input-image from which we get the data:
-        // this is NOT always the same as the affine-grid image number
-        // as there can be multiple GRIDS per input image:
-        for (int j=0; j< 2; j++) {
+        #pragma unroll
+        for (int j=0; j < 2; j++) {
+          #pragma unroll
           for (int i=0; i < 2; i++) {
-            ssy = sy + i;
-            ssx = sx + j;
+            int ssy = sy + i ;
+            int ssx = sx + j ;
             if (ssy < 0 || ssy > inHeight - 1 || ssx < 0 || ssx > inWidth - 1) {
               continue ;
             }
-            const type w = ((1-j)*(1-wx) + j*wx) * ((1-i)*(1-wy) + i*wy);
+            type wwx = (1-j)*(1-wx) + j*wx ;
+            type wwy = (1-i)*(1-wy) + i*wy ;
+            type ww = wwx * wwy ;
             if (!backward) {
-              acc += w * data[ssy + ssx * inHeight];
+              acc += ww * data[ssy + ssx * inHeight];
             } else {
-              derData[ssy + ssx * inHeight] += w * dy ;
+              if (backwardData) {
+                derData[ssy + ssx * inHeight] += ww * dy ;
+              }
+              if (backwardGrid) {
+                derGrid[0] += wwy * dy ;
+                derGrid[1] += wwx * dy ;
+              }
             }
           }
         }
@@ -104,6 +114,7 @@ forward_backward_data
         derData +=inHeight * inWidth ;
       }
       grid -= 2 * outHeight * outWidth ;
+      derGrid -= 2 * outHeight * outWidth ;
     }
     // next image
     if ((n + 1) % groupSize != 0) {
@@ -111,6 +122,7 @@ forward_backward_data
       derData -= inHeight * inWidth * outDepth ;
     }
     grid += 2 * outHeight * outWidth ;
+    derGrid += 2 * outHeight * outWidth ;
   }
   return error ;
 }
@@ -133,8 +145,8 @@ namespace vl { namespace impl {
             size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
             size_t inHeight, size_t inWidth, size_t inCardinality)
     {
-      return forward_backward_data<type, false>
-      (context, output, NULL, data, grid, NULL,
+      return forward_backward<type, false, false>
+      (context, output, NULL, NULL, data, grid, NULL,
        outHeight, outWidth, outDepth, outCardinality,
        inHeight, inWidth,inCardinality) ;
     }
@@ -143,6 +155,12 @@ namespace vl { namespace impl {
     /*------------------------------------------------------------- */
     /*                                                     backward */
     /* ------------------------------------------------------------ */
+
+#define DISPATCH(bwData, bwGrid) \
+error = forward_backward<type, bwData, bwGrid> \
+    (context, NULL, derData, derGrid, data, grid, derOutput, \
+     outHeight, outWidth, outDepth, outCardinality, \
+     inHeight, inWidth,inCardinality) ;
 
     static vl::Error
     backward(Context& context,
@@ -156,13 +174,14 @@ namespace vl { namespace impl {
     {
       vl::Error error = vlSuccess ;
 
-      error = forward_backward_data<type, true>
-      (context, NULL, derData, NULL, grid, derOutput,
-       outHeight, outWidth, outDepth, outCardinality,
-       inHeight, inWidth,inCardinality) ;
-      if (error != vlSuccess) { return error; }
-
-      // todo: backward grid
+      // optimized codepaths depending on what needs to be comptued
+      if (derData && derGrid == NULL) {
+        DISPATCH(true, false) ;
+      } else if (derGrid && derData == NULL) {
+        DISPATCH(false, true) ;
+      } else if (derGrid && derData) {
+        DISPATCH(true, true) ;
+      }
       return error ;
     }
   } ;
