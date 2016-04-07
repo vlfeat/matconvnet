@@ -6,7 +6,7 @@
 #include <math.h>
 #include <string.h>
 
-// use a template to define both given similarities
+// use a template to define both directions as they are nearly identical code-wise
 template<typename type, bool backwardData, bool backwardGrid>
 static vl::Error
 forward_backward
@@ -40,7 +40,7 @@ forward_backward
 
   int groupSize = outCardinality / inCardinality ;
 
-  if (backward) {
+  if (backwardData) {
     memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
   }
 
@@ -108,11 +108,8 @@ forward_backward
         }
       }
       // next channel
-      if (!backward) {
-        data += inHeight * inWidth ;
-      } else {
-        derData +=inHeight * inWidth ;
-      }
+      data += inHeight * inWidth ;
+      derData +=inHeight * inWidth ;
       grid -= 2 * outHeight * outWidth ;
       derGrid -= 2 * outHeight * outWidth ;
     }
