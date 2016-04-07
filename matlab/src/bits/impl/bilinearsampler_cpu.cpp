@@ -79,7 +79,7 @@ forward_backward
             for (int i=0; i < 2; i++) {
               int ssy = sy + i ;
               int ssx = sx + j ;
-              if (ssy < 0 || ssy > inHeight - 1 || ssx < 0 || ssx > inWidth - 1) {
+              if (ssy < 0 || ssy >= inHeight || ssx < 0 || ssx >= inWidth) {
                 continue ;
               }
               type wwx = (1-j)*(1-wx) + j*wx ;
