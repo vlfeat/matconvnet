@@ -53,17 +53,15 @@ forward_backward
 
         py = type(0.5)*(py + type(1.0)) * (inHeight - 1) ;
         px = type(0.5)*(px + type(1.0)) * (inWidth - 1) ;
-        const int sx = floor(px);
+        const int sx = floor(px); // todo: check floor vs floorf
         const int sy = floor(py);
 
         type acc = 0 ;
+        type dgridx = 0 ;
+        type dgridy = 0 ;
         type dy ;
         if (backward) {
           dy = *derOutput++ ;
-        }
-        if (backwardGrid) {
-          derGrid[0] = 0 ;
-          derGrid[1] = 0 ;
         }
 
         // todo: check boundary conditions in other frameworks and make
@@ -92,8 +90,8 @@ forward_backward
                   derData[ssy + ssx * inHeight] += ww * dy ;
                 }
                 if (backwardGrid) {
-                  derGrid[0] += wwy * dy ;
-                  derGrid[1] += wwx * dy ;
+                  dgridy += wwy * dy ;
+                  dgridx += wwx * dy ;
                 }
               }
             }
@@ -103,7 +101,8 @@ forward_backward
           *output++ = acc ;
         }
         if (backwardGrid) {
-          derGrid += 2 ;
+          *derGrid++ = dgridy ;
+          *derGrid++ = dgridx ;
         }
       }
       // next channel
@@ -146,7 +145,6 @@ namespace vl { namespace impl {
        outHeight, outWidth, outDepth, outCardinality,
        inHeight, inWidth,inCardinality) ;
     }
-
 
     /*------------------------------------------------------------- */
     /*                                                     backward */
