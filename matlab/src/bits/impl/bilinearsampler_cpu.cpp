@@ -51,8 +51,8 @@ forward_backward
         type py = *grid++ ;
         type px = *grid++ ;
 
-        py = (py + 1.0) / 2.0 * (inHeight - 1) ;
-        px = (px + 1.0) / 2.0 * (inWidth - 1) ;
+        py = type(0.5)*(py + type(1.0)) * (inHeight - 1) ;
+        px = type(0.5)*(px + type(1.0)) * (inWidth - 1) ;
         const int sx = floor(px);
         const int sy = floor(py);
 
@@ -173,9 +173,9 @@ error = forward_backward<type, bwData, bwGrid> \
       // optimized codepaths depending on what needs to be comptued
       if (derData && derGrid == NULL) {
         DISPATCH(true, false) ;
-      } else if (derGrid && derData == NULL) {
+      } else if (derData == NULL && derGrid) {
         DISPATCH(false, true) ;
-      } else if (derGrid && derData) {
+      } else if (derData && derGrid) {
         DISPATCH(true, true) ;
       }
       return error ;
