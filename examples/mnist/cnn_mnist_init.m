@@ -60,8 +60,10 @@ switch lower(opts.networkType)
     % done
   case 'dagnn'
     net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
-    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
-             {'prediction','label'}, 'error') ;
+    net.addLayer('top1err', dagnn.Loss('loss', 'classerror'), ...
+      {'prediction', 'label'}, 'error') ;
+    net.addLayer('top5err', dagnn.Loss('loss', 'topkerror', ...
+      'opts', {'topk', 5}), {'prediction', 'label'}, 'top5err') ;
   otherwise
     assert(false) ;
 end

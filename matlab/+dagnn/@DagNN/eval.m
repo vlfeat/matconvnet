@@ -96,7 +96,12 @@ end
 if ~obj.computingDerivative, return ; end
 
 % set output derivatives
-v = obj.getVarIndex(derOutputs(1:2:end)) ;
+derOutputsNames = derOutputs(1:2:end);
+v = obj.getVarIndex(derOutputsNames) ;
+if isnan(v)
+  error('Invalid `derOutputs`, variables {%s} do not exist in the network.', ...
+    strjoin(derOutputsNames(isnan(v)), ', '));
+end
 [obj.vars(v).der] = deal(derOutputs{2:2:end}) ;
 derOutputs = [] ;
 

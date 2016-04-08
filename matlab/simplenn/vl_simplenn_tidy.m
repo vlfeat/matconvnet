@@ -33,7 +33,7 @@ end
 
 % copy layers
 for l = 1:numel(net.layers)
-  defaults = {'precious', false};
+  defaults = {'name', sprintf('layer%d', l), 'precious', false};
   layer = net.layers{l} ;
 
   % check weights format

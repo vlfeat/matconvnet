@@ -113,6 +113,32 @@ classdef nnsimplenn < nntest
       end
     end
 
+    function backPropDepth(test)
+      backPropDepth = 3;
+      net_ = test.net;
+      net_.layers{end}.class = test.class;
+      params = {'conserveMemory', true, 'backPropDepth', backPropDepth};
+      res = vl_simplenn(net_, test.x, [], [], params{:});
+      % Should be ignored for forward pass
+      for ri = 1:numel(res) - 1
+        test.verifyEmpty(res(ri).x);
+      end
+      res = vl_simplenn(net_, test.x, 1, [], params{:});
+      for ri = 2:numel(res) - 1
+        test.verifyEmpty(res(ri).x);
+        test.verifyEmpty(res(ri).dzdx);
+      end
+      for ri = 1:numel(res) - 1
+        if strcmp(test.net.layers{ri}.type, 'conv')
+          if ri >= numel(res) - backPropDepth + 1
+            test.verifyNotEmpty(res(ri).dzdw);
+          else
+            test.verifyEmpty(res(ri).dzdw);
+          end
+        end
+      end
+    end
+
     function skipForward(test)
       % Verify that the skipForward argument works
       test.net.layers{end}.class = test.class;
