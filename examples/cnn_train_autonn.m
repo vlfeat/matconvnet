@@ -267,7 +267,7 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
-paramVars = [params.var] ;
+paramVars = [net.params.var] ;
 w = net.getValue(paramVars) ;
 dw = net.getDer(paramVars) ;
 
@@ -287,18 +287,18 @@ for p=1:numel(net.params)
   end
 
   switch net.params(p).trainMethod
-    case 1  % average, mainly for batch normalization
-      thisLR = net.params(p).learningRate ;
-      w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) * dw{p} ;
-      % NOTE: used to divide by net.params(p).fanout !
-
-    case 2  % gradient
+    case 1  % gradient
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;
       thisLR = state.learningRate * net.params(p).learningRate ;
       state.momentum{p} = opts.momentum * state.momentum{p} ...
         - thisDecay * w{p} ...
         - (1 / batchSize) * dw{p} ;
       w{p} = w{p} + thisLR * state.momentum{p} ;
+
+    case 2  % average, mainly for batch normalization
+      thisLR = net.params(p).learningRate ;
+      w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) * dw{p} ;
+      % NOTE: used to divide by net.params(p).fanout !
 
     otherwise
       error('Unknown training method %i for parameter ''%s''.', ...

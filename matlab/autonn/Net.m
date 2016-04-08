@@ -372,9 +372,14 @@ classdef Net < handle
       s.forward = net.forward ;
       s.backward = net.backward ;
       s.test = net.test ;
-      s.vars = net.vars ;
       s.inputs = net.inputs ;
       s.params = net.params ;
+      s.meta = net.meta ;
+      
+      % only save var contents corresponding to parameters, all other vars
+      % are transient
+      s.vars = cell(size(net.vars)) ;
+      s.vars([net.params.var]) = net.vars([net.params.var]) ;
     end
   end
   
@@ -386,6 +391,7 @@ classdef Net < handle
       net.vars = s.vars ;
       net.inputs = s.inputs ;
       net.params = s.params ;
+      net.meta = s.meta ;
     end
   end
   
