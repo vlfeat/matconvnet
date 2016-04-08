@@ -12,13 +12,25 @@ classdef Net < handle
   end
 
   methods
-    function net = Net(root)
-      % copy meta properties
-      net.meta = root.meta ;
+    function net = Net(varargin)
+      if isscalar(varargin)
+        % a single output layer
+        root = varargin{1} ;
+      else
+        % several output layers; create a dummy layer to hold them together
+        root = Layer(@cat, 1, varargin{:}) ;
+      end
       
       % figure out the execution order, and list layer objects
       root.resetOrder() ;
       objs = root.buildOrder({}) ;
+      
+      % get meta properties from one Layer (ideally they should be merged)
+      idx = find(cellfun(@(o) ~isempty(o.meta), objs)) ;
+      if ~isempty(idx)
+        assert(isscalar(idx), 'More than one Layer has the META property.') ;
+        net.meta = objs{idx}.meta ;
+      end
       
       % indexes of callable Layer objects (not Inputs or Params)
       idx = find(cellfun(@(o) ~isa(o, 'Input') && ~isa(o, 'Param'), objs)) ;

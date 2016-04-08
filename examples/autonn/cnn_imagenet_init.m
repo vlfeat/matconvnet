@@ -55,7 +55,7 @@ top5err = vl_nnloss(prediction, label, 'loss', 'topkerror', 'topK', 5) ;
 
 % assign names automatically, and compile network
 Layer.autoNames() ;
-net = Net(loss + top1err + top5err) ;
+net = Net(loss, top1err, top5err) ;
 
 % Meta parameters
 net.meta.normalization.imageSize = imageSize ;

@@ -11,7 +11,7 @@ function inputs = vl_nnconv_setup(layer)
   
   % parse options. other options such as 'stride' will be maintained in the
   % inputs list.
-  opts = struct('size', [], 'hasBias', false, 'learningRate', 1, 'weightDecay', 1) ;
+  opts = struct('size', [], 'hasBias', true, 'learningRate', 1, 'weightDecay', 1) ;
   
   [opts, inputs] = vl_argparsepos(opts, inputs) ;
   
@@ -24,7 +24,7 @@ function inputs = vl_nnconv_setup(layer)
 
     if opts.hasBias
       % also create bias
-      biases = Param('value', zeros(sz(4), 1, 'single') * scale, ...
+      biases = Param('value', zeros(opts.size(4), 1, 'single') * scale, ...
                      'learningRate', opts.learningRate(max(1,end)), ...
                      'weightDecay', opts.weightDecay(max(1,end))) ;
     else

@@ -75,7 +75,7 @@ objective = vl_nnloss(x, labels, 'loss', 'softmaxlog') ;
 error = vl_nnloss(x, labels, 'loss', 'classerror') ;
 
 Layer.autoNames() ;
-net = Net(objective + error) ;
+net = Net(objective, error) ;
 
 % rng(0) ;
 

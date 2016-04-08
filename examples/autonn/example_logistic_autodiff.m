@@ -23,7 +23,7 @@ error = vl_nnloss(prediction, y, 'loss','classerror') ;
 
 % assign names based on workspace variables, and compile net
 Layer.autoNames() ;
-net = Net(loss + error) ;
+net = Net(loss, error) ;
 
 
 
