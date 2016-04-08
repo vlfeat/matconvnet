@@ -36,7 +36,8 @@ classdef Net < handle
       net.vars = cell(2 * numel(objs), 1) ;
       
       numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
-      net.params = Net.initStruct(numParams, 'name', 'var', 'weightDecay', 'learningRate') ;
+      net.params = Net.initStruct(numParams, 'name', 'var', ...
+          'weightDecay', 'learningRate', 'trainMethod') ;
       net.inputs = struct() ;
       
       % first, handle Inputs and Params
@@ -57,6 +58,10 @@ classdef Net < handle
           net.params(p).name = obj.name ;
           net.params(p).weightDecay = obj.weightDecay ;
           net.params(p).learningRate = obj.learningRate ;
+          
+          % store index of training method (defined in Param.trainMethods)
+          net.params(p).trainMethod = find(strcmp(obj.trainMethod, Param.trainMethods)) ;
+          
           net.vars{net.params(p).var} = obj.value ;  % set initial value
           p = p + 1 ;
         end

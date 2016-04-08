@@ -267,9 +267,12 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
-params = [net.params.var] ;
-w = net.getValue(params) ;
-dw = net.getDer(params) ;
+paramVars = [params.var] ;
+w = net.getValue(paramVars) ;
+dw = net.getDer(paramVars) ;
+
+% ensure supported training methods are as expected
+assert(isequal(Param.trainMethods, {'gradient', 'average'})) ;
 
 for p=1:numel(net.params)
   % bring in gradients from other GPUs if any
@@ -281,19 +284,15 @@ for p=1:numel(net.params)
       tmp = tmp + mmap.Data(g).(net.params(p).name) ;
     end
     net.vars{varIdx} = net.vars{varIdx} + tmp ;
-  else
-    numGpus = 1 ;
   end
 
-%   switch net.params(p).trainMethod
-% 
-%     case 'average' % mainly for batch normalization
-%       thisLR = net.params(p).learningRate ;
-%       net.params(p).value = ...
-%           (1 - thisLR) * net.params(p).value + ...
-%           (thisLR/batchSize/net.params(p).fanout) * net.params(p).der ;
-% 
-%     case 'gradient'
+  switch net.params(p).trainMethod
+    case 1  % average, mainly for batch normalization
+      thisLR = net.params(p).learningRate ;
+      w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) * dw{p} ;
+      % NOTE: used to divide by net.params(p).fanout !
+
+    case 2  % gradient
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;
       thisLR = state.learningRate * net.params(p).learningRate ;
       state.momentum{p} = opts.momentum * state.momentum{p} ...
@@ -301,14 +300,14 @@ for p=1:numel(net.params)
         - (1 / batchSize) * dw{p} ;
       w{p} = w{p} + thisLR * state.momentum{p} ;
 
-%     case 'otherwise'
-%       error('Unknown training method ''%s'' for parameter ''%s''.', ...
-%         net.params(p).trainMethod, ...
-%         net.params(p).name) ;
-%   end
+    otherwise
+      error('Unknown training method %i for parameter ''%s''.', ...
+        net.params(p).trainMethod, ...
+        net.params(p).name) ;
+  end
 end
 
-net.setValue(params, w) ;
+net.setValue(paramVars, w) ;
 
 % -------------------------------------------------------------------------
 function mmap = map_gradients(fname, net, numGpus)
