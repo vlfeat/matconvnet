@@ -1,0 +1,42 @@
+function varargout = cat_der(dim, varargin)
+%CAT_DER
+%   CAT(DIM, X1, X2, ..., DZDY)
+%   Derivative of CAT function. Same syntax as native CAT, plus derivative.
+%   Note the first output is always empty (derivative of DIM).
+%
+%   This must be different from VL_NNCONCAT, because we need to take a
+%   variable number of inputs (for Matlab syntax compatibility), and the
+%   backward function must be separate from the forward function in order
+%   to avoid ambiguity in the last argument (is it a derivative or not?).
+%   It also works with arbitrary numbers of dimensions.
+  
+  dzdy = varargin{end} ;
+  
+  if isscalar(dzdy)
+    % special case, a scalar derivative propagates to all non-empty inputs
+    valid = ~cellfun('isempty', varargin(1:end-1)) ;
+    valid = [false, valid] ;  % add slot for DIM derivative, which is empty
+    varargout = cell(size(valid)) ;
+    varargout(valid) = {dzdy} ;
+    return
+  end
+
+  % only need size along the specified dimension
+  sz = cellfun('size', varargin, dim) ;
+  
+  % create indexing structure
+  n = ndims(dzdy) ;
+  idx = cell(1, n) ;
+  idx(:) = {':'} ;
+  
+  start = 1 ;
+  varargout = cell(1, numel(sz) + 1) ;  % leave slot for empty DIM derivative
+  
+  for i = 1:numel(idx)
+    idx{dim} = start : start + sz(i) - 1 ;
+    varargout{i + 1} = dzdy(idx{:}) ;
+    start = start + sz(i) ;
+  end
+
+end
+

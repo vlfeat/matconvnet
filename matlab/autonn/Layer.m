@@ -114,6 +114,9 @@ classdef Layer < handle
     function y = min(obj, varargin)
       y = Layer(@min, obj, varargin{:}) ;
     end
+    function y = cat(obj, varargin)
+      y = Layer(@cat, obj, varargin{:}) ;
+    end
     
     % overloaded math operators. any additions, negative signs and scalar
     % factors are merged into a single vl_nnwsum by the Layer constructor.
@@ -172,6 +175,12 @@ classdef Layer < handle
       c = Layer(@vl_nnmatrixop, a, b, @mpower) ;
     end
     
+    function y = vertcat(obj, varargin)
+      y = Layer(@cat, 1, obj, varargin{:}) ;
+    end
+    function y = horzcat(obj, varargin)
+      y = Layer(@cat, 2, obj, varargin{:}) ;
+    end
     
     % overloaded indexing
     function varargout = subsref(a, s)
