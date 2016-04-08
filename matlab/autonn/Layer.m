@@ -23,6 +23,20 @@ classdef Layer < handle
         return  % these do not need a function call
       end
       
+      % convert from SimpleNN to DagNN
+      if isstruct(func) && isfield(func, 'layers')
+        func = dagnn.DagNN.fromSimpleNN(func, 'CanonicalNames', true) ;
+      end
+      
+      % convert from DagNN to Layer
+      if isa(func, 'dagnn.DagNN')
+         obj = dagnn2layer(func) ;
+         return
+      else
+        assert(isa(func, 'function_handle'), ...
+          'Input must be a function handle, a SimpleNN struct or a DagNN.') ;
+      end
+      
       % general case
       obj.func = func ;
       obj.inputs = varargin(:)' ;

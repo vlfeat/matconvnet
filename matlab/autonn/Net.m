@@ -16,6 +16,10 @@ classdef Net < handle
       if isscalar(varargin)
         % a single output layer
         root = varargin{1} ;
+        
+        if ~isa(root, 'Layer')  % convert SimpleNN or DagNN to Layer
+          root = Layer(root) ;
+        end
       else
         % several output layers; create a dummy layer to hold them together
         root = Layer(@cat, 1, varargin{:}) ;
