@@ -215,9 +215,6 @@ for t=1:opts.batchSize:numel(subset)
     end
   end
 
-  % extract learning stats
-  stats = opts.extractStatsFn(net) ;
-
   % accumulate gradient
   if strcmp(mode, 'train')
     if ~isempty(mmap)
@@ -227,16 +224,16 @@ for t=1:opts.batchSize:numel(subset)
     state = accumulate_gradients(state, net, opts, batchSize, mmap) ;
   end
 
-  % number of images processed so far (on all GPUs)
-  n = t + batchSize - 1 ;
-
-  % print learning statistics
+  % extract learning stats
   time = toc(start) ;
+  batchTime = time - stats.time ;
+  stats = opts.extractStatsFn(net) ;
+  stats.num = num ;
   stats.time = time ;
-  stats.num = num ; % processed on this GPU
-  speed = n/time ; % processed on all GPUs
-  fprintf(' %.1f Hz', speed) ;
+  currentSpeed = batchSize / batchTime ;
+  averageSpeed = (t + batchSize - 1) / time ;
 
+  fprintf(' %.1f (%.1f) Hz', averageSpeed, currentSpeed) ;
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
     f = char(f) ;
     fprintf(' %s:', f) ;
