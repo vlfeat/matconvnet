@@ -111,6 +111,7 @@ namespace vl { namespace impl {
     filtersDescInitialized = true ;
     CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                                      DataTypeToCudnn<dataType>::id,
+                                     IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                      numFiltersPerGroup,
                                      filters.getDepth(),
                                      filters.getWidth(),
@@ -311,6 +312,7 @@ namespace vl { namespace impl {
       filtersDescInitialized = true ;
       CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                                        DataTypeToCudnn<dataType>::id ,
+                                       IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                        numFiltersPerGroup,
                                        filters.getDepth(),
                                        filters.getWidth(),
@@ -338,6 +340,7 @@ namespace vl { namespace impl {
       filtersDescInitialized = true ;
       CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                                        DataTypeToCudnn<dataType>::id ,
+                                       IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                        numFiltersPerGroup,
                                        derFilters.getDepth(),
                                        derFilters.getWidth(),
