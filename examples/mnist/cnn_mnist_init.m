@@ -46,7 +46,7 @@ if opts.batchNormalization
 end
 
 % Meta parameters
-net.meta.inputSize = [27 27 1] ;
+net.meta.inputSize = [28 28 1] ;
 net.meta.trainOpts.learningRate = 0.001 ;
 net.meta.trainOpts.numEpochs = 20 ;
 net.meta.trainOpts.batchSize = 100 ;
