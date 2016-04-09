@@ -69,12 +69,7 @@ for epoch=start+1:opts.numEpochs
   % is restarted from a checkpoint.
 
   rng(epoch + opts.randomSeed) ;
-
-  % Prepare GPUs. For very large models, matlabpool may time out
-  % when the model is checkpointed. Thus we restart it if needed
-  % at the beginning of each epoch.
-
-  prepareGPUs(opts) ;
+  prepareGPUs(opts, epoch == start+1) ;
 
   % Train for one epoch.
 
@@ -418,10 +413,11 @@ if get(0,'CurrentFigure') ~= n
 end
 
 % -------------------------------------------------------------------------
-function prepareGPUs(opts)
+function prepareGPUs(opts, cold)
 % -------------------------------------------------------------------------
 numGpus = numel(opts.gpus) ;
 if numGpus > 1
+  % check parallel pool integrity as it could have timed out
   pool = gcp('nocreate') ;
   if ~isempty(pool) && pool.NumWorkers ~= numGpus
     delete(pool) ;
@@ -429,13 +425,16 @@ if numGpus > 1
   pool = gcp('nocreate') ;
   if isempty(pool)
     parpool('local', numGpus) ;
-  end
-  spmd
-    gpuDevice(opts.gpus(labindex))
+    cold = true
   end
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
   end
-elseif numGpus == 1
-  gpuDevice(opts.gpus)
+end
+if cold
+  if numGpus == 1
+    gpuDevice(opts.gpus) ;
+  else
+    spmd, gpuDevice(opts.gpus(labindex)) ; end
+  end
 end
