@@ -131,6 +131,7 @@ classdef DagNN < handle
     setLayerParams(obj, layer, params)
     renameVar(obj, oldName, newName, varargin)
     rebuild(obj)
+    net = toSimpleNN(dag, inputVar)
 
     % Process data with the DagNN
     initParams(obj)

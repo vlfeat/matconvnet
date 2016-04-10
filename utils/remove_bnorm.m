@@ -23,6 +23,9 @@ for l = bnorm_layers
     sigma = reshape(net.layers{l}.weights{3}(:,2),1,[]);
     G = reshape(net.layers{l}.weights{1},1,[]);
     B = reshape(net.layers{l}.weights{2},1,[]);
+    if isempty(net.layers{l-1}.weights{2})
+        net.layers{l-1}.weights{2} = zeros(1,size(net.layers{l-1}.weights{1},4),'single');
+    end
     net2.layers{l-1}.weights{2} = bsxfun(@plus, bsxfun(@times, bsxfun(@minus, net.layers{l-1}.weights{2}, mu), G./sigma), B);
 end
 
