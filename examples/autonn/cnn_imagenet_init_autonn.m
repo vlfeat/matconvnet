@@ -1,5 +1,5 @@
-function net = cnn_imagenet_init(varargin)
-% CNN_IMAGENET_INIT  Initialize a standard CNN for ImageNet
+function net = cnn_imagenet_init_autonn(varargin)
+% CNN_IMAGENET_INIT_AUTONN  Initialize a standard CNN for ImageNet
 
 opts.scale = 1 ;
 opts.initBias = 0.1 ;

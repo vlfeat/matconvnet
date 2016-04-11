@@ -1,4 +1,4 @@
-function y = vl_nnrelu(x,dzdy,varargin)
+function y = vl_nnrelu(x,varargin)
 %VL_NNRELU CNN rectified linear unit.
 %   Y = VL_NNRELU(X) applies the rectified linear unit to the data
 %   X. X can have arbitrary size.
@@ -29,6 +29,13 @@ function y = vl_nnrelu(x,dzdy,varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+
+if nargin > 1 && ~ischar(varargin{1})  % passed in dzdy
+  dzdy = varargin{1} ;
+  varargin(1) = [] ;
+else
+  dzdy = [] ;
+end
 
 opts.leak = 0 ;
 opts = vl_argparse(opts, varargin) ;

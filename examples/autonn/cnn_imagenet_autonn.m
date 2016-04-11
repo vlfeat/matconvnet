@@ -32,10 +32,27 @@ if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 %                                                             Prepare model
 % -------------------------------------------------------------------------
 
-net = cnn_imagenet_init('model', opts.modelType, ...
+switch opts.networkType
+case 'autonn'
+  net = cnn_imagenet_init_autonn('model', opts.modelType, ...
                         'batchNormalization', opts.batchNormalization, ...
                         'weightInitMethod', opts.weightInitMethod, ...
                         'networkType', opts.networkType) ;
+case 'dagnn'
+  % convert from a DagNN
+  net = cnn_imagenet_init('model', opts.modelType, ...
+                          'batchNormalization', opts.batchNormalization, ...
+                          'weightInitMethod', opts.weightInitMethod, ...
+                          'networkType', opts.networkType) ;
+  layers = dagnn2autonn(net) ;
+  net = Net(layers{:}) ;
+  
+  opts.networkType = 'autonn' ;
+
+otherwise
+  error('Unsupported network type ''%s''.', opts.networkType) ;
+end
+
 
 % -------------------------------------------------------------------------
 %                                                              Prepare data
@@ -75,13 +92,7 @@ clear v d ;
 %                                                                     Learn
 % -------------------------------------------------------------------------
 
-switch opts.networkType
-  case 'simplenn', trainFn = @cnn_train ;
-  case 'dagnn', trainFn = @cnn_train_dag ;
-  case 'autonn', trainFn = @cnn_train_autonn ;
-end
-
-[net, info] = trainFn(net, imdb, getBatchFn(opts, net.meta), ...
+[net, info] = cnn_train_autonn(net, imdb, getBatchFn(opts, net.meta), ...
                       'expDir', opts.expDir, ...
                       net.meta.trainOpts, ...
                       opts.train) ;
@@ -114,33 +125,7 @@ bopts.averageImage = meta.normalization.averageImage ;
 bopts.rgbVariance = meta.augmentation.rgbVariance ;
 bopts.transformation = meta.augmentation.transformation ;
 
-switch lower(opts.networkType)
-  case 'simplenn'
-    fn = @(x,y) getSimpleNNBatch(bopts,x,y) ;
-  case {'dagnn', 'autonn'}
-    fn = @(x,y) getDagNNBatch(bopts,useGpu,x,y) ;
-end
-
-% -------------------------------------------------------------------------
-function [im,labels] = getSimpleNNBatch(opts, imdb, batch)
-% -------------------------------------------------------------------------
-images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-isVal = ~isempty(batch) && imdb.images.set(batch(1)) ~= 1 ;
-
-if ~isVal
-  % training
-  im = cnn_imagenet_get_batch(images, opts, ...
-                              'prefetch', nargout == 0) ;
-else
-  % validation: disable data augmentation
-  im = cnn_imagenet_get_batch(images, opts, ...
-                              'prefetch', nargout == 0, ...
-                              'transformation', 'none') ;
-end
-
-if nargout > 0
-  labels = imdb.images.label(batch) ;
-end
+fn = @(x,y) getDagNNBatch(bopts,useGpu,x,y) ;
 
 % -------------------------------------------------------------------------
 function inputs = getDagNNBatch(opts, useGpu, imdb, batch)
