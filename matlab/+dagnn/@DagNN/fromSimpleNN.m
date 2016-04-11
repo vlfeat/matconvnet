@@ -206,6 +206,9 @@ if opts.canonicalNames
             obj.renameVar(obj.layers(l).outputs{1}, getNewVarName(obj, 'prob')) ;
             obj.renameVar(obj.layers(l).inputs{1}, getNewVarName(obj, 'prediction')) ;
         end
+        if isa(obj.layers(l).block, 'dagnn.PDist')
+            obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
+        end
         if isa(obj.layers(l).block, 'dagnn.Loss')
             obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
             if isempty(regexp(obj.layers(l).inputs{1}, '^prob.*'))
