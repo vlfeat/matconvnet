@@ -31,7 +31,7 @@ enum {
 /* options */
 vlmxOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
-  {"Epsilon",	         1,   opt_epsilon           },
+  {"Epsilon",	       1,   opt_epsilon           },
   {"Moments",          1,   opt_moments           },
   {0,                  0,   0                     }
 } ;
@@ -70,7 +70,7 @@ void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   bool backMode = false ;
-  double epsilon = 10E-4 ;
+  double epsilon = 1e-4 ;
 
   // For the moment true need to be fixed
   bool computeDerData = true ;

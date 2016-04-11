@@ -18,7 +18,8 @@ classdef BatchNorm < dagnn.ElementWise
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       [derInputs{1}, derParams{1}, derParams{2}, derParams{3}] = ...
-        vl_nnbnorm(inputs{1}, params{1}, params{2}, derOutputs{1}) ;
+        vl_nnbnorm(inputs{1}, params{1}, params{2}, derOutputs{1}, ...
+                   'epsilon', obj.epsilon) ;
       % multiply the moments update by the number of images in the batch
       % this is required to make the update additive for subbatches
       % and will eventually be normalized away
@@ -40,6 +41,7 @@ classdef BatchNorm < dagnn.ElementWise
       attach@dagnn.ElementWise(obj, net, index) ;
       p = net.getParamIndex(net.layers(index).params{3}) ;
       net.params(p).trainMethod = 'average' ;
+      net.params(p).learningRate = 0.01 ;
     end
   end
 end
