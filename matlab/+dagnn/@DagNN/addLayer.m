@@ -22,9 +22,16 @@ if ischar(inputs), inputs = {inputs} ; end
 if ischar(outputs), outputs = {outputs} ; end
 if ischar(params), params = {params} ; end
 
+% If no inputs, use last layer output as input
 if isempty(inputs),
-    inputs = obj.layers(end).outputs; 
+    if isempty(obj.layers)
+        inputs = {'input'};
+    else
+        inputs = obj.layers(end).outputs; 
+    end
 end;
+
+% If no output, set default name
 if isempty(outputs),
     outputs = { [name '_out'] }; 
 end;
