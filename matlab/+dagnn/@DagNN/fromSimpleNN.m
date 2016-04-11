@@ -142,6 +142,7 @@ for l = 1:numel(net.layers)
                 'noRoot', net.layers{l}.noRoot, ...
                 'epsilon', net.layers{l}.epsilon, ...
                 'aggregate', net.layers{l}.aggregate) ;
+            inputs{2} = getNewVarName(obj, 'label') ;
             
         case {'softmaxloss'}
             block = Loss('loss', 'softmaxlog') ;
