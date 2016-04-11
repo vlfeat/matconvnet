@@ -126,4 +126,3 @@ vl::nnbilinearsampler_backward(Context& context,
   return context.passError(error, __func__);
 }
 
-
