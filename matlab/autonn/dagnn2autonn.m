@@ -58,6 +58,7 @@ function netOutputs = dagnn2autonn(dag)
   % copy meta properties to one of the Layers
   netOutputs{1}.meta = dag.meta ;
   
+  
   % process a single layer, and recurse on its inputs
   function obj = convertLayer(dag, layerIdx)
     % if this layer has already been processed, return its handle
@@ -110,6 +111,7 @@ function netOutputs = dagnn2autonn(dag)
       error(['Unknown block type ''' class(block) '''.']) ;
     end
     
+    obj.name = layer.name ;
     layers{layerIdx} = obj ;
   end
 end

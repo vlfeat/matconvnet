@@ -212,10 +212,13 @@ classdef Layer < handle
       if nargin < 2
         name = inputname(1) ;
       end
-      fprintf('\n%s = ', name) ;
+      fprintf('\n%s', name) ;
       
       if ~isempty(name) && ~isempty(obj.inputs)
-        fprintf('%s(', char(obj.func)) ;
+        if numel(name) > 30  % line break for long names
+          fprintf('\n')
+        end
+        fprintf(' = %s(', char(obj.func)) ;
         
         for i = 1:numel(obj.inputs)
           input = obj.inputs{i} ;
@@ -244,6 +247,8 @@ classdef Layer < handle
           end
         end
         fprintf(')') ;
+      else
+        fprintf(' = ') ;
       end
       fprintf('\n\n') ;
       
