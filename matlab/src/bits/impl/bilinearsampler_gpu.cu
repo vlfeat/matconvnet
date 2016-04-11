@@ -42,13 +42,13 @@ __global__ void forward_backward_kernel
  int outHeight, int outWidth, int outDepth, int outCardinality,
  int inHeight, int inWidth, int inCardinality)
 {
-  const int flatIndex = getGlobalIdx_2D_1D();
+  const int offset = getGlobalIdx_2D_1D();
   const int nOut = outWidth * outHeight * outDepth * outCardinality ;
-  if (flatIndex >= nOut) { return ; }
+  if (offset >= nOut) { return ; }
   bool backward = backwardData | backwardGrid ;
 
   // get the index of the output image, feature channel, and pixel
-  int k = flatIndex ;
+  int k = offset ;
   int c = k / (outHeight * outWidth) ;
   int n = c / outDepth ;
   k %= (outHeight * outWidth) ;
@@ -56,13 +56,14 @@ __global__ void forward_backward_kernel
 
   // get the index of the input image
   int groupSize = outCardinality / inCardinality ;
-  int nInput = n / groupSize ;
-  int inputOffset = (inHeight * inWidth)*(outDepth * nInput + c) ;
+  int nInputImage = n / groupSize ;
+  int inputOffset = (inHeight * inWidth)*(outDepth * nInputImage + c) ;
+  int gridOffset = 2 * ((outHeight * outWidth) * n + k) ; //+ 1;
+  //int gridOffset = 2*k+1 ;
 
   // get the grid for this output image
-  grid += k + (outHeight * outWidth * 2) * n ;
-  type py = grid[0] ;
-  type px = grid[1] ;
+  type py = grid[gridOffset + 0] ;
+  type px = grid[gridOffset + 1] ;
 
   py = type(0.5)*(py + type(1.0)) * (inHeight - 1) ;
   px = type(0.5)*(px + type(1.0)) * (inWidth - 1) ;
@@ -76,14 +77,11 @@ __global__ void forward_backward_kernel
   if (!backward) {
     data += inputOffset ;
   }
-  if (backward) {
-    dy = derOutput[flatIndex] ;
-  }
   if (backwardData) {
     derData += inputOffset ;
   }
-  if (backwardGrid) {
-    derGrid += flatIndex * 2 ;
+  if (backward) {
+    dy = derOutput[offset] ;
   }
 
   // todo: check boundary conditions in other frameworks and make
@@ -112,18 +110,19 @@ __global__ void forward_backward_kernel
             atomicAdd(derData  + ssy + ssx * inHeight, ww * dy) ;
           }
           if (backwardGrid) {
-            dgridy += wwy * dy ;
-            dgridx += wwx * dy ;
+            type x = data[ssy + ssx * inHeight] ;
+            dgridy += wwy * dy * x ;
+            dgridx += wwx * dy * x ;
           }
         }
       }
-      if (!backward) {
-        *output++ = acc ;
-      }
-      if (backwardGrid) {
-        *derGrid++ = dgridy ;
-        *derGrid++ = dgridx ;
-      }
+    }
+    if (!backward) {
+      output[offset] = acc ;
+    }
+    if (backwardGrid) {
+      derGrid[gridOffset + 0] = dgridy ;
+      derGrid[gridOffset + 1] = dgridx ;
     }
   }
 }

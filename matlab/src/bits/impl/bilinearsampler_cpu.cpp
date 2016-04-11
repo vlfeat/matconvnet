@@ -90,8 +90,9 @@ forward_backward
                   derData[ssy + ssx * inHeight] += ww * dy ;
                 }
                 if (backwardGrid) {
-                  dgridy += wwy * dy ;
-                  dgridx += wwx * dy ;
+                  type x = data[ssy + ssx * inHeight] ;
+                  dgridy += wwy * dy * x ;
+                  dgridx += wwx * dy * x ;
                 }
               }
             }
