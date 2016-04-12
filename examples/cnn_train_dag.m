@@ -435,7 +435,7 @@ if numGpus > 1
     delete(opts.memoryMapFile) ;
   end
 end
-if cold
+if numGpus >= 1 && cold
   fprintf('%s: resetting GPU\n', mfilename)
   if numGpus == 1
     gpuDevice(opts.gpus)
