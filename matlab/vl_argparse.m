@@ -70,7 +70,7 @@ optNames = fieldnames(opts)' ;
 ai = 1 ;
 keep = false(size(args)) ;
 while ai <= numel(args)
-  
+
   % Check whether the argument is a (param,value) pair or a structure.
   if recursive && isstruct(args{ai})
     params = fieldnames(args{ai})' ;
@@ -78,22 +78,22 @@ while ai <= numel(args)
     if nargout == 1
       opts = vl_argparse(opts, vertcat(params,values)) ;
     else
-      [opts, rest] = vl_argparse(opts, vertcat(params,values)) ;
+      [opts, rest] = vl_argparse(opts, reshape(vertcat(params,values), 1, [])) ;
       args{ai} = cell2struct(rest(2:2:end), rest(1:2:end), 2) ;
-      keep{ai} = true ;
-    end   
+      keep(ai) = true ;
+    end
     ai = ai + 1 ;
     continue ;
   end
-  
+
   if ~isstr(args{ai})
     error('Expected either a param-value pair or a structure.') ;
   end
-  
+
   param = args{ai} ;
   value = args{ai+1} ;
-  
-  p = find(strcmpi(param, optNames)) ;  
+
+  p = find(strcmpi(param, optNames)) ;
   if numel(p) ~= 1
     if nargout == 1
       error('Unknown parameter ''%s''', param) ;
@@ -104,7 +104,7 @@ while ai <= numel(args)
     end
   end
   field = optNames{p} ;
-  
+
   if ~recursive
     opts.(field) = value ;
   else
@@ -125,9 +125,8 @@ while ai <= numel(args)
       opts.(field) = value ;
     end
   end
-  
+
   ai = ai + 2 ;
 end
 
 args = args(keep) ;
-
