@@ -6,6 +6,7 @@ run(fullfile(fileparts(mfilename('fullpath')),...
 
 % opts.modelType = 'mlp' ;
 opts.modelType = 'lenet' ;
+opts.networkType = 'autonn' ;
 opts.batchNormalization = false ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
@@ -41,43 +42,58 @@ end
 rng('default') ;
 rng(0) ;
 
-bn = opts.batchNormalization ;
+switch opts.networkType
+case 'autonn'
+  bn = opts.batchNormalization ;
 
-images = Input() ;
-labels = Input() ;
+  images = Input() ;
+  labels = Input() ;
 
-switch opts.modelType
-case 'mlp'  % multi-layer perceptron
-  
-  x = vl_nnconv(images, 'size', [28, 28, 1, 100]) ;
-  x = vl_nnrelu(x) ;
-  x = vl_nnconv(x, 'size', [1, 1, 100, 100]) ;
-  x = vl_nnrelu(x) ;
-  x = vl_nndropout(x, 'rate', 0.5) ;
-  x = vl_nnconv(x, 'size', [1, 1, 100, 10]) ;
+  switch opts.modelType
+  case 'mlp'  % multi-layer perceptron
+    x = vl_nnconv(images, 'size', [28, 28, 1, 100]) ;
+    x = vl_nnrelu(x) ;
+    x = vl_nnconv(x, 'size', [1, 1, 100, 100]) ;
+    x = vl_nnrelu(x) ;
+    x = vl_nndropout(x, 'rate', 0.5) ;
+    x = vl_nnconv(x, 'size', [1, 1, 100, 10]) ;
     
-case 'lenet'  % LeNet
+  case 'lenet'  % LeNet
+    x = vl_nnconv(images, 'size', [5, 5, 1, 20]) ;
+    if bn, x = vl_nnbnorm(x) ; end
+    x = vl_nnpool(x, 2, 'stride', 2) ;
+    x = vl_nnconv(x, 'size', [5, 5, 20, 50]) ;
+    if bn, x = vl_nnbnorm(x) ; end
+    x = vl_nnpool(x, 2, 'stride', 2) ;
+    x = vl_nnconv(x, 'size', [4, 4, 50, 500]) ;
+    if bn, x = vl_nnbnorm(x) ; end
+    x = vl_nnrelu(x) ;
+    x = vl_nnconv(x, 'size', [1, 1, 500, 10]) ;
+  end
   
-  x = vl_nnconv(images, 'size', [5, 5, 1, 20]) ;
-  if bn, x = vl_nnbnorm(x) ; end
-  x = vl_nnpool(x, 2, 'stride', 2) ;
-  x = vl_nnconv(x, 'size', [5, 5, 20, 50]) ;
-  if bn, x = vl_nnbnorm(x) ; end
-  x = vl_nnpool(x, 2, 'stride', 2) ;
-  x = vl_nnconv(x, 'size', [4, 4, 50, 500]) ;
-  if bn, x = vl_nnbnorm(x) ; end
-  x = vl_nnrelu(x) ;
-  x = vl_nnconv(x, 'size', [1, 1, 500, 10]) ;
+  objective = vl_nnloss(x, labels, 'loss', 'softmaxlog') ;
+  error = vl_nnloss(x, labels, 'loss', 'classerror') ;
+
+  Layer.autoNames() ;
+  net = Net(objective, error) ;
   
+  
+case 'dagnn'
+  % test Net converted from a DagNN
+  addpath ../mnist/
+  assert(strcmp(opts.modelType, 'lenet')) ;
+  net = cnn_mnist_init('batchNormalization', opts.batchNormalization, ...
+                       'networkType', 'dagnn') ;
+  net.renameVar('input', 'images');
+  net.renameVar('label', 'labels');
+  layers = dagnn2autonn(net) ;
+  net = Net(layers{:}) ;
+  
+  opts.networkType = 'autonn' ;
+
+otherwise
+  error('Unsupported network type ''%s''.', opts.networkType) ;
 end
-
-objective = vl_nnloss(x, labels, 'loss', 'softmaxlog') ;
-error = vl_nnloss(x, labels, 'loss', 'classerror') ;
-
-Layer.autoNames() ;
-net = Net(objective, error) ;
-
-% rng(0) ;
 
 % --------------------------------------------------------------------
 %                                                                Train
