@@ -31,6 +31,10 @@ __device__ int getGlobalIdx_2D_1D()
   return threadId ;
 }
 
+// todo: fix such assumptions either in doc or by clearing memory
+// probably all these functions should have the option to accumulate, so...
+// assumption: derData is cleared before calling this code
+
 template<typename type, bool backwardData, bool backwardGrid>
 __global__ void forward_backward_kernel
 (type* output,
