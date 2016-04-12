@@ -61,6 +61,63 @@ classdef Layer < handle
       end
     end
     
+    function objs = find(obj, what, n, objs)
+      % OBJS = OBJ.FIND()
+      % OBJS = OBJ.FIND(NAME)
+      % OBJS = OBJ.FIND(FUNC)
+      % Finds layers, starting at the given output layer. The search
+      % criteria can be the layer name or function handle.
+      % By default a cell array is returned, which may be empty.
+      %
+      % OBJS = OBJ.FIND(..., N)
+      % Returns only the Nth object that fits the criteria, in the order of
+      % a forward pass (e.g. from the first layer). If N is negative, it is
+      % found in the order of a backward pass (e.g. from the last layer,
+      % which corresponds to N = -1).
+      % Raises an error if no object is found.
+      
+      if nargin < 2, what = [] ;end
+      if nargin < 3, n = 0 ; end
+      if nargin < 4, objs = {} ; end
+      
+      % 'what' is defined, but it may be just N
+      if nargin == 2 && isnumeric(what)
+        n = what ;
+        what = [] ;
+      end
+      
+      if n == 0 || numel(objs) < abs(n)
+        % recurse on inputs not on the list yet (when in forward order)
+        if n >= 0
+          for i = 1:numel(obj.inputs)
+            if isa(obj.inputs{i}, 'Layer') && ~any(cellfun(@(o) isequal(obj.inputs{i}, o), objs))
+              objs = obj.inputs{i}.find(what, n, objs) ;
+            end
+          end
+        end
+        
+        % add self to list if it matches the pattern
+        if isequal(obj.name, what) || isequal(obj.func, what)
+          objs{end+1} = obj ;
+        end
+        
+        % recurse on inputs not on the list yet (when in backward order)
+        if n < 0
+          for i = 1:numel(obj.inputs)
+            if isa(obj.inputs{i}, 'Layer') && ~any(cellfun(@(o) isequal(obj.inputs{i}, o), objs))
+              objs = obj.inputs{i}.find(what, n, objs) ;
+            end
+          end
+        end
+      end
+      
+      if nargin < 4 && n ~= 0
+        % at the end of the original call, choose the Nth object
+        assert(numel(objs) >= abs(n), 'Cannot find a layer fitting the specified criteria.')
+        objs = objs{abs(n)} ;
+      end
+    end
+    
     % overloaded MatConvNet functions
     function y = vl_nnconv(obj, varargin)
       y = Layer(@vl_nnconv, obj, varargin{:}) ;
