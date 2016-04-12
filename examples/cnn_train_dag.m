@@ -422,7 +422,7 @@ if numGpus > 1
   pool = gcp('nocreate') ;
   if isempty(pool)
     parpool('local', numGpus) ;
-    cold = true
+    cold = true ;
   end
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
