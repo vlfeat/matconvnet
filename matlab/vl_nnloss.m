@@ -142,7 +142,7 @@ if numel(c) == inputSize(4)
   c = repmat(c, inputSize(1:2)) ;
 end
 
-hasIgnoreLabel = any(c == 0);
+hasIgnoreLabel = any(c(:) == 0);
 
 % --------------------------------------------------------------------
 % Spatial weighting
@@ -180,7 +180,10 @@ if ~isempty(opts.instanceWeights)
   if hasIgnoreLabel
     instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
   else
-    instanceWeights = opts.instanceWeights;
+    instanceWeights = opts.instanceWeights ;
+    if size(instanceWeights,4) < inputSize(4)
+      instanceWeights = repmat(instanceWeights,1,1,1,inputSize(4)) ;
+    end
   end
 end
 
