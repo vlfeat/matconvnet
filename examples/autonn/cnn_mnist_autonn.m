@@ -84,12 +84,12 @@ case 'dagnn'
   assert(strcmp(opts.modelType, 'lenet')) ;
   net = cnn_mnist_init('batchNormalization', opts.batchNormalization, ...
                        'networkType', 'dagnn') ;
+  net.initParams() ;
   net.renameVar('input', 'images');
   net.renameVar('label', 'labels');
+  
   layers = dagnn2autonn(net) ;
   net = Net(layers{:}) ;
-  
-  opts.networkType = 'autonn' ;
 
 otherwise
   error('Unsupported network type ''%s''.', opts.networkType) ;

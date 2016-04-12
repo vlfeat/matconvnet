@@ -102,7 +102,7 @@ function netOutputs = dagnn2autonn(dag)
       obj = vl_nnnormalize(inputs{1}, block.param) ;
       
     elseif isa(block, 'dagnn.DropOut')
-      obj = vl_nndropout(inputs{1}, 'mask', block.mask) ;
+      obj = vl_nndropout(inputs{1}) ;
       
     elseif isa(block, 'dagnn.Loss')
       obj = vl_nnloss(inputs{1}, inputs{2}, 'loss', block.loss, block.opts{:}) ;
@@ -131,7 +131,7 @@ function initUninitializedParams(obj)
     end
     
     for i = 1:numel(params)
-      if ~isempty(params{i})
+      if isempty(obj.params(p(i)).value)
         obj.params(p(i)).value = params{i} ;
       end
     end
