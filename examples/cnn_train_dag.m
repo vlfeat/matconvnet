@@ -129,7 +129,7 @@ for epoch=start+1:opts.numEpochs
       plot(1:epoch, values','o-') ;
       xlabel('epoch') ;
       title(p) ;
-      legend(leg{:}) ;
+      legend(leg{:},'Interpreter','none') ;
       grid on ;
     end
     drawnow ;
