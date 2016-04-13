@@ -28,8 +28,12 @@ function str = print(obj, inputSizes, varargin)
 %      of each variables from each input.
 %
 %   `Format`:: 'ascii'
-%      Choose between `ascii`, `latex`, `csv`, and `dot`. The first three
-%      format print tables; the last one prints a graph in `dot` format.
+%      Choose between `ascii`, `latex`, `csv`, 'digraph', and `dot`.
+%      The first three format print tables; `digraph` uses the plot function
+%      for a `digraph` (supported in MATLAB>=R2015b) and the last one
+%      prints a graph  in `dot` format. In case of zero outputs, it
+%      attmepts to compile and visualise the dot graph using `dot` command
+%      and `display` (Linux) or `open` (Mac OSX) on your system.
 %      In the latter case, all variables and layers are included in the
 %      graph, regardless of the other parameters.
 %
@@ -67,11 +71,16 @@ varSizes = obj.getVarSizes(inputSizes) ;
 paramSizes = cellfun(@size, {obj.params.value}, 'UniformOutput', false) ;
 str = {''} ;
 
-if strcmp(lower(opts.format),'dot')
+if strcmpi(opts.format,'dot')
   str = printDot(obj, varSizes, paramSizes, opts) ;
   if nargout == 0
     displayDot(str) ;
   end
+  return ;
+end
+
+if strcmpi(opts.format,'digraph')
+  str = printdigraph(obj, varSizes) ;
   return ;
 end
 
@@ -290,6 +299,45 @@ else
   end
   sel = find(cellfun(@(x) any(strcmp(x, pattern)), {obj.(type).name})) ;
 end
+end
+
+% -------------------------------------------------------------------------
+function h = printdigraph(net, varSizes)
+% -------------------------------------------------------------------------
+if exist('digraph') ~= 2
+  error('MATLAB graph support not present.');
+end
+s = []; t = []; w = [];
+varsNames = {net.vars.name};
+layerNames = {net.layers.name};
+numVars = numel(varsNames);
+spatSize = cellfun(@(vs) vs(1), varSizes);
+spatSize(isnan(spatSize)) = 1;
+varChannels = cellfun(@(vs) vs(3), varSizes);
+varChannels(isnan(varChannels)) = 0;
+
+for li = 1:numel(layerNames)
+  l = net.layers(li); lidx = numVars + li;
+  s = [s l.inputIndexes];
+  t = [t lidx*ones(1, numel(l.inputIndexes))];
+  w = [w spatSize(l.inputIndexes)];
+  s = [s lidx*ones(1, numel(l.outputIndexes))];
+  t = [t l.outputIndexes];
+  w = [w spatSize(l.outputIndexes)];
+end
+nodeNames = [varsNames, layerNames];
+g = digraph(s, t, w);
+lw = 5*g.Edges.Weight/max([g.Edges.Weight; 5]);
+h = plot(g, 'NodeLabel', nodeNames, 'LineWidth', lw);
+highlight(h, numVars+1:numVars+numel(layerNames), 'MarkerSize', 8, 'Marker', 's');
+highlight(h, 1:numVars, 'MarkerSize', 5, 'Marker', 's');
+cmap = copper;
+varNvalRel = varChannels./max(varChannels);
+for vi = 1:numel(varChannels)
+  highlight(h, vi, 'NodeColor', cmap(max(round(varNvalRel(vi)*64), 1),:));
+end
+axis off;
+layout(h, 'force');
 end
 
 % -------------------------------------------------------------------------

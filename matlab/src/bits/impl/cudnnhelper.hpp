@@ -16,6 +16,14 @@ the terms of the BSD license (see the COPYING file).
 #include "cudnn.h"
 #include "assert.h"
 
+#define COMMA ,
+
+#if (CUDNN_VERSION >= 5000)
+#define IF_CUDNN_GE5(x) x
+#else
+#define IF_CUDNN_GE5(x)
+#endif
+
 #if (CUDNN_VERSION >= 4000)
 #define IF_CUDNN_GE4(x) x
 #else
