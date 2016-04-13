@@ -181,12 +181,7 @@ if ~isempty(opts.instanceWeights)
   % important: this code needs to broadcast opts.instanceWeights to
   % an array of the same size as c
   if isempty(instanceWeights)
-    if isa(X,'gpuArray')
-      instanceWeights = gpuArray.ones(size(c), 'like', X) ;
-    else
-      instanceWeights = ones(size(c), 'like', X) ;
-    end
-    instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
+    instanceWeights = bsxfun(@times, onesLike(c), opts.instanceWeights) ;
   end
 end
 
@@ -292,4 +287,13 @@ if isa(x,'gpuArray')
   y = gpuArray.zeros(size(x),classUnderlying(x)) ;
 else
   y = zeros(size(x),'like',x) ;
+end
+
+% --------------------------------------------------------------------
+function y = onesLike(x)
+% --------------------------------------------------------------------
+if isa(x,'gpuArray')
+  y = gpuArray.ones(size(x),classUnderlying(x)) ;
+else
+  y = ones(size(x),'like',x) ;
 end
