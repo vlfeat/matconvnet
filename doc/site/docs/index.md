@@ -31,7 +31,8 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
-> **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet models.
+> **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
+> models, CuDNN V5 support, and numerous other improvements and bugfixes.
 >
 > **New:** [1.0-beta18](about.md#changes) adds support fod DOUBLE data
 > type. [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) can now resize
@@ -86,7 +87,7 @@ recognition, and text detection are available.
 - [Training your own models](training.md)
 - [CNN wrappers: linear chains or DAGs](wrappers.md)
 - [Working with GPU accelerated code](gpu.md)
-- [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html),
+- [Tutorial (classification)](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html), [tutorial (regression)](http://www.robots.ox.ac.uk/~vgg/practicals/cnn-reg/index.html),
   [slides](http://www.robots.ox.ac.uk/~vedaldi/assets/teach/2015/vedaldi15aims-bigdata-lecture-4-deep-learning-handout.pdf)
 
 ## Use cases
