@@ -12,7 +12,9 @@
 \usepackage{color}
 \usepackage{textcomp}
 \usepackage{fancyvrb}
+\usepackage{array}
 \usepackage[colorlinks]{hyperref}
+\usepackage{cleveref}
 
 \newtheorem{example}{Example}
 
@@ -24,6 +26,7 @@
 \newcommand{\cpp}{C{}\texttt{++}~}
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
+\newcommand{\bc}{\mathbf{c}}
 \newcommand{\bz}{\mathbf{z}}
 \newcommand{\bff}{\mathbf{f}}
 \newcommand{\br}{\mathbf{r}}
@@ -77,8 +80,6 @@
 }
 \lstMakeShortInline[columns=fullflexible, breaklines = true,
  breakatwhitespace = true]!
-
-\renewcommand{\subsectionautorefname}{section}
 
 \title{MatConvNet \\
 \Large

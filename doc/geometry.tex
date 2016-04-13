@@ -163,9 +163,9 @@ For example, a pooling region of width $H'=3$ samples with  a stride of $S_h=1$ 
 \section{Convolution transpose}\label{s:receptive-convolution-transpose}
 % ------------------------------------------------------------------
 
-The convolution transpose block is similar to a simple filter, but somewhat more complex. Recall that convolution transpose (\autoref{s:impl-convolution-transpose}) is the transpose of the convolution operator, which in turn is a filter. Reasoning for a 1D slice, let $x_i$ be the input to the convolution transpose block and $y_{i''}$ its output. Furthermore let $U_h$, $C_h^-$, $C_h^+$ and $H'$ be the upsampling factor, top and bottom crops, and filter height, respectively.
+The convolution transpose block is similar to a simple filter, but somewhat more complex. Recall that convolution transpose (\cref{s:impl-convolution-transpose}) is the transpose of the convolution operator, which in turn is a filter. Reasoning for a 1D slice, let $x_i$ be the input to the convolution transpose block and $y_{i''}$ its output. Furthermore let $U_h$, $C_h^-$, $C_h^+$ and $H'$ be the upsampling factor, top and bottom crops, and filter height, respectively.
 
-If we look at the convolution transpose backward, from the output to the input (see also \autoref{f:convt}), the data dependencies are the same as for the convolution operator, studied in \autoref{s:receptive-simple-filters}. Hence there is an interaction between $x_i$ and $y_{i''}$ only if
+If we look at the convolution transpose backward, from the output to the input (see also \cref{f:convt}), the data dependencies are the same as for the convolution operator, studied in \cref{s:receptive-simple-filters}. Hence there is an interaction between $x_i$ and $y_{i''}$ only if
 \begin{equation}\label{e:convt-bounds}
    1 + U_h(i - 1) - C_h^- \leq i'' \leq H' + U_h(i - 1) - C_h^-
 \end{equation}
@@ -194,7 +194,7 @@ If $H$ is now given as input, it is not possible to recover $H''$ uniquely from 
 \[
    S_h (H-1) +H' -  C_h^- - C_h^+ \leq H'' < S_h H +H' -  C_h^- - C_h^+.
 \]
-This is due to the fact that $U_h$ acts as a downsampling factor in the standard convolution direction and some of the samples to the right of the convolution input $\by$ may be ignored by the filter (see also \autoref{f:conv} and \autoref{f:convt}).
+This is due to the fact that $U_h$ acts as a downsampling factor in the standard convolution direction and some of the samples to the right of the convolution input $\by$ may be ignored by the filter (see also \cref{f:conv} and \cref{f:convt}).
 
 Since the height of $\by$ is then determined up to $S_h$ samples, and since the extra samples would be ignored by the computation and stay zero, we choose the tighter definition and set
 \[
@@ -243,7 +243,7 @@ Using the formulas just found, we can obtain the RF transformation for convoluti
 \\
 \hat \Delta_h &= \frac{H' + S_h - 1}{S_h} = \frac{H' -1}{S_h} + 1.
 \end{align*}
-Hence we find again the formulas obtained in \autoref{s:receptive-convolution-transpose}.
+Hence we find again the formulas obtained in \cref{s:receptive-convolution-transpose}.
 \end{example}
 
 
