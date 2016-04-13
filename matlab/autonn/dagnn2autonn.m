@@ -8,8 +8,14 @@ function netOutputs = dagnn2autonn(dag)
 %   Example:
 %     layers = dagnn2autonn(myDag) ;
 %     net = Net(layers{:}) ;
-%     net.setInputs({'images', randn(5,5,1,3), 'labels', 1:3}) ;
+%     net.setInputs('images', randn(5,5,1,3), 'labels', 1:3) ;
 %     net.eval() ;
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   dag.rebuild() ;
   

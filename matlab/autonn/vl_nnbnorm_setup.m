@@ -1,8 +1,15 @@
 function [inputs, testInputs] = vl_nnbnorm_setup(layer)
 %VL_NNBNORM_SETUP
-%   Create parameters if needed, and use vl_nnbnorm_autonn wrapper for
+%   Create parameters if needed, and use VL_NNBNORM_AUTONN wrapper for
 %   proper handling of test mode. Also handles 'learningRate' and
 %   'weightDecay' arguments for the Params.
+%   Called by AUTONN_SETUP.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   assert(isequal(layer.func, @vl_nnbnorm)) ;
   

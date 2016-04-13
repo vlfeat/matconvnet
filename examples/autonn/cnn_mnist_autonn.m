@@ -1,5 +1,5 @@
 function [net, info] = cnn_mnist_autonn(varargin)
-% CNN_MNIST_AUTONN  Demonstrates MatConNet on MNIST using AutoNN
+% CNN_MNIST_AUTONN  Demonstrates MatConNet on MNIST.
 
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;

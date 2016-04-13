@@ -1,4 +1,43 @@
 classdef Net < handle
+%Net
+%   A compiled network, ready to be evaluated on some data.
+%
+%   While Layer objects are used to easily define a network topology
+%   (build-time), a Net object compiles them to a format that can be
+%   executed quickly (run-time).
+%
+%   Example:
+%      % define topology
+%      images = Input() ;
+%      labels = Input() ;
+%      prediction = vl_nnconv(images, 'size', [5, 5, 1, 3]) ;
+%      loss = vl_nnsoftmaxloss(prediction, labels) ;
+%
+%      % assign names automatically
+%      Layer.autoNames() ;
+%
+%      % compile network
+%      net = Net(loss) ;
+%
+%      % set input data and evaluate network
+%      net.setInputs('images', randn(5, 5, 1, 3, 'single'), ...
+%                    'labels', single(1:3)) ;
+%      net.eval() ;
+%
+%      disp(net.getValue(loss)) ;
+%      disp(net.getDer(images)) ;
+%
+%   Note: The examples cannot be ran in the <MATCONVNET>/matlab folder
+%   due to function shadowing.
+%
+%   See also LAYER.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   properties (SetAccess = protected, GetAccess = public)
     forward = []  % forward pass function calls
     backward = []  % backward pass function calls
@@ -321,14 +360,20 @@ classdef Net < handle
     end
     
     function setInputs(net, varargin)
+      assert(mod(numel(varargin), 2) == 0, ...
+        'Arguments must be in the form INPUT1, VALUE1, INPUT2, VALUE2,...'),
+      
       for i = 1 : 2 : numel(varargin) - 1
         net.vars{net.inputs.(varargin{i})} = varargin{i+1} ;
       end
     end
     
-    function displayVars(net)
+    function displayVars(net, vars)
       % get information on each var, and corresponding derivative
-      n = numel(net.vars) / 2 ;
+      if nargin < 2
+        vars = net.vars ;
+      end
+      n = numel(vars) / 2 ;
       assert(n ~= 0, 'NET.VARS is empty.') ;
       type = cell(n, 1) ;
       names = cell(n, 1) ;
@@ -354,7 +399,7 @@ classdef Net < handle
       funcs(idx) = cellfun(@func2str, {net.forward.func}, 'UniformOutput', false) ;
       
       % get Matlab to print the values nicely (e.g. "[50x1 double]")
-      values = strsplit(evalc('disp(net.vars)'), '\n') ;
+      values = strsplit(evalc('disp(vars)'), '\n') ;
       values = cellfun(@strtrim, values, 'UniformOutput', false) ;
       
       % now print out the info as a table

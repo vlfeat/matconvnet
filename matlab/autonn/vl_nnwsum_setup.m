@@ -2,6 +2,13 @@ function inputs = vl_nnwsum_setup(layer)
 %VL_NNWSUM_SETUP
 %   Setup a weighted sum layer, by merging any other weighted sums in its
 %   inputs.
+%   Called by AUTONN_SETUP.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   assert(isequal(layer.func, @vl_nnwsum)) ;
   

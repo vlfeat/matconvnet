@@ -10,6 +10,12 @@ function [opts, args] = vl_argparsepos(opts, args)
 %     opts.pad = 1
 %     args = {x, 'unknown', []}
 
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   % even or odd indexes, always including the 2nd-to-last element of args
   idx = (numel(args) - 1 : -2 : 1) ;  % reverse order
   

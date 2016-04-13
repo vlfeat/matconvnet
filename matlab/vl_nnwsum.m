@@ -1,6 +1,19 @@
 function varargout = vl_nnwsum(varargin)
-%VL_NNWSUM Summary of this function goes here
-%   Detailed explanation goes here
+%VL_NNWSUM
+%   Y = VL_NNWSUM(A, B, ..., 'weights', W)
+%   Weighted sum of inputs. Each element of vector W denotes the weight of
+%   the corresponding input.
+%
+%   [DA, DB, ...] = VL_NNWSUM(A, B, ..., DZDY, 'weights', W)
+%   Projected derivatives of the same operation with respect to all inputs,
+%   except for weights W, which are assumed constant. For products of
+%   non-constant inputs, see VL_NNBINARYOP.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   assert(numel(varargin) >= 2 && isequal(varargin{end-1}, 'weights'), ...
     'Must supply the ''weights'' property.') ;

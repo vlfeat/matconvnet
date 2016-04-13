@@ -68,7 +68,7 @@ for k = 1 : imdb.phraseSize - 1
 end
 
 Layer.autoNames() ;
-net = Net(loss * error) ;  % using * to prevent merging sums; a better fix is to allow multiple Net outputs
+net = Net(loss, error) ;
 
 opts.train.stats = {loss, error} ;  % plot these quantities
 

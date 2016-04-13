@@ -5,6 +5,12 @@ function [da, db] = min_der(a, b, dim, dy)
 %   MIN(A, [], DIM, DY)
 %   Derivative of MIN function. Same syntax as native MIN, plus derivative.
 
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   if nargin == 4
     % derivative of MIN(A, [], DIM)
     assert(isempty(b))

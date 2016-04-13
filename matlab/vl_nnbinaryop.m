@@ -1,6 +1,18 @@
 function [y, db] = vl_nnbinaryop(a, b, op, dy)
-%VL_NNBINARYOP Summary of this function goes here
-%   Detailed explanation goes here
+%VL_NNBINARYOP
+%   Y = VL_NNBINARYOP(A, B, OP)
+%   Arithmetic binary operation OP (@times, @rdivide, @power), with
+%   binary singleton expansion enabled (BSXFUN).
+%
+%   [DA, DB] = VL_NNBINARYOP(A, B, OP, DY)
+%   Projected derivatives of the same operation, with respect to inputs A
+%   and B.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   if nargin < 4
     % forward function. use singleton expansion (important when generalizing
@@ -13,7 +25,8 @@ function [y, db] = vl_nnbinaryop(a, b, op, dy)
       db = bsxfun(@times, a, dy) ;
 
     elseif isequal(op, @rdivide)
-      % note: @ldivide is just @rdivide with swapped inputs (see vl_nnbinaryop_setup)
+      % note: @ldivide is just @rdivide with swapped inputs (see
+      % autonn_setup/vl_nnbinaryop_setup)
       da = bsxfun(@rdivide, dy, b) ;
       db = -dy .* bsxfun(@rdivide, a, b .^ 2) ;
 

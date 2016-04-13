@@ -1,4 +1,17 @@
 classdef Param < Layer
+%Param
+%   Defines a network parameter (such as a convolution's weights).
+%   Note that some functions (e.g. vl_nnconv, vl_nnbnorm) can create and
+%   initialize Param objects automatically. Such behavior is optional,
+%   since they can use any other layer's output in their arguments, not
+%   just Params.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   properties
     weightDecay
     learningRate
@@ -6,7 +19,7 @@ classdef Param < Layer
     value
   end
   properties (Constant)
-    trainMethods = {'gradient', 'average'}
+    trainMethods = {'gradient', 'average'}  % list of methods, see CNN_TRAIN_AUTONN
   end
   
   methods

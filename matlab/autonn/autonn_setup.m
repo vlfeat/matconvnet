@@ -7,7 +7,13 @@ function [inputs, testInputs] = autonn_setup(obj)
 %   has the same name as the original function, followed by '_setup'.
 %
 %   Small setup functions are defined as subfunctions here.
-  
+
+% Copyright (C) 2016 Joao Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   % do not modify inputs or test-mode inputs by default
   inputs = obj.inputs ;
   testInputs = obj.testInputs ;

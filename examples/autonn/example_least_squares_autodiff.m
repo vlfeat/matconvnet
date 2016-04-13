@@ -1,3 +1,5 @@
+% EXAMPLE_LEAST_SQUARES_AUTODIFF
+%   Demonstrates automatic differentiation of a least-squares objective.
 
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;

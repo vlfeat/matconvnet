@@ -1,3 +1,6 @@
+% EXAMPLE_LOGISTIC_AUTODIFF
+%   Demonstrates a simple logistic regression topology, defined with the
+%   autonn framework.
 
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;

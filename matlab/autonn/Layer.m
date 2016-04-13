@@ -1,4 +1,31 @@
 classdef Layer < handle
+%Layer
+%   The Layer object is the main building block for defining networks in
+%   the autonn framework. It specifies a function call in a computational
+%   graph.
+%
+%   Generally there is no need to invoke Layer directly. One can start
+%   by defining the network inputs: (Input is a subclass of Layer)
+%
+%      images = Input() ;
+%      labels = Input() ;
+%
+%   And then composing them using the overloaded functions:
+%
+%      prediction = vl_nnconv(images, 'size', [1, 1, 4, 3]) ;
+%      loss = vl_nnsoftmaxloss(prediction, labels) ;
+%
+%   Both vl_nnconv and vl_nnsoftmaxloss will not run directly, but are
+%   overloaded to return Layer objects that contain the function call
+%   information.
+%
+%   See also NET.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   properties (SetAccess = private, GetAccess = public)  % not setable after construction, to ensure a proper call graph (no cycles)
     inputs = {}  % list of inputs, either constants or other Layers
@@ -326,8 +353,17 @@ classdef Layer < handle
   
   methods (Static)
     function autoNames()
-      % set layer names based on the name of the corresponding variables in
-      % the caller's workspace (e.g. if x=vl_nnconv(...), then x.name='x').
+      % LAYER.AUTONAMES()
+      % Sets layer names based on the name of the corresponding variables
+      % in the caller's workspace.
+      %
+      % Example:
+      %    images = Input() ;
+      %    Layer.autoNames() ;
+      %    >> images.name
+      %    ans =
+      %       'images'
+      
       varNames = evalin('caller','who') ;
       for i = 1:numel(varNames)
         layer = evalin('caller', varNames{i}) ;

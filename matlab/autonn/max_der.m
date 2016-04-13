@@ -5,6 +5,12 @@ function [da, db] = max_der(a, b, dim, dy)
 %   MAX(A, [], DIM, DY)
 %   Derivative of MAX function. Same syntax as native MAX, plus derivative.
 
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   if nargin == 4
     % derivative of MAX(A, [], DIM)
     assert(isempty(b))

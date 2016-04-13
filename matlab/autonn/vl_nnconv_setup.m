@@ -4,6 +4,13 @@ function inputs = vl_nnconv_setup(layer)
 %   automatically initialize randomized Params for the filters. Also
 %   handles 'hasBias' (initialize biases), 'learningRate' and 'weightDecay'
 %   arguments for the Params.
+%   Called by AUTONN_SETUP.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
   assert(isequal(layer.func, @vl_nnconv) || isequal(layer.func, @vl_nnconvt)) ;
   

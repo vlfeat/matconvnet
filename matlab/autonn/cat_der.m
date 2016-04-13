@@ -10,6 +10,12 @@ function varargout = cat_der(dim, varargin)
 %   to avoid ambiguity in the last argument (is it a derivative or not?).
 %   It also works with arbitrary numbers of dimensions.
   
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
   dzdy = varargin{end} ;
   
   if isscalar(dzdy)
