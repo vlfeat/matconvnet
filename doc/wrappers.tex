@@ -2,15 +2,15 @@
 \chapter{Wrappers and pre-trained models}\label{s:wrappers}
 % ------------------------------------------------------------------
 
-It is easy enough to combine the computational blocks of \autoref{s:blocks} ``manually''. However, it is usually much more convenient to use them through a \emph{wrapper} that can implement CNN architectures given a model specification. The available wrappers are briefly summarised in \autoref{s:wrappers-overview}.
+It is easy enough to combine the computational blocks of \cref{s:blocks} ``manually''. However, it is usually much more convenient to use them through a \emph{wrapper} that can implement CNN architectures given a model specification. The available wrappers are briefly summarised in \cref{s:wrappers-overview}.
 
-\matconvnet also comes with many pre-trained models for image classification (most of which are trained on the ImageNet ILSVRC challenge), image segmentation, text spotting, and face recognition. These are very simple to use, as illustrated in \autoref{s:pretrained}.
+\matconvnet also comes with many pre-trained models for image classification (most of which are trained on the ImageNet ILSVRC challenge), image segmentation, text spotting, and face recognition. These are very simple to use, as illustrated in \cref{s:pretrained}.
 
 % ------------------------------------------------------------------
 \section{Wrappers}\label{s:wrappers-overview}
 % ------------------------------------------------------------------
 
-\matconvnet provides two wrappers: SimpleNN for basic chains of blocks (\autoref{s:simplenn}) and DagNN for blocks organized in more complex direct acyclic graphs (\autoref{s:dagnn}).
+\matconvnet provides two wrappers: SimpleNN for basic chains of blocks (\cref{s:simplenn}) and DagNN for blocks organized in more complex direct acyclic graphs (\cref{s:dagnn}).
 
 % ------------------------------------------------------------------
 \subsection{SimpleNN}\label{s:simplenn}

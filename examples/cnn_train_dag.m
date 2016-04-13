@@ -69,12 +69,7 @@ for epoch=start+1:opts.numEpochs
   % is restarted from a checkpoint.
 
   rng(epoch + opts.randomSeed) ;
-
-  % Prepare GPUs. For very large models, matlabpool may time out
-  % when the model is checkpointed. Thus we restart it if needed
-  % at the beginning of each epoch.
-
-  prepareGPUs(opts) ;
+  prepareGPUs(opts, epoch == start+1) ;
 
   % Train for one epoch.
 
@@ -110,6 +105,7 @@ for epoch=start+1:opts.numEpochs
     clear net_ stats_ stats__ savedNet savedNet_ ;
   end
 
+  % save
   if ~evaluateMode
     saveState(modelPath(epoch), net, stats) ;
   end
@@ -179,11 +175,12 @@ if opts.profile
 end
 
 subset = state.(mode) ;
-start = tic ;
 num = 0 ;
 stats.num = 0 ; % return something even if subset = []
 stats.time = 0 ;
+adjustTime = 0 ;
 
+start = tic ;
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: %3d/%3d:', mode, state.epoch, ...
           fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
@@ -220,9 +217,6 @@ for t=1:opts.batchSize:numel(subset)
     end
   end
 
-  % extract learning stats
-  stats = opts.extractStatsFn(net) ;
-
   % accumulate gradient
   if strcmp(mode, 'train')
     if ~isempty(mmap)
@@ -232,16 +226,21 @@ for t=1:opts.batchSize:numel(subset)
     state = accumulate_gradients(state, net, opts, batchSize, mmap) ;
   end
 
-  % number of images processed so far (on all GPUs)
-  n = t + batchSize - 1 ;
-
-  % print learning statistics
-  time = toc(start) ;
+  % get statistics
+  time = toc(start) + adjustTime ;
+  batchTime = time - stats.time ;
+  stats = opts.extractStatsFn(net) ;
+  stats.num = num ;
   stats.time = time ;
-  stats.num = num ; % processed on this GPU
-  speed = n/time ; % processed on all GPUs
-  fprintf(' %.1f Hz', speed) ;
+  currentSpeed = batchSize / batchTime ;
+  averageSpeed = (t + batchSize - 1) / time ;
+  if t == opts.batchSize + 1
+    % compensate for the first iteration, which is an outlier
+    adjustTime = 2*batchTime - time ;
+    stats.time = time + adjustTime ;
+  end
 
+  fprintf(' %.1f (%.1f) Hz', averageSpeed, currentSpeed) ;
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
     f = char(f) ;
     fprintf(' %s:', f) ;
@@ -418,10 +417,11 @@ if get(0,'CurrentFigure') ~= n
 end
 
 % -------------------------------------------------------------------------
-function prepareGPUs(opts)
+function prepareGPUs(opts, cold)
 % -------------------------------------------------------------------------
 numGpus = numel(opts.gpus) ;
 if numGpus > 1
+  % check parallel pool integrity as it could have timed out
   pool = gcp('nocreate') ;
   if ~isempty(pool) && pool.NumWorkers ~= numGpus
     delete(pool) ;
@@ -429,13 +429,17 @@ if numGpus > 1
   pool = gcp('nocreate') ;
   if isempty(pool)
     parpool('local', numGpus) ;
-  end
-  spmd
-    gpuDevice(opts.gpus(labindex))
+    cold = true ;
   end
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
   end
-elseif numGpus == 1
-  gpuDevice(opts.gpus)
+end
+if numGpus >= 1 && cold
+  fprintf('%s: resetting GPU\n', mfilename)
+  if numGpus == 1
+    gpuDevice(opts.gpus)
+  else
+    spmd, gpuDevice(opts.gpus(labindex)), end
+  end
 end

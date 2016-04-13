@@ -38,7 +38,7 @@ else
 end
 
 opts.leak = 0 ;
-opts = vl_argparse(opts, varargin) ;
+opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
 if opts.leak == 0
   if nargin <= 1 || isempty(dzdy)

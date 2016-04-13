@@ -12,7 +12,9 @@
 \usepackage{color}
 \usepackage{textcomp}
 \usepackage{fancyvrb}
+\usepackage{array}
 \usepackage[colorlinks]{hyperref}
+\usepackage{cleveref}
 
 \newtheorem{example}{Example}
 
@@ -24,10 +26,12 @@
 \newcommand{\cpp}{C{}\texttt{++}~}
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
+\newcommand{\bc}{\mathbf{c}}
 \newcommand{\bz}{\mathbf{z}}
 \newcommand{\bff}{\mathbf{f}}
 \newcommand{\br}{\mathbf{r}}
 \newcommand{\bw}{\mathbf{w}}
+\newcommand{\bp}{\mathbf{p}}
 \newcommand{\bfs}{\mathbf{s}}
 \newcommand{\bfe}{\mathbf{e}}
 \newcommand{\bone}{\mathbf{1}}
@@ -37,10 +41,14 @@
 
 \tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] 
 \tikzstyle{data} = []
-\tikzstyle{datac} = [draw, circle, minimum height=1em, minimum width=1em,inner sep=3pt]
-\tikzstyle{par} = [draw, circle, minimum height=1em, minimum width=1em,fill=black!20,inner sep=3pt]
+\tikzstyle{datac} = [draw, circle, minimum height=2.5em, minimum width=2.5em,inner sep=3pt,font=\footnotesize]
+\tikzstyle{par} = [draw, circle, minimum height=2.5em, minimum width=2.5em,fill=black!20,inner sep=3pt,font=\footnotesize]
 \tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
 \tikzstyle{to} = [->,>=stealth',shorten >=1pt,semithick]
+\tikzstyle{from} = [<-,>=stealth',shorten >=1pt,semithick]
+\tikzstyle{bp} = [draw=blue,text=blue]
+\tikzstyle{bpl} = [draw=blue!40]
+\tikzstyle{bpe} = [text=blue,draw=none]
 
 \VerbatimFootnotes
 
@@ -72,8 +80,6 @@
 }
 \lstMakeShortInline[columns=fullflexible, breaklines = true,
  breakatwhitespace = true]!
-
-\renewcommand{\subsectionautorefname}{section}
 
 \title{MatConvNet \\
 \Large

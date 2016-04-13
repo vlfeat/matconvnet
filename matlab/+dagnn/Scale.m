@@ -5,43 +5,32 @@ classdef Scale < dagnn.ElementWise
   end
 
   methods
+
     function outputs = forward(obj, inputs, params)
-
-      if numel(inputs) >= 2, params{1} = inputs{2} ; end
-      outputs{1} = bsxfun(@times, inputs{1}, params{1}) ;
-
+      args = horzcat(inputs, params) ;
+      outputs{1} = bsxfun(@times, args{1}, args{2}) ;
       if obj.hasBias
-        if numel(inputs) >= 2, params{2} = inputs{3} ; end
-        outputs{1} = bsxfun(@plus, outputs{1}, params{2}) ;
+        outputs{1} = bsxfun(@plus, outputs{1}, args{3}) ;
       end
     end
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
-
-      % The scale/bias can be passed in as either input or parameter
-      if numel(inputs) >= 2, params{1} = inputs{2} ; end
-      derInputs{1} = bsxfun(@times, derOutputs{1}, params{1}) ;
-      derParams{1} = derOutputs{1} .* inputs{1} ;
-      for k = find(size(params{1}) == 1)
-        if size(inputs{1},k) > 1
-          derParams{1} = sum(derParams{1},k) ;
-        end
+      args = horzcat(inputs, params) ;
+      sz = [size(args{2}) 1 1 1 1] ;
+      sz = sz(1:4) ;
+      dargs{1} = bsxfun(@times, derOutputs{1}, args{2}) ;
+      dargs{2} = derOutputs{1} .* args{1} ;
+      for k = find(sz == 1)
+        dargs{2} = sum(dargs{2}, k) ;
       end
-
       if obj.hasBias
-        if numel(inputs) >= 2, params{2} = inputs{3} ; end
-        derParams{2} = derOutputs{1} ;
-        for k = find(size(params{2}) == 1)
-          if size(inputs{1},k) > 1
-            derParams{2} = sum(derParams{2},k) ;
-          end
+        dargs{3} = derOutputs{1} ;
+        for k = find(sz == 1)
+          dargs{3} = sum(dargs{3}, k) ;
         end
       end
-
-      if numel(inputs) == 1
-        derInputs(2:3) = derParams ;
-        derParams = {} ;
-      end
+      derInputs = dargs(1:numel(inputs)) ;
+      derParams = dargs(numel(inputs)+(1:numel(params))) ;
     end
 
     function obj = Scale(varargin)
