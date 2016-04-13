@@ -75,10 +75,10 @@ classdef Layer < handle
     
     function objs = find(obj, what, n, objs)
       % OBJS = OBJ.FIND()
-      % OBJS = OBJ.FIND(NAME)
-      % OBJS = OBJ.FIND(FUNC)
+      % OBJS = OBJ.FIND(NAME/FUNC/CLASS)
       % Finds layers, starting at the given output layer. The search
-      % criteria can be the layer name or function handle.
+      % criteria can be a layer name, a function handle, or a class name
+      % (such as 'Input' or 'Param').
       % By default a cell array is returned, which may be empty.
       %
       % OBJS = OBJ.FIND(..., N)
@@ -109,7 +109,7 @@ classdef Layer < handle
         end
         
         % add self to list if it matches the pattern
-        if isequal(obj.name, what) || isequal(obj.func, what)
+        if isequal(obj.name, what) || isequal(obj.func, what) || isa(obj, what)
           objs{end+1} = obj ;
         end
         
