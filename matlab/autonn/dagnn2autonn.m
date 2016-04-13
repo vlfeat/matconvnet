@@ -98,8 +98,15 @@ function netOutputs = dagnn2autonn(dag)
         'pad', block.pad, 'stride', block.stride, block.opts{:}) ;
     
     elseif isa(block, 'dagnn.BatchNorm')
-      obj = vl_nnbnorm(inputs{1}, params{1}, params{2}, params{3}, ...
-        'epsilon', block.epsilon) ;
+      % make sure the Params are not empty, but scalar
+      defaults = single([0, 0, 1]) ;
+      for i = 1:3
+        if isempty(params{i}.value)
+          params{i}.value = defaults(i) ;
+        end
+      end
+      obj = vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
+        'moments', params{3}, 'epsilon', block.epsilon) ;
     
     elseif isa(block, 'dagnn.ReLU')
       obj = vl_nnrelu(inputs{1}, 'leak', block.leak, block.opts{:}) ;

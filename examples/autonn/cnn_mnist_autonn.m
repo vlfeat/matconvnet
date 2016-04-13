@@ -21,7 +21,11 @@ opts.train.batchSize = 100 ;
 opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
-opts.train.learningRate = 0.00001 ;
+if opts.batchNormalization
+  opts.train.learningRate = 0.01 ;
+else
+  opts.train.learningRate = 0.0001 ;
+end
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts = vl_argparse(opts, varargin) ;
@@ -82,9 +86,10 @@ case 'dagnn'
   % test Net converted from a DagNN
   addpath ../mnist/
   assert(strcmp(opts.modelType, 'lenet')) ;
+
   net = cnn_mnist_init('batchNormalization', opts.batchNormalization, ...
                        'networkType', 'dagnn') ;
-  net.initParams() ;
+
   net.renameVar('input', 'images');
   net.renameVar('label', 'labels');
   

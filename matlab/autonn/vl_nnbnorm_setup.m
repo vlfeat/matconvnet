@@ -1,8 +1,9 @@
 function [inputs, testInputs] = vl_nnbnorm_setup(layer)
 %VL_NNBNORM_SETUP
-%   Create parameters if needed, and use VL_NNBNORM_AUTONN wrapper for
-%   proper handling of test mode. Also handles 'learningRate' and
-%   'weightDecay' arguments for the Params.
+%   Create parameters if needed, and use VL_NNBNORM_WRAPPER for proper
+%   handling of test mode. Also handles 'learningRate' and 'weightDecay'
+%   arguments for the Params, and sets trainMethod of moments to
+%   'average'.
 %   Called by AUTONN_SETUP.
 
 % Copyright (C) 2016 Joao F. Henriques.
@@ -14,11 +15,11 @@ function [inputs, testInputs] = vl_nnbnorm_setup(layer)
   assert(isequal(layer.func, @vl_nnbnorm)) ;
   
   % use wrapper
-  layer.func = @vl_nnbnorm_autonn ;
+  layer.func = @vl_nnbnorm_wrapper ;
   inputs = layer.inputs ;
   
-  % parse options
-  opts = struct('learningRate', 1, 'weightDecay', 1) ;
+  % parse options. note the defaults for bnorm's Params are set here.
+  opts = struct('learningRate', 0.01, 'weightDecay', 0, 'moments', []) ;
   [opts, inputs] = vl_argparsepos(opts, inputs) ;
   
   if isscalar(opts.learningRate)
@@ -46,16 +47,22 @@ function [inputs, testInputs] = vl_nnbnorm_setup(layer)
                       'weightDecay', opts.weightDecay(2)) ;
   end
   
-  pos = find(cellfun(@(a) strcmpi(a, 'moments'), inputs(4:end)), 1) ;
-  if isempty(pos)
-    % create moments param
-    moments = Param('value', single(0), ...
-                    'learningRate', opts.learningRate(3), ...
-                    'weightDecay', opts.weightDecay(3)) ;
+  if ~isempty(opts.moments)
+    moments = opts.moments ;
   else
-    % moments param was specified
-    moments = inputs{pos + 1} ;
-    inputs(pos : pos + 1) = [] ;  % delete it; normal mode doesn't use moments
+    % 'moments' name-value pair not specified.
+    % check if the moments were passed in as the 4th argument (alternative
+    % syntax)
+    if numel(inputs) > 3 && ~ischar(inputs{4})
+      moments = inputs{4} ;
+      inputs(4) = [] ;  % remove from list
+    else
+      % create moments param. note the training method is 'average'.
+      moments = Param('value', single(0), ...
+                      'learningRate', opts.learningRate(3), ...
+                      'weightDecay', opts.weightDecay(3), ...
+                      'trainMethod', 'average') ;
+    end
   end
   
   % in normal mode, pass in moments so its derivatives are expected
