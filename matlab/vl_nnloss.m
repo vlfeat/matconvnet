@@ -120,6 +120,7 @@ function Y = vl_nnloss(X,c,dzdy,varargin)
 %   See also: VL_NNSOFTMAX().
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
+% Copyright (C) 2016 Karel Lenc.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -151,7 +152,7 @@ hasIgnoreLabel = any(c(:) == 0);
 labelSize = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
 assert(isequal(labelSize(1:2), inputSize(1:2))) ;
 assert(labelSize(4) == inputSize(4)) ;
-instanceWeights = [];
+instanceWeights = [] ;
 switch lower(opts.loss)
   case {'classerror', 'topkerror', 'log', 'softmaxlog', 'mhinge', 'mshinge'}
     % there must be one categorical label per prediction vector
@@ -177,13 +178,15 @@ switch lower(opts.loss)
 end
 
 if ~isempty(opts.instanceWeights)
-  if hasIgnoreLabel
-    instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
-  else
-    instanceWeights = opts.instanceWeights ;
-    if size(instanceWeights,4) < inputSize(4)
-      instanceWeights = repmat(instanceWeights,1,1,1,inputSize(4)) ;
+  % important: this code needs to broadcast opts.instanceWeights to
+  % an array of the same size as c
+  if isempty(instanceWeights)
+    if isa(X,'gpuArray')
+      instanceWeights = gpuArray.ones(size(c), 'like', X) ;
+    else
+      instanceWeights = ones(size(c), 'like', X) ;
     end
+    instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights) ;
   end
 end
 
