@@ -1,8 +1,11 @@
-function derFunc = der(func)
-%DER
+function derFunc = autonn_der(func)
+%AUTONN_DER
+%   AUTONN_DER is only called by Net during construction.
+%
 %   Given a function handle, returns the function handle for its
-%   derivative.
-%   Small derivative functions can be defined as subfunctions here.
+%   derivative. It has the same name as the function, followed by '_der'.
+%
+%   Small derivative functions are defined as subfunctions here.
 
   derFunc = str2func([func2str(func) '_der']) ;
   info = functions(derFunc) ;
@@ -12,7 +15,6 @@ function derFunc = der(func)
   if isempty(info.file)
     derFunc = func ;
   end
-
 end
 
 function dx = reshape_der(x, ~, dy)  %#ok<*DEFNU>

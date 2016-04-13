@@ -99,7 +99,7 @@ classdef Net < handle
         obj = objs{idx(k)} ;
         
         % add backward function to execution order
-        layer.func = der(obj.func) ;
+        layer.func = autonn_der(obj.func) ;
         layer.name = obj.name ;
         layer = Net.parseArgs(layer, obj.inputs) ;
         

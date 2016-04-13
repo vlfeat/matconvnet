@@ -1,0 +1,70 @@
+function [inputs, testInputs] = autonn_setup(obj)
+%AUTONN_SETUP
+%   AUTONN_SETUP is only called by Layer during construction.
+%
+%   Defines special behavior for a Layer, by calling the setup function
+%   associated with its function handle. A setup function, if it exists,
+%   has the same name as the original function, followed by '_setup'.
+%
+%   Small setup functions are defined as subfunctions here.
+  
+  % do not modify inputs or test-mode inputs by default
+  inputs = obj.inputs ;
+  testInputs = obj.testInputs ;
+
+  % check existence of setup function
+  setupFunc = str2func([func2str(obj.func) '_setup']) ;
+  info = functions(setupFunc) ;
+  
+  if ~isempty(info.file)
+    % accept between 0 and 2 return values: the inputs list, and the
+    % test-time inputs list. both are optional.
+    out = cell(1, nargout(setupFunc)) ;
+    [out{:}] = setupFunc(obj) ;
+
+    if numel(out) >= 1  % changed inputs
+      inputs = out{1} ;
+    end
+
+    if numel(out) >= 2  % changed test mode inputs
+      testInputs = out{2} ;
+    end
+  end
+end
+
+function vl_nnloss_setup(layer)
+  % the 2nd input (label) has no derivative.
+  layer.numInputDer = 1 ;
+end
+
+function vl_nnsoftmaxloss_setup(layer)
+  % the 2nd input (label) has no derivative.
+  layer.numInputDer = 1 ;
+end
+
+function inputs = vl_nnconvt_setup(layer)
+  % same setup as for conv layers (see VL_NNCONV_SETUP).
+  inputs = vl_nnconv_setup(layer) ;
+end
+
+function inputs = vl_nnbinaryop_setup(layer)  %#ok<*DEFNU>
+  % @ldivide is just @rdivide with swapped inputs.
+  inputs = layer.inputs ;
+  if isequal(inputs{3}, @ldivide)
+    inputs = [inputs([2,1]), {@rdivide}] ;
+  end
+end
+
+function inputs = vl_nnmatrixop_setup(layer)
+  % @mldivide is just @mrdivide with swapped inputs.
+  inputs = layer.inputs ;
+  if isequal(inputs{3}, @mldivide)
+    inputs = [inputs([2,1]), {@mrdivide}] ;
+  end
+end
+
+function vl_nnmask_setup(layer)
+  % remove layer in test mode
+  layer.testFunc = 'none' ;
+end
+

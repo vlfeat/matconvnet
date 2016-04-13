@@ -37,28 +37,13 @@ classdef Layer < handle
           'Input must be a function handle, a SimpleNN struct or a DagNN.') ;
       end
       
-      % general case
       obj.func = func ;
       obj.inputs = varargin(:)' ;
       
-      % call setup function if needed. it can change the inputs list (not
+      % call setup function if defined. it can change the inputs list (not
       % allowed for outside functions, to preserve call graph structure).
-      setup_func = [func2str(func) '_setup'] ;
-      if exist(setup_func, 'file')
-        setup_func = str2func(setup_func) ;
-        
-        % accept between 0 and 2 return values
-        out = cell(1, nargout(setup_func)) ;
-        [out{:}] = setup_func(obj) ;
-        
-        if numel(out) >= 1  % changed inputs
-          obj.inputs = out{1} ;
-        end
-        
-        if numel(out) >= 2  % changed test mode inputs
-          obj.testInputs = out{2} ;
-        end
-      end
+      [obj.inputs, obj.testInputs] = autonn_setup(obj) ;
+      
     end
     
     function objs = find(obj, what, n, objs)
