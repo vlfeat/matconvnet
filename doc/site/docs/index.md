@@ -32,7 +32,8 @@ pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
 > **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
-> models, CuDNN V5 support, and numerous other improvements and bugfixes.
+> models (demo training code coming next), CuDNN V5 support, and
+> numerous other improvements and bugfixes.
 >
 > **New:** [1.0-beta18](about.md#changes) adds support fod DOUBLE data
 > type. [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) can now resize
