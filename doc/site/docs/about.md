@@ -23,7 +23,7 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta19 (February 2016).
+-   1.0-beta19 (April 2016).
 
     **New features**
 
