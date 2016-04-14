@@ -68,7 +68,7 @@ end
 
 d = bsxfun(@minus, x, x0) ;
 d(isnan(x0)) = 0;
-d(abs(d) < opts.hinge) = 0;
+if backMode, d(abs(d) < opts.hinge) = 0; end;
 if opts.normed, d = bsxfun(@rdivide, d, (x0+~x0)); end;
 
 if ~isempty(dzdy) && ~isempty(opts.hard_samples_percent)

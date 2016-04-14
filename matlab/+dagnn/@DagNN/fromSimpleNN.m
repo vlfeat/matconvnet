@@ -142,6 +142,7 @@ for l = 1:numel(net.layers)
                 'noRoot', net.layers{l}.noRoot, ...
                 'epsilon', net.layers{l}.epsilon, ...
                 'aggregate', net.layers{l}.aggregate) ;
+            inputs{2} = getNewVarName(obj, 'label') ;
             
         case {'softmaxloss'}
             block = Loss('loss', 'softmaxlog') ;
@@ -204,6 +205,9 @@ if opts.canonicalNames
         if isa(obj.layers(l).block, 'dagnn.SoftMax')
             obj.renameVar(obj.layers(l).outputs{1}, getNewVarName(obj, 'prob')) ;
             obj.renameVar(obj.layers(l).inputs{1}, getNewVarName(obj, 'prediction')) ;
+        end
+        if isa(obj.layers(l).block, 'dagnn.PDist')
+            obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
         end
         if isa(obj.layers(l).block, 'dagnn.Loss')
             obj.renameVar(obj.layers(l).outputs{1}, 'objective') ;
