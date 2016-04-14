@@ -24,12 +24,16 @@ the terms of the BSD license (see the COPYING file).
 
 /* option codes */
 enum {
-  opt_verbose = 0
+  opt_verbose = 0,
+  opt_cudnn,
+  opt_no_cudnn
 };
 
 /* options */
 vlmxOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
+  {"Cudnn",            0,   opt_cudnn             },
+  {"NoCudnn",          0,   opt_no_cudnn          },
   {0,                  0,   0                     }
 } ;
 
@@ -93,6 +97,19 @@ void mexFunction(int nout, mxArray *out[],
       case opt_verbose :
         ++ verbosity ;
         break ;
+
+      case opt_no_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(false) ;
+#endif
+        break ;
+
+      case opt_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(true) ;
+#endif
+        break ;
+
       default:
         break ;
     }

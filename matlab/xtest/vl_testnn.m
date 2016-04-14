@@ -1,4 +1,4 @@
-function vl_testnn(varargin)
+function result = vl_testnn(varargin)
 %VL_TESTNN Run MatConvNet test suite 
 % VL_TESTNN('option', value, ...) takes the following options:
 %  `cpu`:: true

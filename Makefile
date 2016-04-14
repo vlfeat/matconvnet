@@ -220,6 +220,7 @@ ifdef ENABLE_CUDNN
 cpp_src+=matlab/src/bits/impl/nnconv_cudnn.cu
 cpp_src+=matlab/src/bits/impl/nnpooling_cudnn.cu
 cpp_src+=matlab/src/bits/impl/nnbias_cudnn.cu
+cpp_src+=matlab/src/bits/impl/nnbilinearsampler_cudnn.cu
 endif
 endif
 

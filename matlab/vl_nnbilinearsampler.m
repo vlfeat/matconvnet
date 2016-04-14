@@ -24,9 +24,15 @@
 %   have the same dimensions as X,GRID and Y respectively.
 %
 %   ## CUDNN SUPPORT
-%   Currently not supported.
+%   If compiled in, the function will use cuDNN functions for
+%   bilinear interpolation.
+%   Note: there are some known issues when using more than 4 channels,
+%         with cuDNN.
+%   You can use the 'NoCudnn' option to disable cuDNN or 'Cudnn'
+%   to activate it back again
+%   (the choice sticks until MATLAB purges the MEX files for any reason).
 
-% Copyright (C) 2016 Ankush Gupta.
+% Copyright (C) 2016 Ankush Gupta, Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

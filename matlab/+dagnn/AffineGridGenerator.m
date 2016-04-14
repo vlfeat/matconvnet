@@ -1,6 +1,7 @@
 % Affine Transform Block:
-% Turns 1 x 1 x 6 x N affine transforms to: Ho x Wo x 2 x N
-% sampling grid. This can be used as an example to define
+% Turns 1 x 1 x 6 x N affine transforms to: 2 x Ho x Wo x N
+% sampling grid (for cuDNN compatibility.
+% This can be used as an example to define
 % other transforms like thin-plate-splines etc. 
 %
 % (c) 2016 Ankush Gupta
@@ -53,7 +54,10 @@ classdef AffineGridGenerator < dagnn.Layer
       t = A(:,3,:); % translation
       t = reshape(t,1,2*nbatch);
       g = bsxfun(@plus, obj.xxyy * L, t); % apply the transform
-      g = reshape(g, obj.Ho,obj.Wo,2,nbatch);
+      g = reshape(g, obj.Wo,obj.Ho,2,nbatch);
+
+      % cudnn compatibility:
+      g = permute(g, [3,2,1,4]);
 
       outputs = {g};
     end
@@ -64,6 +68,9 @@ classdef AffineGridGenerator < dagnn.Layer
       useGPU = isa(derOutputs{1}, 'gpuArray');
       dY = derOutputs{1};
       nbatch = size(dY,4);
+
+      % cudnn compatibility:
+      dY = permute(dY, [3,2,1,4]);
 
       % create the gradient buffer:
       dA = zeros([2,3,nbatch], 'single');
@@ -100,11 +107,11 @@ classdef AffineGridGenerator < dagnn.Layer
     function init_grid(obj, useGPU)
       % initialize the grid: 
       % this is a constant
-      xi = linspace(-1, 1, obj.Wo);
-      yi = linspace(-1, 1, obj.Ho);
+      xi = linspace(-1, 1, obj.Ho);
+      yi = linspace(-1, 1, obj.Wo);
 
       [yy,xx] = meshgrid(xi,yi);
-      xxyy = [xx(:) yy(:)]; % Mx2
+      xxyy = [yy(:) xx(:)]; % Mx2
       if useGPU
         xxyy = gpuArray(xxyy);
       end
