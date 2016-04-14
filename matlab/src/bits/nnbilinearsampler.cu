@@ -18,6 +18,10 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
+#if ENABLE_CUDNN
+#include "impl/nnbilinearsampler_cudnn.hpp"
+#endif
+
 #include <cstdio>
 #include <assert.h>
 
@@ -43,6 +47,17 @@ IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, double) ; break ;) \
 default: assert(false) ; return vlErrorUnknown ; \
 }
 
+#define DISPATCHCUDNN(dataType) \
+error = vl::impl::nnbilinearsampler_cudnn<dataType>::forward \
+( context, output, data, grid ) ;
+
+#define DISPATCHCUDNN2() \
+switch (dataType) { \
+case vlTypeFloat : DISPATCHCUDNN(vlTypeFloat) ; break ; \
+IF_DOUBLE(case vlTypeDouble : DISPATCHCUDNN(vlTypeDouble) ; break ;) \
+default: assert(false) ; return vlErrorUnknown ; \
+}
+
 vl::Error
 vl::nnbilinearsampler_forward(Context& context,
                               Tensor output,
@@ -65,11 +80,18 @@ vl::nnbilinearsampler_forward(Context& context,
 
 #if ENABLE_GPU
     case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
-        context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
-      }
-      break;
+#if ENABLE_CUDNN
+    if (context.getCudaHelper().getCudnnEnabled()) {
+      DISPATCHCUDNN2() ;
+      if (error == vl::vlSuccess) { return error ; }
+      if (error != vl::vlErrorUnsupported) { return error ; }
+    }
+#endif
+    DISPATCH2(vl::GPU) ;
+    if (error == vlErrorCuda) {
+      context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
+    }
+    break;
 #endif
   }
   return context.passError(error, __func__);
@@ -90,6 +112,14 @@ error = vl::impl::bilinearsampler<deviceType,type>::backward \
 (type const*) derOutput.getMemory(), \
 derOutput.getHeight(), derOutput.getWidth(), derOutput.getDepth(), derOutput.getSize(), \
 data.getHeight(), data.getWidth(), data.getSize());
+
+#undef DISPATCHCUDNN
+#define DISPATCHCUDNN(dataType) \
+error = vl::impl::nnbilinearsampler_cudnn<dataType>::backward \
+( context, \
+  derData, derGrid, \
+  data, grid, \
+  derOutput );
 
 vl::Error
 vl::nnbilinearsampler_backward(Context& context,
@@ -116,13 +146,19 @@ vl::nnbilinearsampler_backward(Context& context,
 
 #if ENABLE_GPU
     case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
-        context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
-      }
-      break;
+#if ENABLE_CUDNN
+    if (context.getCudaHelper().getCudnnEnabled()) {
+      DISPATCHCUDNN2() ;
+      if (error == vl::vlSuccess) { return error ; }
+      if (error != vl::vlErrorUnsupported) { return error ; }
+    }
+#endif
+    DISPATCH2(vl::GPU) ;
+    if (error == vlErrorCuda) {
+      context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
+    }
+    break;
 #endif
   }
   return context.passError(error, __func__);
 }
-
