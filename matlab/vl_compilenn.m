@@ -364,8 +364,8 @@ end
 
 flags.link{end+1} = '-largeArrayDims' ;
 
-flags.mexcc = {flags.cc{:}, '-largeArrayDims', '-cxx'} ;
-
+flags.mexcc = {flags.cc{:}, '-largeArrayDims'} ;
+if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 flags.mexcu = flags.mexcc ;
 flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
 flags.mexcu{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;

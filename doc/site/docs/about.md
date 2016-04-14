@@ -23,11 +23,22 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta19 (February 2016).
+-   1.0-beta19 (April 2016).
 
     **New features**
 
-    * Support for ResNet models.
+    * Support for pre-trained ResNet models.
+
+    * New `Scale` layer in DagNN.
+
+    * Numerous improvements to DagNN.
+
+    * Numerous refinements to example training scripts `cnn_train.m`
+      and `cnn_train_dag.m`.
+
+    * `vl_nnpdist` now can backrpopagate both inputs.
+
+    * CuDNN v5 support.
 
     * Improved the `import-caffe.py` script for compatibility with
       newever versions of Caffe.

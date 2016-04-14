@@ -56,7 +56,7 @@ then
 else
     $converter \
         --caffe-variant=caffe_0115 \
-        --preproc=caffe \
+        --preproc=vgg-caffe \
 	--remove-dropout \
         --remove-loss \
         --append-softmax="cls3_fc" \

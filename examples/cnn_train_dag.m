@@ -105,6 +105,7 @@ for epoch=start+1:opts.numEpochs
     clear net_ stats_ stats__ savedNet savedNet_ ;
   end
 
+  % save
   if ~evaluateMode
     saveState(modelPath(epoch), net, stats) ;
   end
@@ -174,11 +175,12 @@ if opts.profile
 end
 
 subset = state.(mode) ;
-start = tic ;
 num = 0 ;
 stats.num = 0 ; % return something even if subset = []
 stats.time = 0 ;
+adjustTime = 0 ;
 
+start = tic ;
 for t=1:opts.batchSize:numel(subset)
   fprintf('%s: epoch %02d: %3d/%3d:', mode, state.epoch, ...
           fix((t-1)/opts.batchSize)+1, ceil(numel(subset)/opts.batchSize)) ;
@@ -224,14 +226,19 @@ for t=1:opts.batchSize:numel(subset)
     state = accumulate_gradients(state, net, opts, batchSize, mmap) ;
   end
 
-  % extract learning stats
-  time = toc(start) ;
+  % get statistics
+  time = toc(start) + adjustTime ;
   batchTime = time - stats.time ;
   stats = opts.extractStatsFn(net) ;
   stats.num = num ;
   stats.time = time ;
   currentSpeed = batchSize / batchTime ;
   averageSpeed = (t + batchSize - 1) / time ;
+  if t == opts.batchSize + 1
+    % compensate for the first iteration, which is an outlier
+    adjustTime = 2*batchTime - time ;
+    stats.time = time + adjustTime ;
+  end
 
   fprintf(' %.1f (%.1f) Hz', averageSpeed, currentSpeed) ;
   for f = setdiff(fieldnames(stats)', {'num', 'time'})
@@ -422,16 +429,17 @@ if numGpus > 1
   pool = gcp('nocreate') ;
   if isempty(pool)
     parpool('local', numGpus) ;
-    cold = true
+    cold = true ;
   end
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
   end
 end
-if cold
+if numGpus >= 1 && cold
+  fprintf('%s: resetting GPU\n', mfilename)
   if numGpus == 1
-    gpuDevice(opts.gpus) ;
+    gpuDevice(opts.gpus)
   else
-    spmd, gpuDevice(opts.gpus(labindex)) ; end
+    spmd, gpuDevice(opts.gpus(labindex)), end
   end
 end

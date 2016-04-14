@@ -22,7 +22,7 @@ function y = vl_nnnormalizelp(x,dzdy,varargin)
 
 opts.epsilon = 1e-2 ;
 opts.p = 2 ;
-opts = vl_argparse(opts, varargin) ;
+opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
 massp = (sum(x.^opts.p,3) + opts.epsilon) ;
 mass = massp.^(1/opts.p) ;
