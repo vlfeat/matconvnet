@@ -240,51 +240,51 @@ assert(opts.backPropDepth > 0, 'Invalid `backPropDepth` value (!>0)');
 backPropLim = max(n - opts.backPropDepth + 1, 1);
 
 if (nargin <= 2) || isempty(dzdy)
-  doder = false ;
-  if opts.skipForward
-    error('simplenn:skipForwardNoBackwPass', ...
-      '`skipForward` valid only when backward pass is computed.');
-  end
+    doder = false ;
+    if opts.skipForward
+        error('simplenn:skipForwardNoBackwPass', ...
+            '`skipForward` valid only when backward pass is computed.');
+    end
 else
-  doder = true ;
+    doder = true ;
 end
 
 if opts.cudnn
-  cudnn = {'CuDNN'} ;
+    cudnn = {'CuDNN'} ;
   bnormCudnn = {'NoCuDNN'} ; % ours seems slighty faster
 else
-  cudnn = {'NoCuDNN'} ;
+    cudnn = {'NoCuDNN'} ;
   bnormCudnn = {'NoCuDNN'} ;
 end
 
 switch lower(opts.mode)
-  case 'normal'
-    testMode = false ;
-  case 'test'
-    testMode = true ;
-  otherwise
-    error('Unknown mode ''%s''.', opts. mode) ;
+    case 'normal'
+        testMode = false ;
+    case 'test'
+        testMode = true ;
+    otherwise
+        error('Unknown mode ''%s''.', opts. mode) ;
 end
 
 gpuMode = isa(x, 'gpuArray') ;
 
 if nargin <= 3 || isempty(res)
-  if opts.skipForward
-    error('simplenn:skipForwardEmptyRes', ...
-    'RES structure must be provided for `skipForward`.');
-  end
-  res = struct(...
-    'x', cell(1,n+1), ...
-    'dzdx', cell(1,n+1), ...
-    'dzdw', cell(1,n+1), ...
-    'aux', cell(1,n+1), ...
-    'stats', cell(1,n+1), ...
-    'time', num2cell(zeros(1,n+1)), ...
-    'backwardTime', num2cell(zeros(1,n+1))) ;
+    if opts.skipForward
+        error('simplenn:skipForwardEmptyRes', ...
+            'RES structure must be provided for `skipForward`.');
+    end
+    res = struct(...
+        'x', cell(1,n+1), ...
+        'dzdx', cell(1,n+1), ...
+        'dzdw', cell(1,n+1), ...
+        'aux', cell(1,n+1), ...
+        'stats', cell(1,n+1), ...
+        'time', num2cell(zeros(1,n+1)), ...
+        'backwardTime', num2cell(zeros(1,n+1))) ;
 end
 
 if ~opts.skipForward
-  res(1).x = x ;
+    res(1).x = x ;
 end
 
 % -------------------------------------------------------------------------
@@ -459,23 +459,14 @@ if doder
           % hack (which works only for ReLU):
           res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx, leak{:}) ;
         end
-
-      case 'sigmoid'
-        res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
-
-      case 'noffset'
-        res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
-
-      case 'spnorm'
-        res(i).dzdx = vl_nnspnorm(res(i).x, l.param, res(i+1).dzdx) ;
-
-      case 'dropout'
-        if testMode
-          res(i).dzdx = res(i+1).dzdx ;
-        else
-          res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, ...
-                                     'mask', res(i+1).aux) ;
+        if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
+            res(i+1).dzdx = [] ;
+            res(i+1).x = [] ;
         end
+        if ~isfield(l, 'normed'), l.normed = false; end;
+        if ~isfield(l, 'hinge'), l.hinge = 0; end;
+          'normed', l.normed, ...
+          'hinge', l.hinge, ...
 
       case 'bnorm'
         [res(i).dzdx, dzdw{1}, dzdw{2}, dzdw{3}] = ...
@@ -509,7 +500,7 @@ if doder
             res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
           end
         end
-        dzdw = [] ;
+        res(i).backwardTime = toc(res(i).backwardTime) ;
         if ~isempty(opts.parameterServer) && ~opts.holdOn
           for j = 1:numel(res(i).dzdw)
             opts.parameterServer.push(sprintf('l%d_%d',i,j),res(i).dzdw{j}) ;
@@ -517,15 +508,6 @@ if doder
           end
         end
     end
-    if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
-      res(i+1).dzdx = [] ;
-      res(i+1).x = [] ;
-    end
-    if gpuMode && opts.sync
-      wait(gpuDevice) ;
-    end
-    res(i).backwardTime = toc(res(i).backwardTime) ;
-  end
   if i > 1 && i == backPropLim && opts.conserveMemory && ~net.layers{i}.precious
     res(i).dzdx = [] ;
     res(i).x = [] ;

@@ -59,6 +59,7 @@ opts.aggregate = false ;
 opts.instanceWeights = [] ;
 opts.normed = false ;
 opts.hinge = 0;
+opts.hard_samples_percent = [];
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
@@ -79,6 +80,10 @@ if opts.normed, d = bsxfun(@rdivide, d, (x0+~x0)); end;
 
 if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
   dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
+end
+
+if ~isempty(dzdy) && ~isempty(opts.hard_samples_percent)
+    
 end
 
 if ~opts.noRoot
