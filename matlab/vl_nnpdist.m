@@ -52,6 +52,7 @@ opts.epsilon = 1e-6 ;
 opts.aggregate = false ;
 opts.normed = false ;
 opts.hinge = 0;
+opts.hard_samples_percent = [];
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
 if backMode
   dzdy = varargin{1} ;
@@ -69,6 +70,12 @@ d = bsxfun(@minus, x, x0) ;
 d(isnan(x0)) = 0;
 d(abs(d) < opts.hinge) = 0;
 if opts.normed, d = bsxfun(@rdivide, d, (x0+~x0)); end;
+
+if ~isempty(dzdy) && ~isempty(opts.hard_samples_percent)
+    
+end
+    
+    
 
 if ~opts.noRoot
   if isempty(dzdy)
