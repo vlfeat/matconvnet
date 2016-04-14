@@ -1,4 +1,4 @@
-classdef DagNN < handle
+classdef DagNN < matlab.mixin.Copyable
 %DagNN Directed acyclic graph neural network
 %   DagNN is a CNN wrapper alternative to SimpleNN. It is object
 %   oriented and allows constructing networks with a directed acyclic
@@ -36,8 +36,17 @@ classdef DagNN < handle
 %      This flag tells whether the DagNN resides in CPU or GPU
 %      memory. Use the `DagNN.move()` function to move the DagNN
 %      between devices.
+%
+%   The DagNN is copyable handle, i.e. allows to create a deep copy using
+%   `copy` operator `deep_copy = copy(dagnet);`. In all cases the deep copy
+%   is located in CPU memory (i.e. is transfered from GPU before copy).
+%   Remark: As a side effect the original network is being reset (all
+%   variables are cleared) and only the network structure and parameters
+%   are copied.
+%
+%   See Also: matlab.mixin.Copyable
 
-% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2015-2016 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -124,7 +133,7 @@ classdef DagNN < handle
     s = saveobj(obj)
 
     % Manipualte the DagNN
-    addLayer(obj, name, block, inputs, outputs, params)
+    addLayer(obj, name, block, inputs, outputs, params, varargin)
     removeLayer(obj, name)
     setLayerInputs(obj, leyer, inputs)
     setLayerOutput(obj, layer, outputs)
@@ -169,7 +178,7 @@ classdef DagNN < handle
     %   with such a name is found, the value NaN is returned for the
     %   index.
     %
-    %   Variables can then be accessed as the `obj.layers(INDEX)`
+    %   Layers can then be accessed as the `obj.layers(INDEX)`
     %   property of the DaG.
     %
     %   Indexes are stable unless the DaG is modified (e.g. by adding
@@ -248,6 +257,87 @@ classdef DagNN < handle
         end
       end
     end
+
+    function layer = getLayer(obj, layerName)
+    %GETLAYER Get a copy of a layer definition
+    %   LAYER = GETLAYER(obj, NAME) returns a copy of the layer definition
+    %   structure with the specified NAME. NAME can also be a cell array
+    %   of strings or an array of indexes. If no parameter with a
+    %   specified name or index exists, an error is thrown.
+    %
+    %   See Also getLayerIndex().
+      if isnumeric(layerName)
+        idxs = layerName;
+        if any(idxs > numel(obj.layers) || idxs < 0)
+          error('Invalid layer indexes.');
+        end
+      else
+        if ischar(layerName), layerName = {layerName}; end;
+        idxs = obj.getLayerIndex(layerName);
+        if any(isnan(idxs))
+          error('Invalid layer name `%s`', ...
+            strjoin(layerName(isnan(idxs)), ', '));
+        end
+      end
+      layer = obj.layers(idxs);
+    end
+
+    function var = getVar(obj, varName)
+    %GETVAR Get a copy of a layer definition
+    %   VAR = GETVAR(obj, NAME) returns a copy of the network variable
+    %   with the specified NAME. NAME can also be a cell array
+    %   of strings or an array of indexes. If no variable with a
+    %   specified name or index exists, an error is thrown.
+    %
+    %   See Also getVarIndex().
+      if isnumeric(varName)
+        idxs = varName;
+        if any(idxs > numel(obj.vars) || idxs < 0)
+          error('Invalid var indexes.');
+        end
+      else
+        if ischar(varName), varName = {varName}; end;
+        idxs = obj.getVarIndex(varName);
+        if any(isnan(idxs))
+          error('Invalid variable name `%s`', ...
+            strjoin(varName(isnan(idxs)), ', '));
+        end
+      end
+      var = obj.vars(idxs);
+    end
+
+    function param = getParam(obj, paramName)
+    %GETPARAM Get a copy of a layer parameter
+    %   PARAM = GETPARAM(obj, NAME) returns a copy of the network parameter
+    %   with the specified NAME. NAME can also be a cell array
+    %   of strings or an array of indexes. If no parameter with a
+    %   specified name or index exists, an error is thrown.
+    %
+    %   See Also getParamIndex().
+      if isnumeric(paramName)
+        idxs = paramName;
+        if any(idxs > numel(obj.params) || idxs < 0)
+          error('Invalid param indexes.');
+        end
+      else
+        if ischar(paramName), paramName = {paramName}; end;
+        idxs = obj.getParamIndex(paramName);
+        if any(isnan(idxs))
+          error('Invalid param name `%s`', ...
+            strjoin(paramName(isnan(idxs)), ', '));
+        end
+      end
+      param = obj.params(idxs);
+    end
+
+    function order = getLayerExecutionOrder(obj)
+    %GETLAYEREXECUTIONORDER Get the order in which layers are evaluated
+    %   ORDER = GETLAYEREXECUTIONORDER(obj) returns a vector with
+    %   the indexes of the layers in the order in which they are
+    %   executed. This needs not to be the trivial order 1,2,...,L
+    %   as it depends on the graph topology.
+      order = obj.executionOrder ;
+    end
   end
 
   methods (Static)
@@ -291,6 +381,13 @@ classdef DagNN < handle
         'learningRate', {1}, ...
         'weightDecay', {1}) ;
       obj.paramNames.(name) = p ;
+    end
+  end
+
+  methods (Access = protected)
+    function cp = copyElement(obj)
+      % Create a deep copy of the network
+      cp = dagnn.DagNN.loadobj(obj.saveobj());
     end
   end
 end

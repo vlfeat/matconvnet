@@ -37,14 +37,14 @@ dbmx = fmu ;
 
 for i=1:numel(net.layers)
   ly = net.layers{i} ;
-  if ismember(ly.type, {'conv', 'bnorm'}) && numel(ly.filters) > 0
-    x = gather(ly.filters) ;
+  if ismember(ly.type, {'conv', 'bnorm'}) && numel(ly.weights{1}) > 0
+    x = gather(ly.weights{1}) ;
     fmu(i) = mean(x(:)) ;
     fmi(i) = min(x(:)) ;
     fmx(i) = max(x(:)) ;
   end
-  if ismember(ly.type, {'conv', 'bnorm'}) && numel(ly.biases) > 0
-    x = gather(ly.biases) ;
+  if ismember(ly.type, {'conv', 'bnorm'}) && numel(ly.weights{2}) > 0
+    x = gather(ly.weights{2}) ;
     bmu(i) = mean(x(:)) ;
     bmi(i) = min(x(:)) ;
     bmx(i) = max(x(:)) ;

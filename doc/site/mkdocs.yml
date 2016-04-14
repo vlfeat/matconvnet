@@ -27,6 +27,7 @@ pages:
   - vl_nnpdist: 'mfiles/vl_nnpdist.md'
   - vl_nnconv: 'mfiles/vl_nnconv.md'
   - vl_nnconvt: 'mfiles/vl_nnconvt.md'
+  - vl_nncrop: 'mfiles/vl_nncrop.md'
   - vl_nndropout: 'mfiles/vl_nndropout.md'
   - vl_nnloss: 'mfiles/vl_nnloss.md'
   - vl_nnnoffset: 'mfiles/vl_nnnoffset.md'
@@ -46,6 +47,7 @@ pages:
   - vl_compilenn: 'mfiles/vl_compilenn.md'
   - vl_rootnn: 'mfiles/vl_rootnn.md'
   - vl_setupnn: 'mfiles/vl_setupnn.md'
+  - vl_imreadjpeg: 'mfiles/vl_imreadjpeg.md'
 
 - Contributing:
   - Developers notes: 'developers.md'

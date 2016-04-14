@@ -67,10 +67,11 @@
 %   sticks until MATLAB purges the MEX files for any reason).
 %
 %   Some CuDNN algorithms may use a very large amount of memory on the
-%   GPU (workspace). MatConvNet chooses always the fastest, which
-%   might not be the most economical. To change this behaviour, use
-%   the `CudnnWorskpaceLimit` option to specify the maximum size of
-%   the workspace in bytes (set to +inf to remove the limit).
+%   GPU (workspace). MatConvNet requests CuDNN to use at most 512MB of
+%   GPU memory for the workspace. To change this behaviour, use the
+%   `CudnnWorskpaceLimit` option to specify the maximum size of the
+%   workspace in bytes. Set this parameter +inf to remove the limit
+%   and use the `Verbose` flag to check how much memory is being used.
 
 % Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
 % Copyright (C) 2015 Andrea Vedaldi.

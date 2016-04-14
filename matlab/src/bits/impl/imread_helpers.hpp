@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -12,6 +12,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 #ifdef __SSSE3__
 #include <tmmintrin.h>
@@ -25,7 +26,7 @@ namespace vl { namespace impl {
     pixelFormatRGBA,
     pixelFormatBGR,
     pixelFormatBGRA,
-	pixelFormatBGRAasL
+    pixelFormatBGRAasL
   };
 
 #ifndef __SSSE3__
@@ -38,10 +39,11 @@ namespace vl { namespace impl {
   template<int pixelFormat> void
   imageFromPixels(vl::Image & image, char unsigned const * rgb, int rowStride)
   {
+    vl::ImageShape const & shape = image.getShape() ;
     int blockSizeX ;
     int blockSizeY ;
     int pixelStride ;
-    int imagePlaneStride = image.width * image.height ;
+    int imagePlaneStride = (int)shape.width * (int)shape.height ;
     switch (pixelFormat) {
       case pixelFormatL:
         pixelStride = 1 ;
@@ -56,7 +58,7 @@ namespace vl { namespace impl {
         break ;
       case pixelFormatRGBA:
       case pixelFormatBGRA:
-	  case pixelFormatBGRAasL:
+      case pixelFormatBGRAasL:
         pixelStride = 4 ;
         blockSizeX = 4 ;
         blockSizeY = 4 ;
@@ -69,9 +71,9 @@ namespace vl { namespace impl {
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
 
-    float * const  __restrict imageMemory = image.memory ;
-    int const imageHeight = image.height ;
-    int const imageWidth = image.width ;
+    float * const  __restrict imageMemory = image.getMemory() ;
+    int const imageHeight = (int)shape.height ;
+    int const imageWidth = (int)shape.width ;
 
     for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
@@ -99,7 +101,7 @@ namespace vl { namespace impl {
                 r[1 * imagePlaneStride] = (float) pixel[1] ;
                 r[0 * imagePlaneStride] = (float) pixel[2] ;
                 break;
-			  case pixelFormatBGRAasL:
+              case pixelFormatBGRAasL:
               case pixelFormatL:
                 r[0] = (float) pixel[0] ;
                 break ;
@@ -114,17 +116,18 @@ namespace vl { namespace impl {
 
 #else
 #ifdef _MSC_VER
-  #pragma message ( "SSSE3 instruction set enabled." )
+#pragma message ( "SSSE3 instruction set enabled." )
 #endif
   /* SSSE3 optimised version */
 
   template<int pixelFormat> void
   imageFromPixels(vl::Image & image, char unsigned const * rgb, int rowStride)
   {
+    vl::ImageShape const & shape = image.getShape() ;
     int blockSizeX ;
     int blockSizeY ;
     int pixelStride ;
-    int imagePlaneStride = image.width * image.height ;
+    int imagePlaneStride = (int)shape.width * (int)shape.height ;
     __m128i shuffleRgb ;
     __m128i const shuffleL = _mm_set_epi8(0xff, 0xff, 0xff,  3,
                                           0xff, 0xff, 0xff,  2,
@@ -143,15 +146,15 @@ namespace vl { namespace impl {
         pixelStride = 3 ;
         blockSizeX = 4 ;
         blockSizeY = 4 ;
-        assert(image.depth == 3) ;
+        assert(shape.depth == 3) ;
         break ;
       case pixelFormatRGBA:
-	  case pixelFormatBGRA:
-	  case pixelFormatBGRAasL:
+      case pixelFormatBGRA:
+      case pixelFormatBGRAasL:
         pixelStride = 4 ;
         blockSizeX = 4 ;
         blockSizeY = 4 ;
-        assert(image.depth == 3) ;
+        assert(shape.depth == 3) ;
         break ;
       default:
         assert(false) ;
@@ -189,7 +192,7 @@ namespace vl { namespace impl {
                                   0xff,  0,  1,  2) ;
         break ;
 
-	  case pixelFormatBGRAasL:
+      case pixelFormatBGRAasL:
         shuffleRgb = _mm_set_epi8(0xff, 0xff, 0xff, 12,
                                   0xff, 0xff, 0xff, 8,
                                   0xff, 0xff, 0xff, 4,
@@ -200,9 +203,9 @@ namespace vl { namespace impl {
     // we pull out these values as otherwise the compiler
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
-    float *  const __restrict imageMemory = image.memory ;
-    int const imageHeight = image.height ;
-    int const imageWidth = image.width ;
+    float *  const __restrict imageMemory = image.getMemory() ;
+    int const imageHeight = (int)shape.height ;
+    int const imageWidth = (int)shape.width ;
 
     for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
       int y = 0 ;
@@ -221,7 +224,7 @@ namespace vl { namespace impl {
           case pixelFormatRGBA :
           case pixelFormatBGR :
           case pixelFormatBGRA :
-		  case pixelFormatBGRAasL :
+          case pixelFormatBGRAasL :
             // load 4x4 RGB pixels
             p0 = _mm_shuffle_epi8(_mm_loadu_si128((__m128i*)pixel), shuffleRgb) ; pixel += rowStride ;
             p1 = _mm_shuffle_epi8(_mm_loadu_si128((__m128i*)pixel), shuffleRgb) ; pixel += rowStride ;
@@ -244,7 +247,7 @@ namespace vl { namespace impl {
             _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p2, mask))) ; r += imageHeight ;
             _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_and_si128(p3, mask))) ;
 
-			if (pixelFormat == pixelFormatBGRAasL) break ;
+            if (pixelFormat == pixelFormatBGRAasL) break ;
 
             // store g
             r += (imageWidth - 3) * imageHeight ;
@@ -375,7 +378,7 @@ namespace vl { namespace impl {
                 r[1 * imagePlaneStride] = (float) pixel[1] ;
                 r[0 * imagePlaneStride] = (float) pixel[2] ;
                 break;
-			  case pixelFormatBGRAasL:
+              case pixelFormatBGRAasL:
               case pixelFormatL:
                 r[0] = (float) pixel[0] ;
                 break ;
@@ -388,7 +391,132 @@ namespace vl { namespace impl {
     }
   }
 
-
 #endif
+
+  struct ImageResizeFilter
+  {
+    float * weights ;
+    int * starts ;
+    int filterSize ;
+    enum FilterType { kBilinear, kBicubic, kLancoz } ;
+
+    ~ImageResizeFilter() {
+      free(weights) ;
+      free(starts) ;
+    }
+
+    ImageResizeFilter(size_t outputWidth, size_t inputWidth, FilterType filterType = kBilinear)
+    {
+      filterSize = 0 ;
+      switch (filterType) {
+        case kBilinear :
+          filterSize = 2 ;
+          break ;
+        case kBicubic :
+          filterSize = 3 ;
+          break ;
+        case kLancoz :
+          filterSize = 4 ;
+          break ;
+      }
+
+      /* 
+       Find reverse mapping u = alpha v + beta where v is in the target
+       domain and u in the source domain.
+       */
+      float alpha = (float)inputWidth / outputWidth ;
+      float beta = 0.5f * (alpha - 1) ;
+      float filterSupport = (float)filterSize ;
+
+      /* 
+       The filter is virtually applied in the target domain u. This is transferred
+       to the input domain v. If the image is shrunk, the filter is
+       spread over several input pixels, which is a simple form
+       of antialisaing. Note that this could be switched off.
+       */
+      if (alpha > 1) {
+        filterSupport *= alpha ;
+        filterSize = (int)floorf(filterSupport) ;
+      }
+
+      weights = (float*)malloc(sizeof(float) * filterSize * outputWidth) ;
+      starts = (int*)malloc(sizeof(int) * outputWidth) ;
+      float * filter = weights ;
+
+      /* the filter extends in the interval (-filterSize/2, filterSize/2)
+        (extrema not included)
+       */
+      for (int v = 0 ; v < outputWidth ; ++v, filter += filterSize) {
+        /* y(v) = sum_k h(k - u) x(k),  u = alpha * v + beta */
+        /* for uniformity we assume that the sum is non-zero for
+         u - filterSize/2 <= k < u + filterSize/2
+         so that there are always filerWidth elements to sum on */
+        float u = alpha * v + beta ;
+        float mass = 0 ;
+        starts[v] = (int)std::ceil(u - 0.5f * filterSupport) ;
+
+        for (int r = 0 ; r < filterSize ; ++r) {
+          int k = r + starts[v] ;
+          float h ;
+          float delta = u - k ;
+          if (alpha > 1) {
+            delta /= alpha ;
+          }
+          switch (filterType) {
+            case kBilinear:
+              h = (std::max)(0.0f, 1.0f - fabsf(delta)) ;
+              break ;
+            default:
+              assert(false) ;
+              break ;
+          }
+          if (k >= 0 && k < inputWidth) {
+            filter[r] = h ;
+            mass += h ;
+          } else {
+            filter[r] = 0.0f ;
+          }
+        }
+        for (int r = 0 ; r < filterSize ; ++r) {
+          filter[r] /= mass ;
+        }
+      }
+    }
+  } ;
+
+  inline void imageResizeVertical(float * output, float const * input, size_t outputHeight, size_t height, size_t width, size_t depth)
+  {
+    ImageResizeFilter filters(outputHeight, height) ;
+    int filterSize = filters.filterSize ;
+    for (int d = 0 ; d < (int)depth ; ++d) {
+      for (int x = 0 ; x < (int)width ; ++x) {
+        for (int y = 0 ; y < (int)outputHeight ; ++y) {
+          float z = 0 ;
+          int begin = filters.starts[y] ;
+          float const * weights = filters.weights + filterSize * y ;
+          for (int k = begin ; k < begin + filterSize ; ++k) {
+            float w = *weights++ ;
+            if ((0 <= k) & (k < (int)height)) {
+              z += input[k] * w ;
+            }
+          }
+          output[x + y * width] = z ; // transpose
+        }
+        input += height ;
+      }
+      output += outputHeight * width ;
+    }
+  }
+
+  inline void resizeImage(vl::Image & output, vl::Image const & input)
+  {
+    vl::ImageShape const & inputShape = input.getShape() ;
+    vl::ImageShape const & outputShape = output.getShape() ;
+    assert(outputShape.depth == inputShape.depth) ;
+    float * temp = (float*)malloc(sizeof(float) * outputShape.height * inputShape.width * inputShape.depth) ;
+    imageResizeVertical(temp, input.getMemory(), outputShape.height, inputShape.height, inputShape.width, inputShape.depth) ;
+    imageResizeVertical(output.getMemory(), temp, outputShape.width, inputShape.width, outputShape.height, inputShape.depth) ;
+    free(temp) ;
+  }
 
 } }

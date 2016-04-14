@@ -30,9 +30,9 @@ if nargin <= 2 || isempty(dzdy)
   y = x(sv, su, :, :) ;
 else
   if isa(dzdy, 'gpuArray')
-    y = gpuArray.zeros(sz, 'single') ;
+    y = gpuArray.zeros(sz, classUnderlying(dzdy)) ;
   else
-    y = zeros(sz, 'single') ;
+    y = zeros(sz, class(dzdy)) ;
   end
   y(sv, su, :, :) = dzdy ;
 end

@@ -4,10 +4,10 @@
 
 ### Do I need a specific version of the CUDA devkit?
 
-Officially, Mathworks supports a specific version of the CUDA devkit
+Officially, MathWorks supports a specific version of the CUDA devkit
 with each MATLAB version (see [here](install.md#gpu)). However, in
 practice we normally use the most recent version of CUDA (and cuDNN)
-availalble from NVIDIA withouth problems (see
+available from NVIDIA without problems (see
 [here](install.md#nvcc)).
 
 ### Can I use MatConvNet with CuDNN?

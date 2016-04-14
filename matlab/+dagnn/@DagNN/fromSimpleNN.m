@@ -118,7 +118,7 @@ for l = 1:numel(net.layers)
       block.stride = net.layers{l}.stride ;
       block.opts = net.layers{l}.opts ;
 
-    case {'normalize'}
+    case {'normalize', 'lrn'}
       block = LRN() ;
       block.param = net.layers{l}.param ;
 
@@ -157,7 +157,7 @@ for l = 1:numel(net.layers)
       if isfield(net.layers{l},'weightDecay')
         params(1).weightDecay = net.layers{l}.weightDecay(1) ;
         params(2).weightDecay = net.layers{l}.weightDecay(2) ;
-        params(2).weightDecay = 0 ;
+        params(3).weightDecay = 0 ;
       end
 
     otherwise

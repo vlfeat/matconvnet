@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -27,6 +27,8 @@ extern "C" {
 /*                                    LibJPEG reader implementation */
 /* ---------------------------------------------------------------- */
 
+#define ERR_MSG_MAX_LEN 1024
+
 class vl::ImageReader::Impl
 {
 public:
@@ -36,10 +38,10 @@ public:
   struct jpeg_decompress_struct decompressor ;
   jmp_buf onJpegError ;
   char jpegLastErrorMsg [JMSG_LENGTH_MAX] ;
+  char lastErrorMessage [ERR_MSG_MAX_LEN] ;
 
-  vl::Image read(char const * filename, float * memory) ;
-  vl::Image readDimensions(char const * filename) ;
-
+  vl::Error readPixels(float * memory, char const * filename) ;
+  vl::Error readShape(vl::ImageShape & shape, char const * filename) ;
 
   static void reader_jpeg_error (j_common_ptr cinfo)
   {
@@ -51,11 +53,10 @@ public:
 
 vl::ImageReader::Impl::Impl()
 {
+  lastErrorMessage[0] = 0 ;
   decompressor.err = jpeg_std_error(&jpegErrorManager) ;
   jpegErrorManager.error_exit = reader_jpeg_error ;
   jpeg_create_decompress(&decompressor) ;
-  decompressor.out_color_space = JCS_RGB ;
-  decompressor.quantize_colors = FALSE ;
 }
 
 vl::ImageReader::Impl::~Impl()
@@ -63,9 +64,10 @@ vl::ImageReader::Impl::~Impl()
   jpeg_destroy_decompress(&decompressor) ;
 }
 
-vl::Image
-vl::ImageReader::Impl::read(char const * filename, float * memory)
+vl::Error
+vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
 {
+  vl::Error error = vl::vlSuccess ;
   int row_stride ;
   const int blockSize = 32 ;
   char unsigned * pixels = NULL ;
@@ -73,23 +75,20 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   bool requiresAbort = false ;
 
   /* initialize the image as null */
-  Image image ;
-  image.width = 0 ;
-  image.height = 0 ;
-  image.depth = 0 ;
-  image.memory = NULL ;
-  image.error = 0 ;
+  ImageShape shape ;
 
   /* open file */
   FILE* fp = fopen(filename, "r") ;
   if (fp == NULL) {
-    image.error = 1 ;
-    return image ;
+    error = vl::vlErrorUnknown ;
+    return error ;
   }
 
   /* handle LibJPEG errors */
   if (setjmp(onJpegError)) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown ;
+    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+                  "libjpeg: %s", jpegLastErrorMsg) ;
     goto done ;
   }
 
@@ -100,85 +99,85 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   jpeg_read_header(&decompressor, TRUE) ;
   requiresAbort = true ;
 
-  /* get the output dimension (this may differ from the input if we were to scale the image) */
-  jpeg_calc_output_dimensions(&decompressor) ;
-  image.width = decompressor.output_width ;
-  image.height = decompressor.output_height ;
-  image.depth = decompressor.output_components ;
+  /* figure out if the image is grayscale (depth = 1) or color (depth = 3) */
+  decompressor.quantize_colors = FALSE ;
+  if (decompressor.jpeg_color_space == JCS_GRAYSCALE) {
+    shape.depth = 1 ;
+    decompressor.out_color_space = JCS_GRAYSCALE ;
+  }  else {
+    shape.depth = 3 ;
+    decompressor.out_color_space = JCS_RGB ;
+  }
 
-  /* allocate image memory */
-  if (memory == NULL) {
-    image.memory = (float*)malloc(sizeof(float)*image.depth*image.width*image.height) ;
-  } else {
-    image.memory = memory ;
-  }
-  if (image.memory == NULL) {
-    image.error = 1 ;
-    goto done ;
-  }
+  /* get the output dimension */
+  jpeg_calc_output_dimensions(&decompressor) ;
+  shape.width = decompressor.output_width ;
+  shape.height = decompressor.output_height ;
 
   /* allocate scaline buffer */
-  pixels = (char unsigned*)malloc(sizeof(char) * image.width * image.height * image.depth) ;
+  pixels = (char unsigned*)malloc(sizeof(char) * shape.width * shape.height * shape.depth) ;
   if (pixels == NULL) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown ;
     goto done ;
   }
-  scanlines = (char unsigned**)malloc(sizeof(char*) * image.height) ;
+  scanlines = (char unsigned**)malloc(sizeof(char*) * shape.height) ;
   if (scanlines == NULL) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown ;
     goto done ;
   }
-  for (int y = 0 ; y < image.height ; ++y) { scanlines[y] = pixels + image.depth * image.width * y ; }
+  for (int y = 0 ; y < shape.height ; ++y) {
+    scanlines[y] = pixels + shape.depth * shape.width * y ;
+  }
 
   /* decompress each scanline and transpose the result into MATLAB format */
   jpeg_start_decompress(&decompressor);
-  while(decompressor.output_scanline < image.height) {
+  while(decompressor.output_scanline < shape.height) {
     jpeg_read_scanlines(&decompressor,
                         scanlines + decompressor.output_scanline,
-                        image.height - decompressor.output_scanline);
+                        shape.height - decompressor.output_scanline);
   }
-  switch (image.depth) {
-    case 3 : vl::impl::imageFromPixels<impl::pixelFormatRGB>(image, pixels, image.width*3) ; break ;
-    case 1 : vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, image.width*1) ; break ;
+  {
+    Image image(shape, memory) ;
+    switch (shape.depth) {
+    case 3 : vl::impl::imageFromPixels<impl::pixelFormatRGB>(image, pixels, shape.width*3) ; break ;
+    case 1 : vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, shape.width*1) ; break ;
+    default : error = vl::vlErrorUnknown ; goto done ;
+    }
+    jpeg_finish_decompress(&decompressor) ;
+    requiresAbort = false ;
   }
-  jpeg_finish_decompress(&decompressor) ;
-  requiresAbort = false ;
 
 done:
   if (requiresAbort) { jpeg_abort((j_common_ptr)&decompressor) ; }
   if (scanlines) free(scanlines) ;
   if (pixels) free(pixels) ;
   fclose(fp) ;
-  return image ;
+  return error ;
 }
 
-vl::Image
-vl::ImageReader::Impl::readDimensions(char const * filename)
+vl::Error
+vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
 {
+  vl::Error error = vl::vlSuccess ;
+
   int row_stride ;
   const int blockSize = 32 ;
   char unsigned * pixels = NULL ;
   JSAMPARRAY scanlines ;
   bool requiresAbort = false ;
 
-  // initialize the image as null
-  Image image ;
-  image.width = 0 ;
-  image.height = 0 ;
-  image.depth = 0 ;
-  image.memory = NULL ;
-  image.error = 0 ;
-
   // open file
   FILE* fp = fopen(filename, "r") ;
   if (fp == NULL) {
-    image.error = 1 ;
-    return image ;
+    error = vl::vlErrorUnknown ;
+    return error ;
   }
 
   // handle LibJPEG errors
   if (setjmp(onJpegError)) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown ;
+    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+                  "libjpeg: %s", jpegLastErrorMsg) ;
     goto done ;
   }
 
@@ -189,16 +188,22 @@ vl::ImageReader::Impl::readDimensions(char const * filename)
   jpeg_read_header(&decompressor, TRUE) ;
   requiresAbort = true ;
 
+  /* figure out if the image is grayscale (depth = 1) or color (depth = 3) */
+  if (decompressor.jpeg_color_space == JCS_GRAYSCALE) {
+    shape.depth = 1 ;
+  }  else {
+    shape.depth = 3 ;
+  }
+
   /* get the output dimension (this may differ from the input if we were to scale the image) */
   jpeg_calc_output_dimensions(&decompressor) ;
-  image.width = decompressor.output_width ;
-  image.height = decompressor.output_height ;
-  image.depth = decompressor.output_components ;
+  shape.width = decompressor.output_width ;
+  shape.height = decompressor.output_height ;
 
 done:
   if (requiresAbort) { jpeg_abort((j_common_ptr)&decompressor) ; }
   fclose(fp) ;
-  return image ;
+  return error ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -216,14 +221,20 @@ vl::ImageReader::~ImageReader()
   delete impl ;
 }
 
-vl::Image
-vl::ImageReader::read(char const * filename, float * memory)
+vl::Error
+vl::ImageReader::readPixels(float * memory, char const * filename)
 {
-  return impl->read(filename, memory) ;
+  return impl->readPixels(memory, filename) ;
 }
 
-vl::Image
-vl::ImageReader::readDimensions(char const * filename)
+vl::Error
+vl::ImageReader::readShape(vl::ImageShape & shape, char const * filename)
 {
-  return impl->readDimensions(filename) ;
+  return impl->readShape(shape, filename) ;
+}
+
+char const *
+vl::ImageReader::getLastErrorMessage() const
+{
+  return impl->lastErrorMessage  ;
 }

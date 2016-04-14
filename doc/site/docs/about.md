@@ -1,7 +1,7 @@
 # About MatConvNet
 
 MatConvNet was born in the Oxford Visual Geometry Group as both an
-educatinonal and research platform for fast prototyping in
+educational and research platform for fast prototyping in
 Convolutional Neural Nets. Its main features are:
 
 - *Flexibility.* Neural network layers are implemented in a
@@ -23,7 +23,38 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta17 (November 2015).
+-   1.0-beta19 (April 2016).
+
+    **New features**
+
+    * Support for pre-trained ResNet models.
+
+    * New `Scale` layer in DagNN.
+
+    * Numerous improvements to DagNN.
+
+    * Numerous refinements to example training scripts `cnn_train.m`
+      and `cnn_train_dag.m`.
+
+    * `vl_nnpdist` now can backrpopagate both inputs.
+
+    * CuDNN v5 support.
+
+    * Improved the `import-caffe.py` script for compatibility with
+      newever versions of Caffe.
+
+-   1.0-beta18 (January 2016).
+
+    **New features**
+
+    * DOUBLE support. All `vl_nn*` commands now work with either
+      DOUBLE or SINGLE (FLOAT) data types.
+
+    * VL_IMREADJPEG() can now resize images.
+
+    * More thourough unit testing and several bugfixes.
+
+-   1.0-beta17 (December 2015).
 
     **New features**
 
@@ -37,6 +68,8 @@ here.
       and `include` instead of the binary and include files
       directly. This matches how cuDNN is now distributed.
 
+    * CuDNN v4 is now supported.
+
     * This version changes how batch normalization is handled. Now the
       average moments are learned together with the other parameters.
       The net result is that batch normalization is easy to bypass at
@@ -47,7 +80,7 @@ here.
       replaced by a more generic `mode` option that allows running in
       either normal mode or test mode. In the latter case, both
       dropout and batch normalization are bypassed. This is the same
-      behaviour of `DagNN.mode`.
+      behavior of `DagNN.mode`.
 
     * Examples have been re-organized in subdirectories.
 
@@ -56,6 +89,14 @@ here.
 
     * Adds an option to specify the maximum workspace size in the
       convolution routines using cuDNN.
+
+    * The AlexNet, VGG-F, VGG-M, VGG-S examples provided in the
+      `examples/imagenet` directory have been refined in order to
+      produced deployable models. MatConvNet pretrained versions of
+      these models are available for download.
+
+    * A new option in `vl_nnconv` and `vl_nnconvt` allows setting the
+      maximum amount of memory used by CuDNN to perform convolution.
 
     **Changes affecting backward compatibility**
 
@@ -70,6 +111,10 @@ here.
       the new version of SimpleNN. The older models are still
       available for download. Note that old and new models are
       numerically equivalent, only the format is (slightly) different.
+
+    * Recent versions of CuDNN may use by default a very large amount
+      of memory for computation.
+
 
 -   1.0-beta16 (October 2015). Adds
     VGG-Face as a pretrained model. Bugfixes.
@@ -92,19 +137,19 @@ here.
     This version changes slightly the structure of `simplenn`. In
     particular, the `filters` and `biases` fields in certain layers
     have been replaced by a `weights` cell array containing both
-    tensors, simiplifying a significant amount of code. All examples
-    and downloadable models have been updated to reflact this
+    tensors, simplifying a significant amount of code. All examples
+    and downloadable models have been updated to reflect this
     change. Models using the old structure format still work but are
     deprecated.
 
     The `cnn_train` training code example has been rewritten to
-    support multiple GPUs.  The inteface is nearly the same, but the
+    support multiple GPUs.  The interface is nearly the same, but the
     `useGpu` option has been replaced by a `gpus` list of GPUs to use.
 
 -   1.0-beta10 (March 2015) `vl_imreadjpeg` works under Windows as well.
 -   1.0-beta9 (February 2015) CuDNN support. Major rewrite of the C/CUDA core.
 -   1.0-beta8 (December 2014) New website. Experimental Windows support.
--   1.0-beta7 (September 2014) Adds VGG verydeep models.
+-   1.0-beta7 (September 2014) Adds VGG very deep models.
 -   1.0-beta6 (September 2014) Performance improvements.
 -   1.0-beta5 (September 2014) Bugfixes, adds more documentation,
     improves ImageNet example.
@@ -117,7 +162,7 @@ here.
 
 MatConvNet is developed by several hands:
 
-* Andrea Vedaldi, project coordiantor
+* Andrea Vedaldi, project coordinator
 * Karel Lenc, DaG, several building blocks and examples
 * Sébastien Ehrhardt, GPU implementation of batch normalization, FCN
   building blocks and examples
@@ -130,7 +175,7 @@ and providing us with feedback and bug reports.
 
 This package was originally created by
 [Andrea Vedaldi](http://www.robots.ox.ac.uk/~vedaldi) and Karel Lenc
-and it is currently develped by a small community of contributors. It
+and it is currently developed by a small community of contributors. It
 is distributed under the permissive BSD license (see also the file
 `COPYING`):
 

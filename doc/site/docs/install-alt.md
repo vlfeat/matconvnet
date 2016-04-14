@@ -24,7 +24,7 @@ For example:
 should work for a Mac with MATLAB R2014 installed in its default
 location. The other supported architecture is `glnxa64` (for Linux).
 
-> **Remark:** On the Mac, `vl_imreadjpeg` tool will use the native Mac OS X graphcis
+> **Remark:** On the Mac, `vl_imreadjpeg` tool will use the native Mac OS X graphics
 > library Core Graphics. On Linux, it uses instead LibJPEG.
 > The tool can be disabled by defining `ENABLE_IMREADJPEG=` as an empty
 > symbol. The options `IMAGELIB` option can be used to change the
@@ -38,7 +38,7 @@ In order to compile in verbose mode, use the `VERB=yes` option. For example:
 
     > make ARCH=maci64 MATLABROOT=/Applications/MATLAB_R2014a.app VERB=yes
 
-In order to compile turning on degbugging symbols and off optimzations
+In order to compile turning on debugging symbols and off optimizations
 (useful to attach a debugger to MATLAB and debug MatConvNet), use the
 `DEBUG=yes` option. For example:
 
@@ -46,8 +46,8 @@ In order to compile turning on degbugging symbols and off optimzations
 
 ### Compiling the GPU support
 
-The default method to compile the GPU support requries a CUDA toolkit
-version that matches MATLAB's internal one. Compling may look like:
+The default method to compile the GPU support requires a CUDA toolkit
+version that matches MATLAB's internal one. Compiling may look like:
 
     > make ARCH=<your arch> MATLABROOT=<path to MATLAB> \
            ENABLE_GPU=yes CUDAROOT=<path to CUDA>
@@ -59,7 +59,7 @@ For example:
 
 should work on a Mac with MATLAB R2014b.
 
-### Using an unsuppored CUDA tookit version
+### Using an unsupported CUDA toolkit version
 
 Use the `CUDAMETHOD=nvcc` option and the `CUDAROOT` option. For
 example:

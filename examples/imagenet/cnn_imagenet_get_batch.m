@@ -100,7 +100,7 @@ for i=1:numel(images)
   for ai = 1:opts.numAugments
     switch opts.transformation
       case 'stretch'
-        sz = round(min(opts.imageSize(1:2)' .* (1-0.1+0.2*rand(2,1)), [w;h])) ;
+        sz = round(min(opts.imageSize(1:2)' .* (1-0.1+0.2*rand(2,1)), [h;w])) ;
         dx = randi(w - sz(2) + 1, 1) ;
         dy = randi(h - sz(1) + 1, 1) ;
         flip = rand > 0.5 ;

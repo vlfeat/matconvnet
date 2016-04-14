@@ -45,6 +45,10 @@ ram=$2
 num_cpus=1
 method=gm
 
+# image size
+size=256 # most common
+#size=310 # for inception
+
 # image magick
 # num_cpus=8
 # method=im
@@ -56,6 +60,8 @@ function convert_some_im()
 {
     out="$1"
     shift
+    size="$1"
+    shift
     for infile in "$@"
     do
         outfile="$out/$(basename $infile)"
@@ -63,8 +69,12 @@ function convert_some_im()
         then
             continue ;
         fi
-        convert -verbose -quality 90 -resize '256x256^' \
-            "$infile" JPEG:"${outfile}.temp"
+        convert "${infile}" \
+            -verbose \
+            -quality 90 \
+            -colorspace RGB \
+            -resize "${size}x${size}^" \
+            JPEG:"${outfile}.temp"
         mv "${outfile}.temp" "$outfile"
     done
 }
@@ -75,6 +85,8 @@ function convert_some_gm()
     gm=gm
     out="$1"
     shift
+    size="$1"
+    shift
     for infile in "$@"
     do
         outfile="$out/$(basename $infile)"
@@ -82,8 +94,12 @@ function convert_some_gm()
         then
             continue ;
         fi
-        echo convert -verbose "'$infile'" -quality 90 -resize 256x256^ \
-            JPEG:"${outfile}"
+        echo convert "'${infile}'" \
+            -verbose \
+            -quality 90 \
+            -colorspace RGB \
+            -resize "${size}x${size}^" \
+            "JPEG:'${outfile}'"
     done | ${gm} batch -echo on -feedback on -
 }
 export -f convert_some_gm
@@ -97,7 +113,7 @@ do
     mkdir -p "$out"
     find "$d" -maxdepth 1 -type f -name '*.JPEG' | \
         xargs -n 1000 --max-procs=$num_cpus \
-        bash -c "convert_some_$method \"$out\" \"\$@\"" _
+        bash -c "convert_some_$method \"$out\" ${size} \"\$@\" " _
 done
 
 # copy any symlink

@@ -18,31 +18,24 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<typename type> vl::Error
-  nnbias_forward_cudnn(vl::Context& context,
-                       vl::Tensor output, double outputMult,
-                       vl::Tensor data, double dataMult,
-                       vl::Tensor biases, double biasesMult) ;
+  // todo: data type should be handled internally?
 
-  template<typename type> vl::Error
-  nnbias_backward_cudnn(vl::Context& context,
-                        vl::Tensor derData, double derDataMult,
-                        vl::Tensor derBiases, double derBiasesMult,
-                        vl::Tensor derOutput, double derOutputMult) ;
+  template<vl::Type dataType>
+  struct nnbias_cudnn
+  {
+    static vl::Error
+    forward(vl::Context& context,
+            vl::Tensor output, double outputMult,
+            vl::Tensor data, double dataMult,
+            vl::Tensor biases, double biasesMult) ;
 
-  /* specializations */
+    static vl::Error
+    backward(vl::Context& context,
+             vl::Tensor derData, double derDataMult,
+             vl::Tensor derBiases, double derBiasesMult,
+             vl::Tensor derOutput, double derOutputMult) ;
+  } ;
 
-  template<> vl::Error
-  nnbias_forward_cudnn<float>(vl::Context& context,
-                              vl::Tensor output, double outputMult,
-                              vl::Tensor data, double dataMult,
-                              vl::Tensor biases, double biasesMult) ;
-
-  template<> vl::Error
-  nnbias_backward_cudnn<float>(vl::Context& context,
-                               vl::Tensor derData, double derDataMult,
-                               vl::Tensor derBiases, double derBiasesMult,
-                               vl::Tensor derOutput, double derOutputMult) ;
 } }
 
 #endif /* defined(__vl__nnbias_cudnn__) */

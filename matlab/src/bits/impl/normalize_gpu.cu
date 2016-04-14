@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi.
+Copyright (C) 2014-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -16,7 +16,7 @@ the terms of the BSD license (see the COPYING file).
 #include <float.h>
 
 /* ---------------------------------------------------------------- */
-/*                                                normalize_forward */
+/*                                         normalize_forward_kernel */
 /* ---------------------------------------------------------------- */
 
 #undef xat
@@ -30,7 +30,7 @@ the terms of the BSD license (see the COPYING file).
 
 template<typename T> __global__ void
 normalize_forward_kernel
-(T* normalized,
+(T* output,
  T const* data,
  int width,
  int height,
@@ -52,7 +52,7 @@ normalize_forward_kernel
     int offset = width*height ;
     int t ;
     T const* x = data + u0 + (v0 + k0 * (depth*height)) * width ;
-    T* y = normalized + u0 + (v0 + k0 * (depth*height)) * width ;
+    T* y = output + u0 + (v0 + k0 * (depth*height)) * width ;
     T acc = 0 ;
     for (t = -m2 ; t < (signed)depth ; ++t) {
       T ap = 0 ;
@@ -67,31 +67,13 @@ normalize_forward_kernel
   }
 }
 
-template<> vl::Error
-vl::impl::normalize_forward<vl::GPU, float>(float* normalized,
-                                            float const* data,
-                                            size_t width,
-                                            size_t height,
-                                            size_t depth,
-                                            size_t size,
-                                            size_t normDepth,
-                                            double kappa, double alpha, double beta)
-{
-  normalize_forward_kernel<float>
-  <<< divideUpwards(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (normalized, data, width, height, depth, size, normDepth, kappa, alpha, beta) ;
-
-  cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
-
 /* ---------------------------------------------------------------- */
-/*                                               normalize_backward */
+/*                                        normalize_backward_kernel */
 /* ---------------------------------------------------------------- */
 
 template<typename T> __global__ void
 normalize_backward_kernel
-(T* normalized,
+(T* output,
  T const* data,
  T const* dzdy,
  int width,
@@ -115,7 +97,7 @@ normalize_backward_kernel
     T ab2 = 2*alpha*beta ;
     int t, q ;
     T const* x = data + u0 + (v0 + k0 * (depth*height)) * width ;
-    T* y = normalized + u0 + (v0 + k0 * (depth*height)) * width ;
+    T* y = output + u0 + (v0 + k0 * (depth*height)) * width ;
     T const* z = dzdy + u0 + (v0 + k0 * (depth*height)) * width ;
     T acc = 0 ;
     for (t = 0 ; t < (signed)depth ; ++t) {
@@ -143,23 +125,73 @@ normalize_backward_kernel
   }
 }
 
-template<> vl::Error
-vl::impl::normalize_backward<vl::GPU, float>(float* derData,
-                                             float const* data,
-                                             float const* derNormalized,
-                                             size_t width,
-                                             size_t height,
-                                             size_t depth,
-                                             size_t size,
-                                             size_t normDepth,
-                                             double kappa, double alpha, double beta)
-{
-  normalize_backward_kernel<float>
-  <<< divideUpwards(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (derData, data, derNormalized, width, height, depth, size, normDepth, kappa, alpha, beta) ;
+/* ---------------------------------------------------------------- */
+/*                                                          drivers */
+/* ---------------------------------------------------------------- */
 
-  cudaError_t status = cudaPeekAtLastError() ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
+namespace vl { namespace impl {
+
+
+  template<typename type>
+  struct lrn<vl::GPU, type>
+  {
+
+    /* ------------------------------------------------------------ */
+    /*                                                      forward */
+    /* ------------------------------------------------------------ */
+
+    static vl::Error
+    forward(type * output,
+            type  const* data,
+            size_t width,
+            size_t height,
+            size_t depth,
+            size_t size,
+            size_t normDepth,
+            type kappa, type alpha, type beta)
+    {
+      normalize_forward_kernel<type >
+      <<< divideUpwards(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (output, data, width, height, depth, size, normDepth, kappa, alpha, beta) ;
+
+      cudaError_t status = cudaPeekAtLastError() ;
+      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    }
+
+
+    /* ------------------------------------------------------------ */
+    /*                                                      forward */
+    /* ------------------------------------------------------------ */
+
+    static vl::Error
+    backward(type * derData,
+             type  const* data,
+             type  const* derOutput,
+             size_t width,
+             size_t height,
+             size_t depth,
+             size_t size,
+             size_t normDepth,
+             type kappa, type alpha, type beta)
+    {
+      normalize_backward_kernel<type >
+      <<< divideUpwards(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derData, data, derOutput, width, height, depth, size, normDepth, kappa, alpha, beta) ;
+
+      cudaError_t status = cudaPeekAtLastError() ;
+      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+    }
+
+  } ;
+
+} }
+
+// Instantiations
+template struct vl::impl::lrn<vl::GPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::lrn<vl::GPU, double> ;
+#endif
+
 
 

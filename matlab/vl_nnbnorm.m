@@ -24,10 +24,10 @@
 %   of the block projected onto DZDY. DZDX, DZDG, DZDB and DZDY have
 %   the same dimensions as X, G, B, and Y respectivey.
 %
-%   Optionally, [Y,MEAN,MOMENTS] = VL_NNBNORM(...) and
+%   Optionally, [Y,MOMENTS] = VL_NNBNORM(...) and
 %   [DZDX,DZDG,DZDB,MOMENTS] = VL_NNBNORM(...,DZDY) return the values
 %   of the vectors mu and sigma in the formulas above. Here, MOMENTS
-%   is a DEPTH x 2 array, where the vectors mu and sigma are the rows.
+%   is a DEPTH x 2 array [MU, SIGMA].
 %
 %   VL_NNBNROM(..., 'Option', value) takes the following options:
 %
