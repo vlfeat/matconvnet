@@ -1,4 +1,4 @@
-function net = cnn_imagenet_init_autonn(varargin)
+function [net, loss, top1err, top5err] = cnn_imagenet_init_autonn(varargin)
 % CNN_IMAGENET_INIT_AUTONN  Initialize a standard CNN for ImageNet
 
 opts.scale = 1 ;

@@ -28,6 +28,7 @@ else
 end
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
+opts.train.plotStatistics = true ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
@@ -106,8 +107,9 @@ end
 
 bopts.useGpu = numel(opts.train.gpus) >  0 ;
 
-info = cnn_train_autonn(net, imdb, @(varargin) getBatch(bopts,varargin{:}), ...
-                     opts.train, 'val', find(imdb.images.set == 3)) ;
+[net, info] = cnn_train_autonn(net, imdb, ...
+  @(varargin) getBatch(bopts,varargin{:}), ...
+  opts.train, 'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)

@@ -1,11 +1,12 @@
 classdef nnmnist < nntest
   properties (TestParameter)
-    networkType = {'dagnn', 'simplenn'}
+    networkType = {'autonn', 'dagnn', 'simplenn'}
   end
 
   methods (TestClassSetup)
     function init(test)
       addpath(fullfile(vl_rootnn, 'examples', 'mnist'));
+      addpath(fullfile(vl_rootnn, 'examples', 'autonn'));
     end
   end
 
@@ -25,9 +26,17 @@ classdef nnmnist < nntest
       if strcmp(networkType, 'simplenn')
         trainOpts.errorLabels = {'error', 'top5err'} ;
       end
-      [~, info] = cnn_mnist('train', trainOpts, 'networkType', networkType);
-      test.verifyLessThan(info.train.error, 0.08);
-      test.verifyLessThan(info.val.error, 0.025);
+      
+      if ~strcmp(networkType, 'autonn')
+        [~, info] = cnn_mnist('train', trainOpts, 'networkType', networkType) ;
+        test.verifyLessThan(info.train.error, 0.08);
+        test.verifyLessThan(info.val.error, 0.025);
+      else
+        [~, info] = cnn_mnist_autonn('train', trainOpts) ;
+        % initialized using xavier's method, not 0.01*randn
+        test.verifyLessThan(info.train.error, 0.13);
+        test.verifyLessThan(info.val.error, 0.11);
+      end
     end
   end
 end

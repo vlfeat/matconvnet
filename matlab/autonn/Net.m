@@ -232,7 +232,7 @@ classdef Net < handle
         mode = 'normal' ;
       end
       if nargin < 3
-        derOutput = 1 ;
+        derOutput = single(1) ;
       end
       if nargin < 4
         accumulateParamDers = false ;
