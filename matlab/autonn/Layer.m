@@ -246,7 +246,14 @@ classdef Layer < handle
     end
     
     function c = mtimes(a, b)
-      c = Layer(@vl_nnmatrixop, a, b, @mtimes) ;
+      % optimization: for simple scalar factors, use a vl_nnwsum layer
+      if isnumeric(a) && isscalar(a)
+        c = Layer(@vl_nnwsum, b, 'weights', a) ;
+      elseif isnumeric(b) && isscalar(b)
+        c = Layer(@vl_nnwsum, a, 'weights', b) ;
+      else  % general case
+        c = Layer(@vl_nnmatrixop, a, b, @mtimes) ;
+      end
     end
     function c = mrdivide(a, b)
       c = Layer(@vl_nnmatrixop, a, b, @mrdivide) ;
