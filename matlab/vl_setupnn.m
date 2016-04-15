@@ -20,6 +20,6 @@ if ~exist('gather')
   addpath(fullfile(root, 'matlab', 'compatibility', 'parallel')) ;
 end
 
-if regexp(which('vl_nnconv'), '.m$')
+if numel(dir(fullfile(root, 'matlab', 'mex', 'vl_nnconv.mex*'))) == 0
   warning('MatConvNet is not compiled. Consider running `vl_compilenn`.');
 end
