@@ -86,18 +86,20 @@ function netOutputs = dagnn2autonn(dag)
     
     % now create a Layer with those inputs and parameters
     
-    if isa(block, 'dagnn.Conv')
-      if isscalar(params)  % no bias
-        params{2} = [] ;
-      end
+    switch class(block)
+    case 'dagnn.Conv'
+      if isscalar(params), params{2} = [] ; end  % no bias
+      
       obj = vl_nnconv(inputs{1}, params{1}, params{2}, ...
         'pad', block.pad, 'stride', block.stride, block.opts{:}) ;
     
-    elseif isa(block, 'dagnn.Pooling')
-      obj = vl_nnpool(inputs{1}, block.poolSize, 'method', block.method, ...
+    case 'dagnn.ConvTranspose'
+      if isscalar(params), params{2} = [] ; end  % no bias
+      
+      obj = vl_nnconvt(inputs{1}, params{1}, params{2}, ...
         'pad', block.pad, 'stride', block.stride, block.opts{:}) ;
     
-    elseif isa(block, 'dagnn.BatchNorm')
+    case 'dagnn.BatchNorm'
       % make sure the Params are not empty, but scalar
       defaults = single([0, 0, 1]) ;
       for i = 1:3
@@ -105,22 +107,47 @@ function netOutputs = dagnn2autonn(dag)
           params{i}.value = defaults(i) ;
         end
       end
+      
       obj = vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
         'moments', params{3}, 'epsilon', block.epsilon) ;
     
-    elseif isa(block, 'dagnn.ReLU')
+    case 'dagnn.Pooling'
+      obj = vl_nnpool(inputs{1}, block.poolSize, 'method', block.method, ...
+        'pad', block.pad, 'stride', block.stride, block.opts{:}) ;
+    
+    case 'dagnn.ReLU'
       obj = vl_nnrelu(inputs{1}, 'leak', block.leak, block.opts{:}) ;
       
-    elseif isa(block, 'dagnn.LRN')
-      obj = vl_nnnormalize(inputs{1}, block.param) ;
-      
-    elseif isa(block, 'dagnn.DropOut')
+    case 'dagnn.DropOut'
       obj = vl_nndropout(inputs{1}) ;
       
-    elseif isa(block, 'dagnn.Loss')
+    case 'dagnn.Loss'
       obj = vl_nnloss(inputs{1}, inputs{2}, 'loss', block.loss, block.opts{:}) ;
       
-    else
+    case 'dagnn.LRN'
+      obj = vl_nnnormalize(inputs{1}, block.param) ;
+      
+    case 'dagnn.NormOffset'
+      obj = vl_nnnoffset(inputs{1}, block.param) ;
+    
+    case 'dagnn.SpatialNorm'
+      obj = vl_nnspnorm(inputs{1}, block.param) ;
+      
+    case 'dagnn.Sigmoid'
+      obj = vl_nnsigmoid(inputs{1}) ;
+      
+    case 'dagnn.SoftMax'
+      obj = vl_nnsoftmax(inputs{1}) ;
+      
+    case 'dagnn.Concat'
+      obj = cat(block.dim, inputs{:}) ;
+      
+    case 'dagnn.Sum'
+      for i = 1:numel(inputs)
+        obj = obj + inputs{i} ;
+      end
+      
+    otherwise
       error(['Unknown block type ''' class(block) '''.']) ;
     end
     
