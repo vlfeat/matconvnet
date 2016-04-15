@@ -563,7 +563,7 @@ if status == 1
     error('Mex is not configured. Run "mex -setup".');
   end
   prev_path = getenv('PATH');
-  cl_path = fullfile(cc.Location, 'VC','bin','x86_amd64');
+  cl_path = fullfile(cc.Location, 'VC','bin','amd64');
   setenv('PATH', [prev_path ';' cl_path]);
   status = system('cl.exe');
   if status == 1
