@@ -71,7 +71,7 @@ function vl_compilenn(varargin)
 %   By default, the `EnableGpu` option is switched to off, such that
 %   the GPU code support is not compiled in.
 %
-%   Generally, you only need a C/C++ compiler (usually Xcode, GCC or
+%   Generally, you only need a 64bit C/C++ compiler (usually Xcode, GCC or
 %   Visual Studio for Mac, Linux, and Windows respectively). The
 %   compiler can be setup in MATLAB using the
 %
@@ -364,7 +364,7 @@ end
 
 flags.link{end+1} = '-largeArrayDims' ;
 
-flags.mexcc = {flags.cc{:}, '-largeArrayDims'} ;
+flags.mexcc = [flags.cc, {'-largeArrayDims'}] ;
 if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 flags.mexcu = flags.mexcc ;
 flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
@@ -432,13 +432,13 @@ if opts.verbose
   fprintf('%s: \tMEX compiler options: %s\n', mfilename, strjoin(flags.mexcc)) ;
   fprintf('%s: \tMEX linker options: %s\n', mfilename, strjoin(flags.link)) ;
 end
-if opts.verbose & opts.enableGpu
+if opts.verbose && opts.enableGpu
   fprintf('%s: \tMEX compiler options (CUDA): %s\n', mfilename, strjoin(flags.mexcu)) ;
 end
-if opts.verbose & opts.enableGpu & strcmp(opts.cudaMethod,'nvcc')
+if opts.verbose && opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
   fprintf('%s: \tNVCC compiler options: %s\n', mfilename, strjoin(flags.nvcc)) ;
 end
-if opts.verbose & opts.enableImreadJpeg
+if opts.verbose && opts.enableImreadJpeg
   fprintf('%s: * Reading images *\n', mfilename) ;
   fprintf('%s: \tvl_imreadjpeg enabled\n', mfilename) ;
   fprintf('%s: \timage library: %s\n', mfilename, opts.imageLibrary) ;
@@ -469,8 +469,7 @@ end
 
 % Link into MEX files
 for i = 1:numel(mex_src)
-  [~,base,~] = fileparts(mex_src{i}) ;
-  objs = toobj(bld_dir, {mex_src{i}, lib_src{:}}) ;
+  objs = toobj(bld_dir, [mex_src(i), lib_src]) ;
   mex_link(opts, objs, mex_dir, flags.link) ;
 end
 
@@ -487,6 +486,7 @@ function objs = toobj(bld_dir,srcs)
 str = fullfile('matlab','src') ;
 multiple = iscell(srcs) ;
 if ~multiple, srcs = {srcs} ; end
+objs = cell(1, numel(srcs));
 for t = 1:numel(srcs)
   i = strfind(srcs{t},str);
   objs{t} = fullfile(bld_dir, srcs{t}(i+numel(str):end)) ;
@@ -497,14 +497,14 @@ objs = strrep(objs,'.cu',['.' objext]) ;
 objs = strrep(objs,'.c',['.' objext]) ;
 
 % --------------------------------------------------------------------
-function objs = mex_compile(opts, src, tgt, mex_opts)
+function mex_compile(opts, src, tgt, mex_opts)
 % --------------------------------------------------------------------
 mopts = {'-outdir', fileparts(tgt), src, '-c', mex_opts{:}} ;
 opts.verbose && fprintf('%s: MEX CC: %s\n', mfilename, strjoin(mopts)) ;
 mex(mopts{:}) ;
 
 % --------------------------------------------------------------------
-function obj = nvcc_compile(opts, src, tgt, nvcc_opts)
+function nvcc_compile(opts, src, tgt, nvcc_opts)
 % --------------------------------------------------------------------
 nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
 nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', ...
@@ -555,7 +555,7 @@ function check_clpath()
 % --------------------------------------------------------------------
 % Checks whether the cl.exe is in the path (needed for the nvcc). If
 % not, tries to guess the location out of mex configuration.
-status = system('cl.exe -help');
+[status, ~] = system('cl.exe -help');
 if status == 1
   warning('CL.EXE not found in PATH. Trying to guess out of mex setup.');
   cc = mex.getCompilerConfigurations('c++');
@@ -576,7 +576,7 @@ if status == 1
 end
 
 % -------------------------------------------------------------------------
-function paths = which_nvcc(opts)
+function paths = which_nvcc()
 % -------------------------------------------------------------------------
 switch computer('arch')
   case 'win64'
@@ -598,7 +598,7 @@ opts.verbose && fprintf(['%s:\tCUDA: searching for the CUDA Devkit' ...
 
 % Propose a number of candidate paths for NVCC
 paths = {getenv('MW_NVCC_PATH')} ;
-paths = [paths, which_nvcc(opts)] ;
+paths = [paths, which_nvcc()] ;
 for v = {'5.5', '6.0', '6.5', '7.0', '7.5'}
   switch computer('arch')
     case 'glnxa64'
@@ -672,7 +672,7 @@ end
 % available in the command line search path. Make sure that this is%
 % the case.
 [valid_, cuver_] = validate_nvcc('nvcc') ;
-if ~valid || cuver_ ~= cuver
+if ~valid_ || cuver_ ~= cuver
   warning('NVCC not found in the command line path or the one found does not matches ''%s''.', nvccPath);
   nvccDir = fileparts(nvccPath) ;
   prevPath = getenv('PATH') ;
