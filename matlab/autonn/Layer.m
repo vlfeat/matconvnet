@@ -1,4 +1,4 @@
-classdef Layer < handle
+classdef Layer < matlab.mixin.Copyable
 %Layer
 %   The Layer object is the main building block for defining networks in
 %   the autonn framework. It specifies a function call in a computational
@@ -46,8 +46,8 @@ classdef Layer < handle
   
   methods
     function obj = Layer(func, varargin)  % wrap a function call
-      if isa(obj, 'Input') || isa(obj, 'Param')
-        return  % these do not need a function call
+      if nargin == 0 && (isa(obj, 'Input') || isa(obj, 'Param'))
+        return  % called during Input or Param construction, nothing to do
       end
       
       % convert from SimpleNN to DagNN
@@ -63,6 +63,8 @@ classdef Layer < handle
         assert(isa(func, 'function_handle'), ...
           'Input must be a function handle, a SimpleNN struct or a DagNN.') ;
       end
+      
+      assert(isa(func, 'function_handle'), 'Must specify a function handle as the first argument.') ;
       
       obj.func = func ;
       obj.inputs = varargin(:)' ;
@@ -127,6 +129,42 @@ classdef Layer < handle
         % at the end of the original call, choose the Nth object
         assert(numel(objs) >= abs(n), 'Cannot find a layer fitting the specified criteria.')
         objs = objs{abs(n)} ;
+      end
+    end
+    
+    function other = deepCopy(obj, varargin)
+      % OTHER = OBJ.DEEPCOPY(SHAREDLAYER1, SHAREDLAYER2, ...)
+      % OTHER = OBJ.DEEPCOPY({SHAREDLAYER1, SHAREDLAYER2, ...})
+      % Returns a deep copy of a layer, excluding SHAREDLAYER1,
+      % SHAREDLAYER2, etc, which are optional. This can be used to
+      % implement shared Params, or define the boundaries of the deep copy.
+      %
+      % To create a shallow copy, use OTHER = OBJ.COPY().
+      
+      % create a shallow copy first
+      other = obj.copy() ;
+      
+      if isscalar(varargin) && iscell(varargin{1})
+        varargin = varargin{1} ;  % input is a cell array
+      end
+      
+      % recurse on any input that is not shared, replacing it with its
+      % deep copy
+      for i = 1:numel(other.inputs)
+        if isa(other.inputs{i}, 'Layer') && ...
+         ~any(cellfun(@(o) isequal(other.inputs{i}, o), varargin))
+          other.inputs{i} = other.inputs{i}.deepCopy(varargin{:}) ;
+        end
+      end
+      
+      % repeat for test-mode inputs
+      if ~isequal(other.testInputs, 'same')
+        for i = 1:numel(other.testInputs)
+          if isa(other.testInputs{i}, 'Layer') && ...
+           ~any(cellfun(@(o) isequal(other.testInputs{i}, o), varargin))
+            other.testInputs{i} = other.testInputs{i}.deepCopy(varargin{:}) ;
+          end
+        end
       end
     end
     
