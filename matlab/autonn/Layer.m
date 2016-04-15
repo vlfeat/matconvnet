@@ -44,6 +44,10 @@ classdef Layer < matlab.mixin.Copyable
     outputVar = 0  % index of the output var in a Net, used during its construction
   end
   
+  properties (Access = protected)
+    copied = []  % reference of deep copied object, used internally for deepCopy()
+  end
+  
   methods
     function obj = Layer(func, varargin)  % wrap a function call
       if nargin == 0 && (isa(obj, 'Input') || isa(obj, 'Param'))
@@ -141,31 +145,11 @@ classdef Layer < matlab.mixin.Copyable
       %
       % To create a shallow copy, use OTHER = OBJ.COPY().
       
-      % create a shallow copy first
-      other = obj.copy() ;
-      
       if isscalar(varargin) && iscell(varargin{1})
-        varargin = varargin{1} ;  % input is a cell array
+        varargin = varargin{1} ;
       end
-      
-      % recurse on any input that is not shared, replacing it with its
-      % deep copy
-      for i = 1:numel(other.inputs)
-        if isa(other.inputs{i}, 'Layer') && ...
-         ~any(cellfun(@(o) isequal(other.inputs{i}, o), varargin))
-          other.inputs{i} = other.inputs{i}.deepCopy(varargin{:}) ;
-        end
-      end
-      
-      % repeat for test-mode inputs
-      if ~isequal(other.testInputs, 'same')
-        for i = 1:numel(other.testInputs)
-          if isa(other.testInputs{i}, 'Layer') && ...
-           ~any(cellfun(@(o) isequal(other.testInputs{i}, o), varargin))
-            other.testInputs{i} = other.testInputs{i}.deepCopy(varargin{:}) ;
-          end
-        end
-      end
+      obj.deepCopyReset() ;
+      other = obj.deepCopyRecursive(varargin) ;
     end
     
     % overloaded MatConvNet functions
@@ -393,6 +377,52 @@ classdef Layer < matlab.mixin.Copyable
       
       % assign an output var sequentially, leaving slots for derivatives
       obj.outputVar = numel(layers) * 2 - 1 ;
+    end
+    
+    function deepCopyReset(obj)
+      obj.copied = [] ;
+      for i = 1:numel(obj.inputs)  % recurse on inputs
+        if isa(obj.inputs{i}, 'Layer')
+          obj.inputs{i}.deepCopyReset() ;
+        end
+      end
+    end
+    
+    function other = deepCopyRecursive(obj, shared)
+      % create a shallow copy first
+      other = obj.copy() ;
+      
+      % pointer to the copied object, to be reused by any subsequent deep
+      % copied layer that happens to share the same input
+      obj.copied = other ;
+      
+      % recurse on inputs that were not copied yet and are not shared
+      for i = 1:numel(other.inputs)
+        if isa(other.inputs{i}, 'Layer') && ...
+         ~any(cellfun(@(o) isequal(other.inputs{i}, o), shared))
+
+          if ~isempty(other.inputs{i}.copied)  % reuse same deep copy
+            other.inputs{i} = other.inputs{i}.copied ;
+          else  % create a new one
+            other.inputs{i} = other.inputs{i}.deepCopyRecursive(shared) ;
+          end
+        end
+      end
+      
+      % repeat for test-mode inputs
+      if ~isequal(other.testInputs, 'same')
+        for i = 1:numel(other.testInputs)
+          if isa(other.testInputs{i}, 'Layer') && ...
+           ~any(cellfun(@(o) isequal(other.testInputs{i}, o), shared))
+
+            if ~isempty(other.testInputs{i}.copied)  % reuse same deep copy
+              other.testInputs{i} = other.testInputs{i}.copied ;
+            else  % create a new one
+              other.testInputs{i} = other.testInputs{i}.deepCopyRecursive(shared) ;
+            end
+          end
+        end
+      end
     end
   end
   
