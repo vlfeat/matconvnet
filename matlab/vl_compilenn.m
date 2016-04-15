@@ -492,9 +492,9 @@ for t = 1:numel(srcs)
   objs{t} = fullfile(bld_dir, srcs{t}(i+numel(str):end)) ;
 end
 if ~multiple, objs = objs{1} ; end
-objs = strrep(objs,'.cpp',['.' objext]) ;
-objs = strrep(objs,'.cu',['.' objext]) ;
-objs = strrep(objs,'.c',['.' objext]) ;
+objs = regexprep(objs,'.cpp$',['.' objext]) ;
+objs = regexprep(objs,'.cu$',['.' objext]) ;
+objs = regexprep(objs,'.c$',['.' objext]) ;
 
 % --------------------------------------------------------------------
 function mex_compile(opts, src, tgt, mex_opts)
