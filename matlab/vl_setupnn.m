@@ -19,3 +19,7 @@ if ~exist('gather')
   warning('The MATLAB Parallel Toolbox does not seem to be installed. Activating compatibility functions.') ;
   addpath(fullfile(root, 'matlab', 'compatibility', 'parallel')) ;
 end
+
+if regexp(which('vl_nnconv'), '.m$')
+  warning('MatConvNet is not compiled. Consider running `vl_compilenn`.');
+end
