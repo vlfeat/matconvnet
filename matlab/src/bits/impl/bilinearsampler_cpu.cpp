@@ -40,10 +40,13 @@ forward_backward
 
   int groupSize = outCardinality / inCardinality ;
 
-  if (backwardData) {
-    memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
-  }
-
+  // don't need these -- as already being initialized with zeros in the mex file:
+  // if (backwardData) {
+  //   memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
+  // }
+  // if (backwardGrid) {
+  //   memset(derGrid, 0, 2 * outHeight * outWidth * outCardinality * sizeof(type)) ;
+  // }
   for (int n = 0 ; n < outCardinality ; ++n) {
     for (int c = 0 ; c < outDepth ; ++c) {
       type const * end = grid + 2 * outWidth * outHeight ;
@@ -66,7 +69,7 @@ forward_backward
 
         // todo: check boundary conditions in other frameworks and make
         // them the same
-        if (0 <= sy && sy < inHeight && 0 <= sx && sx < inWidth) {
+        if (-1 <= sy && sy < inHeight && -1 <= sx && sx < inWidth) {
           // get the interpolation weights
           const type wx = px - sx ;
           const type wy = py - sy ;
@@ -91,8 +94,8 @@ forward_backward
                 }
                 if (backwardGrid) {
                   type x = data[ssy + ssx * inHeight] ;
-                  dgridy += wwy * dy * x ;
-                  dgridx += wwx * dy * x ;
+                  dgridx += (2*j-1) * wwy * dy * x ;
+                  dgridy += (2*i-1) * wwx * dy * x ;
                 }
               }
             }
@@ -102,8 +105,8 @@ forward_backward
           *output++ = acc ;
         }
         if (backwardGrid) {
-          *derGrid++ = dgridy ;
-          *derGrid++ = dgridx ;
+          *derGrid++ += type(0.5)*(inHeight - 1) * dgridy ;
+          *derGrid++ += type(0.5)*(inWidth - 1) * dgridx ;
         }
       }
       // next channel

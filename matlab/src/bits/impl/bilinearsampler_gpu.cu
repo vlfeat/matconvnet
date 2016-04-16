@@ -35,11 +35,10 @@ __device__ int getGlobalIdx_2D_1D()
 // probably all these functions should have the option to accumulate, so...
 // assumption: derData is cleared before calling this code
 
-template<typename type, bool backwardData, bool backwardGrid>
+template<typename type, bool backwardData>
 __global__ void forward_backward_kernel
 (type* output,
  type* derData,
- type* derGrid,
  type const* data,
  type const* grid,
  type const* derOutput,
@@ -49,20 +48,20 @@ __global__ void forward_backward_kernel
   const int offset = getGlobalIdx_2D_1D();
   const int nOut = outWidth * outHeight * outDepth * outCardinality ;
   if (offset >= nOut) { return ; }
-  bool backward = backwardData | backwardGrid ;
+  bool backward = backwardData;
 
   // get the index of the output image, feature channel, and pixel
   int k = offset ;
-  int c = k / (outHeight * outWidth) ;
-  int n = c / outDepth ;
-  k %= (outHeight * outWidth) ;
-  c %= outDepth ;
+  int c = k / (outHeight * outWidth) ; 
+  int n = c / outDepth ; // out image index
+  k %= (outHeight * outWidth) ; // out spatial index
+  c %= outDepth ; // out channel index
 
   // get the index of the input image
-  int groupSize = outCardinality / inCardinality ;
-  int nInputImage = n / groupSize ;
-  int inputOffset = (inHeight * inWidth)*(outDepth * nInputImage + c) ;
-  int gridOffset = 2 * ((outHeight * outWidth) * n + k) ; //+ 1;
+  int groupSize = outCardinality / inCardinality ; // num of transformations/image
+  int nInputImage = n / groupSize ; // index of the input image
+  int inputOffset = (inHeight * inWidth)*(outDepth * nInputImage + c) ; // location of the start of the input image
+  int gridOffset = 2 * ((outHeight * outWidth) * n + k) ; //+ 1;    // location of the first grid coordinate for this output pixel
   //int gridOffset = 2*k+1 ;
 
   // get the grid for this output image
@@ -75,8 +74,6 @@ __global__ void forward_backward_kernel
   const int sy = floor(py);
 
   type acc = 0 ;
-  type dgridx = 0 ;
-  type dgridy = 0 ;
   type dy ;
   if (!backward) {
     data += inputOffset ;
@@ -90,7 +87,8 @@ __global__ void forward_backward_kernel
 
   // todo: check boundary conditions in other frameworks and make
   // them the same
-  if (0 <= sy && sy < inHeight && 0 <= sx && sx < inWidth) {
+  // AG: checked against CUDNN -- works
+  if (-1 <= sy && sy < inHeight && -1 <= sx && sx < inWidth) {
     // get the interpolation weights
     const type wx = px - sx ;
     const type wy = py - sy ;
@@ -113,21 +111,82 @@ __global__ void forward_backward_kernel
           if (backwardData) {
             atomicAdd(derData  + ssy + ssx * inHeight, ww * dy) ;
           }
-          if (backwardGrid) {
-            type x = data[ssy + ssx * inHeight] ;
-            dgridy += wwy * dy * x ;
-            dgridx += wwx * dy * x ;
-          }
         }
       }
     }
     if (!backward) {
       output[offset] = acc ;
     }
-    if (backwardGrid) {
-      derGrid[gridOffset + 0] = dgridy ;
-      derGrid[gridOffset + 1] = dgridx ;
+  }
+}
+
+template<typename type>
+__global__ void grid_backward_kernel
+(type* derGrid,
+ type const* data,
+ type const* grid,
+ type const* derOutput,
+ int outHeight, int outWidth, int outDepth, int outCardinality,
+ int inHeight, int inWidth, int inCardinality)
+{
+  const int offset = getGlobalIdx_2D_1D();
+  const int nOut = outWidth * outHeight * outCardinality ;
+  if (offset >= nOut) { return ; }
+
+  // get the index of the output image, feature channel, and pixel
+  int k = offset ;
+  int n = k / (outHeight * outWidth) ; // out image index
+  k %= (outHeight * outWidth) ; // out spatial index
+
+  // get the grid offset:
+  //  --> location of the first grid coordinate for this output pixel
+  int gridOffset = 2 * ((outHeight * outWidth) * n + k) ; //+ 1;  
+
+  // get the index of the input image
+  const int groupSize = outCardinality / inCardinality ; // num of transformations/image
+  const int nInputImage = n / groupSize ; // index of the input image
+  const int inputOffset = inHeight * inWidth * outDepth * nInputImage ; // location of the start of the input image
+
+  // get the grid for this output image
+  type py = grid[gridOffset + 0] ;
+  type px = grid[gridOffset + 1] ;
+
+  py = type(0.5)*(py + type(1.0)) * (inHeight - 1) ;
+  px = type(0.5)*(px + type(1.0)) * (inWidth - 1) ;
+  const int sx = floor(px); // todo: check floor vs floorf
+  const int sy = floor(py);
+
+  type dgridx = 0 ;
+  type dgridy = 0 ;
+  data += inputOffset ;
+  derOutput += k + n * outWidth * outHeight * outDepth ;
+
+  if (-1 <= sy && sy < inHeight && -1 <= sx && sx < inWidth) {
+    // get the interpolation weights
+    const type wx = px - sx ;
+    const type wy = py - sy ;
+
+    #pragma unroll
+    for (int j=0; j < 2; j++) {
+      #pragma unroll
+      for (int i=0; i < 2; i++) {
+        int ssy = sy + i ;
+        int ssx = sx + j ;
+        if (ssy < 0 || ssy >= inHeight || ssx < 0 || ssx >= inWidth) {
+          continue ;
+        }
+        const type wwx = (2*i-1) * ( (1-j)*(1-wx) + j*wx ) ;
+        const type wwy = (2*j-1) * ( (1-i)*(1-wy) + i*wy ) ;
+        for (int ic=0; ic < outDepth; ic++) {
+          const type dy = derOutput[ic * outHeight * outWidth];
+          const type x = data[ssy  +  ssx * inHeight  +  ic * inHeight * inWidth];
+          dgridy += wwx * dy * x ;
+          dgridx += wwy * dy * x ;
+        }
+      }
     }
+    derGrid[gridOffset + 0] = type(0.5)*(inHeight - 1) * dgridy ;
+    derGrid[gridOffset + 1] = type(0.5)*(inWidth - 1) * dgridx ;
   }
 }
 
@@ -184,21 +243,20 @@ forward_backward
   assert(!backwardGrid || derGrid) ;
   assert(!backwardGrid || data) ;
 
-  if (backwardData) {
-    //memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
-  }
+  // if (backwardData) {
+  //   //memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
+  // }
 
   // setup and launch the kernel for DER-DATA:
-  const int outVolume = outHeight * outWidth * outDepth * outCardinality ;
   int nTh, nGx, nGy;
+  const int outVolume = outHeight * outWidth * outDepth * outCardinality ;
   vl::Error volume_ok = get_launch_params(outVolume, nTh, nGx, nGy);
   if (volume_ok != vl::vlSuccess) { return volume_ok;}
 
   dim3  gridDim(nGx,nGy); // grid-dimensions
-  forward_backward_kernel <type, backwardData, backwardGrid>
+  forward_backward_kernel <type, backwardData>
     <<< gridDim, nTh >>> (output,
                           derData,
-                          derGrid,
                           data,
                           grid,
                           derOutput,
@@ -206,7 +264,25 @@ forward_backward
                           inHeight, inWidth, inCardinality) ;
 
   cudaError_t status = cudaPeekAtLastError() ;
-  return (status != cudaSuccess) ? vl::vlErrorCuda : vl::vlSuccess ;
+  if (status != cudaSuccess) { return vl::vlErrorCuda; }
+
+  if (backwardGrid) {
+    // setup and launch kernel for DER-GRID:
+    const int outN = outHeight * outWidth * outCardinality;
+    volume_ok = get_launch_params(outN, nTh, nGx, nGy);
+    if (volume_ok != vl::vlSuccess) { return volume_ok;}
+
+    gridDim.x = nGx; gridDim.y = nGy; // grid-dimensions
+    grid_backward_kernel <type>
+    <<< gridDim, nTh >>>  ( derGrid,
+                            data, grid,
+                            derOutput,
+                            outHeight, outWidth, outDepth, outCardinality,
+                            inHeight, inWidth, inCardinality ) ;    
+  status = cudaPeekAtLastError() ;
+  }
+  // catch any errors:
+  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
 }
 
 namespace vl { namespace impl {

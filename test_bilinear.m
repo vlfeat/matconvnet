@@ -3,7 +3,7 @@ function test_affineGridGenerator()
 
   insz = [128 256 3 4];
   osz = [256 512];
-  gpu = [3];
+  gpu = [1];
 
   % read the images:
   i1 = imread('peppers.png');
@@ -49,9 +49,9 @@ function test_affineGridGenerator()
   % generate the affine grids:
   grids = gridGen.forward({aff},{});
   % do bilinear sampling:
-  bSampler = dagnn.BilinearSampler();
-  y = bSampler.forward({x, grids{1}}, {});
-  y = gather(y{1});
+  %bSampler = dagnn.BilinearSampler();
+  y = vl_nnbilinearsampler(x, grids{1}, 'NoCudnn');
+  y = gather(y);
 
   close all;
   clf();%figure();

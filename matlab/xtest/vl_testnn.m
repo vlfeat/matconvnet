@@ -29,8 +29,8 @@ function result = vl_testnn(varargin)
 
 opts.cpu = true ;
 opts.gpu = false ;
-opts.single = true ;
-opts.double = false ;
+opts.single = false;
+opts.double = true ;
 opts.command = 'nn' ;
 opts.break = false ;
 opts.tapFile = '';

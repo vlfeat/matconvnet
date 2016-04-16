@@ -67,6 +67,11 @@ namespace vl { namespace impl {
     int outWidth = output.getWidth();
     int outHeight = output.getHeight();
 
+
+    // get number of transforms/image == groupSize:
+    int groupSize = outCardinality / inCardinality;
+
+
     int dimOut[4] = { outCardinality, outDepth, outWidth, outHeight };
     
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
