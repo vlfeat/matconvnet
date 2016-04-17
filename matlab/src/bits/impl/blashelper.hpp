@@ -52,6 +52,19 @@ struct blas
        type beta,
        type * y, ptrdiff_t incy) ;
 
+  static vl::Error
+  axpy(vl::Context& context,
+       ptrdiff_t n,
+       type alpha,
+       type const *x, ptrdiff_t incx,
+       type *y, ptrdiff_t incy) ;
+
+  static vl::Error
+  scal(vl::Context& context,
+       ptrdiff_t n,
+       type alpha,
+       type *x,
+       ptrdiff_t inc) ;
 } ;
 
 /* ---------------------------------------------------------------- */
@@ -101,6 +114,32 @@ struct blas<vl::CPU, vl::vlTypeFloat>
           y, &incy) ;
     return vl::vlSuccess ;
   }
+
+  static vl::Error
+  axpy(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type const *x, ptrdiff_t incx,
+       type *y, ptrdiff_t incy)
+  {
+    saxpy(&n,
+          &alpha,
+          (float*)x, &incx,
+          (float*)y, &incy) ;
+    return vl::vlSuccess ;
+  }
+
+  static vl::Error
+  scal(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type *x, ptrdiff_t incx)
+  {
+    sscal(&n,
+          &alpha,
+          (float*)x, &incx) ;
+    return vl::vlSuccess ;
+  }
 } ;
 
 template<>
@@ -144,6 +183,32 @@ struct blas<vl::CPU, vl::vlTypeDouble>
           (type*)x, &incx,
           &beta,
           y, &incy) ;
+    return vl::vlSuccess ;
+  }
+
+  static vl::Error
+  axpy(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type const *x, ptrdiff_t incx,
+       type *y, ptrdiff_t incy)
+  {
+    daxpy(&n,
+          &alpha,
+          (double*)x, &incx,
+          (double*)y, &incy) ;
+    return vl::vlSuccess ;
+  }
+
+  static vl::Error
+  scal(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type *x, ptrdiff_t incx)
+  {
+    dscal(&n,
+          &alpha,
+          (double*)x, &incx) ;
     return vl::vlSuccess ;
   }
 } ;
@@ -202,7 +267,6 @@ struct blas<vl::GPU, vl::vlTypeFloat>
     cublasStatus_t status ;
     status = context.getCudaHelper().getCublasHandle(&handle) ;
     if (status != CUBLAS_STATUS_SUCCESS) goto done ;
-
     status = cublasSgemv(handle,
                          (op == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
                          (int)m, (int)n,
@@ -214,7 +278,47 @@ struct blas<vl::GPU, vl::vlTypeFloat>
 
   done:
     return context.setError
-    (context.getCudaHelper().catchCublasError(status, "cublasSgemv"), __func__) ;
+      (context.getCudaHelper().catchCublasError(status, "cublasSgemv"), __func__) ;
+  }
+
+  static vl::Error
+  scal(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type *x, ptrdiff_t incx)
+  {
+    cublasHandle_t handle ;
+    cublasStatus_t status ;
+    status = context.getCudaHelper().getCublasHandle(&handle) ;
+    if (status != CUBLAS_STATUS_SUCCESS) goto done ;
+    status = cublasSscal(handle,
+                         (int)n,
+                         &alpha,
+                         x, (int)incx) ;
+  done:
+    return context.setError
+      (context.getCudaHelper().catchCublasError(status, "cublasSscal"), __func__) ;
+  }
+
+  static vl::Error
+  axpy(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type const *x, ptrdiff_t incx,
+       type *y, ptrdiff_t incy)
+  {
+    cublasHandle_t handle ;
+    cublasStatus_t status ;
+    status = context.getCudaHelper().getCublasHandle(&handle) ;
+    if (status != CUBLAS_STATUS_SUCCESS) goto done ;
+    status = cublasSaxpy(handle,
+                         (int)n,
+                         &alpha,
+                         x, (int)incx,
+                         y, (int)incy) ;
+  done:
+    return context.setError
+      (context.getCudaHelper().catchCublasError(status, "cublasSaxpy"), __func__) ;
   }
 } ;
 
@@ -279,7 +383,48 @@ struct blas<vl::GPU, vl::vlTypeDouble>
     return context.setError
     (context.getCudaHelper().catchCublasError(status, "cublasDgemv"), __func__) ;
   }
+
+  static vl::Error
+  scal(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type *x, ptrdiff_t incx)
+  {
+    cublasHandle_t handle ;
+    cublasStatus_t status ;
+    status = context.getCudaHelper().getCublasHandle(&handle) ;
+    if (status != CUBLAS_STATUS_SUCCESS) goto done ;
+    status = cublasDscal(handle,
+                         (int)n,
+                         &alpha,
+                         x, (int)incx) ;
+  done:
+    return context.setError
+      (context.getCudaHelper().catchCublasError(status, "cublasDscal"), __func__) ;
+  }
+
+  static vl::Error
+  axpy(vl::Context & context,
+       ptrdiff_t n,
+       type alpha,
+       type const *x, ptrdiff_t incx,
+       type *y, ptrdiff_t incy)
+  {
+    cublasHandle_t handle ;
+    cublasStatus_t status ;
+    status = context.getCudaHelper().getCublasHandle(&handle) ;
+    if (status != CUBLAS_STATUS_SUCCESS) goto done ;
+    status = cublasDaxpy(handle,
+                         (int)n,
+                         &alpha,
+                         x, (int)incx,
+                         y, (int)incy) ;
+  done:
+    return context.setError
+      (context.getCudaHelper().catchCublasError(status, "cublasDaxpy"), __func__) ;
+  }
 } ;
 #endif // ENABLE_GPU
+
 } } // namespace vl { namespace impl {
 #endif /* defined(__vl__blashelper__) */
