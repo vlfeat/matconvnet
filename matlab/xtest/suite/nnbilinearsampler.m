@@ -5,26 +5,27 @@ classdef nnbilinearsampler < nntest
     iw = {4 8 16}
     oh = {8}
     ow = {4 8}
-    method_type = {'cuda','cudnn'};
+    method_type = {'cuda', 'cudnn'}
+    multiple_grids = {true false}
   end
 
   methods (Test)
 
-    function check_der_x(test, ih, iw, oh, ow)
+    function check_der_x(test, ih, iw, oh, ow, multiple_grids)
       if ~strcmp(test.currentDevice ,'cpu'), return; end
-      [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4); % param-init
+      [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
       [dx,~] = vl_nnbilinearsampler(ims,grids,dout); % analytic deriv
       test.der(@(inp)vl_nnbilinearsampler(inp,grids), ims, dout, dx, 1e-2); % numcheck
     end
 % 
-%     function check_der_grid(test, ih, iw, oh, ow)
+%     function check_der_grid(test, ih, iw, oh, ow, multiple_grids)
 %       if ~strcmp(test.currentDevice ,'cpu'), return; end
-%       [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4); % param-init
+%       [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
 %       [~,dgrid] = vl_nnbilinearsampler(ims,grids,dout); % analytic deriv
 %       test.der(@(inp)vl_nnbilinearsampler(ims,inp), grids, dout, dgrid, 1e-2); % numcheck
 %     end
     
-    % function check_der_x_gpu(test, ih, iw, oh, ow, method_type)
+    % function check_der_x_gpu(test, ih, iw, oh, ow, method_type, multiple_grids)
     %   if ~strcmp(test.currentDevice ,'gpu'), return; end
     %   opts = {};
     %   switch method_type
@@ -33,12 +34,12 @@ classdef nnbilinearsampler < nntest
     %     case 'cudnn'
     %       opts = {'Cudnn'};
     %   end
-    %   [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4); % param-init
+    %   [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
     %   [dx,~] = vl_nnbilinearsampler(ims,grids,dout,opts{:}); % analytic deriv
     %   test.der(@(inp)vl_nnbilinearsampler(inp,grids,opts{:}), ims, dout, dx, 1e-2); % numcheck
     % end
 
-    % function check_der_grid_gpu(test, ih, iw, oh, ow, method_type)
+    % function check_der_grid_gpu(test, ih, iw, oh, ow, method_type, multiple_grids)
     %   if ~strcmp(test.currentDevice ,'gpu'), return; end
     %   opts = {};
     %   switch method_type
@@ -47,15 +48,15 @@ classdef nnbilinearsampler < nntest
     %     case 'cudnn'
     %       opts = {'Cudnn'};
     %   end
-    %   [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4); % param-init
+    %   [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
     %   [~,dgrid] = vl_nnbilinearsampler(ims,grids,dout,opts{:}); % analytic deriv
     %   test.der(@(inp)vl_nnbilinearsampler(ims,inp,opts{:}), grids, dout, dgrid, 1e-2); % numcheck
     % end
 
-    function fwd_consistency(test, ih, iw, oh, ow)
+    function fwd_consistency(test, ih, iw, oh, ow, multiple_grids)
       if ~strcmp(test.currentDevice ,'gpu'), return; end
 
-      [ims,grids,~] = test.init_params(ih,iw,oh,ow,4); % param-init
+      [ims,grids,~] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
       %out_cpu = vl_nnbilinearsampler(gather(ims),gather(grids));
       out_cuda = vl_nnbilinearsampler(ims,grids,'NoCudnn');
       out_cudnn = vl_nnbilinearsampler(ims,grids,'Cudnn');
@@ -67,10 +68,10 @@ classdef nnbilinearsampler < nntest
       %test.eq(out_cuda, out_cpu);
     end
 
-    function bwd_grid_consistency(test, ih, iw, oh, ow)
+    function bwd_grid_consistency(test, ih, iw, oh, ow, multiple_grids)
       if ~strcmp(test.currentDevice ,'gpu'), return; end
 
-      [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4); % param-init
+      [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
       %[~,dgrid_cpu] = vl_nnbilinearsampler(gather(ims),gather(grids),gather(dout));
       [~,dgrid_cuda] = vl_nnbilinearsampler(ims,grids,dout,'NoCudnn');
       [~,dgrid_cudnn] = vl_nnbilinearsampler(ims,grids,dout,'Cudnn');
@@ -82,10 +83,10 @@ classdef nnbilinearsampler < nntest
       %test.eq(dgrid_cuda,dgrid_cpu);
     end
 
-    function bwd_data_consistency(test, ih, iw, oh, ow)
+    function bwd_data_consistency(test, ih, iw, oh, ow, multiple_grids)
       if ~strcmp(test.currentDevice ,'gpu'), return; end
 
-      [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4); % param-init
+      [ims,grids,dout] = test.init_params(ih,iw,oh,ow,4,multiple_grids); % param-init
       %[dData_cpu,~] = vl_nnbilinearsampler(gather(ims),gather(grids),gather(dout));
       [dData_cuda,~] = vl_nnbilinearsampler(ims,grids,dout,'NoCudnn');
       [dData_cudnn,~] = vl_nnbilinearsampler(ims,grids,dout,'Cudnn');
@@ -100,7 +101,7 @@ classdef nnbilinearsampler < nntest
   end
 
   methods 
-    function [x,grid,dout] = init_params(test, ih,iw,oh,ow,n)
+    function [x,grid,dout] = init_params(test, ih,iw,oh,ow,n, multiple_grids)
       % initialize a batch of images:
       assert(mod(n,2)==0, 'n should be a multiple of 2.');
 
@@ -108,8 +109,11 @@ classdef nnbilinearsampler < nntest
       i2 = imread('pears.png');
       i1 = imresize(i1,[ih,iw]);
       i2 = imresize(i2,[ih,iw]); 
-      x = zeros([ih,iw,3,n], test.currentDataType);
-      for i = 1:(n/2)
+
+      nin = n;
+      if multiple_grids, nin = n/2; end
+      x = zeros([ih,iw,3,nin], test.currentDataType);
+      for i = 1:(nin/2)
         x(:,:,:,1 + 2*(i-1)) = i1(:,:,:);
         x(:,:,:,2 + 2*(i-1)) = i2(:,:,:);
       end
@@ -144,4 +148,3 @@ classdef nnbilinearsampler < nntest
   end
 
 end % class
-
