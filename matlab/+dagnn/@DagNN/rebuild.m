@@ -68,7 +68,7 @@ for l = 1:numel(obj.layers)
   end
 end
 if any(order == -1)
-  warning('The network grpah contains a cycle') ;
+  warning('The network graph contains a cycle') ;
 end
 [~,order] = sort(order, 'descend') ;
 
