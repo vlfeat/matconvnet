@@ -67,13 +67,6 @@ namespace vl { namespace impl {
     int outWidth = output.getWidth();
     int outHeight = output.getHeight();
 
-
-    // get number of transforms/image == groupSize:
-    int groupSize = outCardinality / inCardinality;
-
-
-    int dimOut[4] = { outCardinality, outDepth, outWidth, outHeight };
-    
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
     vl::Type dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
@@ -82,16 +75,19 @@ namespace vl { namespace impl {
     vl::Error error = vl::vlSuccess ;
     cudnnHandle_t handle ;
 
+    // get number of transforms/image == groupSize:
+    int groupSize = outCardinality / inCardinality ;
+    int dimOut[4] = { 1, outDepth, outWidth, outHeight } ; // one-image
+
     // Get CuDNN
     CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descriptors:
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
     outputDescInitialized = true ;
-  
     CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
                                        cudnnDataType,
-                                       outCardinality, outDepth, outWidth, outHeight, // sizes: n,c,w,h
+                                       1, outDepth, outWidth, outHeight, // sizes: n,c,w,h
                                        outHeight * outWidth * outDepth, //strides
                                        outHeight * outWidth,
                                        outHeight,
@@ -99,10 +95,9 @@ namespace vl { namespace impl {
 
     CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
     dataDescInitialized = true ;
-  
     CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
                                        cudnnDataType,
-                                       inCardinality, inDepth, inWidth, inHeight, // sizes: n,c,w,h
+                                       1, inDepth, inWidth, inHeight, // sizes: n,c,w,h
                                        inHeight * inWidth * inDepth, //strides
                                        inHeight * inWidth,
                                        inHeight,
@@ -115,21 +110,34 @@ namespace vl { namespace impl {
                                                   CUDNN_SAMPLER_BILINEAR,
                                                   cudnnDataType,
                                                   4,
-                                                  dimOut));
-    /* do the work */
+                                                  dimOut)) ;
+
     {
-      type alpha = 1.0f;
-      type beta = 0.0f;
-      cudnnSpatialTfSamplerForward( handle,
-                                    samplerDesc,
-                                    &alpha,
-                                    dataDesc, data.getMemory(),
-                                    grid.getMemory(),
-                                    &beta,
-                                    outputDesc, output.getMemory());
+      type alpha = 1.0f ;
+      type beta = 0.0f ;
+      const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
+      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ; 
+      const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
+      type const* data_ptr = (type const*) data.getMemory() ;
+      type const* grid_ptr = (type const*) grid.getMemory() ;
+      type * out_ptr = (type *) output.getMemory() ;
+
+      for (int im=0; im < inCardinality; im++) {
+        for (int ig=0; ig < groupSize; ig++) {
+          cudnnSpatialTfSamplerForward( handle,
+                                        samplerDesc,
+                                        &alpha,
+                                        dataDesc, data_ptr,
+                                        grid_ptr,
+                                        &beta,
+                                        outputDesc, out_ptr ) ;
+          grid_ptr += gridOffset ;
+          out_ptr += outOffset ;
+        }
+        data_ptr += dataOffset ;
+      }
     }
 
-    /* cleanup */
   done:
     if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
@@ -147,9 +155,8 @@ namespace vl { namespace impl {
                                                          Tensor derGrid,
                                                          Tensor data,
                                                          Tensor grid,
-                                                         Tensor derOutput)
+                                                         Tensor derOutput )
   {
-    
     typedef typename DataTypeTraits<dataType>::type type ;
 
     /* no derDataDesc needed as same as dataDesc <-- nice! */
@@ -170,8 +177,6 @@ namespace vl { namespace impl {
     int outWidth = derOutput.getWidth();
     int outHeight = derOutput.getHeight();
 
-    int dimOut[4] = { outCardinality, outDepth, outWidth, outHeight };
-
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
     vl::Type dynDataType = derOutput.getDataType() ;
     assert(dynDataType == dataType) ;
@@ -180,15 +185,20 @@ namespace vl { namespace impl {
     vl::Error error = vl::vlSuccess ;
     cudnnHandle_t handle ;
 
+    // get number of transforms/image == groupSize:
+    int groupSize = outCardinality / inCardinality;
+    int dimOut[4] = { 1, outDepth, outWidth, outHeight };
+
     // Get CuDNN
     CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+
 
     // Get tensor descriptors:
     CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
     derOutputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
                                        cudnnDataType,
-                                       outCardinality, outDepth, outWidth, outHeight, // sizes: n,c,w,h
+                                       1, outDepth, outWidth, outHeight, // sizes: n,c,w,h
                                        outHeight * outWidth * outDepth, //strides
                                        outHeight * outWidth,
                                        outHeight,
@@ -198,7 +208,7 @@ namespace vl { namespace impl {
     dataDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
                                        cudnnDataType,
-                                       inCardinality, inDepth, inWidth, inHeight, // sizes: n,c,w,h
+                                       1, inDepth, inWidth, inHeight, // sizes: n,c,w,h
                                        inHeight * inWidth * inDepth, //strides
                                        inHeight * inWidth,
                                        inHeight,
@@ -214,19 +224,38 @@ namespace vl { namespace impl {
                                                   dimOut));
     /* do the work */
     {
-      type alpha = 1.0f;
-      type beta = 0.0f;
-      cudnnSpatialTfSamplerBackward(  handle,
-                                      samplerDesc,
-                                      &alpha,
-                                      dataDesc, data.getMemory(),
-                                      &beta,
-                                      dataDesc, derData.getMemory(),
-                                      &alpha,
-                                      derOutputDesc, derOutput.getMemory(),
-                                      grid.getMemory(),
-                                      &beta,
-                                      derGrid.getMemory() );
+      type alpha = 1.0f ;
+      type dataBeta = 1.0f ; // assuming that the derData has been initialized to zero
+      type gridBeta = 0.0f ;
+      const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
+      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ; 
+      const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
+      type const* data_ptr = (type const*) data.getMemory() ;
+      type * derData_ptr = (type *) derData.getMemory() ;
+      type const* grid_ptr = (type const*) grid.getMemory() ;
+      type * derGrid_ptr = (type *) derGrid.getMemory() ;
+      type * derOut_ptr = (type *) derOutput.getMemory() ;
+
+      for (int im=0; im < inCardinality; im++) {
+        for (int ig=0; ig < groupSize; ig++) {
+        cudnnSpatialTfSamplerBackward(  handle,
+                                        samplerDesc,
+                                        &alpha,
+                                        dataDesc, data_ptr,
+                                        &dataBeta,
+                                        dataDesc, derData_ptr,
+                                        &alpha,
+                                        derOutputDesc, derOut_ptr,
+                                        grid_ptr,
+                                        &gridBeta,
+                                        derGrid_ptr ) ;
+          grid_ptr += gridOffset ;
+          derGrid_ptr += gridOffset ;
+          derOut_ptr += outOffset ;
+        }
+        data_ptr += dataOffset ;
+        derData_ptr += dataOffset ;
+      }
     }
 
   /* cleanup */
