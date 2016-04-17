@@ -27,6 +27,10 @@ function dx = reshape_der(x, ~, dy)  %#ok<*DEFNU>
   dx = reshape(dy, size(x)) ;
 end
 
+function dx = sqrt_der(x, dy)
+  dx = dy ./ sqrt(x) ;
+end
+
 function dx = sum_der(x, dim, dy)
   if nargin < 3
     % one-argument syntax of sum, plus derivative
@@ -51,5 +55,9 @@ function dx = mean_der(x, dim, dy)
   reps = ones(1, ndims(x)) ;
   reps(dim) = size(x,dim) ;
   dx = repmat(dy, reps) / size(x, dim) ;
+end
+
+function size_der(~, ~)
+  % nothing to return; SIZE_SETUP (in AUTONN_SETUP) specifies 0 derivatives
 end
 

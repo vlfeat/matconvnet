@@ -115,7 +115,11 @@ classdef Layer < matlab.mixin.Copyable
         end
         
         % add self to list if it matches the pattern
-        if isequal(obj.name, what) || isequal(obj.func, what) || isa(obj, what)
+        if ischar(what)
+          if isequal(obj.name, what) || isa(obj, what)
+            objs{end+1} = obj ;
+          end
+        elseif isequal(obj.func, what)
           objs{end+1} = obj ;
         end
         
@@ -207,6 +211,15 @@ classdef Layer < matlab.mixin.Copyable
     function y = reshape(obj, varargin)
       y = Layer(@reshape, obj, varargin{:}) ;
     end
+    function y = permute(obj, varargin)
+      y = Layer(@permute, obj, varargin{:}) ;
+    end
+    function y = ipermute(obj, varargin)
+      y = Layer(@ipermute, obj, varargin{:}) ;
+    end
+    function y = size(obj, varargin)
+      y = Layer(@size, obj, varargin{:}) ;
+    end
     function y = sum(obj, varargin)
       y = Layer(@sum, obj, varargin{:}) ;
     end
@@ -218,6 +231,9 @@ classdef Layer < matlab.mixin.Copyable
     end
     function y = min(obj, varargin)
       y = Layer(@min, obj, varargin{:}) ;
+    end
+    function y = sqrt(obj, varargin)
+      y = Layer(@sqrt, obj, varargin{:}) ;
     end
     function y = cat(obj, varargin)
       y = Layer(@cat, obj, varargin{:}) ;
@@ -427,10 +443,14 @@ classdef Layer < matlab.mixin.Copyable
   end
   
   methods (Static)
-    function autoNames()
+    function autoNames(modifier)
       % LAYER.AUTONAMES()
       % Sets layer names based on the name of the corresponding variables
       % in the caller's workspace.
+      %
+      % LAYER.AUTONAMES(MODIFIER)
+      % Specifies a function handle to be evaluated on each name, possibly
+      % modifying it (e.g. append a prefix or suffix).
       %
       % Example:
       %    images = Input() ;
@@ -439,11 +459,14 @@ classdef Layer < matlab.mixin.Copyable
       %    ans =
       %       'images'
       
+      if nargin == 0
+        modifier = @deal ;
+      end
       varNames = evalin('caller','who') ;
       for i = 1:numel(varNames)
         layer = evalin('caller', varNames{i}) ;
         if isa(layer, 'Layer') && isempty(layer.name)
-          layer.name = varNames{i} ;
+          layer.name = modifier(varNames{i}) ;
         end
       end
     end

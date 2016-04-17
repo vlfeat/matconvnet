@@ -74,3 +74,8 @@ function vl_nnmask_setup(layer)
   layer.testFunc = 'none' ;
 end
 
+function size_setup(layer)
+  % no derivatives defined for SIZE
+  layer.numInputDer = 0 ;
+end
+
