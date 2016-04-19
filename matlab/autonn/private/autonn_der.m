@@ -27,6 +27,14 @@ function dx = reshape_der(x, ~, dy)  %#ok<*DEFNU>
   dx = reshape(dy, size(x)) ;
 end
 
+function dx = permute_der(~, dim, dy)
+  dx = ipermute(dy, dim) ;
+end
+
+function dx = ipermute_der(~, dim, dy)
+  dx = permute(dy, dim) ;
+end
+
 function dx = sqrt_der(x, dy)
   dx = dy ./ sqrt(x) ;
 end
