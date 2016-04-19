@@ -161,6 +161,20 @@ Detailed calculation of the derivatives is provided in \cref{s:impl-pooling}.
 See \cref{s:impl-activation} for implementation details.
 
 % ------------------------------------------------------------------
+\section{Feature Warping}\label{s:sampler}
+% ------------------------------------------------------------------
+!vl_nnbilinearsampler! uses bilinear-interpolation to spatially warp the features according to an input transformation grid.
+The same transformation is applied to all the features channels to keep them spatially coherent:
+\[
+  F_{ijk} = \sum_{n=1}^H\sum_{m=1}^W f_{nmk} \max(0, 1-|g_y(i,j)-n|) \max(0, 1-|g_x(i,j)-m|)
+\]
+where, for each channel $k$, the output $F_{ijk}$ at the location $(i,j)$, is a weighted sum of 
+the input values $f$ in the neighborhood of the pixel location given by the transformation grid
+$(g_x(i,j), g_y(i,j))$. The weights are given by the bilinear-interpolation kernel as above.\\
+
+See \cref{s:impl-sampler} for implementation details.
+
+% ------------------------------------------------------------------
 \section{Normalization}\label{s:normalization}
 % ------------------------------------------------------------------
 

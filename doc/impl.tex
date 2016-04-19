@@ -225,6 +225,35 @@ In matrix notation:
 (\bone\bone^\top - \by).
 \]
 
+
+% ------------------------------------------------------------------
+\section{Feature Warping}\label{s:impl-sampler}
+% ------------------------------------------------------------------
+The output is computed by summing over the local support region of the bilinear-interpolation
+kernel (at most four input pixels are involved in the weighted sum for a given output).\\
+
+The transformation grid is a tensor of size $2{\times}H'{\times}W'$, where the first dimension corresponds to
+the two spatial dimensions ($y$ and $x$ respectively).\\
+
+The derivatives with respect to the input tensor are computed as following:
+\[
+  \frac{d z}{d f_{stk}} = \sum_{ij}\frac{dz}{d F_{ijk}}\frac{d F_{ijk}}{d f_{stk} } = \sum_{ij} \frac{dz}{d F_{ijk}} \max\left(0, 1-|g_y(i,j)-s|\right) \max\left(0, 1-|g_x(i,j)-t|\right)) 
+\]
+while, the derivatives with respect to the transformation grid are computed as following:
+\begin{align*}
+  \frac{d z}{d g_x(i,j)} = \sum_{k}\frac{d z}{d F_{ijk}}\frac{d F_{ijk}}{d g_x(i,j)} = \sum_{n,m,k}  f_{nmk} \max\left(0, 1-|g_y(i,j)-n|\right)
+  \left\{
+  \begin{array}{ll}
+    0  & \mbox{if } |m-g_x(i,j)| \geq 1 \\
+    1 & \mbox{if } m  \geq  g_x(i,j) \\
+    -1 & \mbox{if } m < g_x(i,j)
+  \end{array}
+\right.
+\end{align*}
+similarly, for $g_y(i,j)$.\\
+
+In practice, both the input and output spatial extents are normalized to the interval $[-1,1]$; 
+a value of 0 is assumed for the region outside this range.\\
 % ------------------------------------------------------------------
 \section{Normalization}\label{s:normalization}
 % ------------------------------------------------------------------
