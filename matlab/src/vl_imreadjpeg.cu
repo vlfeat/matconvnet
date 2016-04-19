@@ -340,10 +340,10 @@ void mexFunction(int nout, mxArray *out[],
               readers.size(), prefetch) ;
     switch (resizeMode) {
       case kResizeIsotropic:
-        mexPrintf("vl_imreadjpeg: isotropic resize to x %d\n", resizeHeight) ;
+        mexPrintf("vl_imreadjpeg: isotropic resize to x%d\n", resizeHeight) ;
         break ;
       case kResizeAnisotropic:
-        mexPrintf("vl_imreadjpeg: anisotropic resize to %d x %d\n", resizeHeight, resizeWidth) ;
+        mexPrintf("vl_imreadjpeg: anisotropic resize to %dx%d\n", resizeHeight, resizeWidth) ;
         break ;
       default:
         break ;
@@ -397,7 +397,8 @@ void mexFunction(int nout, mxArray *out[],
             break ;
           case kResizeIsotropic:
           {
-            float scale = (std::max)((float)resizeWidth / shape.width,
+            // note: not a bug below, resizeHeight contains the only resize param
+            float scale = (std::max)((float)resizeHeight / shape.width,
                                      (float)resizeHeight / shape.height);
             resizedShape.height = roundf(resizedShape.height * scale) ;
             resizedShape.width = roundf(resizedShape.width * scale) ;
