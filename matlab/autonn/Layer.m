@@ -211,6 +211,9 @@ classdef Layer < matlab.mixin.Copyable
     function y = reshape(obj, varargin)
       y = Layer(@reshape, obj, varargin{:}) ;
     end
+    function y = repmat(obj, varargin)
+      y = Layer(@repmat, obj, varargin{:}) ;
+    end
     function y = permute(obj, varargin)
       y = Layer(@permute, obj, varargin{:}) ;
     end
