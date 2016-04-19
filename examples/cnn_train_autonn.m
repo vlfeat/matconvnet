@@ -268,12 +268,14 @@ net.move('cpu') ;
 % -------------------------------------------------------------------------
 function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 % -------------------------------------------------------------------------
+
+% ensure supported training methods are ordered as expected
+assert(isequal(Param.trainMethods, {'gradient', 'average', 'none'})) ;
+
 paramVars = [net.params.var] ;
+paramVars = paramVars([net.params.trainMethod] ~= 3) ;  % ignore trainMethod = 'none'
 w = net.getValue(paramVars) ;
 dw = net.getDer(paramVars) ;
-
-% ensure supported training methods are as expected
-assert(isequal(Param.trainMethods, {'gradient', 'average'})) ;
 
 for p=1:numel(net.params)
   % bring in gradients from other GPUs if any
@@ -301,6 +303,7 @@ for p=1:numel(net.params)
       w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) * dw{p} ;
       % NOTE: used to divide by net.params(p).fanout !
 
+    case 3  % none
     otherwise
       error('Unknown training method %i for parameter ''%s''.', ...
         net.params(p).trainMethod, ...

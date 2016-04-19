@@ -19,7 +19,7 @@ classdef Param < Layer
     value
   end
   properties (Constant)
-    trainMethods = {'gradient', 'average'}  % list of methods, see CNN_TRAIN_AUTONN
+    trainMethods = {'gradient', 'average', 'none'}  % list of methods, see CNN_TRAIN_AUTONN
   end
   
   methods
