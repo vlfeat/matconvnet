@@ -1,8 +1,8 @@
 function [da, db] = max_der(a, b, dim, dy)
 %MAX_DER
-%   MAX(A, DY)
-%   MAX(A, B, DY)
-%   MAX(A, [], DIM, DY)
+%   MAX_DER(A, DY)
+%   MAX_DER(A, B, DY)
+%   MAX_DER(A, [], DIM, DY)
 %   Derivative of MAX function. Same syntax as native MAX, plus derivative.
 
 % Copyright (C) 2016 Joao F. Henriques.

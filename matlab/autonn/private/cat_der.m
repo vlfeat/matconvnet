@@ -1,6 +1,6 @@
 function varargout = cat_der(dim, varargin)
 %CAT_DER
-%   CAT(DIM, X1, X2, ..., DZDY)
+%   CAT_DER(DIM, X1, X2, ..., DZDY)
 %   Derivative of CAT function. Same syntax as native CAT, plus derivative.
 %   Note the first output is always empty (derivative of DIM).
 %

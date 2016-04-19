@@ -277,7 +277,7 @@ paramVars = paramVars([net.params.trainMethod] ~= 3) ;  % ignore trainMethod = '
 w = net.getValue(paramVars) ;
 dw = net.getDer(paramVars) ;
 
-for p=1:numel(net.params)
+for p=1:numel(paramVars)
   % bring in gradients from other GPUs if any
   if ~isempty(mmap)
     error('Not implemented.') ;

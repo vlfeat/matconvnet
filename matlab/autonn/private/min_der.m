@@ -1,8 +1,8 @@
 function [da, db] = min_der(a, b, dim, dy)
 %MIN_DER
-%   MIN(A, DY)
-%   MIN(A, B, DY)
-%   MIN(A, [], DIM, DY)
+%   MIN_DER(A, DY)
+%   MIN_DER(A, B, DY)
+%   MIN_DER(A, [], DIM, DY)
 %   Derivative of MIN function. Same syntax as native MIN, plus derivative.
 
 % Copyright (C) 2016 Joao F. Henriques.

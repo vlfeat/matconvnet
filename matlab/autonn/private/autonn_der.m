@@ -65,7 +65,7 @@ function dx = mean_der(x, dim, dy)
   dx = repmat(dy, reps) / size(x, dim) ;
 end
 
-function size_der(~, ~)
+function size_der(~, ~, ~)
   % nothing to return; SIZE_SETUP (in AUTONN_SETUP) specifies 0 derivatives
 end
 
