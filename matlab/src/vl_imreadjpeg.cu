@@ -397,7 +397,10 @@ void mexFunction(int nout, mxArray *out[],
             break ;
           case kResizeIsotropic:
           {
-            float scale = (std::max)((float)resizeWidth / shape.width,
+	    // NOTE this will always resizes height to resizeHeight
+	    //      because resizeWidth has the dummy value of 1
+            //float scale = (std::max)((float)resizeWidth / shape.width,
+            float scale = (std::max)((float)resizeHeight / shape.width,
                                      (float)resizeHeight / shape.height);
             resizedShape.height = roundf(resizedShape.height * scale) ;
             resizedShape.width = roundf(resizedShape.width * scale) ;
