@@ -31,7 +31,7 @@ net = vl_simplenn_tidy(net) ;
 im = imread('peppers.png') ;
 im_ = single(im) ; % note: 0-255 range
 im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
-im_ = im_ - net.meta.normalization.averageImage ;
+im_ = bsxfun(@minus, im_, net.meta.normalization.averageImage) ;
 
 % run the CNN
 res = vl_simplenn(net, im_) ;
@@ -72,7 +72,7 @@ net.mode = 'test' ;
 im = imread('peppers.png') ;
 im_ = single(im) ; % note: 0-255 range
 im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
-im_ = im_ - net.meta.normalization.averageImage ;
+im_ = bsxfun(@minus, im_, net.meta.normalization.averageImage) ;
 
 % run the CNN
 net.eval({'data', im_}) ;
