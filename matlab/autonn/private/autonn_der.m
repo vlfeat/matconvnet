@@ -23,8 +23,8 @@ function derFunc = autonn_der(func)
   end
 end
 
-function dx = reshape_der(x, ~, dy)  %#ok<*DEFNU>
-  dx = reshape(dy, size(x)) ;
+function dx = reshape_der(x, varargin)  %#ok<*DEFNU>
+  dx = reshape(varargin{end}, size(x)) ;
 end
 
 function dx = permute_der(~, dim, dy)
