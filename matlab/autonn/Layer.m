@@ -260,7 +260,7 @@ classdef Layer < matlab.mixin.Copyable
     end
     
     function c = times(a, b)
-      % optimization: for simple scalar factors, use a vl_nnwsum layer
+      % optimization: for simple scalar constants, use a vl_nnwsum layer
       if isnumeric(a) && isscalar(a)
         c = Layer(@vl_nnwsum, b, 'weights', a) ;
       elseif isnumeric(b) && isscalar(b)
@@ -270,10 +270,18 @@ classdef Layer < matlab.mixin.Copyable
       end
     end
     function c = rdivide(a, b)
-      c = Layer(@vl_nnbinaryop, a, b, @rdivide) ;
+      if isnumeric(b) && isscalar(b)  % optimization for scalar constants
+        c = Layer(@vl_nnwsum, a, 'weights', 1 / b) ;
+      else
+        c = Layer(@vl_nnbinaryop, a, b, @rdivide) ;
+      end
     end
     function c = ldivide(a, b)
-      c = Layer(@vl_nnbinaryop, a, b, @ldivide) ;
+      if isnumeric(a) && isscalar(a)  % optimization for scalar constants
+        c = Layer(@vl_nnwsum, b, 'weights', 1 / a) ;
+      else
+        c = Layer(@vl_nnbinaryop, a, b, @ldivide) ;
+      end
     end
     function c = power(a, b)
       c = Layer(@vl_nnbinaryop, a, b, @power) ;
@@ -287,7 +295,7 @@ classdef Layer < matlab.mixin.Copyable
     end
     
     function c = mtimes(a, b)
-      % optimization: for simple scalar factors, use a vl_nnwsum layer
+      % optimization: for simple scalar constants, use a vl_nnwsum layer
       if isnumeric(a) && isscalar(a)
         c = Layer(@vl_nnwsum, b, 'weights', a) ;
       elseif isnumeric(b) && isscalar(b)
@@ -297,10 +305,18 @@ classdef Layer < matlab.mixin.Copyable
       end
     end
     function c = mrdivide(a, b)
-      c = Layer(@vl_nnmatrixop, a, b, @mrdivide) ;
+      if isnumeric(b) && isscalar(b)  % optimization for scalar constants
+        c = Layer(@vl_nnwsum, a, 'weights', 1 / b) ;
+      else
+        c = Layer(@vl_nnmatrixop, a, b, @mrdivide) ;
+      end
     end
     function c = mldivide(a, b)
-      c = Layer(@vl_nnmatrixop, a, b, @mldivide) ;
+      if isnumeric(a) && isscalar(a)  % optimization for scalar constants
+        c = Layer(@vl_nnwsum, b, 'weights', 1 / a) ;
+      else
+        c = Layer(@vl_nnmatrixop, a, b, @mldivide) ;
+      end
     end
     function c = mpower(a, b)
       c = Layer(@vl_nnmatrixop, a, b, @mpower) ;
