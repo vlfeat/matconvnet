@@ -1,13 +1,11 @@
-function [dx, varargout] = repmat_der(~, varargin)
+function dx = repmat_der(~, varargin)
 %REPMAT_DER
 %   REPMAT_DER(X, N, DZDY)
 %   REPMAT_DER(X, D1, D2, ..., DZDY)
 %   REPMAT_DER(X, D, DZDY)
-%   Derivative of REPMAT function. Same syntax as native REPMAT, plus
-%   derivative.
-%   Note all the returned derivatives are empty except for the first one,
-%   corresponding to X.
-  
+%   Derivative of REPMAT function, w.r.t. first input. Same syntax as
+%   native REPMAT, plus derivative.
+
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.
 %
@@ -44,9 +42,5 @@ function [dx, varargout] = repmat_der(~, varargin)
       dx = reshape(dx, [sz(1:dim-1), sz(dim) / reps(dim), sz(dim+1:end)]) ;
     end
   end
-  
-  % return empty derivatives for other arguments
-  varargout = cell(1, numel(varargin)) ;
-  varargout{1} = dx ;
 end
 
