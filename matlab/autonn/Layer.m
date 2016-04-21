@@ -38,6 +38,7 @@ classdef Layer < matlab.mixin.Copyable
     name = []  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
     meta = []  % optional meta properties
+    source = []  % call stack (source files and line numbers) where this Layer was created
   end
   
   properties (SetAccess = {?Net}, GetAccess = public)
@@ -50,6 +51,8 @@ classdef Layer < matlab.mixin.Copyable
   
   methods
     function obj = Layer(func, varargin)  % wrap a function call
+      obj.saveStack() ;  % record source file and line number, for debugging
+      
       if nargin == 0 && (isa(obj, 'Input') || isa(obj, 'Param'))
         return  % called during Input or Param construction, nothing to do
       end
@@ -347,10 +350,13 @@ classdef Layer < matlab.mixin.Copyable
       end
       fprintf('\n%s', name) ;
       
-      if ~isempty(name) && ~isempty(obj.inputs)
-        if numel(name) > 30  % line break for long names
-          fprintf('\n')
-        end
+      if numel(name) > 30  % line break for long names
+        fprintf('\n')
+      end
+      if isempty(obj.func)  % other classes, such as Input or Param
+        fprintf(' = %s\n\n', class(obj)) ;
+      else
+        % a standard Layer, expressing a function call
         fprintf(' = %s(', char(obj.func)) ;
         
         for i = 1:numel(obj.inputs)
@@ -379,13 +385,16 @@ classdef Layer < matlab.mixin.Copyable
             fprintf(', ') ;
           end
         end
-        fprintf(')') ;
-      else
-        fprintf(' = ') ;
+        fprintf(')\n\n') ;
       end
-      fprintf('\n\n') ;
       
       disp(obj) ;
+      
+      if ~isempty(obj.source)
+        [~, file, ext] = fileparts(obj.source(1).file) ;
+        fprintf('Defined in <a href="matlab:opentoline(''%s'',%i)">%s%s, line %i</a>.\n', ...
+          obj.source(1).file, obj.source(1).line, file, ext, obj.source(1).line) ;
+      end
     end
   end
   
@@ -458,6 +467,24 @@ classdef Layer < matlab.mixin.Copyable
           end
         end
       end
+    end
+    
+    function saveStack(obj)
+      % record call stack (source files and line numbers), starting with
+      % the first function in user-land (not part of autonn).
+      stack = dbstack('-completenames') ;
+      
+      % current file's directory (e.g. <MATCONVNET>/matlab/autonn)
+      p = [fileparts(stack(1).file), filesep] ;
+      
+      % find a non-matching directory (i.e., not part of autonn directly)
+      for i = 2:numel(stack)
+        if ~strncmp(p, stack(i).file, numel(p))
+          obj.source = stack(i:end) ;
+          return
+        end
+      end
+      obj.source = struct('file',{}, 'name',{}, 'line',{}) ;
     end
   end
   

@@ -80,10 +80,10 @@ classdef Net < handle
       
       % allocate memory
       net.forward = Net.initStruct(numel(idx), 'func', 'name', ...
-          'args', 'inputVars', 'inputArgPos', 'outputVar') ;
+          'source', 'args', 'inputVars', 'inputArgPos', 'outputVar') ;
       net.test = net.forward ;
       net.backward = Net.initStruct(numel(idx), 'func', 'name', ...
-          'args', 'inputVars', 'inputArgPos', 'numInputDer') ;
+          'source', 'args', 'inputVars', 'inputArgPos', 'numInputDer') ;
       
       % there is one var for the output of each Layer in objs; plus another
       % to hold its derivative. note if a Layer has multiple outputs, they
@@ -92,7 +92,7 @@ classdef Net < handle
       
       numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
       net.params = Net.initStruct(numParams, 'name', 'var', ...
-          'weightDecay', 'learningRate', 'trainMethod') ;
+          'weightDecay', 'learningRate', 'source', 'trainMethod') ;
       net.inputs = struct() ;
       
       % first, handle Inputs and Params
@@ -113,6 +113,7 @@ classdef Net < handle
           net.params(p).name = obj.name ;
           net.params(p).weightDecay = obj.weightDecay ;
           net.params(p).learningRate = obj.learningRate ;
+          net.params(p).source = obj.source ;
           
           % store index of training method (defined in Param.trainMethods)
           net.params(p).trainMethod = find(strcmp(obj.trainMethod, Param.trainMethods)) ;
@@ -128,6 +129,7 @@ classdef Net < handle
         obj = objs{idx(k)} ;
         layer.func = obj.func ;
         layer.name = obj.name ;
+        layer.source = obj.source ;
         layer.outputVar = 2 * idx(k) - 1 ;
         net.forward(k) = Net.parseArgs(layer, obj.inputs) ;
       end
@@ -140,6 +142,7 @@ classdef Net < handle
         % add backward function to execution order
         layer.func = autonn_der(obj.func) ;
         layer.name = obj.name ;
+        layer.source = obj.source ;
         layer = Net.parseArgs(layer, obj.inputs) ;
         
         % figure out position of derivative argument: it's right before
@@ -185,6 +188,7 @@ classdef Net < handle
         
         % add to execution order
         layer.name = obj.name ;
+        layer.source = obj.source ;
         layer.outputVar = 2 * idx(k) - 1 ;
         
         % default is to use the same arguments
