@@ -273,7 +273,6 @@ function state = accumulate_gradients(state, net, opts, batchSize, mmap)
 assert(isequal(Param.trainMethods, {'gradient', 'average', 'none'})) ;
 
 paramVars = [net.params.var] ;
-paramVars = paramVars([net.params.trainMethod] ~= 3) ;  % ignore trainMethod = 'none'
 w = net.getValue(paramVars) ;
 dw = net.getDer(paramVars) ;
 
