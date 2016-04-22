@@ -46,4 +46,4 @@ the previous name of the C++11 standard argument:
  * In MATLAB run: `mex -setup c++`.
  * Run `edit(fullfile(prefdir, 'mex_C++_glnxa64.xml'))` to edit your MATLAB
  compiler options.
- * Replace all occurrances of `-std=c++11` with `-std=c++0x` and save the file.
+ * Replace all occurrences of `-std=c++11` with `-std=c++0x` and save the file.

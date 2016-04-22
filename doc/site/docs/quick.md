@@ -52,7 +52,7 @@ the [installation instructions](install.md).
 ## Using DAG models
 
 The example above exemplifies using a model using the SimpleNN
-wrapper. More complex models use instead the DagNN wrapper. For
+wrapper. More complex models use the DagNN wrapper instead. For
 example, to run GoogLeNet use:
 
 ```matlab
