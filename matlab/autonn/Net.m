@@ -481,21 +481,23 @@ classdef Net < handle
       for i = 1:n
         data = net.vars{net.diagnostics(i).var}(:) ;
         ps = get(s.lines(i), 'YData') ;
-        ps = [ps(2:end), mean(data)] ;
+        ps = [ps(2:end), gather(mean(data))] ;
         set(s.lines(i), 'YData', ps) ;
         
-        if ~isscalar(data)
-          s.mins{i} = [s.mins{i}(2:end), min(data)] ;
-          s.maxs{i} = [s.maxs{i}(2:end), max(data)] ;
-          
-          valid = find(~isnan(s.mins{i})) ;
-          set(s.patches(i), 'XData', [valid, valid(end:-1:1)], ...
-            'YData', [s.mins{i}(valid), s.maxs{i}(valid(end:-1:1))]) ;
-          if ~isempty(valid)
-            set(s.ax(i), 'YLim', [min(s.mins{i}), max(s.maxs{i}) + 0.01 * abs(max(s.maxs{i}))]) ;
-          end
-        else
-          if ~all(isnan(ps))
+        if ~all(isnan(ps))
+          if ~isscalar(data)
+            mi = gather(min(data)) ;
+            ma = gather(max(data)) ;
+            if mi ~= ma
+              s.mins{i} = [s.mins{i}(2:end), mi] ;
+              s.maxs{i} = [s.maxs{i}(2:end), ma] ;
+            
+              valid = find(~isnan(s.mins{i})) ;
+              set(s.patches(i), 'XData', [valid, valid(end:-1:1)], ...
+                'YData', [s.mins{i}(valid), s.maxs{i}(valid(end:-1:1))]) ;
+              set(s.ax(i), 'YLim', [min(s.mins{i}), max(s.maxs{i})]) ;
+            end
+          else
             set(s.ax(i), 'YLim', [min(ps), max(ps) + 0.01 * abs(max(ps))]) ;
           end
         end
