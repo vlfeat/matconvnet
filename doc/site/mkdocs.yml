@@ -15,6 +15,7 @@ pages:
   - CNN Wrappers: 'wrappers.md'
   - Pretrained CNNs: 'pretrained.md'
   - Training new CNNs: 'training.md'
+  - Spatial Transformers: 'spatial-transformer.md'
   - Using a GPU: 'gpu.md'
   - About: 'about.md'
   - Frequently-asked questions: 'faq.md'
@@ -22,6 +23,7 @@ pages:
 - Functions:
   - Index: 'functions.md'
   - vl_nnbnorm: 'mfiles/vl_nnbnorm.md'
+  - vl_nnbilinearsampler: 'mfiles/vl_nnbilinearsampler.md'
   - vl_nnconcat: 'mfiles/vl_nnconcat.md'
   - vl_nnspnorm: 'mfiles/vl_nnspnorm.md'
   - vl_nnpdist: 'mfiles/vl_nnpdist.md'
