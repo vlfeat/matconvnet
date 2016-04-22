@@ -1,42 +1,47 @@
 % script to initialize a small spatial transformer networl
 % for cluttered MNIST:
-function nn = cnn_stn_cluttered_mnist_init(imsz)
+function nn = cnn_stn_cluttered_mnist_init(imsz, use_transformer)
   % init the object:
   nn = dagnn.DagNN();
-  % ************************** localization network ****************************
-  l_mp1 = dagnn.Pooling('method', 'max', 'poolSize', [2 2],'pad', 0, 'stride', 2);
-  nn.addLayer('l_mp1', l_mp1, {'input'}, {'x1'});
-  l_cnv1 = dagnn.Conv('size',[5 5 1 20],'pad',0,'stride',1,'hasBias',true);
-  nn.addLayer('l_cnv1', l_cnv1, {'x1'}, {'x2'}, {'lc1f','lc1b'});
-  nn.addLayer('l_re1', dagnn.ReLU(), {'x2'}, {'x3'});
 
-  l_mp2 = dagnn.Pooling('method', 'max', 'poolSize', [2 2],'pad', 0, 'stride', 2);
-  nn.addLayer('l_mp2', l_mp2, {'x3'}, {'x4'});
-  l_cnv2 = dagnn.Conv('size',[5 5 20 20],'pad',0,'stride',1,'hasBias',true);
-  nn.addLayer('l_cnv2', l_cnv2, {'x4'}, {'x5'}, {'lc2f','lc2b'});
-  nn.addLayer('l_re2', dagnn.ReLU(), {'x5'}, {'x6'});
+  if use_transformer
+    % ************************** localization network ****************************
+    l_mp1 = dagnn.Pooling('method', 'max', 'poolSize', [2 2],'pad', 0, 'stride', 2);
+    nn.addLayer('l_mp1', l_mp1, {'input'}, {'x1'});
+    l_cnv1 = dagnn.Conv('size',[5 5 1 20],'pad',0,'stride',1,'hasBias',true);
+    nn.addLayer('l_cnv1', l_cnv1, {'x1'}, {'x2'}, {'lc1f','lc1b'});
+    nn.addLayer('l_re1', dagnn.ReLU(), {'x2'}, {'x3'});
 
-  l_fc1 = dagnn.Conv('size',[9,9,20,50],'pad',0,'stride',1,'hasBias',true);
-  nn.addLayer('l_fc1', l_fc1, {'x6'}, {'x7'}, {'lfcf','lfcb'});
-  nn.addLayer('l_re3', dagnn.ReLU(), {'x7'}, {'x8'});
+    l_mp2 = dagnn.Pooling('method', 'max', 'poolSize', [2 2],'pad', 0, 'stride', 2);
+    nn.addLayer('l_mp2', l_mp2, {'x3'}, {'x4'});
+    l_cnv2 = dagnn.Conv('size',[5 5 20 20],'pad',0,'stride',1,'hasBias',true);
+    nn.addLayer('l_cnv2', l_cnv2, {'x4'}, {'x5'}, {'lc2f','lc2b'});
+    nn.addLayer('l_re2', dagnn.ReLU(), {'x5'}, {'x6'});
 
-  % output affine transforms:
-  l_out = dagnn.Conv('size',[1,1,50,6],'pad',0,'stride',1,'hasBias',true);
-  nn.addLayer('l_out', l_out, {'x8'}, {'aff'}, {'lof','lob'});
-  %***** NEED TO SET THE PARAMETERS OF THIS LAST LAYER TO OUTPUT IDENTITY *******
+    l_fc1 = dagnn.Conv('size',[9,9,20,50],'pad',0,'stride',1,'hasBias',true);
+    nn.addLayer('l_fc1', l_fc1, {'x6'}, {'x7'}, {'lfcf','lfcb'});
+    nn.addLayer('l_re3', dagnn.ReLU(), {'x7'}, {'x8'});
 
-  % ************************** spatial transformer ******************************
-  aff_grid = dagnn.AffineGridGenerator('Ho',imsz(1),'Wo',imsz(2));
-  nn.addLayer('aff', aff_grid,{'aff'},{'grid'});
+    % output affine transforms:
+    l_out = dagnn.Conv('size',[1,1,50,6],'pad',0,'stride',1,'hasBias',true);
+    nn.addLayer('l_out', l_out, {'x8'}, {'aff'}, {'lof','lob'});
+    %***** NEED TO SET THE PARAMETERS OF THIS LAST LAYER TO OUTPUT IDENTITY *******
 
-  sampler = dagnn.BilinearSampler();
-  nn.addLayer('samp',sampler,{'input','grid'},{'xST'});
-  % *****************************************************************************
+    % ************************** spatial transformer ******************************
+    aff_grid = dagnn.AffineGridGenerator('Ho',imsz(1),'Wo',imsz(2));
+    nn.addLayer('aff', aff_grid,{'aff'},{'grid'});
+
+    sampler = dagnn.BilinearSampler();
+    nn.addLayer('samp',sampler,{'input','grid'},{'xST'});
+    % *****************************************************************************
+  end
 
   % ************************** classification network ***************************
   % average pooling:
   c_ap1 = dagnn.Pooling('method', 'avg', 'poolSize', [2 2],'pad', 0, 'stride', 2);
-  nn.addLayer('c_ap1', c_ap1, {'xST'}, {'xc0'}); %output dim: 60/2 = 30
+  in_name = 'input';
+  if use_transformer, in_name = 'xST'; end
+  nn.addLayer('c_ap1', c_ap1, {in_name}, {'xc0'}); %output dim: 60/2 = 30
 
   % classification net:
   c_cnv1 = dagnn.Conv('size',[7 7 1 32],'pad',0,'stride',1,'hasBias',true);
@@ -65,11 +70,13 @@ function nn = cnn_stn_cluttered_mnist_init(imsz)
   % initialize the weights:
   nn.initParams();
 
-  % VERY IMPORTANT: bias the transformation to IDENTITY:
-  f_prev = nn.params(nn.getParamIndex('lof')).value;
-  nn.params(nn.getParamIndex('lof')).value = 0*f_prev;
+  if use_transformer
+    % VERY IMPORTANT: bias the transformation to IDENTITY:
+    f_prev = nn.params(nn.getParamIndex('lof')).value;
+    nn.params(nn.getParamIndex('lof')).value = 0*f_prev;
 
-  b_prev = 0*nn.params(nn.getParamIndex('lob')).value;
-  b_prev(1) = 1; b_prev(4) = 1;
-  nn.params(nn.getParamIndex('lob')).value = b_prev;
+    b_prev = 0*nn.params(nn.getParamIndex('lob')).value;
+    b_prev(1) = 1; b_prev(4) = 1;
+    nn.params(nn.getParamIndex('lob')).value = b_prev;
+  end
 end

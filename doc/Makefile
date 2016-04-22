@@ -15,6 +15,7 @@ vl_argparse.m \
 vl_compilenn.m \
 vl_imreadjpeg.m \
 vl_nnbnorm.m \
+vl_nnbilinearsampler.m \
 vl_nnconcat.m \
 vl_nnconv.m \
 vl_nnconvt.m \
