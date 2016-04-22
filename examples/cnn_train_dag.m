@@ -428,6 +428,7 @@ if numGpus > 1
     delete(opts.memoryMapFile) ;
   end
 
+end
 if cold
   if numGpus == 1
     gpuDevice(opts.gpus) ;
@@ -436,4 +437,4 @@ if cold
   end
 end
 
-end
+%end
