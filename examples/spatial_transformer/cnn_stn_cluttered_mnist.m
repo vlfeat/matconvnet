@@ -7,14 +7,16 @@ run(fullfile(fileparts(mfilename('fullpath')),...
 opts.expDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist') ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 opts.dataDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist') ;
-opts.dataDbFname = '/Users/ankushgupta/cdt/research/text_spotting/text-rnn/matconvnet-rnn/mnistUtils/cluttered_mnist.mat' ;
+opts.dataDbFname = '/homes/angupta/data/cluttered_mnist.mat' ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train = struct() ;
-opts.train.numEpochs = 30 ;
-opts.train.gpus = [] ; % add a gpu index here
-opts.train.learningRate = 0.001 ;
+opts.train.numEpochs = 60 ;
+opts.train.gpus = [2] ; % add a gpu index here
+opts.train.learningRate = 0.00005 ;
+opts.train.batchSize = 256 ;
 opts = vl_argparse(opts, varargin) ;
-if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
+opts.train.gpus
+%if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % --------------------------------------------------------------------
 %                                                         Prepare data
