@@ -29,6 +29,7 @@ end
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts.train.plotStatistics = true ;
+opts.train.plotDiagnostics = true ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
@@ -75,6 +76,8 @@ case 'autonn'
     x = vl_nnrelu(x) ;
     x = vl_nnconv(x, 'size', [1, 1, 500, 10]) ;
   end
+  
+  Layer.setDiagnostics(x.find(@vl_nnconv), true) ;
   
   objective = vl_nnloss(x, labels, 'loss', 'softmaxlog') ;
   error = vl_nnloss(x, labels, 'loss', 'classerror') ;

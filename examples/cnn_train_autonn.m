@@ -30,6 +30,7 @@ opts.profile = false ;
 opts.derOutputs = 1 ;
 opts.stats = 'losses' ;  %list of layers that are stats (loss, error), their names, or 'losses' for automatic
 opts.plotStatistics = true ;
+opts.plotDiagnostics = false ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -254,6 +255,10 @@ for t=1:opts.batchSize:numel(subset)
     fprintf(' %.3f', statsAccum(i) / num) ;
   end
   fprintf('\n') ;
+  
+  if opts.plotDiagnostics && mod(t-1, opts.batchSize * 5) == 0
+    net.plotDiagnostics(200) ;
+  end
 end
 
 % return structure with statistics

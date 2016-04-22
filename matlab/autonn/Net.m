@@ -48,6 +48,7 @@ classdef Net < handle
   end
   properties (SetAccess = public, GetAccess = public)
     meta = []  % optional meta properties
+    diagnostics = []  % list of diagnosed vars (see Net.plotDiagnostics)
   end
 
   methods
@@ -216,6 +217,39 @@ classdef Net < handle
         
         net.test(k) = Net.parseArgs(layer, args) ;
       end
+      
+      % network outputs, activate diagnostics automatically if empty
+      for k = 1:numel(varargin)
+        if isempty(varargin{k}.diagnostics)
+          varargin{k}.diagnostics = true ;
+        end
+      end
+      % store diagnostics info for vars
+      valid = false(numel(net.vars), 1) ;
+      net.diagnostics = Net.initStruct(numel(net.vars), 'var', 'name') ;
+      for k = 1:numel(objs)
+        if isequal(objs{k}.diagnostics, true)
+          var = objs{k}.outputVar ;
+          name = objs{k}.name ;
+          if isempty(name)
+            % assign a name such as vl_nnconv1, vl_nnconv2...
+            if isa(objs{k}, 'Input') || isa(objs{k}, 'Param')
+              n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k-1))) ;
+              name = sprintf('%s%i', class(objs{k}), n) ;
+            else
+              n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k-1))) ;
+              name = sprintf('%s%i', strrep(func2str(objs{k}.func), '_', '\_'), n) ;
+            end
+          end
+          
+          net.diagnostics(var).var = var ;
+          net.diagnostics(var).name = name ;
+          net.diagnostics(var + 1).var = var + 1 ;
+          net.diagnostics(var + 1).name = ['\partial', name] ;
+          valid([var, var + 1]) = true ;
+        end
+      end
+      net.diagnostics(~valid) = [] ;
     end
     
     function move(net, device)
@@ -372,6 +406,77 @@ classdef Net < handle
       end
     end
     
+    function plotDiagnostics(net, numPoints)
+      fig = findobj(0, 'Type','figure', 'Tag', 'Net.plotDiagnostics') ;
+      if isempty(fig)
+        fig = figure() ;
+        s = [] ;
+      else
+        s = get(fig, 'UserData') ;
+      end
+      n = numel(net.diagnostics) ;
+      
+      if ~isstruct(s) || ~isfield(s, 'diagnostics') || ~isequal(s.diagnostics, net.diagnostics) || ...
+        ~isequal(s.numPoints, numPoints)
+        clf ;  % initialize new figure, with n axes
+        s.diagnostics = net.diagnostics ;
+        s.numPoints = numPoints ;
+        colors = get(0, 'DefaultAxesColorOrder') ;
+        if n < 4  % vertical layout
+          m = n ;
+          w = 1 ;
+        else  % 2-columns layout
+          m = ceil(n / 2) ;
+          w = 0.5 ;
+        end
+        for i = 1:n
+          if i <= m
+            s.ax(i) = axes('OuterPosition', [0, 1-i/m, w, 1/m]) ;
+          else
+            s.ax(i) = axes('OuterPosition', [w, 1-(i-m)/m, w, 1/m]) ;
+          end
+          
+          color = colors(mod(floor((i-1)/2), size(colors,1)) + 1, :) ;
+          s.lines(i) = line(1:numPoints, NaN(1, numPoints), 'Color', color);
+          
+          s.mins{i} = NaN(1, numPoints) ;
+          s.maxs{i} = NaN(1, numPoints) ;
+
+          s.patches(i) = patch('XData', [], 'YData', [], 'EdgeColor', 'none', 'FaceColor', color, 'FaceAlpha', 0.5) ;
+        
+          set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {' '}) ;
+          ylabel(net.diagnostics(i).name) ;
+        end
+        set(fig, 'Tag', 'Net.plotDiagnostics', 'UserData', s) ;
+      end
+      
+      % add new points and roll buffer
+      for i = 1:n
+        data = net.vars{net.diagnostics(i).var}(:) ;
+        ps = get(s.lines(i), 'YData') ;
+        ps = [ps(2:end), mean(data)] ;
+        set(s.lines(i), 'YData', ps) ;
+        
+        if ~isscalar(data)
+          s.mins{i} = [s.mins{i}(2:end), min(data)] ;
+          s.maxs{i} = [s.maxs{i}(2:end), max(data)] ;
+          
+          valid = find(~isnan(s.mins{i})) ;
+          set(s.patches(i), 'XData', [valid, valid(end:-1:1)], ...
+            'YData', [s.mins{i}(valid), s.maxs{i}(valid(end:-1:1))]) ;
+          if ~isempty(valid)
+            set(s.ax(i), 'YLim', [min(s.mins{i}), max(s.maxs{i}) + 0.01 * abs(max(s.maxs{i}))]) ;
+          end
+        else
+          if ~all(isnan(ps))
+            set(s.ax(i), 'YLim', [min(ps), max(ps) + 0.01 * abs(max(ps))]) ;
+          end
+        end
+      end
+      set(fig, 'UserData', s) ;
+      drawnow ;
+    end
+    
     function displayVars(net, vars)
       % get information on each var, and corresponding derivative
       if nargin < 2
@@ -440,6 +545,7 @@ classdef Net < handle
       s.inputs = net.inputs ;
       s.params = net.params ;
       s.meta = net.meta ;
+      s.diagnostics = net.diagnostics ;
       
       % only save var contents corresponding to parameters, all other vars
       % are transient
@@ -457,6 +563,7 @@ classdef Net < handle
       net.inputs = s.inputs ;
       net.params = s.params ;
       net.meta = s.meta ;
+      net.diagnostics = s.diagnostics ;
     end
   end
   

@@ -39,6 +39,7 @@ classdef Layer < matlab.mixin.Copyable
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
     meta = []  % optional meta properties
     source = []  % call stack (source files and line numbers) where this Layer was created
+    diagnostics = []  % whether to plot the mean, min and max of the Layer's output var. empty for automatic (network outputs only).
   end
   
   properties (SetAccess = {?Net}, GetAccess = public)
@@ -158,6 +159,7 @@ classdef Layer < matlab.mixin.Copyable
       obj.deepCopyReset() ;
       other = obj.deepCopyRecursive(varargin) ;
     end
+    
     
     % overloaded MatConvNet functions
     function y = vl_nnconv(obj, varargin)
@@ -514,6 +516,16 @@ classdef Layer < matlab.mixin.Copyable
         if isa(layer, 'Layer') && isempty(layer.name)
           layer.name = modifier(varNames{i}) ;
         end
+      end
+    end
+    
+    function setDiagnostics(obj, value)
+      if iscell(obj)
+        for i = 1:numel(obj)
+          obj{i}.diagnostics = value ;
+        end
+      else
+        obj.diagnostics = value ;
       end
     end
   end
