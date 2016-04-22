@@ -83,7 +83,7 @@ classdef Layer < matlab.mixin.Copyable
       
     end
     
-    function objs = find(obj, what, n, objs)
+    function objs = find(obj, varargin)
       % OBJS = OBJ.FIND()
       % OBJS = OBJ.FIND(NAME/FUNC/CLASS)
       % Finds layers, starting at the given output layer. The search
@@ -97,50 +97,41 @@ classdef Layer < matlab.mixin.Copyable
       % found in the order of a backward pass (e.g. from the last layer,
       % which corresponds to N = -1).
       % Raises an error if no object is found.
+      %
+      % OBJS = OBJ.FIND(..., 'depth', D)
+      % Only recurses D depth levels (i.e., D=1 means that only OBJ's
+      % inputs will be searched).
       
-      if nargin < 2, what = [] ;end
-      if nargin < 3, n = 0 ; end
-      if nargin < 4, objs = {} ; end
-      
-      % 'what' is defined, but it may be just N
-      if nargin == 2 && isnumeric(what)
-        n = what ;
-        what = [] ;
+      % parse name-value pairs, and leave the rest in varargin
+      opts.depth = inf ;
+      firstArg = find(cellfun(@(s) ischar(s) && any(strcmp(s, fieldnames(opts))), varargin), 1) ;
+      if ~isempty(firstArg)
+        opts = vl_argparse(opts, varargin(firstArg:end), 'nonrecursive') ;
+        varargin(firstArg:end) = [] ;
       end
       
-      if n == 0 || numel(objs) < abs(n)
-        % recurse on inputs not on the list yet (when in forward order)
-        if n >= 0
-          for i = 1:numel(obj.inputs)
-            if isa(obj.inputs{i}, 'Layer') && ~any(cellfun(@(o) isequal(obj.inputs{i}, o), objs))
-              objs = obj.inputs{i}.find(what, n, objs) ;
-            end
-          end
+      what = [] ;
+      n = 0 ;
+      if isscalar(varargin)
+        if isnumeric(varargin{1})
+          n = varargin{1} ;
+        else
+          what = varargin{1} ;
         end
-        
-        % add self to list if it matches the pattern
-        if ischar(what)
-          if isequal(obj.name, what) || isa(obj, what)
-            objs{end+1} = obj ;
-          end
-        elseif isequal(obj.func, what)
-          objs{end+1} = obj ;
-        end
-        
-        % recurse on inputs not on the list yet (when in backward order)
-        if n < 0
-          for i = 1:numel(obj.inputs)
-            if isa(obj.inputs{i}, 'Layer') && ~any(cellfun(@(o) isequal(obj.inputs{i}, o), objs))
-              objs = obj.inputs{i}.find(what, n, objs) ;
-            end
-          end
-        end
+      elseif numel(varargin) == 2
+        what = varargin{1} ;
+        n = varargin{2} ;
+      else
+        error('Too many input arguments.') ;
       end
       
-      if nargin < 4 && n ~= 0
-        % at the end of the original call, choose the Nth object
+      % do the work
+      objs = obj.findRecursive(what, n, opts.depth, {}) ;
+      
+      % choose the Nth object
+      if n ~= 0
         assert(numel(objs) >= abs(n), 'Cannot find a layer fitting the specified criteria.')
-        objs = objs{abs(n)} ;
+        objs = objs{mod(n - 1, numel(objs)) + 1} ;
       end
     end
     
@@ -423,6 +414,34 @@ classdef Layer < matlab.mixin.Copyable
       
       % assign an output var sequentially, leaving slots for derivatives
       obj.outputVar = numel(layers) * 2 - 1 ;
+    end
+    
+    function objs = findRecursive(obj, what, n, depth, objs)
+      if n > 0 && numel(objs) >= n
+        return  % early break, already found the object we're after
+      end
+      
+      % recurse on inputs not on the list yet (forward order)
+      if depth > 0
+        for i = 1:numel(obj.inputs)
+          if isa(obj.inputs{i}, 'Layer') && ~any(cellfun(@(o) isequal(obj.inputs{i}, o), objs))
+            objs = obj.inputs{i}.findRecursive(what, n, depth - 1, objs) ;
+          end
+        end
+      end
+      
+      % add self to list if it matches the pattern
+      if ischar(what)
+        if any(what == '*') || any(what == '?')  % wildcards
+          if ~isempty(regexp(obj.name, regexptranslate('wildcard', what), 'once'))
+            objs{end+1} = obj ;
+          end
+        elseif isequal(obj.name, what) || isa(obj, what)
+          objs{end+1} = obj ;
+        end
+      elseif isequal(obj.func, what)
+        objs{end+1} = obj ;
+      end
     end
     
     function deepCopyReset(obj)
