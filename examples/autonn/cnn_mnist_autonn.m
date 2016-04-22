@@ -77,7 +77,14 @@ case 'autonn'
     x = vl_nnconv(x, 'size', [1, 1, 500, 10]) ;
   end
   
-  Layer.setDiagnostics(x.find(@vl_nnconv), true) ;
+%   % diagnose outputs of conv layers
+%   Layer.setDiagnostics(x.find(@vl_nnconv), true) ;
+
+  % diagnose all Params associated with conv layers
+  convs = x.find(@vl_nnconv) ;
+  for i = 1:numel(convs)
+    Layer.setDiagnostics(convs{i}.find('Param', 'depth',1), true) ;
+  end
   
   objective = vl_nnloss(x, labels, 'loss', 'softmaxlog') ;
   error = vl_nnloss(x, labels, 'loss', 'classerror') ;

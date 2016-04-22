@@ -76,6 +76,40 @@ classdef Net < handle
         net.meta = objs{idx}.meta ;
       end
       
+      % figure out the execution order, and list layer objects
+      root.resetOrder() ;
+      objs = root.buildOrder({}) ;
+      
+      % automatically set missing names, according to the execution order
+      for k = 1:numel(objs)
+        if isempty(objs{k}.name)
+          if isa(objs{k}, 'Input')  % input1, input2, ...
+            n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k-1))) ;
+            objs{k}.name = sprintf('input%i', n) ;
+            
+          elseif ~isa(objs{k}, 'Param')  % vl_nnconv1, vl_nnconv2...
+            n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k-1))) ;
+            name = func2str(objs{k}.func) ;
+            if strncmp(name, 'vl_nn', 5), name(1:5) = [] ; end
+            name = strrep(name, '_', '\_') ;
+            objs{k}.name = sprintf('%s%i', name, n) ;
+            
+            % also set dependant Param names: vl_nnconv1_p1, ...
+            for i = 1:numel(objs{k}.inputs)
+              if isa(objs{k}.inputs{i}, 'Layer') && isempty(objs{k}.inputs{i}.name)
+                objs{k}.inputs{i}.name = sprintf('%s_p%i', objs{k}.name, i) ;
+              end
+            end
+          end
+        end
+      end
+      for k = 1:numel(objs)  % name any remaining objects
+        if isempty(objs{k}.name)
+          n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k-1))) ;
+          objs{k}.name = sprintf('%s%i', lower(class(objs{k})), n) ;
+        end
+      end
+      
       % indexes of callable Layer objects (not Inputs or Params)
       idx = find(cellfun(@(o) ~isa(o, 'Input') && ~isa(o, 'Param'), objs)) ;
       
@@ -224,28 +258,17 @@ classdef Net < handle
           varargin{k}.diagnostics = true ;
         end
       end
+      
       % store diagnostics info for vars
       valid = false(numel(net.vars), 1) ;
       net.diagnostics = Net.initStruct(numel(net.vars), 'var', 'name') ;
-      for k = 1:numel(objs)
+      for k = 1 : numel(objs)
         if isequal(objs{k}.diagnostics, true)
           var = objs{k}.outputVar ;
-          name = objs{k}.name ;
-          if isempty(name)
-            % assign a name such as vl_nnconv1, vl_nnconv2...
-            if isa(objs{k}, 'Input') || isa(objs{k}, 'Param')
-              n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k-1))) ;
-              name = sprintf('%s%i', class(objs{k}), n) ;
-            else
-              n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k-1))) ;
-              name = sprintf('%s%i', strrep(func2str(objs{k}.func), '_', '\_'), n) ;
-            end
-          end
-          
           net.diagnostics(var).var = var ;
-          net.diagnostics(var).name = name ;
+          net.diagnostics(var).name = objs{k}.name ;
           net.diagnostics(var + 1).var = var + 1 ;
-          net.diagnostics(var + 1).name = ['\partial', name] ;
+          net.diagnostics(var + 1).name = ['\partial', objs{k}.name] ;
           valid([var, var + 1]) = true ;
         end
       end
@@ -410,6 +433,9 @@ classdef Net < handle
       fig = findobj(0, 'Type','figure', 'Tag', 'Net.plotDiagnostics') ;
       if isempty(fig)
         fig = figure() ;
+        if isequal(fig, 1) || isequal(get(fig, 'Number'), 1)
+          fig = figure() ;  % avoid using figure 1, since it's used by cnn_train
+        end
         s = [] ;
       else
         s = get(fig, 'UserData') ;
@@ -417,8 +443,9 @@ classdef Net < handle
       n = numel(net.diagnostics) ;
       
       if ~isstruct(s) || ~isfield(s, 'diagnostics') || ~isequal(s.diagnostics, net.diagnostics) || ...
-        ~isequal(s.numPoints, numPoints)
+        ~isequal(s.numPoints, numPoints) || ~all(ishandle([s.ax, s.lines, s.patches]))
         clf ;  % initialize new figure, with n axes
+        s = [] ;
         s.diagnostics = net.diagnostics ;
         s.numPoints = numPoints ;
         colors = get(0, 'DefaultAxesColorOrder') ;
@@ -444,7 +471,7 @@ classdef Net < handle
 
           s.patches(i) = patch('XData', [], 'YData', [], 'EdgeColor', 'none', 'FaceColor', color, 'FaceAlpha', 0.5) ;
         
-          set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {' '}) ;
+          set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {' '}, 'FontSize', 8) ;
           ylabel(net.diagnostics(i).name) ;
         end
         set(fig, 'Tag', 'Net.plotDiagnostics', 'UserData', s) ;
