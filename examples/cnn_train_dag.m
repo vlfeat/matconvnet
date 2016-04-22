@@ -427,11 +427,13 @@ if numGpus > 1
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
   end
-end
+
 if cold
   if numGpus == 1
     gpuDevice(opts.gpus) ;
   else
     spmd, gpuDevice(opts.gpus(labindex)) ; end
   end
+end
+
 end
