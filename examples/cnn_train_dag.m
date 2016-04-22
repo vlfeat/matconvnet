@@ -443,3 +443,5 @@ if numGpus >= 1 && cold
     spmd, gpuDevice(opts.gpus(labindex)), end
   end
 end
+
+end
