@@ -21,7 +21,7 @@ showing how to train CNNs.
 ## Building blocks
 
 - [`vl_nnbnorm`](mfiles/vl_nnbnorm.md) Batch normalization.
-- [`vl_bilinearsampler`](mfiles/vl_nnbilinearsampler.md) Bilinear Samppler.
+- [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) Bilinear Samppler.
 - [`vl_nnconv`](mfiles/vl_nnconv.md) Linear convolution by a filter.
 - [`vl_nnconcat`](mfiles/vl_nnconcat.md) Concatenation.
 - [`vl_nnconvt`](mfiles/vl_nnconvt.md) Convolution transpose.

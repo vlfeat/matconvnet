@@ -4,9 +4,9 @@ function [net, info] = cnn_stn_cluttered_mnist(varargin)
 
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
-opts.expDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist-no-ST') ;
+opts.expDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist') ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
-opts.dataDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist-no-ST') ;
+opts.dataDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist') ;
 opts.dataDbFname = '/homes/angupta/data/cluttered_mnist.mat' ;  % TODO: change this to a URL
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.train = struct() ;
@@ -28,7 +28,7 @@ else
   mkdir(opts.expDir) ;
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
-net = cnn_stn_cluttered_mnist_init([60 60], false) ; % initialize the network
+net = cnn_stn_cluttered_mnist_init([60 60], true) ; % initialize the network
 net.meta.classes.name = arrayfun(@(x)sprintf('%d',x),1:10,'UniformOutput',false) ;
 
 % --------------------------------------------------------------------
