@@ -21,28 +21,27 @@ function varargout = cat_der(dim, varargin)
   if isscalar(dzdy)
     % special case, a scalar derivative propagates to all non-empty inputs
     valid = ~cellfun('isempty', varargin(1:end-1)) ;
-    valid = [false, valid] ;  % add slot for DIM derivative, which is empty
+    valid = [false, valid] ;  % add slot for DIM derivative, which is 0
     varargout = cell(size(valid)) ;
     varargout(valid) = {dzdy} ;
+    varargout{1} = 0 ;
     return
   end
 
-  % only need size along the specified dimension
-  sz = cellfun('size', varargin, dim) ;
-  
   % create indexing structure
-  n = ndims(dzdy) ;
-  idx = cell(1, n) ;
+  idx = cell(1, ndims(dzdy)) ;
   idx(:) = {':'} ;
   
   start = 1 ;
-  varargout = cell(1, numel(sz) + 1) ;  % leave slot for empty DIM derivative
+  varargout = cell(1, numel(varargin)) ;
   
-  for i = 1:numel(idx)
-    idx{dim} = start : start + sz(i) - 1 ;
+  for i = 1 : numel(varargin) - 1
+    sz = size(varargin{i}, dim) ;
+    idx{dim} = start : start + sz - 1 ;
     varargout{i + 1} = dzdy(idx{:}) ;
-    start = start + sz(i) ;
+    start = start + sz ;
   end
+  varargout{1} = 0 ;  % DIM derivative
 
 end
 
