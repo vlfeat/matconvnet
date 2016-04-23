@@ -434,6 +434,7 @@ if numGpus > 1
   if exist(opts.memoryMapFile)
     delete(opts.memoryMapFile) ;
   end
+
 end
 if numGpus >= 1 && cold
   fprintf('%s: resetting GPU\n', mfilename)
