@@ -84,28 +84,30 @@ classdef Net < handle
       for k = 1:numel(objs)
         if isempty(objs{k}.name)
           if isa(objs{k}, 'Input')  % input1, input2, ...
-            n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k-1))) ;
+            n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k))) ;
             objs{k}.name = sprintf('input%i', n) ;
             
-          elseif ~isa(objs{k}, 'Param')  % vl_nnconv1, vl_nnconv2...
-            n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k-1))) ;
+          elseif ~isempty(objs{k}.func)  % conv1, conv2...
+            n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k))) ;
             name = func2str(objs{k}.func) ;
-            if strncmp(name, 'vl_nn', 5), name(1:5) = [] ; end
-            name = strrep(name, '_', '\_') ;
+            
+            if strncmp(name, 'vl_nn', 5), name(1:5) = [] ; end  % shorten names
+            if strcmp(name, 'bnorm_wrapper'), name = 'bnorm' ; end
             objs{k}.name = sprintf('%s%i', name, n) ;
             
-            % also set dependant Param names: vl_nnconv1_p1, ...
-            for i = 1:numel(objs{k}.inputs)
-              if isa(objs{k}.inputs{i}, 'Layer') && isempty(objs{k}.inputs{i}.name)
-                objs{k}.inputs{i}.name = sprintf('%s_p%i', objs{k}.name, i) ;
+            % also set dependant Param names: conv1_p1, ...
+            ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
+            for i = 1:numel(ps)
+              if isempty(objs{k}.inputs{ps(i)}.name)
+                objs{k}.inputs{ps(i)}.name = sprintf('%s_p%i', objs{k}.name, i) ;
               end
             end
           end
         end
       end
-      for k = 1:numel(objs)  % name any remaining objects
+      for k = 1:numel(objs)  % name any remaining objects by class
         if isempty(objs{k}.name)
-          n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k-1))) ;
+          n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k))) ;
           objs{k}.name = sprintf('%s%i', lower(class(objs{k})), n) ;
         end
       end
@@ -472,7 +474,7 @@ classdef Net < handle
           s.patches(i) = patch('XData', [], 'YData', [], 'EdgeColor', 'none', 'FaceColor', color, 'FaceAlpha', 0.5) ;
         
           set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {' '}, 'FontSize', 8) ;
-          ylabel(net.diagnostics(i).name) ;
+          ylabel(strrep(net.diagnostics(i).name, '_', '\_')) ;
         end
         set(fig, 'Tag', 'Net.plotDiagnostics', 'UserData', s) ;
       end
