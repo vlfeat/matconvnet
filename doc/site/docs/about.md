@@ -23,6 +23,16 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta20 (April 2016).
+
+    **New features**
+
+    * New spatial bilinear resampler `vl_nnbilinearsampler.m` to warp
+      image spatially.
+
+    * New `cnn_stn_cluttered_mnist.m` examples demonstrating an
+      implementation o f spatial transformer networks.
+
 -   1.0-beta19 (April 2016).
 
     **New features**
