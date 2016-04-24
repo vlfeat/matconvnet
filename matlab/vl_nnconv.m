@@ -1,35 +1,34 @@
 %VL_NNCONV CNN convolution.
-%   Y = VL_NNCONV(X, F, B) computes the convolution of the image stack X
+%   Y = VL_NNCONV(X, F, B) computes the convolution of the image X
 %   with the filter bank F and biases B. If B is the empty matrix,
-%   then no biases are added. If F is the empty matrix, then
-%   the function does not filter the image, but still adds the
-%   biases as well as performing downsampling and padding as explained
-%   below.
+%   then no biases are added. If F is the empty matrix, then the
+%   function does not filter the image, but still adds the biases and
+%   applies downsampling and padding as explained below.
 %
-%   X is a SINGLE array of dimension H x W x D x N where (H,W) are
-%   the height and width of the image stack, D is the image depth
-%   (number of feature channels) and N the number of images in the
-%   stack.
+%   X is an array of dimension H x W x C x N where (H,W) are the
+%   height and width of the image stack, C is the number of feature
+%   channels, and N is the number of images in the batch.
 %
-%   F is a SINGLE array of dimension FW x FH x FD x K where (FH,FW)
-%   are the filter height and width and K the number o filters in the
-%   bank. D is the depth of each filter and must match the depth D of
-%   X. Alternatively, FD can *divide* the depth D; in this case,
-%   filters are assumed to form G=D/FD *groups* of equal size (where
-%   G must divide K). Each group of filters works on a consecutive
-%   subset of feature channels of the input array X.
+%   F is an array of dimension FW x FH x FC x K where (FH,FW) are the
+%   filter height and width and K the number o filters in the bank. FC
+%   is the number of feature channels in each filter and must match
+%   the number of feature channels C in X. Alternatively, FC can
+%   *divide* the C; in this case, filters are assumed to form G=C/FC
+%   *groups* of equal size (where G must divide K). Each group of
+%   filters works on a consecutive subset of feature channels of the
+%   input array X.
 %
-%   [DZDX, DZDF, DZDB] = VL_NNCONV(X, F, B, DZDY) computes the
-%   derivatives of the block projected onto DZDY. DZDX, DZDF, and
-%   DZDB, and DZDY have the same dimensions as X, F, B, and Y
-%   repsectively. In particular, if B is the empty matrix, then DZDB
-%   is also empty.
+%   [DX, DF, DB] = VL_NNCONV(X, F, B, DY) computes the derivatives of
+%   the operator projected onto P. DX, DF, DB, and DY have the same
+%   dimensions as X, F, B, and Y, respectively. In particular, if B is
+%   the empty matrix, then DB is also empty.
 %
-%   VL_NNCONV() implements a special `fully-connected' mode: when the
+%   VL_NNCONV() implements a special *fully-connected* mode: when the
 %   support of the filters matches exactly the support of the input
 %   image, the code uses an optimized path for faster computation.
 %
-%   VL_NNCONV(..., 'option', value, ...) takes the following options:
+%   VL_NNCONV(..., 'option', value, ...) accepts the following
+%   options:
 %
 %   `Stride`:: 1
 %     The output stride or downsampling factor. If the value is a
@@ -51,27 +50,29 @@
 %     1 <= FH <= H + 2*(PADTOP+PADBOTTOM),
 %     1 <= FW <= W + 2*(PADLEFT+PADRIGHT).
 %
-%   The output a is a SINGLE array of dimension YH x YW x K x N of
-%   N images with K challens and size:
+%   The output a is an array of dimension YH x YW x K x N of N images
+%   with K feature challens and size:
 %
 %     YH = floor((H + (PADTOP+PADBOTTOM) - FH)/STRIDEY) + 1,
 %     YW = floor((W + (PADLEFT+PADRIGHT) - FW)/STRIDEX) + 1.
+%
+%   Arguments can be SINGLE or DOUBLE and CPU or GPU arrays; however,
+%   they must all be of the same type (unless empty).
 %
 %   ## CUDNN SUPPORT
 %
 %   If compiled in, the function will use cuDNN convolution routines
 %   (with the exception of asymmetric left-right or top-bottom
-%   padding and a few corner cases such as 1x1 filters in Linux that
-%   trigger current bugs in cuDNN). You can use the 'NoCudnn' option
+%   padding that are not supported by cuDNN). You can use the 'NoCudnn' option
 %   to disable cuDNN or 'Cudnn' to activate it back again (the choice
 %   sticks until MATLAB purges the MEX files for any reason).
 %
-%   Some CuDNN algorithms may use a very large amount of memory on the
-%   GPU (workspace). MatConvNet requests CuDNN to use at most 512MB of
-%   GPU memory for the workspace. To change this behaviour, use the
-%   `CudnnWorskpaceLimit` option to specify the maximum size of the
-%   workspace in bytes. Set this parameter +inf to remove the limit
-%   and use the `Verbose` flag to check how much memory is being used.
+%   Some cuDNN algorithms may use a very large amount of memory on the
+%   GPU (workspace). By default, MatConvNet limits this to 512MB.  To
+%   change this behavior, use the `CudnnWorskpaceLimit` option to
+%   specify the maximum size of the workspace in bytes. Set this
+%   parameter +inf to remove the limit and use the `Verbose` flag to
+%   check how much memory is being used.
 
 % Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
 % Copyright (C) 2015 Andrea Vedaldi.
