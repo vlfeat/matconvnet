@@ -242,6 +242,8 @@
 		2DA349B31A83FC2C0073185F /* nnfullyconnected.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnfullyconnected.hpp; path = matlab/src/bits/nnfullyconnected.hpp; sourceTree = "<group>"; };
 		2DA349BA1A86C5210073185F /* nnsubsample.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnsubsample.cu; path = matlab/src/bits/nnsubsample.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DA349BB1A86C5210073185F /* nnsubsample.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnsubsample.hpp; path = matlab/src/bits/nnsubsample.hpp; sourceTree = "<group>"; };
+		2DA761D61CCD17B600265BD8 /* vl_nnbilinearsampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnbilinearsampler.cpp; path = matlab/src/vl_nnbilinearsampler.cpp; sourceTree = "<group>"; };
+		2DA761D71CCD28BA00265BD8 /* nnbilinearsampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnbilinearsampler.m; path = matlab/xtest/suite/nnbilinearsampler.m; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
 		2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnloss.m; path = matlab/vl_nnloss.m; sourceTree = "<group>"; };
 		2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnrelu.m; path = matlab/vl_nnrelu.m; sourceTree = "<group>"; };
@@ -292,11 +294,12 @@
 		2D375DBD18A7F796008A97EE /* src */ = {
 			isa = PBXGroup;
 			children = (
-				2DF0C6221CB54CA8005BEF89 /* vl_nnbilinearsampler.cu */,
 				2D375DCE18A84923008A97EE /* bits */,
 				2D6D0420196A892E00022E96 /* config */,
 				2DE27162197A5531001768CA /* vl_imreadjpeg.cpp */,
 				2DF61A991AB5925900ED9A1F /* vl_imreadjpeg.cu */,
+				2DA761D61CCD17B600265BD8 /* vl_nnbilinearsampler.cpp */,
+				2DF0C6221CB54CA8005BEF89 /* vl_nnbilinearsampler.cu */,
 				2D8079301AEF94860040BC14 /* vl_nnbnorm.cpp */,
 				2D8079311AEF94860040BC14 /* vl_nnbnorm.cu */,
 				2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */,
@@ -376,18 +379,17 @@
 		2D479D071A88AE0400826D48 /* impl */ = {
 			isa = PBXGroup;
 			children = (
-				2DF0C61F1CB54C2B005BEF89 /* bilinearsampler_gpu.cu */,
 				2DF0C6251CB55813005BEF89 /* bilinearsampler_cpu.cpp */,
+				2DF0C61F1CB54C2B005BEF89 /* bilinearsampler_gpu.cu */,
 				2DF0C6201CB54C2B005BEF89 /* bilinearsampler.hpp */,
-				2D4E88271C37FAB80074DDEE /* sharedmem.cuh */,
 				2D479D091A88AF4300826D48 /* blashelper.hpp */,
-				2D0958DA1C3A938500553C8A /* cudnnhelper.hpp */,
 				2D80792A1AEF94530040BC14 /* bnorm_cpu.cpp */,
 				2D80792B1AEF94530040BC14 /* bnorm_gpu.cu */,
 				2D80792C1AEF94530040BC14 /* bnorm.hpp */,
 				2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */,
 				2D479D0A1A88AF4300826D48 /* copy_gpu.cu */,
 				2D479D0B1A88AF4300826D48 /* copy.hpp */,
+				2D0958DA1C3A938500553C8A /* cudnnhelper.hpp */,
 				2D19E6741AB20B2900D4FF0C /* fast_mutex.h */,
 				2D479D0D1A88AF4300826D48 /* im2row_cpu.cpp */,
 				2D479D0C1A88AF4300826D48 /* im2row_gpu.cu */,
@@ -410,6 +412,7 @@
 				2D528BA91A8284C6006EC40A /* pooling_cpu.cpp */,
 				2D528BAB1A8284C6006EC40A /* pooling_gpu.cu */,
 				2D528BAA1A8284C6006EC40A /* pooling.hpp */,
+				2D4E88271C37FAB80074DDEE /* sharedmem.cuh */,
 				2D479D121A88AF4300826D48 /* subsample_cpu.cpp */,
 				2D479D111A88AF4300826D48 /* subsample_gpu.cu */,
 				2D479D131A88AF4300826D48 /* subsample.hpp */,
@@ -472,6 +475,7 @@
 		2D68331F1B66623300FA6D98 /* suite */ = {
 			isa = PBXGroup;
 			children = (
+				2DA761D71CCD28BA00265BD8 /* nnbilinearsampler.m */,
 				2D6833201B66624E00FA6D98 /* nnbnorm.m */,
 				2D6833211B66624E00FA6D98 /* nnconcat.m */,
 				2D6833221B66624E00FA6D98 /* nnconv.m */,
