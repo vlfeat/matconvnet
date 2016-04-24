@@ -15,7 +15,6 @@ opts.dataDir = opts.expDir ;
 opts.dataPath = fullfile(opts.dataDir,'cluttered-mnist.mat')  ;
 opts.dataURL = 'http://www.vlfeat.org/matconvnet/download/data/cluttered-mnist.mat' ;
 opts.train = struct() ;
-opts.train.numEpochs = 60 ;
 opts = vl_argparse(opts, varargin) ;
 if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
@@ -61,6 +60,7 @@ if ~exist(opts.dataDir, 'dir')
   mkdir(opts.dataDir) ;
 end
 if ~exist(opts.dataPath)
+  fprintf('Downloading %s to %s.\n', opts.dataURL, opts.dataPath) ;
   urlwrite(opts.dataURL, opts.dataPath) ;
 end
 dat = load(opts.dataPath);
