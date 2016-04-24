@@ -115,7 +115,7 @@ PASCAL VOC category definitions.
 
 ## ImageNet ILSVRC classification
 
-These modesl are trained to perform classification in the ImageNet
+These modes are trained to perform classification in the ImageNet
 ILSVRC challenge data.
 
 -   **ResNet** models imported from the
