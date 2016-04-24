@@ -227,33 +227,56 @@ In matrix notation:
 
 
 % ------------------------------------------------------------------
-\section{Spatial Transformation}\label{s:impl-sampler}
+\section{Spatial bilinear resampling}\label{s:impl-sampler}
 % ------------------------------------------------------------------
-The output is computed by summing over the local support region of the bilinear-interpolation
-kernel (at most four input pixels are involved in the weighted sum for a given output).\\
 
-The transformation grid is a tensor of size $2{\times}H'{\times}W'$, where the first dimension corresponds to
-the two spatial dimensions ($y$ and $x$ respectively).\\
+The projected derivative $d\langle \bp, \phi(\bx,\bg)\rangle / d\bx$ of the spatial bilinaer resampler operator with respect to the input image $\bx$ can be found as follows:
+\begin{multline}\label{e:bilinear-back-x}
+  \frac{\partial}{\partial x_{ijc}}
+  \left[
+  \sum_{i''j''c''}
+  p_{i''k''c''}
+  \sum_{i'=1}^H
+  \sum_{j'=1}^W 
+  x_{i'j'c''}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v -i'|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u -j'|\}
+  \right]
+  \\
+=
+  \sum_{i''j''}
+  p_{i''k''c}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v -i|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u -j|\}.
+\end{multline}
+Note that the formula is similar to Eq.~\ref{e:bilinear}, with the difference that summation is on $i''$ rather than $i$.
 
-The derivatives with respect to the input tensor are computed as following:
-\[
-  \frac{d z}{d f_{stk}} = \sum_{ij}\frac{dz}{d F_{ijk}}\frac{d F_{ijk}}{d f_{stk} } = \sum_{ij} \frac{dz}{d F_{ijk}} \max\left(0, 1-|g_y(i,j)-s|\right) \max\left(0, 1-|g_x(i,j)-t|\right)) 
-\]
-while, the derivatives with respect to the transformation grid are computed as following:
-\begin{align*}
-  \frac{d z}{d g_x(i,j)} = \sum_{k}\frac{d z}{d F_{ijk}}\frac{d F_{ijk}}{d g_x(i,j)} = \sum_{n,m,k}  f_{nmk} \max\left(0, 1-|g_y(i,j)-n|\right)
-  \left\{
-  \begin{array}{ll}
-    0  & \mbox{if } |m-g_x(i,j)| \geq 1 \\
-    1 & \mbox{if } m  \geq  g_x(i,j) \\
-    -1 & \mbox{if } m < g_x(i,j)
-  \end{array}
-\right.
-\end{align*}
-similarly, for $g_y(i,j)$.\\
+The projected derivative $d\langle \bp, \phi(\bx,\bg)\rangle / d\bg$ with respect to the grid is similar:
+\begin{multline}\label{e:bilinear-back-g}
+  \frac{\partial}{\partial g_{1i'j'}}
+  \left[
+  \sum_{i''j''c}
+  p_{i''k''c}
+  \sum_{i=1}^H
+  \sum_{j=1}^W 
+  x_{ijc}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v -i|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u -j|\}
+  \right]
+  \\
+=
+  -
+  \sum_c
+  p_{i'j'c}
+  \sum_{i=1}^H
+  \sum_{j=1}^W
+  \alpha_v x_{ijc}
+  \max\{0, 1-|\alpha_v g_{2i'j'} + \beta_v -j|\}
+  \sign(\alpha_v g_{1i'j'} + \beta_v -j)
+  \mathbf{1}_{\{-1 < \alpha_u g_{2i'j'} + \beta_u < 1\}}.
+\end{multline}
+A similar expression holds for $\partial g_{2i'j'}$
 
-In practice, both the input and output spatial extents are normalized to the interval $[-1,1]$; 
-a value of 0 is assumed for the region outside this range.\\
 % ------------------------------------------------------------------
 \section{Normalization}\label{s:normalization}
 % ------------------------------------------------------------------
