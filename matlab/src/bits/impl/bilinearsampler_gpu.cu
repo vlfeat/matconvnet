@@ -1,4 +1,16 @@
-// defines the CUDA kernels and the dispatcher for them:
+// @file bilinearsampler_gpu.cu
+// @brief Bilinear sampler CUDA implementation
+// @author Ankush Gupta
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
+
 #include "bilinearsampler.hpp"
 #include "../datacu.hpp"
 #include <assert.h>

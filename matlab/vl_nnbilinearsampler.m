@@ -1,40 +1,50 @@
-%VL_NNBILIEARSAMPLER Differentiable bilinear interpolation.
-%   Y = VL_NNBILINEARSAMPLER(X,GRID) does bilinear interpolation on X,
-%   according to the texture map (as defined in the sampling grid
-%   GRID).
+%VL_NNBILIEARSAMPLER  CNN spatial bilinear resampling
+%   Y = VL_NNBILINEARSAMPLER(X,GRID) resamples image X at the spatial
+%   locations specified by GRID using bilinear interpolation.
 %
-%   X is a array of dimension Hi x Wi x D x Ni, where (H,W) are the
-%   height and width of the feature-map, D is the number of channels,
-%   and Ni, the number of images in the stack.
+%   X is a array of dimension H x W x C x N, where (H,W) are the
+%   height and width of the image, C is the number of feature
+%   channels, and N is the number of images in the batch.
 %
-%   GRID is an array of dimension 2 x Ho x Wo x Ng, where (Ho,Wo) are
-%   the height and width of the output feature-map, 2 is for the two
-%   spatial dimensions corresponding to Ho and Wo respectively, and Ng
-%   is the number of transforms. (Ho,Wo) need not be equal to (Hi,Wi).
-%   Further, Ng can be a multiple of Ni: in this case, it is assumed
+%   GRID is an array of dimension 2 x Ho x Wo x No, where (Ho,Wo) are
+%   the height and width of the output image and No the number of
+%   output images in the output batch Y. The output array Y has
+%   dimensions Ho x Wo x C x No. The same resampling grid is used for
+%   all input feature channels, but each output image in the batchY
+%   uses its own grid.
+%
+%   For output image n, GRID(1,:,:,n) specifies the vertical location
+%   v of a sample in the input image X and GRID(2,:,:,n) the
+%   horizontal location u. The convention follows standard
+%   impelemntations of this operator in the literature. Namely:
+%
+%   1. The grid coordinates are normalized in the range [-1,1]. This
+%      means that (-1,-1) is the center of the upper-left pixel in the
+%      input image and (+1,+1) the center of the bottom-right pixel.
+%
+%   2. The V,U coordiante planes are stacked in the fisrt dimension of
+%      GRID instead of in the third, as it would be more natural in
+%      MatConvNet (as these could be interpreted as 'channels' in
+%      GRID).
+%
+%   Furthre, Ng can be a multiple of N; in this case, it is assumed
 %   that there are Ng/Ni transforms per input image, hence, the
-%   transforms [1 ... Ng/Ni] are applied to the first image,
-%   [Ng/Ni+1 ... 2*Ng/Ni] are applied to the second image, etc.
-%   The grid coordinates are normalized such that the extents of the
-%   output and input image are both in [-,1,1] (see the paper for details).
+%   transforms [1 ... Ng/Ni] are applied to the first image, [Ng/Ni+1
+%   ... 2*Ng/Ni] are applied to the second image, etc.
 %
-%   Y is an array of size Ho x Wo x D x Ng. Note, the SAME transform
-%   is applied to all the D channels of a given image.
-%
-%   [DZDX, DZDGRID] = VL_NNBILINEARSAMPLER(X, GRID, DZDY) computes the
-%   derivatives of the block projected onto DZDY.  DZDX,DZDGRID,DZDY
-%   have the same dimensions as X,GRID and Y respectively.
+%   [DX, DGRID] = VL_NNBILINEARSAMPLER(X, GRID, DY) computes the
+%   derivatives of the block projected onto DY. DX, DGRID, DY have the
+%   same dimensions as X, GRID and Y, respectively.
 %
 %   ## CUDNN SUPPORT
-%   If compiled in, the function will use cuDNN functions for
-%   bilinear interpolation.
-%   Note: there are some known issues when using more than 4 channels,
-%         with cuDNN.
-%   You can use the 'NoCudnn' option to disable cuDNN or 'Cudnn'
-%   to activate it back again
-%   (the choice sticks until MATLAB purges the MEX files for any reason).
 %
-% Copyright (C) 2016 Ankush Gupta, Andrea Vedaldi.
+%   If compiled in, the function will use cuDNN's
+%   implementation. Note: there are some known issues when using more
+%   than 4 feature channels with cuDNN v5.0. You can use the 'NoCudnn'
+%   option to disable cuDNN or 'CuDNN' to activate it back again (the
+%   choice sticks until MATLAB purges the MEX files for any reason).
+
+% Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

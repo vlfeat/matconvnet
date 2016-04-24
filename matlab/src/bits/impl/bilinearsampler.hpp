@@ -1,3 +1,16 @@
+// @file bilinearsampler.hpp
+// @brief Bilinear sampler implementation
+// @author Ankush Gupta
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
+
 #ifndef VL_BILINEARSAMPLER_H
 #define VL_BILINEARSAMPLER_H
 
