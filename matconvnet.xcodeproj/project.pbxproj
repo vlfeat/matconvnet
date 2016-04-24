@@ -244,6 +244,7 @@
 		2DA349BB1A86C5210073185F /* nnsubsample.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnsubsample.hpp; path = matlab/src/bits/nnsubsample.hpp; sourceTree = "<group>"; };
 		2DA761D61CCD17B600265BD8 /* vl_nnbilinearsampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnbilinearsampler.cpp; path = matlab/src/vl_nnbilinearsampler.cpp; sourceTree = "<group>"; };
 		2DA761D71CCD28BA00265BD8 /* nnbilinearsampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnbilinearsampler.m; path = matlab/xtest/suite/nnbilinearsampler.m; sourceTree = "<group>"; };
+		2DA761D81CCD297400265BD8 /* spatial-transformer.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = "spatial-transformer.md"; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
 		2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnloss.m; path = matlab/vl_nnloss.m; sourceTree = "<group>"; };
 		2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnrelu.m; path = matlab/vl_nnrelu.m; sourceTree = "<group>"; };
@@ -534,6 +535,7 @@
 				2D708AB21A52F61A004E7D42 /* install.md */,
 				2D708AC81A52F61A004E7D42 /* pretrained.md */,
 				2D433A181BAC4A6F00D31E69 /* quick.md */,
+				2DA761D81CCD297400265BD8 /* spatial-transformer.md */,
 				2D708AC91A52F61A004E7D42 /* training.md */,
 				2D433A191BAC4A6F00D31E69 /* wrappers.md */,
 			);
