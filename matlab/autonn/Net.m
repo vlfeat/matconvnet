@@ -451,20 +451,8 @@ classdef Net < handle
         s.diagnostics = net.diagnostics ;
         s.numPoints = numPoints ;
         colors = get(0, 'DefaultAxesColorOrder') ;
-        if n < 4  % vertical layout
-          m = n ;
-          w = 1 ;
-        else  % 2-columns layout
-          m = ceil(n / 2) ;
-          w = 0.5 ;
-        end
         for i = 1:n
-          if i <= m
-            s.ax(i) = axes('OuterPosition', [0, 1-i/m, w, 1/m]) ;
-          else
-            s.ax(i) = axes('OuterPosition', [w, 1-(i-m)/m, w, 1/m]) ;
-          end
-          
+          s.ax(i) = axes() ;
           color = colors(mod(floor((i-1)/2), size(colors,1)) + 1, :) ;
           s.lines(i) = line(1:numPoints, NaN(1, numPoints), 'Color', color);
           
@@ -476,7 +464,9 @@ classdef Net < handle
           set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {' '}, 'FontSize', 8) ;
           ylabel(strrep(net.diagnostics(i).name, '_', '\_')) ;
         end
-        set(fig, 'Tag', 'Net.plotDiagnostics', 'UserData', s) ;
+        dynamic_subplot(fig, s.ax, 3) ;
+        set(fig, 'Name', 'Diagnostics', 'NumberTitle','off', ...
+          'Tag', 'Net.plotDiagnostics', 'UserData', s) ;
       end
       
       % add new points and roll buffer
