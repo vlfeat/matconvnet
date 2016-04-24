@@ -120,7 +120,7 @@ doc-info:
 	@echo "mfile_doc=$(mfile_doc)"
 	@echo "svg_tgt=$(svg_tgt)"
 
-doc-serve:
+doc-serve: doc
 	cd doc/site ; $(MKDOCS) serve
 
 data/models/%.dot : data/models/%.mat

@@ -6,6 +6,7 @@ extra_css: ['css/fixes.css']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js', 'js/toggle.js']
 
 repo_url: https://github.com/vlfeat/matconvnet
+copyright: "Copyright &copy; 2014-16 The MatConvNet Team."
 
 pages:
 - Home: 'index.md'
