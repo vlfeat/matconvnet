@@ -80,7 +80,8 @@ function nn = cnn_stn_cluttered_mnist_init(imsz, use_transformer)
     b_prev(1) = 1; b_prev(4) = 1;
     nn.params(nn.getParamIndex('lob')).value = b_prev;
   end
-  
+
   nn.meta.trainOpts.learningRate = 0.001 ;
   nn.meta.trainOpts.batchSize = 256 ;
+  nn.meta.trainOpts.numEpochs = 60 ;
 end

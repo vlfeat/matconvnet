@@ -5,14 +5,20 @@ function [net, info] = cnn_stn_cluttered_mnist(varargin)
 
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
-opts.expDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist') ;
-[opts, varargin] = vl_argparse(opts, varargin) ;
 
-opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.dataDir = opts.expDir ;
+opts.dataDir = fullfile(vl_rootnn, 'data') ;
+opts.useSpatialTransformer = true ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.dataPath = fullfile(opts.dataDir,'cluttered-mnist.mat')  ;
+if opts.useSpatialTransformer
+  opts.expDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist-stn') ;
+else
+  opts.expDir = fullfile(vl_rootnn, 'data', 'cluttered-mnist-no-stn') ;
+end
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.dataURL = 'http://www.vlfeat.org/matconvnet/download/data/cluttered-mnist.mat' ;
 opts.train = struct() ;
 opts = vl_argparse(opts, varargin) ;
@@ -21,6 +27,7 @@ if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 % --------------------------------------------------------------------
 %                                                         Prepare data
 % --------------------------------------------------------------------
+
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;
 else
@@ -34,6 +41,7 @@ net.meta.classes.name = arrayfun(@(x)sprintf('%d',x),1:10,'UniformOutput',false)
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
+
 fbatch = @(i,b) getBatch(opts.train,i,b);
 [net, info] = cnn_train_dag(net, imdb, fbatch, ...
                             'expDir', opts.expDir, ...
@@ -42,8 +50,23 @@ fbatch = @(i,b) getBatch(opts.train,i,b);
                             'val', find(imdb.images.set == 2)) ;
 
 % --------------------------------------------------------------------
+%                                                     Show transformer
+% --------------------------------------------------------------------
+
+figure(100) ; clf ;
+v = net.getVarIndex('xST') ;
+net.vars(v).precious = true ;
+net.eval({'input',imdb.images.data(:,:,:,1:6)}) ;
+for t = 1:6
+  subplot(2,6,t) ; imagesc(imdb.images.data(:,:,:,t)) ; axis image off ;
+  subplot(2,6,6+t) ; imagesc(net.vars(v).value(:,:,:,t)) ; axis image off ;
+  colormap gray ;
+end
+
+% --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
 % --------------------------------------------------------------------
+
 if ~isa(imdb.images.data, 'gpuArray') && numel(opts.gpus) > 0
   imdb.images.data = gpuArray(imdb.images.data);
   imdb.images.labels = gpuArray(imdb.images.labels);
@@ -55,6 +78,7 @@ inputs = {'input', images, 'label', labels} ;
 % --------------------------------------------------------------------
 function imdb = getImdDB(opts)
 % --------------------------------------------------------------------
+
 % Prepare the IMDB structure:
 if ~exist(opts.dataDir, 'dir')
   mkdir(opts.dataDir) ;
