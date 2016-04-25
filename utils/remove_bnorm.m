@@ -2,10 +2,10 @@ function net2 = remove_bnorm(net)
 
 bnorm_layers = find(cellfun(@(l) strcmp(l.type, 'bnorm'), net.layers));
 conv_layers = find(cellfun(@(l) strcmp(l.type, 'conv'), net.layers));
-relu_layers = find(cellfun(@(l) strcmp(l.type, 'relu'), net.layers));
+relu_layers = find(cellfun(@(l) strcmp(l.type, 'relu') | strcmp(l.type, 'elu'), net.layers));
 
 if ~all(ismember(bnorm_layers-1, conv_layers)) || ~all(ismember(bnorm_layers+1, relu_layers))
-    error('Batch norm must be between conv & relu');
+    error('Batch norm must be between conv & (relu or elu)');
 end
 
 net2 = net;

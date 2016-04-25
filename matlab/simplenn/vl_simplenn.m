@@ -335,6 +335,11 @@ for i=1:n
       if l.leak > 0, leak = {'leak', l.leak} ; else leak = {} ; end
       res(i+1).x = vl_nnrelu(res(i).x,[],leak{:}) ;
 
+        case 'elu'
+            if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
+            res(i+1).x = vl_nnelu(res(i).x,[],alpha{:}) ;
+            
+
     case 'sigmoid'
       res(i+1).x = vl_nnsigmoid(res(i).x) ;
 
@@ -407,6 +412,17 @@ end
 % -------------------------------------------------------------------------
 
 if doder
+                
+            case 'elu'
+                if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
+                if ~isempty(res(i).x)
+                    res(i).dzdx = vl_nnelu(res(i).x, res(i+1).dzdx, alpha{:}) ;
+                else
+                    % if res(i).x is empty, it has been optimized away, so we use this
+                    % hack (which works only for ReLU):
+                    res(i).dzdx = vl_nnelu(res(i+1).x, res(i+1).dzdx, alpha{:}) ;
+                end
+                
   res(n+1).dzdx = dzdy ;
   for i=n:-1:backPropLim
     l = net.layers{i} ;
