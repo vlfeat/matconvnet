@@ -68,7 +68,7 @@ while ~isempty(currentVars)
                     % Create new block
                     block = dagnn.Conv();
                     block.load(blocks{1}.save);
-                    block.size(4) = sum(cellfun(@(b) b.size(4),blocks));
+                    block.size(4) = sum(cellfun(@(b) double(b.size(4)),blocks));
                     
                     % Verify params
                     assert(all(arrayfun(@(l) dag.params(l.paramIndexes(1)).learningRate==dag.params(layer(1).paramIndexes(1)).learningRate,layer)));
