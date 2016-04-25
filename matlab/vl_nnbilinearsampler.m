@@ -39,8 +39,9 @@
 %   ## CUDNN SUPPORT
 %
 %   If compiled in, the function will use cuDNN's
-%   implementation. You can use the 'NoCudnn' option to
-%   disable cuDNN or 'CuDNN' to activate it back again (the
+%   implementation. Note, cuDNN v5 or higher is required.
+%   You can use the 'NoCudnn' option to disable
+%   cuDNN or 'CuDNN' to activate it back again (the
 %   choice sticks until MATLAB purges the MEX files for any reason).
 
 % Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.

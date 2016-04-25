@@ -11,7 +11,7 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #if !defined(ENABLE_GPU) || !defined(ENABLE_CUDNN) || (CUDNN_VERSION < 5000)
-#error "bilinearsampler_cudnn.hpp can only be compiled with GPU and CUDNN (v5 or higher) support."
+#error "bilinearsampler_cudnn.cu can only be compiled with GPU and CUDNN (v5 or higher) support."
 #endif
 
 #include "nnbilinearsampler_cudnn.hpp"
