@@ -67,7 +67,7 @@ for k = 1 : imdb.phraseSize - 1
   error = error + vl_nnloss(o, i, 'loss', 'classerror') ;
 end
 
-Layer.autoNames() ;
+Layer.workspaceNames() ;
 net = Net(loss, error) ;
 
 opts.train.stats = {loss, error} ;  % plot these quantities

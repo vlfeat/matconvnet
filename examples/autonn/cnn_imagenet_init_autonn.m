@@ -54,7 +54,7 @@ top1err = vl_nnloss(prediction, label, 'loss', 'classerror') ;
 top5err = vl_nnloss(prediction, label, 'loss', 'topkerror', 'topK', 5) ;
 
 % assign names automatically, and compile network
-Layer.autoNames() ;
+Layer.workspaceNames() ;
 net = Net(loss, top1err, top5err) ;
 
 % Meta parameters

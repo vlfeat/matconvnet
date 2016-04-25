@@ -53,6 +53,10 @@ classdef Net < handle
 
   methods
     function net = Net(varargin)
+      % parse auto-naming option after the other inputs
+      opts.sequentialNames = false ;
+      [opts, varargin] = vl_argparsepos(opts, varargin) ;
+      
       if isscalar(varargin)
         % a single output layer
         root = varargin{1} ;
@@ -80,36 +84,9 @@ classdef Net < handle
       root.resetOrder() ;
       objs = root.buildOrder({}) ;
       
-      % automatically set missing names, according to the execution order
-      for k = 1:numel(objs)
-        if isempty(objs{k}.name)
-          if isa(objs{k}, 'Input')  % input1, input2, ...
-            n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k))) ;
-            objs{k}.name = sprintf('input%i', n) ;
-            
-          elseif ~isempty(objs{k}.func)  % conv1, conv2...
-            n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k))) ;
-            name = func2str(objs{k}.func) ;
-            
-            if strncmp(name, 'vl_nn', 5), name(1:5) = [] ; end  % shorten names
-            if strcmp(name, 'bnorm_wrapper'), name = 'bnorm' ; end
-            objs{k}.name = sprintf('%s%i', name, n) ;
-            
-            % also set dependant Param names: conv1_p1, ...
-            ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
-            for i = 1:numel(ps)
-              if isempty(objs{k}.inputs{ps(i)}.name)
-                objs{k}.inputs{ps(i)}.name = sprintf('%s_p%i', objs{k}.name, i) ;
-              end
-            end
-          end
-        end
-      end
-      for k = 1:numel(objs)  % name any remaining objects by class
-        if isempty(objs{k}.name)
-          n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k))) ;
-          objs{k}.name = sprintf('%s%i', lower(class(objs{k})), n) ;
-        end
+      % make sure all layers have names
+      if opts.sequentialNames
+        root.sequentialNames() ;
       end
       
       % indexes of callable Layer objects (not Inputs or Params)

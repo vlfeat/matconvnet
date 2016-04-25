@@ -25,7 +25,7 @@ prediction = w * x + b ;
 loss = sum(sum((prediction - y).^2)) ;
 
 % assign names based on workspace variables, and compile net
-Layer.autoNames() ;
+Layer.workspaceNames() ;
 net = Net(loss) ;
 
 

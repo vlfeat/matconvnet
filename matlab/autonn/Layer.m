@@ -151,6 +151,74 @@ classdef Layer < matlab.mixin.Copyable
       other = obj.deepCopyRecursive(varargin) ;
     end
     
+    function sequentialNames(varargin)
+      % OBJ.SEQUENTIALNAMES()
+      % Sets layer names sequentially, based on their function handle and
+      % execution order. E.g.: conv1, conv2, pool1...
+      % Only empty names are set.
+      %
+      % LAYER.SEQUENTIALNAMES(OBJ1, OBJ2, ...)
+      % Same but considering a network with outputs OBJ1, OBJ2, ...
+      %
+      % LAYER.SEQUENTIALNAMES(..., MODIFIER)
+      % Specifies a function handle to be evaluated on each name, possibly
+      % modifying it (e.g. append a prefix or suffix).
+      %
+      % See also WORKSPACENAMES.
+      
+      if ~isempty(varargin) && isa(varargin{end}, 'function_handle')
+        modifier = varargin{end} ;
+        varargin(end) = [] ;
+      else
+        modifier = @deal ;
+      end
+      
+      % figure out the execution order, and list layer objects
+      assert(~isempty(varargin), 'Not enough input arguments.') ;
+      for i = 1:numel(varargin)
+        varargin{i}.resetOrder() ;
+      end
+      objs = {} ;
+      for i = 1:numel(varargin)
+        objs = varargin{i}.buildOrder(objs) ;
+      end
+      
+      % automatically set missing names, according to the execution order
+      for k = 1:numel(objs)
+        if isempty(objs{k}.name)
+          if isa(objs{k}, 'Input')  % input1, input2, ...
+            n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k))) ;
+            objs{k}.name = modifier(sprintf('input%i', n)) ;  %#ok<*AGROW>
+            
+          elseif ~isempty(objs{k}.func)  % conv1, conv2...
+            n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k))) ;
+            name = func2str(objs{k}.func) ;  %#ok<*PROP>
+            
+            if strncmp(name, 'vl_nn', 5), name(1:5) = [] ; end  % shorten names
+            if strcmp(name, 'bnorm_wrapper'), name = 'bnorm' ; end
+            name = sprintf('%s%i', name, n) ;
+            objs{k}.name = modifier(name) ;
+            
+            % also set dependant Param names: conv1_p1, ...
+            ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
+            for i = 1:numel(ps)
+              if isempty(objs{k}.inputs{ps(i)}.name)
+                objs{k}.inputs{ps(i)}.name = modifier(sprintf('%s_p%i', name, i)) ;
+              end
+            end
+          end
+        end
+      end
+      
+      % name any remaining objects by class
+      for k = 1:numel(objs)
+        if isempty(objs{k}.name)
+          n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k))) ;
+          objs{k}.name = modifier(sprintf('%s%i', lower(class(objs{k})), n)) ;
+        end
+      end
+    end
+    
     
     % overloaded MatConvNet functions
     function y = vl_nnconv(obj, varargin)
@@ -510,25 +578,26 @@ classdef Layer < matlab.mixin.Copyable
   end
   
   methods (Static)
-    function autoNames(modifier)
-      % LAYER.AUTONAMES()
+    function workspaceNames(modifier)
+      % LAYER.WORKSPACENAMES()
       % Sets layer names based on the name of the corresponding variables
-      % in the caller's workspace.
+      % in the caller's workspace. Only empty names are set.
       %
-      % LAYER.AUTONAMES(MODIFIER)
+      % LAYER.WORKSPACENAMES(MODIFIER)
       % Specifies a function handle to be evaluated on each name, possibly
       % modifying it (e.g. append a prefix or suffix).
       %
+      % See also SEQUENTIALNAMES.
+      %
       % Example:
       %    images = Input() ;
-      %    Layer.autoNames() ;
+      %    Layer.workspaceNames() ;
       %    >> images.name
       %    ans =
       %       'images'
       
-      if nargin == 0
-        modifier = @deal ;
-      end
+      if nargin < 1, modifier = @deal ; end
+      
       varNames = evalin('caller','who') ;
       for i = 1:numel(varNames)
         layer = evalin('caller', varNames{i}) ;
