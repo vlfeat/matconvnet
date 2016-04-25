@@ -1,12 +1,9 @@
-% Affine Transform Block:
-% Turns 1 x 1 x 6 x N affine transforms to: 2 x Ho x Wo x N
-% sampling grid (for cuDNN compatibility.
-% This can be used as an example to define
-% other transforms like thin-plate-splines etc. 
-%
-% (c) 2016 Ankush Gupta
-
 classdef AffineGridGenerator < dagnn.Layer
+%DAGNN.AFFINEGRIDGENERATIOR  Generate an affine grid gor bilinear resampling
+%   This layer maps 1 x 1 x 6 x N affine transforms to 2 x Ho x Wo x N
+%   sampling grids compatible with dagnn.BlilinearSampler.
+
+% (c) 2016 Ankush Gupta
 
  properties
      f_downsample = 1;
@@ -37,7 +34,7 @@ classdef AffineGridGenerator < dagnn.Layer
 
       %fprintf('affineGridGenerator forward\n');
       useGPU = isa(inputs{1}, 'gpuArray');
-      
+
       % reshape the tfm params into matrices:
       A = inputs{1};
       nbatch = size(A,4);
@@ -47,7 +44,7 @@ classdef AffineGridGenerator < dagnn.Layer
 
       % generate the grid coordinates:
       if isempty(obj.xxyy)
-        obj.init_grid(useGPU);
+        obj.initGrid(useGPU);
       end
 
       % transform the grid:
@@ -63,8 +60,7 @@ classdef AffineGridGenerator < dagnn.Layer
     end
 
     function [derInputs, derParams] = backward(obj, inputs, ~, derOutputs)
-      %fprintf('affineGridGenerator backward\n');
-      
+
       useGPU = isa(derOutputs{1}, 'gpuArray');
       dY = derOutputs{1};
       nbatch = size(dY,4);
@@ -96,26 +92,32 @@ classdef AffineGridGenerator < dagnn.Layer
       outputSizes = {[obj.Ho, obj.Wo, 2, nBatch]};
     end
 
+    % ---------------------------------------------------------------------
     function obj = AffineGridGenerator(varargin)
-      obj.load(varargin);
+      obj.load(varargin) ;
       % get the output sizes:
-      obj.Ho = obj.Ho;
-      obj.Wo = obj.Wo;
-      obj.xxyy = [];
+      obj.Ho = obj.Ho ;
+      obj.Wo = obj.Wo ;
+      obj.xxyy = [] ;
     end
 
-    function init_grid(obj, useGPU)
-      % initialize the grid: 
+    function obj = reset(obj)
+      reset@dagnn.Layer(obj) ;
+      obj.xxyy = [] ;
+    end
+
+    function initGrid(obj, useGPU)
+      % initialize the grid:
       % this is a constant
       xi = linspace(-1, 1, obj.Ho);
       yi = linspace(-1, 1, obj.Wo);
 
       [yy,xx] = meshgrid(xi,yi);
-      xxyy = [yy(:) xx(:)]; % Mx2
+      xxyy = [yy(:), xx(:)] ; % Mx2
       if useGPU
         xxyy = gpuArray(xxyy);
       end
-      obj.xxyy = xxyy; % cache it here
+      obj.xxyy = xxyy ;
     end
 
   end
