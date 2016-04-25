@@ -39,9 +39,8 @@
 %   ## CUDNN SUPPORT
 %
 %   If compiled in, the function will use cuDNN's
-%   implementation. Note: there are some known issues when using more
-%   than 4 feature channels with cuDNN v5.0. You can use the 'NoCudnn'
-%   option to disable cuDNN or 'CuDNN' to activate it back again (the
+%   implementation. You can use the 'NoCudnn' option to
+%   disable cuDNN or 'CuDNN' to activate it back again (the
 %   choice sticks until MATLAB purges the MEX files for any reason).
 
 % Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.

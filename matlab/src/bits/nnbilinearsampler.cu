@@ -1,5 +1,5 @@
 // @file nnbilinearsampler.cu
-// @brief Bilinear sampler block (definition)
+// @brief Bilinear sampler block
 // @author Ankush Gupta
 // @author Andrea Vedaldi
 
@@ -81,11 +81,13 @@ vl::nnbilinearsampler_forward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
+#if (CUDNN_VERSION >= 5000)
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
       if (error == vl::vlSuccess) { return error ; }
       if (error != vl::vlErrorUnsupported) { return error ; }
     }
+#endif
 #endif
     DISPATCH2(vl::GPU) ;
     if (error == vlErrorCuda) {
@@ -147,11 +149,13 @@ vl::nnbilinearsampler_backward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
+#if (CUDNN_VERSION >= 5000)
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
       if (error == vl::vlSuccess) { return error ; }
       if (error != vl::vlErrorUnsupported) { return error ; }
     }
+#endif
 #endif
     DISPATCH2(vl::GPU) ;
     if (error == vlErrorCuda) {
