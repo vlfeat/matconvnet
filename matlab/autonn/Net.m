@@ -270,7 +270,7 @@ classdef Net < handle
           net.diagnostics(var).var = var ;
           net.diagnostics(var).name = objs{k}.name ;
           net.diagnostics(var + 1).var = var + 1 ;
-          net.diagnostics(var + 1).name = ['\partial', objs{k}.name] ;
+          net.diagnostics(var + 1).name = ['\partial ', objs{k}.name] ;
           valid([var, var + 1]) = true ;
         end
       end
@@ -460,11 +460,11 @@ classdef Net < handle
           s.maxs{i} = NaN(1, numPoints) ;
 
           s.patches(i) = patch('XData', [], 'YData', [], 'EdgeColor', 'none', 'FaceColor', color, 'FaceAlpha', 0.5) ;
-        
-          set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {' '}, 'FontSize', 8) ;
-          ylabel(strrep(net.diagnostics(i).name, '_', '\_')) ;
+
+          set(s.ax(i), 'XLim', [1, numPoints], 'XTickLabel', {''}, 'FontSize', 8) ;
+          title(strrep(net.diagnostics(i).name, '_', '\_'), 'FontSize', 9, 'FontWeight', 'normal') ;
         end
-        dynamic_subplot(fig, s.ax, 3) ;
+        dynamic_subplot(s.ax, 3) ;
         set(fig, 'Name', 'Diagnostics', 'NumberTitle','off', ...
           'Tag', 'Net.plotDiagnostics', 'UserData', s) ;
       end
