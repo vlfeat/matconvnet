@@ -89,7 +89,7 @@ where $X\in\real^{(H'W')\times D}$ is the matrix obtained by reshaping $\bx$. No
 \section{Convolution transpose}\label{s:impl-convolution-transpose}
 % ------------------------------------------------------------------
 
-In order to understand the definition of convolution transpose, let $\by$ to be obtained from $\bx$ by the convolution operator as defined in \autoref{s:convolution} (including padding and downsampling).  Since this is a linear operation, it can be rewritten as $\vv \by = M \vv\bx$ for a suitable matrix $M$; convolution transpose computes instead $\vv \bx = M^\top \vv \by$.  While this is simple to describe in term of matrices, what happens in term of indexes is tricky. In order to derive a formula for the convolution transpose, start from standard convolution (for a 1D signal):
+In order to understand the definition of convolution transpose, let $\by$ to be obtained from $\bx$ by the convolution operator as defined in \cref{s:convolution} (including padding and downsampling).  Since this is a linear operation, it can be rewritten as $\vv \by = M \vv\bx$ for a suitable matrix $M$; convolution transpose computes instead $\vv \bx = M^\top \vv \by$.  While this is simple to describe in term of matrices, what happens in term of indexes is tricky. In order to derive a formula for the convolution transpose, start from standard convolution (for a 1D signal):
 \[
    y_{i''} = \sum_{i'=1}^{H'} f_{i'} x_{S (i''-1) + i' - P_h^-}, 
    \quad
@@ -150,7 +150,7 @@ Note that the summation extrema in \eqref{e:convt-step} can be refined slightly 
 \left\lfloor \frac{k-1 + P_h^-}{S} \right\rfloor
 \right\}.
 \end{multline*}
-The size $H''$ of the output of convolution transpose is obtained in \autoref{s:receptive-convolution-transpose}.
+The size $H''$ of the output of convolution transpose is obtained in \cref{s:receptive-convolution-transpose}.
 
 % ------------------------------------------------------------------
 \section{Spatial pooling}\label{s:impl-pooling}
@@ -467,34 +467,98 @@ where $X,Y\in\real^{HW\times D}$ are the matrices obtained by reshaping the arra
 $\bx$ and $\by$. Note that the numerical implementation of this expression is straightforward once the output $Y$ has been computed with the caveats above.
 
 % ------------------------------------------------------------------
-\section{Losses and comparisons}\label{s:impl-losses}
+\section{Categorical losses}\label{s:impl-losses}
 % ------------------------------------------------------------------
 
+This section obtains the projected derivatives of the categorical losses in \cref{s:losses}. Recall that all losses give a scalar output, so the projection tensor $p$ is trivial (a scalar).
+
 % ------------------------------------------------------------------
-\subsection{Log-loss}\label{s:impl-loss}
+\subsection{Classification losses}\label{s:impl-loss-classification}
 % ------------------------------------------------------------------
 
-The derivative is
+\paragraph{Top-$K$ classification error.} The derivative is zero a.e.\
+
+\paragraph{Log-loss.} The projected derivative is:
 \[
-\frac{dz}{dx_{ijd}} = - \frac{dz}{dy} \frac{1}{x_{ijc}} \delta_{d = c}.
+\frac{\partial p \ell(\bx,c)}{\partial x_k}
+=
+- p \frac{\partial \log (x_c) }{\partial x_k}
+=
+- p x_c \delta_{k=c}.
+\]
+
+\paragraph{Softmax log-loss.} The projected derivative is given by:
+\[
+\frac{\partial p \ell(\bx,c)}{\partial x_k}
+=
+- p \frac{\partial}{\partial x_k}
+\left(x_c - \log \sum_{t=1}^C e^{x_t}\right)
+=
+- p \left(\delta_{k=c} - \frac{e^{x_c}}{\sum_{t=1}^C e^{x_t}} \right).
+\]
+In brackets, we can recognize the output of the loss itself:
+\[
+ y = \ell(\bx,c) = \frac{e^{x_c}}{\sum_{t=1}^C e^{x_t}}.
+\]
+Hence the loss derivatives rewrites:
+\[
+\frac{\partial p \ell(\bx,c)}{\partial x_k}
+=
+- p \left(\delta_{k=c} - y \right).
+\]
+
+\paragraph{Multi-class hinge loss.} The projected derivative is:
+\[
+\frac{\partial p \ell(\bx,c)}{\partial x_k}
+=
+- p\,\mathbf{1}[x_c < 1]\,\delta_{k=c}.
+\]
+
+\paragraph{Structured multi-class hinge loss.} The projected derivative is:
+\[
+\frac{\partial p \ell(\bx,c)}{\partial x_k}
+=
+- p\,\mathbf{1}[x_c < 1 + \max_{t\not= c} x_t]\,(\delta_{k=c} - \delta_{k=t^*}),
+\qquad
+t^* = \argmax_{t =1,2,\dots,C} x_t.
 \]
 
 % ------------------------------------------------------------------
-\subsection{Softmax log-loss}\label{s:impl-sfloss}
+\subsection{Attribute losses}\label{s:impl-loss-attribute}
 % ------------------------------------------------------------------
 
-The derivative is given by
+\paragraph{Binary error.} The derivative of the binary error is 0 a.e.
+
+\paragraph{Binary log-loss.} The projected derivative is:
 \[
-\frac{dz}{dx_{ijd}} 
-= - \frac{dz}{dy} \left(\delta_{d=c} - y_{ijd}\right)
+\frac{\partial p \ell(x,c)}{\partial x}
+=
+- p \frac{c}{c \left(x - \frac{1}{2}\right) + \frac{1}{2}}.
 \]
-where $y_{ijc}$ is the output of the softmax layer. In matrix form:
+
+\paragraph{Binary logistic loss.} The projected derivative is:
 \[
-\frac{dz}{dX} 
-= - \frac{dz}{dy} \left(\bone^\top \bfe_c - Y\right)
+\frac{\partial p \ell(x,c)}{\partial x}
+=
+- p \frac{\partial}{\partial x} \log \frac{1}{1+e^{-cx}}
+=
+- p \frac{c e^{-cx}}{1 + e^{-cx}}
+=
+- p \frac{c}{e^{cx} + 1}
+=
+- pc\, \sigma(-cx).
 \]
-where $X,Y\in\real^{HW\times D}$ are the matrices obtained by reshaping the arrays
-$\bx$ and $\by$ and $\bfe_c$ is the indicator vector of class $c$.
+
+\paragraph{Binary hinge loss.} The projected derivative is
+\[
+\frac{\partial p \ell(x,c)}{\partial x}
+=
+- pc\,\mathbf{1}[cx < 1].
+\]
+
+% ------------------------------------------------------------------
+\section{Comparisons}\label{s:impl-comparisons}
+% ------------------------------------------------------------------
 
 % ------------------------------------------------------------------
 \subsection{$p$-distance}\label{s:impl-pdistance}
@@ -518,7 +582,8 @@ p |x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})
 \\
 &= 
 \frac{dz}{dy_{ij}}
-\frac{|x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}}.
+\frac{|x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}};
+\frac{dz}{d\bar x_{ijd}} = -\frac{dz}{dx_{ijd}}.
 \end{align*}
 The formulas simplify a little for $p=1,2$ which are therefore implemented as special cases.
 

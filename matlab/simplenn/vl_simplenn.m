@@ -47,8 +47,12 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %      Aggressively delete intermediate results. This in practice has
 %      a very small performance hit and allows training much larger
 %      models. However, it can be useful to disable it for
-%      debugging. It is also possible to preserve individual layer outputs
+%      debugging. Keeps the values in `res(1)` (input) and `res(end)`
+%      (output) with the outputs of `loss` and `softmaxloss` layers.
+%      It is also possible to preserve individual layer outputs
 %      by setting `net.layers{...}.precious` to `true`.
+%      For back-propagation, keeps only the derivatives with respect to
+%      weights.
 %
 %   `CuDNN`:: `true`
 %      Use CuDNN when available.
@@ -59,9 +63,12 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %      The gradients are accumulated to the provided RES structure
 %      (i.e. to call VL_SIMPLENN(NET, X, DZDY, RES, ...).
 %
+%   `BackPropDepth`:: `inf`
+%      Limit the back-propagation to top-N layers.
+%
 %   `SkipForward`:: `false`
 %      Reuse the output values from the provided RES structure and compute
-%      only the derivatives (bacward pass).
+%      only the derivatives (backward pass).
 %
 %   ## The result format
 %
@@ -226,6 +233,7 @@ opts.skipForward = false;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
+assert(opts.backPropDepth > 0, 'Invalid `backPropDepth` value (!>0)');
 backPropLim = max(n - opts.backPropDepth + 1, 1);
 
 if (nargin <= 2) || isempty(dzdy)
@@ -357,6 +365,7 @@ for i=1:n
             res(i+1).x = vl_nnpdist(res(i).x, l.class, l.p, ...
                 'noRoot', l.noRoot, ...
                 'epsilon', l.epsilon, ...
+                'instanceWeights', l.instanceWeights, ...
                 'aggregate', l.aggregate, ...
                 'normed', l.normed, ...
                 'hinge', l.hinge, ...
@@ -370,13 +379,14 @@ for i=1:n
     end
     
     % optionally forget intermediate results
-    forget = opts.conserveMemory & ~(doder & n >= backPropLim) ;
+    needsBProp = doder && i >= backPropLim;
+    forget = opts.conserveMemory && ~needsBProp ;
     if i > 1
         lp = net.layers{i-1} ;
         % forget RELU input, even for BPROP
-        forget = forget & (~doder | (strcmp(l.type, 'relu') & ~lp.precious)) ;
-        forget = forget & ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
-        forget = forget & ~lp.precious ;
+        forget = forget && (~needsBProp || (strcmp(l.type, 'relu') && ~lp.precious)) ;
+        forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
+        forget = forget && ~lp.precious ;
     end
     if forget
         res(i).x = [] ;
@@ -394,7 +404,7 @@ end
 
 if doder
     res(n+1).dzdx = dzdy ;
-    for i=n:-1:max(1, n-opts.backPropDepth+1)
+    for i=n:-1:backPropLim
         l = net.layers{i} ;
         res(i).backwardTime = tic ;
         switch l.type
@@ -489,6 +499,7 @@ if doder
                     l.p, res(i+1).dzdx, ...
                     'noRoot', l.noRoot, ...
                     'epsilon', l.epsilon, ...
+                    'instanceWeights', l.instanceWeights, ...
                     'aggregate', l.aggregate, ...
                     'normed', l.normed, ...
                     'hinge', l.hinge, ...
@@ -518,5 +529,9 @@ if doder
             wait(gpuDevice) ;
         end
         res(i).backwardTime = toc(res(i).backwardTime) ;
+    end
+    if i > 1 && i == backPropLim && opts.conserveMemory && ~net.layers{i}.precious
+        res(i).dzdx = [] ;
+        res(i).x = [] ;
     end
 end

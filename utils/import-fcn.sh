@@ -29,7 +29,7 @@ SCRIPTPATH=`pwd`
 popd > /dev/null
 
 converter="python $SCRIPTPATH/import-caffe.py"
-data="$SCRIPTPATH/../data"
+data="$SCRIPTPATH/../data/models-import"
 
 mkdir -p "$data/tmp/fcn"
 
@@ -56,7 +56,7 @@ then
 
     for ((i=0;i<${#ins[@]};++i)); do
         in="$data/tmp/fcn/${ins[i]}"
-        out="$data/models/${outs[i]}.mat"
+        out="$data/${outs[i]}.mat"
         if test -f "$out" -a -z "$overwrite"
         then
             echo "$out exists; skipping."

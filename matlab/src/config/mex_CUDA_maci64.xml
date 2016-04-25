@@ -48,7 +48,7 @@
           
           OBJEXT=".o"
           LDEXT=".mexmaci64"
-          MACOSX_DEPLOYMENT_TARGET='10.8'>
+          MACOSX_DEPLOYMENT_TARGET='10.9'>
     </vars>
     <client>
     </client>

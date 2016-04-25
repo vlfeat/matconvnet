@@ -23,7 +23,27 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta18 (January 2015).
+-   1.0-beta19 (April 2016).
+
+    **New features**
+
+    * Support for pre-trained ResNet models.
+
+    * New `Scale` layer in DagNN.
+
+    * Numerous improvements to DagNN.
+
+    * Numerous refinements to example training scripts `cnn_train.m`
+      and `cnn_train_dag.m`.
+
+    * `vl_nnpdist` now can backpropagate both inputs.
+
+    * CuDNN v5 support.
+
+    * Improved the `import-caffe.py` script for compatibility with
+      newer versions of Caffe.
+
+-   1.0-beta18 (January 2016).
 
     **New features**
 
@@ -32,7 +52,7 @@ here.
 
     * VL_IMREADJPEG() can now resize images.
 
-    * More thourough unit testing and several bugfixes.
+    * More thorough unit testing and several bugfixes.
 
 -   1.0-beta17 (December 2015).
 
@@ -40,7 +60,7 @@ here.
 
     * Mac OS X 10.11 support. Since setting `LD_LIBRARY_PATH` is not
       supported under this OS due to security reasons, now MatConvNet
-      binaries hardcodes the location of the CUDA/cuDNN libraries as
+      binaries hardcode the location of the CUDA/cuDNN libraries as
       needed. This also simplifies starting up MATLAB.
 
     * This version changes slightly how cuDNN is configured; the cuDNN
@@ -72,7 +92,7 @@ here.
 
     * The AlexNet, VGG-F, VGG-M, VGG-S examples provided in the
       `examples/imagenet` directory have been refined in order to
-      produced deployable models. MatConvNet pretrained versions of
+      produce deployable models. MatConvNet pretrained versions of
       these models are available for download.
 
     * A new option in `vl_nnconv` and `vl_nnconvt` allows setting the
@@ -84,8 +104,8 @@ here.
       handled. Use the `vl_simplenn_tidy()` to upgrade existing
       networks to the latest version of MatConvNet. This function is
       also useful to fill in missing default values for the parameters
-      of the network layers. It is therefore recommended to use
-      `vl_simplenn_tidy()` also when new models are defined.
+      of the network layers. It is therefore also recommended to use
+      `vl_simplenn_tidy()` when new models are defined.
 
     * The downloadable pre-trained models have been updated to match
       the new version of SimpleNN. The older models are still

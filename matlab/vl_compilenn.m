@@ -284,7 +284,7 @@ if opts.enableCudnn
     case 'glnxa64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib64') ;
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
-end  
+end
 
 % --------------------------------------------------------------------
 %                                                     Compiler options
@@ -309,8 +309,10 @@ if opts.debug
 else
   flags.cc{end+1} = '-DNDEBUG' ;
 end
-if opts.enableGpu, flags.cc{end+1} = '-DENABLE_GPU' ; end
-if opts.enableCudnn,
+if opts.enableGpu
+  flags.cc{end+1} = '-DENABLE_GPU' ;
+end
+if opts.enableCudnn
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
   flags.cc{end+1} = ['-I' opts.cudnnIncludeDir] ;
 end
@@ -346,57 +348,81 @@ if opts.enableGpu
   end
 end
 
-% For the MEX command
+% So far all options are understood by the MEX command directly. Next,
+% we specify options that the MEX command passes to the underlying
+% compiler. This is usually clang or gcc, which have a compatible
+% interface. However, to add to the complexity, when compiling CUDA
+% MEX files, the compiler invoked is nvcc, wich *in turn* need to pass
+% options to the underyling clang or gcc.
+%
+% In practice:
+%
+% flags.link: MEX opts to link CPU/CUDA file (uses clang/gcc)
+% flags.mexcc: MEX opts to compile and link CPU file (uses clang/gcc)
+% flags.mexcu: MEX opts to only compile a CUDA file (uses nvcc)
+% flags.nvcc: NVCC opts to only compile a CUDA file (direct nvcc call)
+
 flags.link{end+1} = '-largeArrayDims' ;
-flags.mexcc = flags.cc ;
-flags.mexcc{end+1} = '-largeArrayDims' ;
-flags.mexcc{end+1} = '-cxx' ;
-if strcmp(arch, 'maci64') && opts.enableGpu && cuver < 70000
-  % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
-  % Clang libc++. This should go away in the future.
-  flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
-  flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
-  if  ~verLessThan('matlab', '8.5.0')
-    % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
-    % default when linking MEX files overriding the option above. We
-    % force it to use GCC libstdc++
-    flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
-  end
-end
-if strcmp(arch, 'maci64') && opts.enableGpu
-  % Mac OS X 10.11 disables LD_LIBRARY_PATH for security reason. To
-  % address this issue, we need to rpath the required CUDA and
-  % cuDNN libraries.
-  flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
-  if opts.enableCudnn
-    flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
-  end
-end
-if opts.enableGpu
-  flags.mexcu = flags.cc ;
-  flags.mexcu{end+1} = '-largeArrayDims' ;
-  flags.mexcu{end+1} = '-cxx' ;
-  flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
-  flags.mexcu{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;
+
+flags.mexcc = {flags.cc{:}, '-largeArrayDims'} ;
+if ~ispc, flags.mexcc{end+1} = '-cxx'; end
+flags.mexcu = flags.mexcc ;
+flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
+flags.mexcu{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;
+
+flags.nvcc = flags.cc ;
+flags.nvcc{end+1} = opts.cudaArch ;
+flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'extern', 'include') '"'] ;
+flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'] ;
+if opts.debug
+  flags.nvcc{end+1} = '-O0' ;
 end
 
-% For the cudaMethod='nvcc'
-if opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
-  flags.nvcc = flags.cc ;
-  flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'extern', 'include') '"'] ;
-  flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'] ;
-  if opts.debug
-    flags.nvcc{end+1} = '-O0' ;
-  end
-  flags.nvcc{end+1} = '-Xcompiler' ;
-  switch arch
-    case {'maci64', 'glnxa64'}
-      flags.nvcc{end+1} = '-fPIC' ;
-    case 'win64'
-      flags.nvcc{end+1} = '/MD' ;
-      check_clpath(); % check whether cl.exe in path
-  end
-  flags.nvcc{end+1} = opts.cudaArch;
+switch arch
+  case {'maci64'}
+    flags.nvcc{end+1} = '-Xcompiler -mssse3,-ffast-math,-mmacosx-version-min=10.9' ;
+    flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -mmacosx-version-min=10.9' ;
+    flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ffast-math' ;
+    flags.mexcu{end+1} = 'CXXFLAGS=$CXXFLAGS -Xcompiler -mmacosx-version-min=10.9' ;
+    flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ffast-math' ;
+
+    flags.link{end+1} = 'LDFLAGS=$LDFLAGS -mmacosx-version-min=10.9' ;
+
+    if opts.enableGpu
+      flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+      if opts.enableCudnn
+        flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+      end
+
+      if cuver < 70000
+        % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
+        % clang libc++. This should go away in the future.
+        flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
+        flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
+        if  ~verLessThan('matlab', '8.5.0')
+          % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
+          % default when linking MEX files overriding the option above. We
+          % force it to use GCC libstdc++
+          flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+        end
+      end
+    end
+
+  case {'glnxa64'}
+    flags.nvcc{end+1} = '-Xcompiler -fpic,-mssse3,-ffast-math' ;
+    flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
+    flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops' ;
+
+    if opts.enableGpu
+      flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+      if opts.enableCudnn
+        flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+      end
+    end
+
+  case {'win64'}
+    flags.nvcc{end+1} = '-Xcompiler /MD' ;
+    check_clpath(); % check whether cl.exe in path
 end
 
 if opts.verbose
