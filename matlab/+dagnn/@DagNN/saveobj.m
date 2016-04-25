@@ -6,8 +6,13 @@ function s = saveobj(obj)
 %   instead of embedding dependencies to code.
 %
 %   The object can be reconstructe by `obj = DagNN.loadobj(s)`.
+%
+%   As a side-effect the network is being reset (all variables are cleared)
+%   and is transfered to CPU.
+%
+%   See Also: dagnn.DagNN.loadobj, dagnn.DagNN.reset
 
-% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2015-2016 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

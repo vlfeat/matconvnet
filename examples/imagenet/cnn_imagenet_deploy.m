@@ -110,10 +110,30 @@ for name = names
   layer = net.layers(net.getLayerIndex(name)) ;
 
   % merge into previous conv layer
-  player = dagFindLayersWithOutput(net, layer.inputs{1}) ;
-  player = net.layers(net.getLayerIndex(player)) ;
+  playerName = dagFindLayersWithOutput(net, layer.inputs{1}) ;
+  playerName = playerName{1} ;
+  playerIndex = net.getLayerIndex(playerName) ;
+  player = net.layers(playerIndex)
   if ~isa(player.block, 'dagnn.Conv')
     error('Batch normalization cannot be merged as it is not preceded by a conv layer.') ;
+  end
+
+  % if the convolution layer does not have a bias,
+  % recreate it to have one
+  if ~player.block.hasBias
+    block = player.block ;
+    block.hasBias = true ;
+    net.renameLayer(playerName, 'tmp') ;
+    net.addLayer(playerName, ...
+                 block, ...
+                 player.inputs, ...
+                 player.outputs, ...
+                 {player.params{1}, sprintf('%s_b',playerName)}) ;
+    net.removeLayer('tmp') ;
+    playerIndex = net.getLayerIndex(playerName) ;
+    player = net.layers(playerIndex) ;
+    biases = net.getParamIndex(player.params{2}) ;
+    net.params(biases).value = zeros(block.size(4), 1, 'single') ;
   end
 
   filters = net.getParamIndex(player.params{1}) ;

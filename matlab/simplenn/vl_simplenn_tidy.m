@@ -46,7 +46,7 @@ end
 
 % copy layers
 for l = 1:numel(net.layers)
-  defaults = {'precious', false};
+  defaults = {'name', sprintf('layer%d', l), 'precious', false};
   layer = net.layers{l} ;
 
   % check weights format
@@ -95,6 +95,10 @@ for l = 1:numel(net.layers)
       defaults = [ defaults {...
         'leak', 0}] ;
 
+    case 'elu'
+      defaults = [ defaults {...
+        'alpha', 1}] ;
+
     case 'dropout'
       defaults = [ defaults {...
         'rate', 0.5}] ;
@@ -108,7 +112,8 @@ for l = 1:numel(net.layers)
         'noRoot', false, ...
         'aggregate', false, ...
         'p', 2, ...
-        'epsilon', 1e-3} ];
+        'epsilon', 1e-3, ...
+        'instanceWeights', []} ];
   end
 
   for i = 1:2:numel(defaults)

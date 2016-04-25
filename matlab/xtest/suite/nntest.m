@@ -18,7 +18,6 @@ classdef nntest < matlab.unittest.TestCase
 
   methods (TestClassSetup)
     function generators(test, device, dataType)
-      range = 128 ;
       test.currentDevice = device ;
       test.currentDataType = dataType ;
       switch dataType
@@ -30,14 +29,14 @@ classdef nntest < matlab.unittest.TestCase
       switch device
         case 'gpu'
           gpuDevice ;
-          test.randn = @(varargin) range * gpuArray.randn(varargin{:},dataType) ;
-          test.rand = @(varargin) range * gpuArray.rand(varargin{:},dataType) ;
+          test.randn = @(varargin) test.range * gpuArray.randn(varargin{:},dataType) ;
+          test.rand = @(varargin) test.range * gpuArray.rand(varargin{:},dataType) ;
           test.zeros = @(varargin) gpuArray.zeros(varargin{:},dataType) ;
           test.ones = @(varargin) gpuArray.ones(varargin{:},dataType) ;
           test.toDevice = @(x) gpuArray(x) ;
         case 'cpu'
-          test.randn = @(varargin) range * randn(varargin{:},dataType) ;
-          test.rand = @(varargin) range * rand(varargin{:},dataType) ;
+          test.randn = @(varargin) test.range * randn(varargin{:},dataType) ;
+          test.rand = @(varargin) test.range * rand(varargin{:},dataType) ;
           test.zeros = @(varargin) zeros(varargin{:},dataType) ;
           test.ones = @(varargin) ones(varargin{:},dataType) ;
           test.toDevice = @(x) gather(x) ;

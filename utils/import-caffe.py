@@ -1,6 +1,6 @@
 #! /usr/bin/python
-# file: import-caffe-dag.py
-# brief: Caffe importer for DagNN
+# file: import-caffe.py
+# brief: Caffe importer for DagNN and SimpleNN
 # author: Karel Lenc and Andrea Vedaldi
 
 # Requires Google Protobuf for Python and SciPy
@@ -22,6 +22,19 @@ from ast import literal_eval as make_tuple
 from layers import *
 
 # --------------------------------------------------------------------
+#                                                  Check NumPy version
+# --------------------------------------------------------------------
+
+def versiontuple(version):
+  return tuple(map(int, (version.split("."))))
+
+min_numpy_version = "1.7.0"
+if versiontuple(numpy.version.version) < versiontuple(min_numpy_version):
+  print 'Unsupported numpy version ({}), must be >= {}'.format(numpy.version.version,
+    min_numpy_version)
+  sys.exit(0)
+
+# --------------------------------------------------------------------
 #                                                     Helper functions
 # --------------------------------------------------------------------
 
@@ -32,8 +45,17 @@ def find(seq, name):
   return None
 
 def blobproto_to_array(blob):
-  return np.array(blob.data,dtype='float32').reshape(
-    blob.num, blob.channels, blob.height, blob.width).transpose()
+  """Convert a Caffe Blob to a numpy array.
+
+It also reverses the order of all dimensions to [width, height,
+channels, instance].
+"""
+  dims = []
+  if hasattr(blob, 'shape'):
+    dims = tolist(blob.shape.dim)
+  if not dims:
+    dims = [blob.num, blob.channels, blob.height, blob.width]
+  return np.array(blob.data,dtype='float32').reshape(dims).transpose()
 
 def dict_to_struct_array(d):
   if not d:
@@ -44,14 +66,17 @@ def dict_to_struct_array(d):
     y[x][0] = d[x]
   return y
 
-def versiontuple(version):
-  return tuple(map(int, (version.split("."))))
+def tolist(x):
+  "Convert x to a Python list. x can be a Protobuf container, a list or tuple, or scalar"
+  if isinstance(x,google.protobuf.internal.containers.RepeatedScalarFieldContainer):
+    return [z for z in x]
+  elif isinstance(x, (list,tuple)):
+    return [z for z in x]
+  else:
+    return [x]
 
-min_numpy_version = "1.7.0"
-if versiontuple(numpy.version.version) < versiontuple(min_numpy_version):
-  print 'Unsupported numpy version ({}), must be >= {}'.format(numpy.version.version,
-    min_numpy_version)
-  sys.exit(0)
+def escape(name):
+  return name.replace('-','_')
 
 # --------------------------------------------------------------------
 #                                                        Parse options
@@ -107,6 +132,14 @@ parser.add_argument('--preproc',
                     nargs='?',
                     default='caffe',
                     help='Variant of image preprocessing to use (use ? to get a list)')
+parser.add_argument('--simplify',
+                    dest='simplify',
+                    action='store_true',
+                    help='Apply simplifications')
+parser.add_argument('--no-simplify',
+                    dest='simplify',
+                    action='store_false',
+                    help='Do not apply simplifications')
 parser.add_argument('--remove-dropout',
                     dest='remove_dropout',
                     action='store_true',
@@ -136,6 +169,7 @@ parser.add_argument('--output-format',
 parser.set_defaults(transpose=True)
 parser.set_defaults(remove_dropout=False)
 parser.set_defaults(remove_loss=False)
+parser.set_defaults(simplify=True)
 args = parser.parse_args()
 
 print 'Caffe varaint set to', args.caffe_variant
@@ -149,8 +183,10 @@ elif args.caffe_variant == 'caffe_0115':
   import proto.caffe_0115_pb2 as caffe_pb2
 elif args.caffe_variant == 'caffe_6e3916':
   import proto.caffe_6e3916_pb2 as caffe_pb2
+elif args.caffe_variant == 'caffe_b590f1d':
+  import proto.caffe_b590f1d_pb2 as caffe_pb2
 elif args.caffe_variant == '?':
-  print 'Supported variants: caffe, cafe-old, caffe_0115, caffe_6e3916, vgg-caffe'
+  print 'Supported variants: caffe, vgg-caffe, caffe-old, caffe_0115, caffe_6e3916, caffe_5b0f1d'
   sys.exit(0)
 else:
   print 'Unknown Caffe variant', args.caffe_variant
@@ -297,10 +333,17 @@ if args.caffe_data:
 #                                   Read layers in a CaffeModel object
 # --------------------------------------------------------------------
 
-print 'Converting {} layers'.format(len(net.layers))
+if args.caffe_variant in ['caffe_b590f1d']:
+  layers_list = net.layer
+  data_layers_list = data.layer
+else:
+  layers_list = net.layers
+  data_layers_list = data.layers
+
+print 'Converting {} layers'.format(len(layers_list))
 
 cmodel = CaffeModel()
-for layer in net.layers:
+for layer in layers_list:
 
   # Depending on how old the proto-buf, the top and bottom parameters
   # are found at a different level than the others
@@ -314,143 +357,154 @@ for layer in net.layers:
   # ID, which we convert back to a string
   ltype = layer.type
   if not isinstance(ltype, basestring): ltype = layers_type[ltype]
-  print 'Processing layer {} of type \'{}\''.format(layer.name, ltype)
+  print 'Added layer \'{}\' ({})'.format(ltype, layer.name)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  if ltype == 'conv' or ltype == 'deconvolution':
+  if ltype in ['conv', 'deconvolution', 'Convolution', 'Deconvolution']:
     opts = getopts(layer, 'convolution_param')
-    if hasattr(layer, 'kernelsize'):
-      kernelSize = [opts.kernelsize]*2
+    if hasattr(opts, 'kernelsize'):
+      kernel_size = opts.kernelsize
     else:
-      kernelSize = [opts.kernel_size]*2
-    if hasattr(layer, 'bias_term'):
+      kernel_size = opts.kernel_size
+    if hasattr(opts, 'bias_term'):
       bias_term = opts.bias_term
     else:
       bias_term = True
-    pad = [opts.pad]*4
-    stride = [opts.stride]*2
-    if ltype == 'conv':
-      clayer = CaffeConv(layer.name,
-                         bottom,
-                         top,
-                         kernelSize,
-                         bias_term,
-                         opts.num_output,
-                         opts.group,
-                         [opts.stride] * 2,
-                         [opts.pad] * 4)
+    if hasattr(opts, 'dilation'):
+      dilation = opts.dilation
     else:
-      clayer = CaffeDeconvolution(layer.name,
-                                  bottom,
-                                  top,
-                                  kernelSize,
-                                  bias_term,
-                                  opts.num_output,
-                                  opts.group,
-                                  [opts.stride] * 2,
-                                  [opts.pad] * 4)
+      dilation = 1
+    if ltype in ['conv', 'Convolution']:
+      clayer = CaffeConv(layer.name, bottom, top,
+                         kernel_size = tolist(kernel_size),
+                         bias_term = bias_term,
+                         num_output = opts.num_output,
+                         group = opts.group,
+                         dilation = dilation,
+                         stride = tolist(opts.stride),
+                         pad = tolist(opts.pad))
+    else:
+      clayer = CaffeDeconvolution(layer.name, bottom, top,
+                                  kernel_size = tolist(kernel_size),
+                                  bias_term = bias_term,
+                                  num_output = opts.num_output,
+                                  group = opts.group,
+                                  dilation = dilation,
+                                  stride = tolist(opts.stride),
+                                  pad = tolist(opts.pad))
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'innerproduct' or ltype == 'inner_product':
+  elif ltype in ['innerproduct', 'inner_product', 'InnerProduct']:
     opts = getopts(layer, 'inner_product_param')
-    #assert(opts.axis == 1)
-    if hasattr(layer, 'bias_term'):
+    if hasattr(opts, 'bias_term'):
       bias_term = opts.bias_term
     else:
       bias_term = True
-    clayer = CaffeInnerProduct(layer.name,
-                               bottom,
-                               top,
-                               bias_term,
-                               opts.num_output)
+    if hasattr(opts, 'axis'):
+      axis = opts.axis
+    else:
+      axis = 1
+    clayer = CaffeInnerProduct(layer.name, bottom, top,
+                               num_output = opts.num_output,
+                               bias_term = bias_term,
+                               axis = axis)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'relu':
-    clayer = CaffeReLU(layer.name,
-                       bottom,
-                       top)
-
+  elif ltype in ['relu', 'ReLU']:
+    clayer = CaffeReLU(layer.name, bottom, top)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'crop':
-    clayer = CaffeCrop(layer.name,
-                       bottom,
-                       top)
+  elif ltype in ['crop', 'Crop']:
+    clayer = CaffeCrop(layer.name, bottom, top)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'lrn':
+  elif ltype in ['lrn', 'LRN']:
     opts = getopts(layer, 'lrn_param')
     local_size = float(opts.local_size)
     alpha = float(opts.alpha)
     beta = float(opts.beta)
     kappa = opts.k if hasattr(opts,'k') else 1.
-    clayer = CaffeLRN(layer.name,
-                      bottom,
-                      top,
-                      local_size,
-                      kappa,
-                      alpha,
-                      beta)
+    regions = ['across_channels', 'within_channel']
+    if hasattr(opts, 'norm_region'):
+      norm_region = opts.norm_region
+    else:
+      norm_region = 0
+    clayer = CaffeLRN(layer.name, bottom, top,
+                      local_size = local_size,
+                      alpha = alpha,
+                      beta = beta,
+                      norm_region = regions[norm_region],
+                      kappa = kappa)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'pool':
+  elif ltype in ['pool', 'Pooling']:
     opts = getopts(layer, 'pooling_param')
     if hasattr(layer, 'kernelsize'):
-      kernelSize = [opts.kernelsize]*2
+      kernel_size = opts.kernelsize
     else:
-      kernelSize = [opts.kernel_size]*2
-    clayer = CaffePooling(layer.name,
-                          bottom,
-                          top,
-                          ['max', 'avg'][opts.pool],
-                          kernelSize,
-                          [opts.stride]*2,
-                          [opts.pad]*4)
+      kernel_size = opts.kernel_size
+    clayer = CaffePooling(layer.name, bottom, top,
+                          method = ['max', 'avg'][opts.pool],
+                          pad = tolist(opts.pad),
+                          kernel_size = tolist(kernel_size),
+                          stride = tolist(opts.stride))
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'dropout':
+  elif ltype in ['dropout', 'Dropout']:
     opts = getopts(layer, 'dropout_param')
-    clayer = CaffeDropout(layer.name,
-                          bottom,
-                          top,
+    clayer = CaffeDropout(layer.name, bottom, top,
                           opts.dropout_ratio)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'softmax':
-    clayer = CaffeSoftMax(layer.name,
-                          bottom,
-                          top)
+  elif ltype in ['softmax', 'Softmax']:
+    clayer = CaffeSoftMax(layer.name, bottom, top)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'softmax_loss':
-    clayer = CaffeSoftMaxLoss(layer.name,
-                              bottom,
-                              top)
+  elif ltype in ['softmax_loss', 'SoftmaxLoss']:
+    clayer = CaffeSoftMaxLoss(layer.name, bottom, top)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'concat':
+  elif ltype in ['concat', 'Concat']:
     opts = getopts(layer, 'concat_param')
-    clayer = CaffeConcat(layer.name,
-                         bottom,
-                         top,
+    clayer = CaffeConcat(layer.name, bottom, top,
                          3 - opts.concat_dim) # todo: depreceted in recent Caffes
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'eltwise':
+  elif ltype in ['Scale']:
+    opts = getopts(layer, 'scale_param')
+    clayer = CaffeScale(layer.name, bottom, top,
+                        axis = opts.axis,
+                        num_axes = opts.num_axes,
+                        bias_term = opts.bias_term)
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype in ['BatchNorm']:
+    opts = getopts(layer, 'batch_norm_param')
+    clayer = CaffeBatchNorm(layer.name, bottom, top,
+                            use_global_stats = opts.use_global_stats,
+                            moving_average_fraction = opts.moving_average_fraction,
+                            eps = opts.eps)
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype in  ['eltwise', 'Eltwise']:
     opts = getopts(layer, 'eltwise_param')
-    clayer = CaffeEltWise(layer.name,
-                          bottom,
-                          top,
-                          ['prod', 'sum', 'max'][opts.operation],
-                          opts.coeff,
-                          opts.stable_prod_grad)
+    operations = ['prod', 'sum', 'max']
+    clayer = CaffeEltWise(layer.name, bottom, top,
+                          operation = operations[opts.operation],
+                          coeff = opts.coeff,
+                          stable_prod_grad = opts.stable_prod_grad)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'data':
-    continue
+  elif ltype in ['data', 'Data']:
+    opts = getopts(layer, 'eltwise_param')
+    operations = ['prod', 'sum', 'max']
+    clayer = CaffeData(layer.name, bottom, top,
+                       operation = operations[opts.operation],
+                       coeff = opts.coeff,
+                       stable_prod_grad = opts.stable_prod_grad)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  elif ltype == 'accuracy':
+  elif ltype in ['accuracy', 'Accuracy']:
     continue
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -458,66 +512,58 @@ for layer in net.layers:
     print 'Warning: unknown layer type', ltype
     continue
 
-  clayer.model = cmodel
-  cmodel.addLayer(clayer)
-
-  # Fill parameters
-  for dlayer in data.layers:
-    if args.caffe_variant in ['vgg-caffe', 'caffe-old']:
-      dlayer = dlayer.layer
-    if dlayer.name == layer.name:
-      for i, blob in enumerate(dlayer.blobs):
-        array = blobproto_to_array(blob).astype('float32')
-        cmodel.params[clayer.params[i]].value = array
-        print '  Found parameter blob of size', array.shape
+  if clayer is not None:
+    clayer.model = cmodel
+    cmodel.addLayer(clayer)
+    # Fill parameters
+    for dlayer in data_layers_list:
+      if args.caffe_variant in ['vgg-caffe', 'caffe-old']:
+        dlayer = dlayer.layer
+      if dlayer.name == layer.name:
+        for i, blob in enumerate(dlayer.blobs):
+          blob = blobproto_to_array(blob).astype('float32')
+          print '  + parameter \'%s\' <-- blob%s' % (clayer.params[i], blob.shape)
+          clayer.setBlob(cmodel, i, blob)
 
 # --------------------------------------------------------------------
 #                             Get the size of the input to the network
 # --------------------------------------------------------------------
 
-if len(net.input_dim) > 0:
-  dataSize = [net.input_dim[2],
-              net.input_dim[3],
-              net.input_dim[1],
-              1]
-else:
-  layer = find(net.layers, 'data')
-  if layer is None:
-    print "Warning: could not determine the input data size"
+for i, inputVarName in enumerate(net.input):
+  if hasattr(net, 'input_shape') and net.input_shape:
+    shape = copy.deepcopy(net.input_shape[i])
+    shape.reverse()
   else:
-    dataSize = [layer.transform_param.crop_size,
-                layer.transform_param.crop_size,
-                3,
-                1]
+    shape = [net.input_dim[k + 4*i] for k in [3,2,1,0]]
+  print '  c- Input \'{}\' is {}'.format(inputVarName, shape)
+  cmodel.vars[inputVarName].shape = shape
+  # heuristic: the first input or 'data' is the input image
+  if i == 0 or inputVarName == 'data': dataShape = shape
 
-dataVarName = 'data'
-if not cmodel.vars.has_key('data'):
-  dataVarName = cmodel.layers.elements().next().inputs[0]
-cmodel.vars[dataVarName].size = dataSize
-
-# mark data as BGR for the purpose of transposition
-# rare Caffe networks are trained in RGB format, so this can be skipped
-# this is decided based on the value of the --color-format option
-cmodel.vars[dataVarName].bgrInput = (args.color_format == 'bgr')
+  # mark any 3-channels input as BGR for the purpose of RGB conversion
+  # rare Caffe networks are trained in RGB format, so this can be skipped
+  # this is decided based on the value of the --color-format option
+  if cmodel.vars[inputVarName].shape[2] == 3:
+    cmodel.vars[inputVarName].bgrInput = (args.color_format == 'bgr')
 
 # --------------------------------------------------------------------
 #                                                      Edit operations
 # --------------------------------------------------------------------
 
-# May perform several adjustments that depend on the input size:
+# The first step is to compute the size of all the variables in the
+# model, starting from the input. A small number of conversions
+# require this information to be done properly. In particular:
 #
-# * For pooling, fix incompatibility between pooling padding in MatConvNet and Caffe
-# * For FCNs, compute the amount of crop
+# * For Pooling layers, fix incompatibility between pooling padding in MatConvNet and Caffe
+# * For Crop layers (in FCNs), determine the amount of crop (in Caffe this is done at run time)
 
 cmodel.reshape()
 
-# Transpose to accomodate MATLAB H x W image order
+# Next, MATLAB uses a column major image format, whereas Caffe uses a
+# row major.  We fix this by transposing X and Y in all spatial
+# layers.
 
-if args.transpose:
-  cmodel.transpose()
-
-def escape(name):
-  return name.replace('-','_')
+if args.transpose: cmodel.transpose()
 
 # Rename layers, parametrs, and variables if they contain
 # symbols that are incompatible with MatConvNet
@@ -581,6 +627,31 @@ if args.remove_dropout:
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 
+# Simplifications
+if args.simplify:
+  # BatchNorm followed by Scale
+  layerNames = cmodel.layers.keys()
+  for name in layerNames:
+    layer = cmodel.layers[name]
+    if type(layer) is CaffeScale:
+      if len(layer.inputs) > 1:
+        continue # the scaling factor is an input, not a parameter
+      if len(cmodel.getLayersWithInput(layer.inputs[0])) > 1:
+        continue # other layers use the same input
+      parentNames = cmodel.getLayersWithOutput(layer.inputs[0])
+      if len(parentNames) != 1: continue
+      parent = cmodel.layers[parentNames[0]]
+      if type(parent) is not CaffeBatchNorm: continue
+      print "Simplifying scale layer \'{}\'".format(name)
+      smult = cmodel.params[layer.params[0]]
+      sbias = cmodel.params[layer.params[1]]
+      mult = cmodel.params[parent.params[0]]
+      bias = cmodel.params[parent.params[1]]
+      mult.value = mult.value * smult.value
+      bias.value = smult.value * bias.value + sbias.value
+      cmodel.renameVar(layer.outputs[0], layer.inputs[0])
+      cmodel.removeLayer(name)
+
 # Append softmax
 for i, name in enumerate(args.append_softmax):
   # search for the layer to append SoftMax to
@@ -607,15 +678,15 @@ cmodel.display()
 
 if average_image is not None:
   if resize_average_image:
-    x = numpy.linspace(0, average_image.shape[1]-1, dataSize[0])
-    y = numpy.linspace(0, average_image.shape[0]-1, dataSize[1])
+    x = numpy.linspace(0, average_image.shape[1]-1, dataShape[0])
+    y = numpy.linspace(0, average_image.shape[0]-1, dataShape[1])
     x, y = np.meshgrid(x, y, sparse=False, indexing='xy')
     average_image = bilinear_interpolate(average_image, x, y)
 else:
   average_image = np.zeros((0,),dtype='float')
 
 mnormalization = {
-  'imageSize': row(dataSize),
+  'imageSize': row(dataShape),
   'averageImage': average_image,
   'interpolation': 'bilinear',
   'keepAspect': True,
@@ -624,7 +695,7 @@ mnormalization = {
 if args.preproc == 'caffe':
   mnormalization['interpolation'] = 'bicubic'
   mnormalization['keepAspect'] = False
-  mnormalization['border'] = row([256 - dataSize[0], 256 - dataSize[1]])
+  mnormalization['border'] = row([256 - dataShape[0], 256 - dataShape[1]])
 
 # --------------------------------------------------------------------
 #                                                              Classes

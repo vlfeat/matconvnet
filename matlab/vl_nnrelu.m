@@ -31,7 +31,7 @@ function y = vl_nnrelu(x,dzdy,varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.leak = 0 ;
-opts = vl_argparse(opts, varargin) ;
+opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
 if opts.leak == 0
   if nargin <= 1 || isempty(dzdy)

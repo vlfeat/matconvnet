@@ -44,12 +44,13 @@ IMAGELIB_LDFLAGS ?= $(IMAGELIB_LDFLAGS_DEFAULT)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta18
+VER = 1.0-beta19
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync
 HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
+SHELL = /bin/bash # sh not good enough
 
 # --------------------------------------------------------------------
 #                                                        Configuration
@@ -60,30 +61,39 @@ MEX = $(MATLABROOT)/bin/mex
 MEXEXT = $(MATLABROOT)/bin/mexext
 MEXARCH = $(subst mex,,$(shell $(MEXEXT)))
 MEXOPTS ?= matlab/src/config/mex_CUDA_$(ARCH).xml
-MEXFLAGS = -cxx -largeArrayDims -lmwblas \
+
+# We define four set of command line options:
+#
+# 1.   MEXFLAGS_CPU: options for the `mex` command to compile or link
+#      a CPU-only object file or MEX file.
+# 2.   MEXFLAGS_GPU: options for the `mex` command to compile or link
+#      a CUDA object file or MEX file.
+# 3.   MEXFLAGS_GPU_LINK: options for the `mex` command to link
+#      a CUDA object file or MEX fil.
+# 4.   NVCCFLAGS: optios for the `nvcc` command to compile
+#      a CUDA object or MEX file.
+
+CCFLAGS = \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
-$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,)
+$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,) \
+$(if $(VERB),-v,)
+
+MEXFLAGS = $(CCFLAGS) -cxx -largeArrayDims -lmwblas
 MEXFLAGS_CPU = $(MEXFLAGS)
 MEXFLAGS_GPU = $(MEXFLAGS) -f "$(MEXOPTS)"
-SHELL = /bin/bash # sh not good enough
+MEXFLAGS_GPU_LINK = $(MEXFLAGS) -lmwgpu
 
 NVCC = $(CUDAROOT)/bin/nvcc
 NVCCVER = $(shell $(NVCC) --version | \
 sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
 xargs printf '%02d%02d%02d')
 NVCCVER_LT_70 = $(shell test $(NVCCVER) -lt 070000 && echo true)
-
-# this is used *onyl* for the 'nvcc' method
-NVCCFLAGS = \
--gencode=arch=compute_30,code=\"sm_30,compute_30\" \
--DENABLE_GPU \
-$(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
-$(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,) \
+NVCCFLAGS = $(CCFLAGS) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
+-gencode=arch=compute_30,code=\"sm_30,compute_30\" \
 -Xcompiler -fPIC
-MEXFLAGS_NVCC = $(MEXFLAGS) -lmwgpu
 
 ifneq ($(DEBUG),)
 MEXFLAGS += -g
@@ -97,33 +107,42 @@ MEXFLAGS += LDOPTIMFLAGS='$$LDOPTIMFLAGS -g'
 NVCCFLAGS += -g
 endif
 
-ifdef VERB
-MEXFLAGS += -v
-NVCCFLAGS += -v
-endif
+# Rpath to CUDA and CuDNN for convenience (required on recent versions of Mac OS X)
+comma:=,
 
 # Mac OS X
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
-comma:=,
-MEXLDFLAGS := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
-MEXLDFLAGS += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib",)
-ifeq ($(NVCCVER_LT_70),true)
-MEXLDFLAGS += -stdlib=libstdc++
-endif
-MEXFLAGS_CPU  += CXXFLAGS='$$CXXFLAGS -mmacosx-version-min=10.8'
-MEXFLAGS_NVCC += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
-MEXFLAGS_GPU  += -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(MEXLDFLAGS)'
 IMAGELIB_DEFAULT = quartz
+
+NVCCFLAGS += -Xcompiler -mssse3,-ffast-math,-mmacosx-version-min=10.9
+MEXFLAGS_CPU += CXXFLAGS='$$CXXFLAGS -mmacosx-version-min=10.9'
+MEXFLAGS_GPU += CXXFLAGS='$$CXXFLAGS -Xcompiler -mmacosx-version-min=10.9'
+MEXFLAGS_CPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -mssse3 -ffast-math'
+MEXFLAGS_GPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler -mssse3,-ffast-math'
+
+LDFLAGS_GPU := -Wl,-rpath -Wl,"$(CUDAROOT)/lib"
+LDFLAGS_GPU += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib",)
+ifeq ($(NVCCVER_LT_70),true)
+LDFLAGS_GPU += -stdlib=libstdc++
+endif
+MEXLDFLAGS_GPU := -L"$(CUDAROOT)/lib" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib",) LDFLAGS='$$LDFLAGS $(LDFLAGS_GPU)'
+MEXFLAGS_GPU += $(MEXLDFLAGS_GPU)
+MEXFLAGS_GPU_LINK += $(MEXLDFLAGS_GPU)
 endif
 
 # Linux
 ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
-MEXFLAGS_NVCC += -L"$(CUDAROOT)/lib64" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64",)
-MEXFLAGS_GPU  += -L"$(CUDAROOT)/lib64" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64",)
 IMAGELIB_DEFAULT = libjpeg
-MEXFLAGS_GPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops'
-MEXFLAGS_CPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops'
+
 NVCCFLAGS += -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops
+MEXFLAGS_CPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops'
+MEXFLAGS_GPU += CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops'
+
+LDFLAGS_GPU := -Wl,-rpath -Wl,"$(CUDAROOT)/lib64"
+LDFLAGS_GPU += $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib64",)
+MEXLDFLAGS_GPU := -L"$(CUDAROOT)/lib64" $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64",) LDFLAGS='$$LDFLAGS $(LDFLAGS_GPU)'
+MEXFLAGS_GPU += $(MEXLDFLAGS_GPU)
+MEXFLAGS_GPU_LINK += $(MEXLDFLAGS_GPU)
 endif
 
 # Image library
@@ -140,7 +159,7 @@ MEXFLAGS += $(IMAGELIB_CFLAGS) $(IMAGELIB_LDFLAGS)
 endif
 
 MEXFLAGS_GPU += -lcublas -lcudart $(if $(ENABLE_CUDNN),-lcudnn,)
-MEXFLAGS_NVCC += -lcublas -lcudart $(if $(ENABLE_CUDNN),-lcudnn,)
+MEXFLAGS_GPU_LINK += -lcublas -lcudart $(if $(ENABLE_CUDNN),-lcudnn,)
 
 # --------------------------------------------------------------------
 #                                                      Build MEX files
@@ -206,7 +225,7 @@ mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 
 cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
-cpp_tgt:=$(subst matlab/src/bits/,matlab/mex/.build/,$(cpp_tgt))
+cpp_tgt:=$(subst matlab/src/,matlab/mex/.build/,$(cpp_tgt))
 
 .PHONY: all, distclean, clean, info, pack, post, post-doc, doc
 
@@ -215,9 +234,9 @@ all: $(cpp_tgt) $(mex_tgt)
 # Create build directory
 %/.stamp:
 	mkdir -p $(*)/ ; touch $(*)/.stamp
-$(mex_tgt): matlab/mex/.build/impl/.stamp
-$(cpp_tgt): matlab/mex/.build/impl/.stamp
-$(cu_tgt): matlab/mex/.build/impl/.stamp
+$(mex_tgt): matlab/mex/.build/bits/impl/.stamp
+$(cpp_tgt): matlab/mex/.build/bits/impl/.stamp
+$(cu_tgt): matlab/mex/.build/bits/impl/.stamp
 
 # Standard code
 .PRECIOUS: matlab/mex/.build/%.o
@@ -229,11 +248,10 @@ else
 include Makefile.nvcc
 endif
 
-matlab/mex/.build/impl/imread.o : matlab/src/bits/impl/imread_helpers.hpp
-matlab/mex/.build/impl/imread_quartz.o : matlab/src/bits/impl/imread_helpers.hpp
-matlab/mex/.build/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
-matlab/mex/.build/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
-
+matlab/mex/.build/bits/impl/imread.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/bits/impl/imread_quartz.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/bits/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
+matlab/mex/.build/bits/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
 
 # --------------------------------------------------------------------
 #                                                        Documentation
@@ -255,7 +273,7 @@ info: doc-info
 	@echo '------------------------------'
 	@echo 'MEXFLAGS=$(MEXFLAGS)'
 	@echo 'MEXFLAGS_GPU=$(MEXFLAGS_GPU)'
-	@echo 'MEXFLAGS_NVCC=$(MEXFLAGS_NVCC)'
+	@echo 'MEXFLAGS_GPU_LINK=$(MEXFLAGS_GPU_LINK)'
 	@echo '------------------------------'
 	@echo 'NVCC=$(NVCC)'
 	@echo 'NVCCVER=$(NVCCVER)'
