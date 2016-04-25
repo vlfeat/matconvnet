@@ -3,7 +3,7 @@
 // @author Ankush Gupta
 // @author Andrea Vedaldi
 /*
-Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
+Copyright (C) 2016- Ankush Gupta and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under

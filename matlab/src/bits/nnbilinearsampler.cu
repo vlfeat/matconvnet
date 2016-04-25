@@ -4,7 +4,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
+Copyright (C) 2016- Ankush Gupta and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -18,7 +18,7 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
-#if ENABLE_CUDNN
+#if ENABLE_CUDNN && (CUDNN_VERSION >= 5000)
 #include "impl/nnbilinearsampler_cudnn.hpp"
 #endif
 
@@ -80,14 +80,12 @@ vl::nnbilinearsampler_forward(Context& context,
 
 #if ENABLE_GPU
     case vl::GPU:
-#if ENABLE_CUDNN
-#if (CUDNN_VERSION >= 5000)
+#if ENABLE_CUDNN && (CUDNN_VERSION >= 5000)
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
       if (error == vl::vlSuccess) { return error ; }
       if (error != vl::vlErrorUnsupported) { return error ; }
     }
-#endif
 #endif
     DISPATCH2(vl::GPU) ;
     if (error == vlErrorCuda) {
@@ -148,14 +146,12 @@ vl::nnbilinearsampler_backward(Context& context,
 
 #if ENABLE_GPU
     case vl::GPU:
-#if ENABLE_CUDNN
-#if (CUDNN_VERSION >= 5000)
+#if ENABLE_CUDNN && (CUDNN_VERSION >= 5000)
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
       if (error == vl::vlSuccess) { return error ; }
       if (error != vl::vlErrorUnsupported) { return error ; }
     }
-#endif
 #endif
     DISPATCH2(vl::GPU) ;
     if (error == vlErrorCuda) {

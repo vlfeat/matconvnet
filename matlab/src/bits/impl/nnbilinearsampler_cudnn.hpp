@@ -10,6 +10,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
+#if (CUDNN_VERSION >= 5000)
+
 #ifndef __vl__bilinearsampler_cudnn__
 #define __vl__bilinearsampler_cudnn__
 
@@ -38,3 +40,4 @@ namespace vl { namespace impl {
 
 } }
 #endif /* defined(__vl__nnbilinearsampler_cudnn__) */
+#endif /* CUDNN _VERSION >= 5000 check */
