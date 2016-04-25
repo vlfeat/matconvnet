@@ -95,6 +95,10 @@ for l = 1:numel(net.layers)
       defaults = [ defaults {...
         'leak', 0}] ;
 
+    case 'elu'
+      defaults = [ defaults {...
+        'alpha', 1}] ;
+
     case 'dropout'
       defaults = [ defaults {...
         'rate', 0.5}] ;

@@ -129,6 +129,10 @@ while ~isempty(currentVars)
                     'pad', block.pad); 
             case 'dagnn.Sigmoid'
                 net.layers{end+1} = struct('type', 'sigmoid') ;
+            case 'dagnn.Concat'
+                % Nothing, we already concated layers if it was possible
+            case 'dagnn.DropOut'
+                % Nothing
             otherwise
                 error('Unsupported layer type ''%s''', class(block))
         end
