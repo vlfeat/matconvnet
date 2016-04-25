@@ -82,9 +82,9 @@ case 'autonn'
 
   % diagnose all Params associated with conv layers (1 depth up from them)
   convs = x.find(@vl_nnconv) ;
-  for i = 1:numel(convs)
-    Layer.setDiagnostics(convs{i}.find('Param', 'depth',1), true) ;
-  end
+  convParams = cellfun(@(x) x.find('Param', 'depth', 1), convs, 'Uniform', false) ;
+  Layer.setDiagnostics(convParams, true) ;
+  
   
   objective = vl_nnloss(x, labels, 'loss', 'softmaxlog') ;
   error = vl_nnloss(x, labels, 'loss', 'classerror') ;

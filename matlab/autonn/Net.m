@@ -54,7 +54,7 @@ classdef Net < handle
   methods
     function net = Net(varargin)
       % parse auto-naming option after the other inputs
-      opts.sequentialNames = false ;
+      opts.sequentialNames = true ;
       [opts, varargin] = vl_argparsepos(opts, varargin) ;
       
       if isscalar(varargin)
@@ -69,6 +69,11 @@ classdef Net < handle
         root = Layer(@cat, 1, varargin{:}) ;
       end
       
+      % make sure all layers have names
+      if opts.sequentialNames
+        root.sequentialNames() ;
+      end
+      
       % figure out the execution order, and list layer objects
       root.resetOrder() ;
       objs = root.buildOrder({}) ;
@@ -78,15 +83,6 @@ classdef Net < handle
       if ~isempty(idx)
         assert(isscalar(idx), 'More than one Layer has the META property.') ;
         net.meta = objs{idx}.meta ;
-      end
-      
-      % figure out the execution order, and list layer objects
-      root.resetOrder() ;
-      objs = root.buildOrder({}) ;
-      
-      % make sure all layers have names
-      if opts.sequentialNames
-        root.sequentialNames() ;
       end
       
       % indexes of callable Layer objects (not Inputs or Params)

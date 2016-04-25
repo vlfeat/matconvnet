@@ -185,12 +185,14 @@ classdef Layer < matlab.mixin.Copyable
       
       % automatically set missing names, according to the execution order
       for k = 1:numel(objs)
-        if isempty(objs{k}.name)
-          if isa(objs{k}, 'Input')  % input1, input2, ...
+        if isa(objs{k}, 'Input')  % input1, input2, ...
+          if isempty(objs{k}.name)
             n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k))) ;
             objs{k}.name = modifier(sprintf('input%i', n)) ;  %#ok<*AGROW>
-            
-          elseif ~isempty(objs{k}.func)  % conv1, conv2...
+          end
+        elseif ~isempty(objs{k}.func)  % conv1, conv2...
+          name = objs{k}.name ;
+          if isempty(name)
             n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k))) ;
             name = func2str(objs{k}.func) ;  %#ok<*PROP>
             
@@ -198,13 +200,14 @@ classdef Layer < matlab.mixin.Copyable
             if strcmp(name, 'bnorm_wrapper'), name = 'bnorm' ; end
             name = sprintf('%s%i', name, n) ;
             objs{k}.name = modifier(name) ;
-            
-            % also set dependant Param names: conv1_p1, ...
-            ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
-            for i = 1:numel(ps)
-              if isempty(objs{k}.inputs{ps(i)}.name)
-                objs{k}.inputs{ps(i)}.name = modifier(sprintf('%s_p%i', name, i)) ;
-              end
+          end
+          
+          % also set dependant Param names: conv1_p1, ..., regardless of
+          % whether the original name was empty (e.g. objective_p1, ...).
+          ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
+          for i = 1:numel(ps)
+            if isempty(objs{k}.inputs{ps(i)}.name)
+              objs{k}.inputs{ps(i)}.name = modifier(sprintf('%s_p%i', name, i)) ;
             end
           end
         end
@@ -608,9 +611,9 @@ classdef Layer < matlab.mixin.Copyable
     end
     
     function setDiagnostics(obj, value)
-      if iscell(obj)
+      if iscell(obj)  % applies recursively to nested cell arrays
         for i = 1:numel(obj)
-          obj{i}.diagnostics = value ;
+          Layer.setDiagnostics(obj{i}, value) ;
         end
       else
         obj.diagnostics = value ;
