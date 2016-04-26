@@ -231,8 +231,6 @@
 		2D8079311AEF94860040BC14 /* vl_nnbnorm.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnbnorm.cu; path = matlab/src/vl_nnbnorm.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D8DC38B1A8D76FD00D053E6 /* nnpooling_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling_cudnn.cu; path = matlab/src/bits/impl/nnpooling_cudnn.cu; sourceTree = "<group>"; };
 		2D8DC38C1A8D76FD00D053E6 /* nnpooling_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnpooling_cudnn.hpp; path = matlab/src/bits/impl/nnpooling_cudnn.hpp; sourceTree = "<group>"; };
-		2D9A37031A7E41EF00C994CF /* Makefile.mex */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; path = Makefile.mex; sourceTree = "<group>"; };
-		2D9A37041A7E41EF00C994CF /* Makefile.nvcc */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; path = Makefile.nvcc; sourceTree = "<group>"; };
 		2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnconv.cpp; path = matlab/src/vl_nnconv.cpp; sourceTree = "<group>"; };
 		2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnnormalize.cpp; path = matlab/src/vl_nnnormalize.cpp; sourceTree = "<group>"; };
 		2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnpool.cpp; path = matlab/src/vl_nnpool.cpp; sourceTree = "<group>"; };
@@ -282,8 +280,6 @@
 			isa = PBXGroup;
 			children = (
 				2D375DBC18A7F790008A97EE /* Makefile */,
-				2D9A37031A7E41EF00C994CF /* Makefile.mex */,
-				2D9A37041A7E41EF00C994CF /* Makefile.nvcc */,
 				2D717F2219B3A2AB0028FE9E /* doc */,
 				2D375DBD18A7F796008A97EE /* src */,
 				2DD3FACA18EC0E4C00053032 /* matlab */,
