@@ -31,6 +31,7 @@ opts.derOutputs = 1 ;
 opts.stats = 'losses' ;  %list of layers that are stats (loss, error), their names, or 'losses' for automatic
 opts.plotStatistics = true ;
 opts.plotDiagnostics = false ;
+opts.postEpochFn = [] ;  % postEpochFn(opts,epoch,net,stats) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -156,6 +157,16 @@ for epoch=start+1:opts.numEpochs
     end
     drawnow ;
     print(1, modelFigPath, '-dpdf') ;
+  end
+  
+  if ~isempty(opts.postEpochFn)
+    if nargout(opts.postEpochFn) == 0
+      opts.postEpochFn(opts, epoch, net, stats) ;
+    else
+      lr = opts.postEpochFn(opts, epoch, net, stats) ;
+      if ~isempty(lr), opts.learningRate = lr; end
+      if opts.learningRate == 0, break; end
+    end
   end
 end
 
