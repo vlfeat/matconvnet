@@ -10,8 +10,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#if !defined(ENABLE_GPU) | !defined(ENABLE_CUDNN)
-#error "bilinearsampler_cudnn.hpp cannot be compiled without GPU and CUDNN support."
+#if !defined(ENABLE_GPU) || !defined(ENABLE_CUDNN) || (CUDNN_VERSION < 5000)
+#error "bilinearsampler_cudnn.cu can only be compiled with GPU and CUDNN (v5 or higher) support."
 #endif
 
 #include "nnbilinearsampler_cudnn.hpp"
