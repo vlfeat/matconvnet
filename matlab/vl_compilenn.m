@@ -307,6 +307,7 @@ flags.cc = {} ;
 flags.ccpass = {} ;
 flags.ccoptim = {} ;
 flags.link = {} ;
+flags.linklibs = {} ;
 flags.nvccpass = {char(opts.cudaArch)} ;
 
 if opts.verbose > 1
@@ -329,7 +330,7 @@ end
 if opts.enableDouble
   flags.cc{end+1} = '-DENABLE_DOUBLE' ;
 end
-flags.link{end+1} = '-lmwblas' ;
+flags.linklibs{end+1} = '-lmwblas' ;
 switch arch
   case {'maci64', 'glnxa64'}
   case {'win64'}
@@ -339,13 +340,11 @@ end
 
 if opts.enableImreadJpeg
   flags.cc = horzcat(flags.cc, opts.imageLibraryCompileFlags) ;
-  flags.link = horzcat(flags.link, opts.imageLibraryLinkFlags) ;
+  flags.linklibs = horzcat(flags.linklibs, opts.imageLibraryLinkFlags) ;
 end
 
 if opts.enableGpu
-  flags.link{end+1} = ['-L' opts.cudaLibDir] ;
-  flags.link{end+1} = '-lcudart' ;
-  flags.link{end+1} = '-lcublas' ;
+  flags.linklibs = horzcat(flags.linklibs, {['-L' opts.cudaLibDir], '-lcudart', '-lcublas'}) ;
   switch arch
     case {'maci64', 'glnxa64'}
       flags.link{end+1} = '-lmwgpu' ;
@@ -376,12 +375,12 @@ switch arch
       % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
       % clang libc++. This should go away in the future.
       flags.ccpass{end+1} = '-stdlib=libstdc++' ;
-      flags.link{end+1} = '-stdlib=libstdc++' ;
+      flags.linklibs{end+1} = '-stdlib=libstdc++' ;
       if  ~verLessThan('matlab', '8.5.0')
         % Complicating matters, MATLAB 8.5.0 links to clang's libc++ by
         % default when linking MEX files overriding the option above. We
         % force it to use GCC libstdc++
-        flags.link{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+        flags.linklibs{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
       end
     end
 
@@ -419,8 +418,9 @@ flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
 
 % mex: link
-flags.mexlink = {'-largeArrayDims', ...
-                 ['LDFLAGS=$LDFLAGS ', strjoin(flags.link)]} ;
+flags.mexlink = horzcat(flags.cc, flags.linklibs, ...
+                 {'-largeArrayDims'}, ...
+                 {['LDFLAGS=$LDFLAGS ', strjoin(flags.link)]}) ;
 
 % nvcc: compile GPU
 flags.nvcc = horzcat(flags.cc, ...
@@ -435,7 +435,7 @@ if opts.verbose
   fprintf('%s: \tintermediate build products directory: %s\n', mfilename, bld_dir) ;
   fprintf('%s: \tMEX files: %s/\n', mfilename, mex_dir) ;
   fprintf('%s: \tMEX options [CC CPU]: %s\n', mfilename, strjoin(flags.mexcc)) ;
-  fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.link)) ;
+  fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.mexlink)) ;
 end
 if opts.verbose && opts.enableGpu
   fprintf('%s: \tMEX options [CC GPU]: %s\n', mfilename, strjoin(flags.mexcu)) ;
