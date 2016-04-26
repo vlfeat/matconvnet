@@ -276,7 +276,7 @@ matlab/mex/.build/%.o : matlab/src/%.cpp matlab/mex/.build/.stamp
 	$(MEX) -c $(MEXFLAGS_CC_CPU) "$(<)"
 	mv -f "$(notdir $(@))" "$(@)"
 
-matlab/mex/%.mex$(MEXARCH) : matlab/src/.build/%.o $(cpp_tgt)
+matlab/mex/%.mex$(MEXARCH) : matlab/mex/.build/%.o $(cpp_tgt)
 	$(MEX) $(MEXFLAGS_LD) "$(<)" -output "$(@)" $(cpp_tgt)
 
 # --------------------------------------------------------------------
@@ -291,7 +291,7 @@ include doc/Makefile
 
 info: doc-info
 	@echo "mex_src=$(mex_src)"
-	@echo "mex_tgt=$(mex_obj)"
+	@echo "mex_obj=$(mex_obj)"
 	@echo "mex_tgt=$(mex_tgt)"
 	@echo "cpp_src=$(cpp_src)"
 	@echo "cpp_tgt=$(cpp_tgt)"
@@ -302,6 +302,7 @@ info: doc-info
 	@echo 'LDFLAGS=$(LDFLAGS)'
 	@echo 'LDOPTIMFLAGS=$(LDOPTIMFLAGS)'
 	@echo '------------------------------'
+	@echo 'MEXARCH=$(MEXARCH)'
 	@echo 'MEXFLAGS=$(MEXFLAGS)'
 	@echo 'MEXFLAGS_CC_CPU=$(MEXFLAGS_CC_CPU)'
 	@echo 'MEXFLAGS_CC_GPU=$(MEXFLAGS_CC_GPU)'
