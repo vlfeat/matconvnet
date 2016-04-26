@@ -28,10 +28,12 @@ here.
     **New features**
 
     * New spatial bilinear resampler `vl_nnbilinearsampler.m` to warp
-      image spatially.
+      images spatially.
 
-    * New `cnn_stn_cluttered_mnist.m` examples demonstrating an
-      implementation o f spatial transformer networks.
+    * New `cnn_stn_cluttered_mnist.m` example to demonstrate
+      spatial transformer networks.
+
+    * MATLAB R2016a compatibility.
 
 -   1.0-beta19 (April 2016).
 
