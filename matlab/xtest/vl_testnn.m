@@ -7,6 +7,12 @@ function vl_testnn(varargin)
 %  `gpu`:: false
 %    Run the GPU tests.
 %
+%  `single`:: true
+%    Perform tests in single precision.
+%
+%  `double`:: false
+%    Perform tests in double precision.
+%
 %  `command`:: 'nn'
 %    Run only tests which name starts with the specified substring.
 %    E.g. `vl_testnn('command', 'nnloss') would run only the nnloss tests.
@@ -29,7 +35,7 @@ function vl_testnn(varargin)
 
 opts.cpu = true ;
 opts.gpu = false ;
-opts.single = true;
+opts.single = true ;
 opts.double = false ;
 opts.command = 'nn' ;
 opts.break = false ;
