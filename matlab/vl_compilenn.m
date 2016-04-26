@@ -180,8 +180,8 @@ end
 if isempty(opts.imageLibraryLinkFlags)
   switch opts.imageLibrary
     case 'libjpeg', opts.imageLibraryLinkFlags = {'-ljpeg'} ;
-    case 'quartz', opts.imageLibraryLinkFlags = {'LDFLAGS=$LDFLAGS -framework Cocoa -framework ImageIO'} ;
-    case 'gdiplus', opts.imageLibraryLinkFlags = {'-lgdiplus'} ;
+    case 'quartz', opts.imageLibraryLinkFlags = {'-framework Cocoa -framework ImageIO'} ;
+    case 'gdiplus', opts.imageLibraryLinkFlags = {'gdiplus.lib'} ;
   end
 end
 
@@ -304,13 +304,19 @@ end
 
 % Compiler flags
 flags.cc = {} ;
+flags.ccpass = {} ;
+flags.ccoptim = {} ;
 flags.link = {} ;
+flags.linklibs = {} ;
+flags.linkpass = {} ;
+flags.nvccpass = {char(opts.cudaArch)} ;
+
 if opts.verbose > 1
   flags.cc{end+1} = '-v' ;
-  flags.link{end+1} = '-v' ;
 end
 if opts.debug
   flags.cc{end+1} = '-g' ;
+  flags.nvccpass{end+1} = '-O0' ;
 else
   flags.cc{end+1} = '-DNDEBUG' ;
 end
@@ -334,13 +340,11 @@ end
 
 if opts.enableImreadJpeg
   flags.cc = horzcat(flags.cc, opts.imageLibraryCompileFlags) ;
-  flags.link = horzcat(flags.link, opts.imageLibraryLinkFlags) ;
+  flags.linklibs = horzcat(flags.linklibs, opts.imageLibraryLinkFlags) ;
 end
 
 if opts.enableGpu
-  flags.link{end+1} = ['-L' opts.cudaLibDir] ;
-  flags.link{end+1} = '-lcudart' ;
-  flags.link{end+1} = '-lcublas' ;
+  flags.link = horzcat(flags.link, {['-L' opts.cudaLibDir], '-lcudart', '-lcublas'}) ;
   switch arch
     case {'maci64', 'glnxa64'}
       flags.link{end+1} = '-lmwgpu' ;
@@ -353,95 +357,92 @@ if opts.enableGpu
   end
 end
 
-% So far all options are understood by the MEX command directly. Next,
-% we specify options that the MEX command passes to the underlying
-% compiler. This is usually clang or gcc, which have a compatible
-% interface. However, to add to the complexity, when compiling CUDA
-% MEX files, the compiler invoked is nvcc, wich *in turn* need to pass
-% options to the underyling clang or gcc.
-%
-% In practice:
-%
-% flags.link: MEX opts to link CPU/CUDA file (uses clang/gcc)
-% flags.mexcc: MEX opts to compile and link CPU file (uses clang/gcc)
-% flags.mexcu: MEX opts to only compile a CUDA file (uses nvcc)
-% flags.nvcc: NVCC opts to only compile a CUDA file (direct nvcc call)
-
-flags.link{end+1} = '-largeArrayDims' ;
-
-flags.mexcc = [flags.cc, {'-largeArrayDims'}] ;
-if ~ispc, flags.mexcc{end+1} = '-cxx'; end
-flags.mexcu = flags.mexcc ;
-flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
-flags.mexcu{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;
-
-flags.nvcc = flags.cc ;
-flags.nvcc{end+1} = opts.cudaArch ;
-flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'extern', 'include') '"'] ;
-flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'] ;
-if opts.debug
-  flags.nvcc{end+1} = '-O0' ;
-end
-
 switch arch
   case {'maci64'}
-    flags.nvcc{end+1} = '-Xcompiler -mssse3,-ffast-math,-mmacosx-version-min=10.9' ;
-    flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -mmacosx-version-min=10.9' ;
-    flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ffast-math' ;
-    flags.mexcu{end+1} = 'CXXFLAGS=$CXXFLAGS -Xcompiler -mmacosx-version-min=10.9' ;
-    flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ffast-math' ;
-
-    flags.link{end+1} = 'LDFLAGS=$LDFLAGS -mmacosx-version-min=10.9' ;
+    flags.ccpass{end+1} = '-mmacosx-version-min=10.9' ;
+    flags.linkpass{end+1} = '-mmacosx-version-min=10.9' ;
+    flags.ccoptim{end+1} = '-mssse3 -ffast-math' ;
+    flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
 
     if opts.enableGpu
-      flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
-      if opts.enableCudnn
-        flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
-      end
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+    end
+    if opts.enableGpu && opts.enableCudnn
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+    end
 
-      if cuver < 70000
-        % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
-        % clang libc++. This should go away in the future.
-        flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
-        flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
-        if  ~verLessThan('matlab', '8.5.0')
-          % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
-          % default when linking MEX files overriding the option above. We
-          % force it to use GCC libstdc++
-          flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
-        end
+    if opts.enableGpu && cuver < 70000
+      % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
+      % clang libc++. This should go away in the future.
+      flags.ccpass{end+1} = '-stdlib=libstdc++' ;
+      flags.linkpass{end+1} = '-stdlib=libstdc++' ;
+      if  ~verLessThan('matlab', '8.5.0')
+        % Complicating matters, MATLAB 8.5.0 links to clang's libc++ by
+        % default when linking MEX files overriding the option above. We
+        % force it to use GCC libstdc++
+        flags.linkpass{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
       end
     end
 
   case {'glnxa64'}
-    flags.nvcc{end+1} = '-Xcompiler -fpic,-mssse3,-ffast-math' ;
-    flags.mexcc{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
-    flags.mexcu{end+1} = 'CXXOPTIMFLAGS=$CXXOPTIMFLAGS -Xcompiler -mssse3,-ftree-vect-loop-version,-ffast-math,-funroll-all-loops' ;
+    flags.ccoptim{end+1} = '-mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
+    flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
 
     if opts.enableGpu
-      flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
-      if opts.enableCudnn
-        flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
-      end
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+    end
+    if opts.enableGpu && opts.enableCudnn
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
     end
 
   case {'win64'}
-    flags.nvcc{end+1} = '-Xcompiler /MD' ;
+    flags.nvccpass{end+1} = '-Xcompiler /MD' ;
     check_clpath(); % check whether cl.exe in path
 end
+
+% --------------------------------------------------------------------
+%                                                        Command flags
+% --------------------------------------------------------------------
+
+flags.mexcc = horzcat(flags.cc, ...
+                      {'-largeArrayDims'}, ...
+                      {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.ccpass)]}, ...
+                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' strjoin(flags.ccoptim)]}) ;
+if ~ispc, flags.mexcc{end+1} = '-cxx'; end
+
+% mex: compile GPU
+flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
+                     flags.cc, ...
+                     {'-largeArrayDims'}, ...
+                     {['CXXFLAGS=$CXXFLAGS ' quote_nvcc(flags.ccpass) ' ' strjoin(flags.nvccpass)]}, ...
+                     {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
+
+% mex: link
+flags.mexlink = horzcat(flags.cc, flags.link, ...
+                        {'-largeArrayDims'}, ...
+                        {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
+                        {['LINKLIBS=$LINKLIBS ', strjoin(flags.linklibs)]}) ;
+
+% nvcc: compile GPU
+flags.nvcc = horzcat(flags.cc, ...
+                     {opts.cudaArch}, ...
+                     {sprintf('-I"%s"', fullfile(matlabroot, 'extern', 'include'))}, ...
+                     {sprintf('-I"%s"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include'))}, ...
+                     { quote_nvcc(flags.ccpass)}, ...
+                     flags.nvccpass) ;
 
 if opts.verbose
   fprintf('%s: * Compiler and linker configurations *\n', mfilename) ;
   fprintf('%s: \tintermediate build products directory: %s\n', mfilename, bld_dir) ;
   fprintf('%s: \tMEX files: %s/\n', mfilename, mex_dir) ;
-  fprintf('%s: \tMEX compiler options: %s\n', mfilename, strjoin(flags.mexcc)) ;
-  fprintf('%s: \tMEX linker options: %s\n', mfilename, strjoin(flags.link)) ;
+  fprintf('%s: \tMEX options [CC CPU]: %s\n', mfilename, strjoin(flags.mexcc)) ;
+  fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.mexlink)) ;
 end
 if opts.verbose && opts.enableGpu
-  fprintf('%s: \tMEX compiler options (CUDA): %s\n', mfilename, strjoin(flags.mexcu)) ;
+  fprintf('%s: \tMEX options [CC GPU]: %s\n', mfilename, strjoin(flags.mexcu)) ;
 end
 if opts.verbose && opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
-  fprintf('%s: \tNVCC compiler options: %s\n', mfilename, strjoin(flags.nvcc)) ;
+  fprintf('%s: \tNVCC options [CC GPU]: %s\n', mfilename, strjoin(flags.nvcc)) ;
 end
 if opts.verbose && opts.enableImreadJpeg
   fprintf('%s: * Reading images *\n', mfilename) ;
@@ -475,7 +476,7 @@ end
 % Link into MEX files
 for i = 1:numel(mex_src)
   objs = toobj(bld_dir, [mex_src(i), lib_src]) ;
-  mex_link(opts, objs, mex_dir, flags.link) ;
+  mex_link(opts, objs, mex_dir, flags.mexlink) ;
 end
 
 % Reset path adding the mex subdirectory just created
@@ -695,6 +696,12 @@ if ~valid_ || cuver_ ~= cuver
   end
 end
 
+% -------------------------------------------------------------------------
+function str = quote_nvcc(str)
+% -------------------------------------------------------------------------
+if iscell(str), str = strjoin(str) ; end
+str = strrep(strtrim(str), ' ', ',') ;
+if ~isempty(str), str = ['-Xcompiler ' str] ; end
 
 % --------------------------------------------------------------------
 function cudaArch = get_cuda_arch(opts)

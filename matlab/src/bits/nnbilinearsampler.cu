@@ -18,7 +18,7 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
-#if ENABLE_CUDNN && (CUDNN_VERSION >= 5000)
+#if ENABLE_CUDNN
 #include "impl/nnbilinearsampler_cudnn.hpp"
 #endif
 
@@ -80,7 +80,7 @@ vl::nnbilinearsampler_forward(Context& context,
 
 #if ENABLE_GPU
     case vl::GPU:
-#if ENABLE_CUDNN && (CUDNN_VERSION >= 5000)
+#if ENABLE_CUDNN
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
       if (error == vl::vlSuccess) { return error ; }
