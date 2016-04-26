@@ -36,12 +36,12 @@ namespace vl { namespace impl {
 
   template<vl::Type dataType>
   vl::Error
-  vl::impl::nnbilinearsampler_cudnn<dataType>::backward( Context& context,
+  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& context,
                                                         Tensor derData,
                                                         Tensor derGrid,
                                                         Tensor data,
                                                         Tensor grid,
-                                                        Tensor derOutput )
+                                                        Tensor derOutput)
   {
     return vl::vlErrorUnsupported ;
   }
@@ -134,17 +134,17 @@ namespace vl { namespace impl {
     // Get bilinear-sampler descriptor:
     CHECK(cudnnCreateSpatialTransformerDescriptor(&samplerDesc)) ;
     samplerDescInitialized = true ;
-    CHECK(cudnnSetSpatialTransformerNdDescriptor( samplerDesc,
-                                                  CUDNN_SAMPLER_BILINEAR,
-                                                  cudnnDataType,
-                                                  4,
-                                                  dimOut)) ;
+    CHECK(cudnnSetSpatialTransformerNdDescriptor(samplerDesc,
+                                                 CUDNN_SAMPLER_BILINEAR,
+                                                 cudnnDataType,
+                                                 4,
+                                                 dimOut)) ;
 
     {
       type alpha = 1.0f ;
       type beta = 0.0f ;
       const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
-      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ; 
+      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ;
       const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
       type const* data_ptr = (type const*) data.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;
@@ -152,13 +152,13 @@ namespace vl { namespace impl {
 
       for (int im=0; im < inCardinality; im++) {
         for (int ig=0; ig < groupSize; ig++) {
-          cudnnSpatialTfSamplerForward( handle,
-                                        samplerDesc,
-                                        &alpha,
-                                        dataDesc, data_ptr,
-                                        grid_ptr,
-                                        &beta,
-                                        outputDesc, out_ptr ) ;
+          cudnnSpatialTfSamplerForward(handle,
+                                       samplerDesc,
+                                       &alpha,
+                                       dataDesc, data_ptr,
+                                       grid_ptr,
+                                       &beta,
+                                       outputDesc, out_ptr) ;
           grid_ptr += gridOffset ;
           out_ptr += outOffset ;
         }
@@ -178,12 +178,12 @@ namespace vl { namespace impl {
   /* ---------------------------------------------------------------- */
   template<vl::Type dataType>
   vl::Error
-  vl::impl::nnbilinearsampler_cudnn<dataType>::backward( Context& context,
-                                                         Tensor derData,
-                                                         Tensor derGrid,
-                                                         Tensor data,
-                                                         Tensor grid,
-                                                         Tensor derOutput )
+  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& context,
+                                                        Tensor derData,
+                                                        Tensor derGrid,
+                                                        Tensor data,
+                                                        Tensor grid,
+                                                        Tensor derOutput)
   {
     typedef typename DataTypeTraits<dataType>::type type ;
 
@@ -245,18 +245,18 @@ namespace vl { namespace impl {
     // Get bilinear-sampler descriptor:
     CHECK(cudnnCreateSpatialTransformerDescriptor(&samplerDesc)) ;
     samplerDescInitialized = true ;
-    CHECK(cudnnSetSpatialTransformerNdDescriptor( samplerDesc,
-                                                  CUDNN_SAMPLER_BILINEAR,
-                                                  cudnnDataType,
-                                                  4,
-                                                  dimOut));
+    CHECK(cudnnSetSpatialTransformerNdDescriptor(samplerDesc,
+                                                 CUDNN_SAMPLER_BILINEAR,
+                                                 cudnnDataType,
+                                                 4,
+                                                 dimOut));
     /* do the work */
     {
       type alpha = 1.0f ;
       type dataBeta = 1.0f ; // assuming that the derData has been initialized to zero
       type gridBeta = 0.0f ;
       const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
-      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ; 
+      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ;
       const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
       type const* data_ptr = (type const*) data.getMemory() ;
       type * derData_ptr = (type *) derData.getMemory() ;
@@ -266,17 +266,17 @@ namespace vl { namespace impl {
 
       for (int im=0; im < inCardinality; im++) {
         for (int ig=0; ig < groupSize; ig++) {
-        cudnnSpatialTfSamplerBackward(  handle,
-                                        samplerDesc,
-                                        &alpha,
-                                        dataDesc, data_ptr,
-                                        &dataBeta,
-                                        dataDesc, derData_ptr,
-                                        &alpha,
-                                        derOutputDesc, derOut_ptr,
-                                        grid_ptr,
-                                        &gridBeta,
-                                        derGrid_ptr ) ;
+        cudnnSpatialTfSamplerBackward(handle,
+                                      samplerDesc,
+                                      &alpha,
+                                      dataDesc, data_ptr,
+                                      &dataBeta,
+                                      dataDesc, derData_ptr,
+                                      &alpha,
+                                      derOutputDesc, derOut_ptr,
+                                      grid_ptr,
+                                      &gridBeta,
+                                      derGrid_ptr) ;
           grid_ptr += gridOffset ;
           derGrid_ptr += gridOffset ;
           derOut_ptr += outOffset ;
