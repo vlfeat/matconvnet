@@ -181,7 +181,7 @@ if isempty(opts.imageLibraryLinkFlags)
   switch opts.imageLibrary
     case 'libjpeg', opts.imageLibraryLinkFlags = {'-ljpeg'} ;
     case 'quartz', opts.imageLibraryLinkFlags = {'-framework Cocoa -framework ImageIO'} ;
-    case 'gdiplus', opts.imageLibraryLinkFlags = {'-lgdiplus'} ;
+    case 'gdiplus', opts.imageLibraryLinkFlags = {'gdiplus.lib'} ;
   end
 end
 
