@@ -61,24 +61,15 @@ comma:=,
 space:=
 space+=
 join-with = $(subst $(space),$1,$(strip $2))
+nvcc-quote = $(if $(strip $1),-Xcompiler $(call join-with,$(comma),$(1)),)
 
-
-# We define four set of command line options:
-#
+# Flags:
 # 1.   `CXXFLAGS`: passed to `mex` and `nvcc` compiler wrappers
 # 2.   `CXXFLAGS_PASS`: passed directly to the underlying C++ compiler
 # 3.   `LDFLAGS`: passed directly to the underlying C++ compiler for linking
 # 4.   `CXXOPTIMFLAGS`: passed directyl to the underlying C++ compiler
 # 5.   `LDOPTIMFLAGS`: passed directly to the underlying C++ compiler
-# 6.   `NVCCFLAGS`: passed directly to `nvcc` when invoked directly or through `mex`
-# 7.   `NVCCFLAGS_CC:` passed to `nvcc` when invoked directly
-
-# 2.   MEXFLAGS_GPU: options for the `mex` command to compile or link
-#      a CUDA object file or MEX file.
-# 3.   MEXFLAGS_GPU_LINK: options for the `mex` command to link
-#      a CUDA object file or MEX fil.
-# 4.   NVCCFLAGS: optios for the `nvcc` command to compile
-#      a CUDA object or MEX file.
+# 6.   `NVCCFLAGS_PASS`: passed directly to `nvcc` when invoked directly or through `mex`
 
 CXXFLAGS = \
 $(if $(ENABLE_GPU),-DENABLE_GPU,) \
@@ -95,10 +86,6 @@ NVCCVER = $(shell $(NVCC) --version | \
 sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
 xargs printf '%02d%02d%02d')
 NVCCVER_LT_70 = $(shell test $(NVCCVER) -lt 070000 && echo true)
-NVCCFLAGS = $(CXXFLAGS) $(NVCCFLAGS_PASS) \
--I"$(MATLABROOT)/extern/include" \
--I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
--Xcompiler $(call join-with,$(comma),-fPIC $(CXXFLAGS_PASS) $(CXXOPTIMFLAGS))
 
 # Mac OS X
 ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
@@ -146,21 +133,6 @@ CXXOPTIMFLAGS += -g
 LDOPTIMFLAGS += -g
 NVCCFLAGS_PASS += -g
 endif
-
-MEXFLAGS_CC_CPU := \
-$(MEXFLAGS) \
-CXXFLAGS='$$CXXFLAGS $(CXXFLAGS_PASS)' \
-CXXOPTIMFLAGS='$$CXXOPTIMFLAGS $(CXXOPTIMFLAGS)'
-
-MEXFLAGS_CC_GPU := \
--f "$(MEXOPTS)" \
-$(MEXFLAGS) \
-CXXFLAGS='$$CXXFLAGS $(NVCCFLAGS_PASS) -Xcompiler $(call join-with,$(comma),$(CXXFLAGS_PASS))' \
-CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler $(call join-with,$(comma),$(CXXOPTIMFLAGS))'
-
-MEXFLAGS_LD := $(MEXFLAGS) \
-LDFLAGS='$$LDFLAGS $(LDFLAGS)' \
-LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)'
 
 # --------------------------------------------------------------------
 #                                                      Build MEX files
@@ -257,8 +229,28 @@ matlab/mex/.build/bits/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpe
 matlab/mex/.build/bits/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
 
 # --------------------------------------------------------------------
-#                                                      Compiling rules
+#                                                    Compilation rules
 # --------------------------------------------------------------------
+
+MEXFLAGS_CC_CPU := \
+$(MEXFLAGS) \
+CXXFLAGS='$$CXXFLAGS $(CXXFLAGS_PASS)' \
+CXXOPTIMFLAGS='$$CXXOPTIMFLAGS $(CXXOPTIMFLAGS)'
+
+MEXFLAGS_CC_GPU := \
+-f "$(MEXOPTS)" \
+$(MEXFLAGS) \
+CXXFLAGS='$$CXXFLAGS $(NVCCFLAGS_PASS) -Xcompiler $(call nvcc-quote,$(CXXFLAGS_PASS))' \
+CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler $(call nvcc-quote,$(CXXOPTIMFLAGS))'
+
+MEXFLAGS_LD := $(MEXFLAGS) \
+LDFLAGS='$$LDFLAGS $(LDFLAGS)' \
+LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)'
+
+NVCCFLAGS = $(CXXFLAGS) $(NVCCFLAGS_PASS) \
+-I"$(MATLABROOT)/extern/include" \
+-I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
+$(call nvcc-quote,-fPIC $(CXXFLAGS_PASS) $(CXXOPTIMFLAGS))
 
 ifneq ($(ENABLE_GPU),)
 ifeq ($(CUDAMETHOD),mex)
