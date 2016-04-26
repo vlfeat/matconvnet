@@ -373,7 +373,6 @@ switch arch
     end
 
     if opts.enableGpu && cuver < 70000
-      error('finish porting') ;
       % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
       % clang libc++. This should go away in the future.
       flags.ccpass{end+1} = '-stdlib=libstdc++' ;
@@ -382,7 +381,7 @@ switch arch
         % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
         % default when linking MEX files overriding the option above. We
         % force it to use GCC libstdc++
-        flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+        flags.link{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
       end
     end
 
