@@ -53,6 +53,12 @@ classdef Net < handle
 
   methods
     function net = Net(varargin)
+      % load from struct
+      if isscalar(varargin) && isstruct(varargin{1})
+        net.loadobj(varargin{1}) ;
+        return
+      end
+      
       % parse auto-naming option after the other inputs
       opts.sequentialNames = true ;
       [opts, varargin] = vl_argparsepos(opts, varargin) ;
@@ -546,10 +552,8 @@ classdef Net < handle
       s.vars = cell(size(net.vars)) ;
       s.vars([net.params.var]) = net.vars([net.params.var]) ;
     end
-  end
-  
-  methods (Static)
-    function net = loadobj(s)
+    
+    function loadobj(net, s)
       net.forward = s.forward ;
       net.backward = s.backward ;
       net.test = s.test ;

@@ -386,7 +386,7 @@ save(fileName, 'net', 'stats') ;
 function [net, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'stats') ;
-net = dagnn.DagNN.loadobj(net) ;
+net = Net(net) ;
 
 % -------------------------------------------------------------------------
 function epoch = findLastCheckpoint(modelDir)
