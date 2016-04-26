@@ -10,7 +10,7 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#if !defined(ENABLE_GPU) || !defined(ENABLE_CUDNN) || (CUDNN_VERSION < 5000)
+#if !defined(ENABLE_GPU) || !defined(ENABLE_CUDNN)
 #error "bilinearsampler_cudnn.cu can only be compiled with GPU and CUDNN (v5 or higher) support."
 #endif
 
@@ -19,6 +19,34 @@ the terms of the BSD license (see the COPYING file).
 #include "../datacu.hpp"
 #include <assert.h>
 #include <algorithm>
+
+#if CUDNN_VERSION < 5000
+#warning "bilinearsampler_cudnn.cu will be disabled as it requires CUDNN v5 or higher."
+
+namespace vl { namespace impl {
+  template<vl::Type dataType>
+  vl::Error
+  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& context,
+                                                       Tensor output,
+                                                       Tensor data,
+                                                       Tensor grid)
+  {
+    return vl::vlErrorUnsupported ;
+  }
+
+  template<vl::Type dataType>
+  vl::Error
+  vl::impl::nnbilinearsampler_cudnn<dataType>::backward( Context& context,
+                                                        Tensor derData,
+                                                        Tensor derGrid,
+                                                        Tensor data,
+                                                        Tensor grid,
+                                                        Tensor derOutput )
+  {
+    return vl::vlErrorUnsupported ;
+  }
+}}
+#else
 
 using namespace vl ;
 
@@ -39,10 +67,10 @@ namespace vl { namespace impl {
 
   template<vl::Type dataType>
   vl::Error
-  vl::impl::nnbilinearsampler_cudnn<dataType>::forward( Context& context,
-                                                        Tensor output,
-                                                        Tensor data,
-                                                        Tensor grid )
+  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& context,
+                                                       Tensor output,
+                                                       Tensor data,
+                                                       Tensor grid)
   {
     assert(output) ;
     assert(data) ;
@@ -266,6 +294,8 @@ namespace vl { namespace impl {
     return context.passError(error, __func__) ;
   }
 }}
+
+#endif // CUDNN >= v5.0
 
 // Instantiations
 template struct vl::impl::nnbilinearsampler_cudnn<vl::vlTypeFloat> ;

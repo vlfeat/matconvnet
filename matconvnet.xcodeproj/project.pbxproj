@@ -68,6 +68,8 @@
 		2D14F00F1B03A6FA00A8F33D /* nnbias_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbias_cudnn.hpp; path = matlab/src/bits/impl/nnbias_cudnn.hpp; sourceTree = "<group>"; };
 		2D14F0111B03A78A00A8F33D /* nnbias_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias_cudnn.cu; path = matlab/src/bits/impl/nnbias_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D16767D1AB5AF6000CC738D /* imread_helpers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = imread_helpers.hpp; path = matlab/src/bits/impl/imread_helpers.hpp; sourceTree = "<group>"; };
+		2D18CE2F1CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler_cudnn.cu; path = matlab/src/bits/impl/nnbilinearsampler_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D18CE301CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbilinearsampler_cudnn.hpp; path = matlab/src/bits/impl/nnbilinearsampler_cudnn.hpp; sourceTree = "<group>"; };
 		2D19E6741AB20B2900D4FF0C /* fast_mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = fast_mutex.h; path = matlab/src/bits/impl/fast_mutex.h; sourceTree = "<group>"; };
 		2D19E6751AB20B2900D4FF0C /* imread_gdiplus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imread_gdiplus.cpp; path = matlab/src/bits/impl/imread_gdiplus.cpp; sourceTree = "<group>"; };
 		2D19E6761AB20B2900D4FF0C /* tinythread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tinythread.cpp; path = matlab/src/bits/impl/tinythread.cpp; sourceTree = "<group>"; };
@@ -398,6 +400,8 @@
 				2D14F00D1B03A35700A8F33D /* nnbias_blas.hpp */,
 				2D14F0111B03A78A00A8F33D /* nnbias_cudnn.cu */,
 				2D14F00F1B03A6FA00A8F33D /* nnbias_cudnn.hpp */,
+				2D18CE2F1CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.cu */,
+				2D18CE301CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.hpp */,
 				2D7B112A1A88E5CC00A3D8A0 /* nnconv_blas.hpp */,
 				2D479D0F1A88AF4300826D48 /* nnconv_cudnn.cu */,
 				2D479D101A88AF4300826D48 /* nnconv_cudnn.hpp */,
