@@ -434,14 +434,14 @@ if opts.verbose
   fprintf('%s: * Compiler and linker configurations *\n', mfilename) ;
   fprintf('%s: \tintermediate build products directory: %s\n', mfilename, bld_dir) ;
   fprintf('%s: \tMEX files: %s/\n', mfilename, mex_dir) ;
-  fprintf('%s: \tMEX compiler options: %s\n', mfilename, strjoin(flags.mexcc)) ;
-  fprintf('%s: \tMEX linker options: %s\n', mfilename, strjoin(flags.link)) ;
+  fprintf('%s: \tMEX options [CC CPU]: %s\n', mfilename, strjoin(flags.mexcc)) ;
+  fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.link)) ;
 end
 if opts.verbose && opts.enableGpu
-  fprintf('%s: \tMEX compiler options (CUDA): %s\n', mfilename, strjoin(flags.mexcu)) ;
+  fprintf('%s: \tMEX options [CC GPU]: %s\n', mfilename, strjoin(flags.mexcu)) ;
 end
 if opts.verbose && opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
-  fprintf('%s: \tNVCC compiler options: %s\n', mfilename, strjoin(flags.nvcc)) ;
+  fprintf('%s: \tNVCC options [CC GPU]: %s\n', mfilename, strjoin(flags.nvcc)) ;
 end
 if opts.verbose && opts.enableImreadJpeg
   fprintf('%s: * Reading images *\n', mfilename) ;
