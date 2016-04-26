@@ -307,7 +307,7 @@ flags.cc = {} ;
 flags.ccpass = {} ;
 flags.ccoptim = {} ;
 flags.link = {} ;
-flags.nvccpass = {opts.cudaArch} ;
+flags.nvccpass = {char(opts.cudaArch)} ;
 
 if opts.verbose > 1
   flags.cc{end+1} = '-v' ;
@@ -378,7 +378,7 @@ switch arch
       flags.ccpass{end+1} = '-stdlib=libstdc++' ;
       flags.link{end+1} = '-stdlib=libstdc++' ;
       if  ~verLessThan('matlab', '8.5.0')
-        % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
+        % Complicating matters, MATLAB 8.5.0 links to clang's libc++ by
         % default when linking MEX files overriding the option above. We
         % force it to use GCC libstdc++
         flags.link{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
@@ -405,7 +405,6 @@ end
 %                                                        Command flags
 % --------------------------------------------------------------------
 
-% mex: compile CPU
 flags.mexcc = horzcat(flags.cc, ...
                       {'-largeArrayDims'}, ...
                       {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.ccpass)]}, ...
