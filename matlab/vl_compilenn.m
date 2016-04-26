@@ -308,11 +308,11 @@ flags.ccpass = {} ;
 flags.ccoptim = {} ;
 flags.link = {} ;
 flags.linklibs = {} ;
+flags.linkpass = {} ;
 flags.nvccpass = {char(opts.cudaArch)} ;
 
 if opts.verbose > 1
   flags.cc{end+1} = '-v' ;
-  flags.link{end+1} = '-v' ;
 end
 if opts.debug
   flags.cc{end+1} = '-g' ;
@@ -330,7 +330,7 @@ end
 if opts.enableDouble
   flags.cc{end+1} = '-DENABLE_DOUBLE' ;
 end
-flags.linklibs{end+1} = '-lmwblas' ;
+flags.link{end+1} = '-lmwblas' ;
 switch arch
   case {'maci64', 'glnxa64'}
   case {'win64'}
@@ -344,7 +344,7 @@ if opts.enableImreadJpeg
 end
 
 if opts.enableGpu
-  flags.linklibs = horzcat(flags.linklibs, {['-L' opts.cudaLibDir], '-lcudart', '-lcublas'}) ;
+  flags.link = horzcat(flags.link, {['-L' opts.cudaLibDir], '-lcudart', '-lcublas'}) ;
   switch arch
     case {'maci64', 'glnxa64'}
       flags.link{end+1} = '-lmwgpu' ;
@@ -360,27 +360,27 @@ end
 switch arch
   case {'maci64'}
     flags.ccpass{end+1} = '-mmacosx-version-min=10.9' ;
-    flags.link{end+1} = '-mmacosx-version-min=10.9' ;
+    flags.linkpass{end+1} = '-mmacosx-version-min=10.9' ;
     flags.ccoptim{end+1} = '-mssse3 -ffast-math' ;
     flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
 
     if opts.enableGpu
-      flags.link{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
     end
     if opts.enableGpu && opts.enableCudnn
-      flags.link{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
     end
 
     if opts.enableGpu && cuver < 70000
       % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
       % clang libc++. This should go away in the future.
       flags.ccpass{end+1} = '-stdlib=libstdc++' ;
-      flags.linklibs{end+1} = '-stdlib=libstdc++' ;
+      flags.linkpass{end+1} = '-stdlib=libstdc++' ;
       if  ~verLessThan('matlab', '8.5.0')
         % Complicating matters, MATLAB 8.5.0 links to clang's libc++ by
         % default when linking MEX files overriding the option above. We
         % force it to use GCC libstdc++
-        flags.linklibs{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+        flags.linkpass{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
       end
     end
 
@@ -389,10 +389,10 @@ switch arch
     flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
 
     if opts.enableGpu
-      flags.link{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
     end
     if opts.enableGpu && opts.enableCudnn
-      flags.link{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
     end
 
   case {'win64'}
@@ -418,9 +418,10 @@ flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
 
 % mex: link
-flags.mexlink = horzcat(flags.cc, flags.linklibs, ...
-                 {'-largeArrayDims'}, ...
-                 {['LDFLAGS=$LDFLAGS ', strjoin(flags.link)]}) ;
+flags.mexlink = horzcat(flags.cc, flags.link, ...
+                        {'-largeArrayDims'}, ...
+                        {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
+                        {['LINKLIBS=$LINKLIBS ', strjoin(flags.linklibs)]}) ;
 
 % nvcc: compile GPU
 flags.nvcc = horzcat(flags.cc, ...
