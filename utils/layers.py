@@ -1080,11 +1080,11 @@ class CaffeModel(object):
         else:
             start = 0
         # fix all references to the variable
-        for layer in self.layers.values()[start:-1]:
+        for layer in self.layers.values()[start:]:  # was [start:-1] - changed by Justin (caused a bug)
             layer.inputs = [new if x == old else x for x in layer.inputs]
             layer.outputs = [new if x == old else x for x in layer.outputs]
         self.vars[new] = copy.deepcopy(self.vars[old])
-        # check if we can delete the old one (for afterLayet != None)
+        # check if we can delete the old one (for afterLayer != None)
         stillUsed = False
         for layer in self.layers.values():
             stillUsed = stillUsed or old in layer.inputs or old in layer.outputs
