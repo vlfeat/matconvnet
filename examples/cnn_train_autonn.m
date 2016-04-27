@@ -156,7 +156,7 @@ for epoch=start+1:opts.numEpochs
       grid on ;
     end
     drawnow ;
-    print(1, modelFigPath, '-dpdf') ;
+    try print(1, modelFigPath, '-dpdf') ; catch, end
   end
   
   if ~isempty(opts.postEpochFn)

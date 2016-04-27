@@ -32,6 +32,7 @@ classdef nnmnist < nntest
         test.verifyLessThan(info.train.error, 0.08);
         test.verifyLessThan(info.val.error, 0.025);
       else
+        trainOpts.plotDiagnostics = false ;
         [~, info] = cnn_mnist_autonn('train', trainOpts) ;
         % initialized using xavier's method, not 0.01*randn
         test.verifyLessThan(info.train.error, 0.13);

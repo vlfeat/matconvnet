@@ -19,7 +19,7 @@ function [inputs, testInputs] = vl_nnbnorm_setup(layer)
   inputs = layer.inputs ;
   
   % parse options. note the defaults for bnorm's Params are set here.
-  opts = struct('learningRate', 0.01, 'weightDecay', 0, 'moments', []) ;
+  opts = struct('learningRate', 0.05, 'weightDecay', 0, 'moments', []) ;
   [opts, inputs] = vl_argparsepos(opts, inputs) ;
   
   if isscalar(opts.learningRate)

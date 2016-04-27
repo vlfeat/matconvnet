@@ -62,7 +62,7 @@ classdef nnautonn < nntest
       end
       
       % name layers, create net and set input
-      Layer.autoNames() ;
+      Layer.workspaceNames() ;
       net = Net(y) ;
       net.setInputs('x', x_value) ;
       

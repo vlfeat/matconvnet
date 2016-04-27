@@ -6,7 +6,7 @@ classdef nnautonnlayers < nntest
       w = Param('value', randn(3, 3, 2, 2, test.currentDataType)) ;
       b = Param('value', randn(2, 1, test.currentDataType)) ;
       labels = Param('value', ones(5, 1)) ;
-      Layer.autoNames() ;
+      Layer.workspaceNames() ;
       
       % test several layers and syntaxes
       
@@ -36,7 +36,7 @@ classdef nnautonnlayers < nntest
       b = Param('value', randn(3, 3, test.currentDataType)) ;
       c = Param('value', randn(1, 1, test.currentDataType)) ;
       d = Param('value', randn(3, 1, test.currentDataType)) ;
-      Layer.autoNames() ;
+      Layer.workspaceNames() ;
       
       % test several operations
       
