@@ -5,20 +5,17 @@
 
 # Requires Google Protobuf for Python and SciPy
 
-import sys
-import os
 import argparse
 import code
+import os
 import re
-import numpy as np
-from math import floor, ceil
-import numpy
-from numpy import array
-import scipy
-import scipy.io
-import scipy.misc
-import google.protobuf
+import sys
 from ast import literal_eval as make_tuple
+
+import google.protobuf
+import numpy
+import scipy.io
+
 from layers import *
 
 
@@ -98,7 +95,7 @@ parser.add_argument('--caffe-data',
                     type=argparse.FileType('rb'),
                     help='The Caffe CNN data file (binary .proto)')
 parser.add_argument('output',
-                    type=argparse.FileType('w'),
+                    type=argparse.FileType('wb'),
                     help='Output MATLAB file')
 parser.add_argument('--average-image',
                     type=argparse.FileType('rb'),
@@ -238,10 +235,10 @@ def bilinear_interpolate(im, x, y):
     y0 = np.floor(y).astype(int)
     y1 = y0 + 1
 
+    y1 = np.clip(y1, 0, im.shape[0] - 1);
     x0 = np.clip(x0, 0, im.shape[1] - 1);
     x1 = np.clip(x1, 0, im.shape[1] - 1);
     y0 = np.clip(y0, 0, im.shape[0] - 1);
-    y1 = np.clip(y1, 0, im.shape[0] - 1);
 
     Ia = im[y0, x0]
     Ib = im[y1, x0]
