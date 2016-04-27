@@ -1,14 +1,11 @@
 classdef AffineGridGenerator < dagnn.Layer
-%DAGNN.AFFINEGRIDGENERATIOR  Generate an affine grid gor bilinear resampling
+%DAGNN.AFFINEGRIDGENERATIOR  Generate an affine grid for bilinear resampling
 %   This layer maps 1 x 1 x 6 x N affine transforms to 2 x Ho x Wo x N
 %   sampling grids compatible with dagnn.BlilinearSampler.
 
 % (c) 2016 Ankush Gupta
 
  properties
-     f_downsample = 1;
-     Hi = 0;
-     Wi = 0;
      Ho = 0;
      Wo = 0;
  end
