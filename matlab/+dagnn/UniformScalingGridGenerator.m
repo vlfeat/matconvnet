@@ -24,7 +24,7 @@ classdef UniformScalingGridGenerator < dagnn.Layer
       % input is a 1x1x3xN TENSOR corresponding to:
       % [  s 0 ty ]
       % [  0 s tx ]
-      % 
+      %
       % OUTPUT is a 2xHoxWoxN grid
 
       % reshape the tfm params into matrices:
@@ -70,7 +70,7 @@ classdef UniformScalingGridGenerator < dagnn.Layer
 
     function outputSizes = getOutputSizes(obj, inputSizes)
       nBatch = inputSizes{1}(4);
-      outputSizes = {[obj.Ho, obj.Wo, 2, nBatch]};
+      outputSizes = {[2, obj.Ho, obj.Wo, nBatch]};
     end
 
     function obj = UniformScalingGridGenerator(varargin)
