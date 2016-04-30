@@ -33,7 +33,8 @@ switch opts.model
     bs = 128 ;
   case 'vgg-vd-16'
     prediction = vgg_vd(opts) ;
-    bs = 32 ;
+%     bs = 32 ;
+    bs = 24 ;
   case 'vgg-vd-19'
     prediction = vgg_vd(opts) ;
     bs = 24 ;
@@ -196,7 +197,6 @@ function net = vgg_m(opts)
 net = Input('input') ;
 bn = opts.batchNormalization ;
 
-net.layers = {} ;
 net = add_block(net, opts, [7, 7, 3, 96], 'stride', 2, 'pad', 0) ;
 if ~bn
   net = vl_nnnormalize(net, opts.normalization) ;
@@ -235,7 +235,6 @@ function net = vgg_f(opts)
 net = Input('input') ;
 bn = opts.batchNormalization ;
 
-net.layers = {} ;
 net = add_block(net, opts, [11, 11, 3, 64], 'stride', 4, 'pad', 0) ;
 if ~bn
   net = vl_nnnormalize(net, opts.normalization) ;
@@ -274,7 +273,6 @@ function net = vgg_vd(opts)
 net = Input('input') ;
 bn = opts.batchNormalization ;
 
-net.layers = {} ;
 net = add_block(net, opts, [3, 3, 3, 64], 'stride', 1, 'pad', 1) ;
 net = add_block(net, opts, [3, 3, 64, 64], 'stride', 1, 'pad', 1) ;
 net = vl_nnpool(net, [2 2], 'stride', 2, 'pad', 0) ;
