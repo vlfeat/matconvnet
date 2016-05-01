@@ -14,16 +14,16 @@ import collections
 
 # Recent Caffes just pass a string as a type; this is used for legacy support
 layers_type = {}
-layers_type[0]  = 'none'
-layers_type[1]  = 'accuracy'
-layers_type[2]  = 'bnll'
-layers_type[3]  = 'concat'
-layers_type[4]  = 'conv'
-layers_type[5]  = 'data'
-layers_type[6]  = 'dropout'
-layers_type[7]  = 'euclidean_loss'
-layers_type[8]  = 'flatten'
-layers_type[9]  = 'hdf5_data'
+layers_type[0] = 'none'
+layers_type[1] = 'accuracy'
+layers_type[2] = 'bnll'
+layers_type[3] = 'concat'
+layers_type[4] = 'conv'
+layers_type[5] = 'data'
+layers_type[6] = 'dropout'
+layers_type[7] = 'euclidean_loss'
+layers_type[8] = 'flatten'
+layers_type[9] = 'hdf5_data'
 layers_type[10] = 'hdf5_output'
 layers_type[28] = 'hinge_loss'
 layers_type[11] = 'im2col'
@@ -47,57 +47,66 @@ layers_type[24] = 'window_data'
 layers_type[39] = 'deconvolution'
 layers_type[40] = 'crop'
 
+
 def getFilterOutputSize(size, kernelSize, stride, pad):
-    return [floor((size[0] + pad[0]+pad[1] - kernelSize[0]) / stride[0]) + 1., \
-            floor((size[1] + pad[2]+pad[3] - kernelSize[1]) / stride[1]) + 1.]
+    return [floor((size[0] + pad[0] + pad[1] - kernelSize[0]) / stride[0]) + 1., \
+            floor((size[1] + pad[2] + pad[3] - kernelSize[1]) / stride[1]) + 1.]
+
 
 def getFilterTransform(ks, stride, pad):
-    y1 = 1. - pad[0] ;
-    y2 = 1. - pad[0] + ks[0] - 1 ;
-    x1 = 1. - pad[2] ;
-    x2 = 1. - pad[2] + ks[1] - 1 ;
-    h = y2 - y1 + 1. ;
-    w = x2 - x1 + 1. ;
-    return CaffeTransform([h, w], stride, [(y1+y2)/2, (x1+x2)/2])
+    y1 = 1. - pad[0];
+    y2 = 1. - pad[0] + ks[0] - 1;
+    x1 = 1. - pad[2];
+    x2 = 1. - pad[2] + ks[1] - 1;
+    h = y2 - y1 + 1.;
+    w = x2 - x1 + 1.;
+    return CaffeTransform([h, w], stride, [(y1 + y2) / 2, (x1 + x2) / 2])
+
 
 def reorder(aList, order):
     return [aList[i] for i in order]
 
+
 def row(x):
-    return np.array(x,dtype=float).reshape(1,-1)
+    return np.array(x, dtype=float).reshape(1, -1)
+
 
 def rowarray(x):
-    return x.reshape(1,-1)
+    return x.reshape(1, -1)
+
 
 def rowcell(x):
-    return np.array(x,dtype=object).reshape(1,-1)
+    return np.array(x, dtype=object).reshape(1, -1)
+
 
 def dictToMatlabStruct(d):
-  if not d:
-    return np.zeros((0,))
-  dt = []
-  for x in d.keys():
-      pair = (x,object)
-      if isinstance(d[x], np.ndarray): pair = (x,type(d[x]))
-      dt.append(pair)
-  y = np.empty((1,),dtype=dt)
-  for x in d.keys():
-    y[x][0] = d[x]
-  return y
+    if not d:
+        return np.zeros((0,))
+    dt = []
+    for x in d.keys():
+        pair = (x, object)
+        if isinstance(d[x], np.ndarray): pair = (x, type(d[x]))
+        dt.append(pair)
+    y = np.empty((1,), dtype=dt)
+    for x in d.keys():
+        y[x][0] = d[x]
+    return y
+
 
 # --------------------------------------------------------------------
 #                                                  MatConvNet in NumPy
 # --------------------------------------------------------------------
 
-mlayerdt = [('name',object),
-            ('type',object),
-            ('inputs',object),
-            ('outputs',object),
-            ('params',object),
-            ('block',object)]
+mlayerdt = [('name', object),
+            ('type', object),
+            ('inputs', object),
+            ('outputs', object),
+            ('params', object),
+            ('block', object)]
 
-mparamdt = [('name',object),
-            ('value',object)]
+mparamdt = [('name', object),
+            ('value', object)]
+
 
 # --------------------------------------------------------------------
 #                                                      Vars and params
@@ -107,20 +116,21 @@ class CaffeBlob(object):
     def __init__(self, name):
         self.name = name
         self.shape = None
-        self.value = np.zeros(shape=(0,0), dtype='float32')
+        self.value = np.zeros(shape=(0, 0), dtype='float32')
         self.bgrInput = False
 
     def transpose(self):
-        if self.shape: self.shape = [self.shape[k] for k in [1,0,2,3]]
+        if self.shape: self.shape = [self.shape[k] for k in [1, 0, 2, 3]]
 
     def toMatlab(self):
-        mparam = np.empty(shape=[1,], dtype=mparamdt)
+        mparam = np.empty(shape=[1, ], dtype=mparamdt)
         mparam['name'][0] = self.name
         mparam['value'][0] = self.value
         return mparam
 
     def toMatlabSimpleNN(self):
         return self.value
+
 
 class CaffeTransform(object):
     def __init__(self, size, stride, offset):
@@ -131,27 +141,30 @@ class CaffeTransform(object):
     def __str__(self):
         return "<%s %s %s>" % (self.shape, self.stride, self.offset)
 
+
 def composeTransforms(a, b):
-    size = [0.,0.]
-    stride = [0.,0.]
-    offset = [0.,0.]
-    for i in [0,1]:
+    size = [0., 0.]
+    stride = [0., 0.]
+    offset = [0., 0.]
+    for i in [0, 1]:
         size[i] = a.stride[i] * (b.shape[i] - 1) + a.shape[i]
         stride[i] = a.stride[i] * b.stride[i]
         offset[i] = a.stride[i] * (b.offset[i] - 1) + a.offset[i]
     c = CaffeTransform(size, stride, offset)
     return c
 
+
 def transposeTransform(a):
-    size = [0.,0.]
-    stride = [0.,0.]
-    offset = [0.,0.]
-    for i in [0,1]:
+    size = [0., 0.]
+    stride = [0., 0.]
+    offset = [0., 0.]
+    for i in [0, 1]:
         size[i] = (a.shape[i] + a.stride[i] - 1.0) / a.stride[i]
-        stride[i] = 1.0/a.stride[i]
+        stride[i] = 1.0 / a.stride[i]
         offset[i] = (1.0 + a.stride[i] - a.offset[i]) / a.stride[i]
     c = CaffeTransform(size, stride, offset)
     return c
+
 
 # --------------------------------------------------------------------
 #                                                               Errors
@@ -160,8 +173,10 @@ def transposeTransform(a):
 class ConversionError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
+
 
 # --------------------------------------------------------------------
 #                                                         Basic Layers
@@ -190,7 +205,7 @@ class CaffeLayer(object):
         for i in enumerate(self.inputs):
             row = []
             for j in enumerate(self.outputs):
-                row.append(CaffeTransform([1.,1.], [1.,1.], [1.,1.]))
+                row.append(CaffeTransform([1., 1.], [1., 1.], [1., 1.]))
             transforms.append(row)
         return transforms
 
@@ -198,10 +213,10 @@ class CaffeLayer(object):
         pass
 
     def setBlob(self, model, i, blob):
-        assert(False)
+        assert (False)
 
     def toMatlab(self):
-        mlayer = np.empty(shape=[1,],dtype=mlayerdt)
+        mlayer = np.empty(shape=[1, ], dtype=mlayerdt)
         mlayer['name'][0] = self.name
         mlayer['type'][0] = None
         mlayer['inputs'][0] = rowcell(self.inputs)
@@ -211,16 +226,18 @@ class CaffeLayer(object):
         return mlayer
 
     def toMatlabSimpleNN(self):
-        mparam = collections.OrderedDict() ;
+        mparam = collections.OrderedDict();
         mparam['name'] = self.name
         mparam['type'] = None
         return mparam
+
 
 class CaffeElementWise(CaffeLayer):
     def reshape(self, model):
         for i in range(len(self.inputs)):
             model.vars[self.outputs[i]].shape = \
                 model.vars[self.inputs[i]].shape
+
 
 class CaffeReLU(CaffeElementWise):
     def __init__(self, name, inputs, outputs):
@@ -230,7 +247,7 @@ class CaffeReLU(CaffeElementWise):
         mlayer = super(CaffeReLU, self).toMatlab()
         mlayer['type'][0] = u'dagnn.ReLU'
         mlayer['block'][0] = dictToMatlabStruct(
-            {'leak': float(0.0) })
+            {'leak': float(0.0)})
         # todo: leak factor
         return mlayer
 
@@ -240,6 +257,7 @@ class CaffeReLU(CaffeElementWise):
         mlayer['leak'] = float(0.0)
         return mlayer
 
+
 class CaffeLRN(CaffeElementWise):
     def __init__(self, name, inputs, outputs,
                  local_size,
@@ -247,7 +265,6 @@ class CaffeLRN(CaffeElementWise):
                  beta,
                  norm_region,
                  kappa):
-
         super(CaffeLRN, self).__init__(name, inputs, outputs)
         self.local_size = local_size
         self.alpha = alpha
@@ -255,7 +272,7 @@ class CaffeLRN(CaffeElementWise):
         self.norm_region = norm_region
         self.kappa = kappa
 
-        assert(norm_region == 'across_channels')
+        assert (norm_region == 'across_channels')
 
     def toMatlab(self):
         mlayer = super(CaffeLRN, self).toMatlab()
@@ -276,6 +293,7 @@ class CaffeLRN(CaffeElementWise):
                                self.beta])
         return mlayer
 
+
 class CaffeSoftMax(CaffeElementWise):
     def __init__(self, name, inputs, outputs):
         super(CaffeSoftMax, self).__init__(name, inputs, outputs)
@@ -290,6 +308,7 @@ class CaffeSoftMax(CaffeElementWise):
         mlayer['type'] = u'softmax'
         return mlayer
 
+
 class CaffeSoftMaxLoss(CaffeElementWise):
     def __init__(self, name, inputs, outputs):
         super(CaffeSoftMaxLoss, self).__init__(name, inputs, outputs)
@@ -303,6 +322,7 @@ class CaffeSoftMaxLoss(CaffeElementWise):
         mlayer = super(CaffeSoftMaxLoss, self).toMatlabSimpleNN()
         mlayer['type'] = u'softmax'
         return mlayer
+
 
 class CaffeDropout(CaffeElementWise):
     def __init__(self, name, inputs, outputs, ratio):
@@ -325,6 +345,7 @@ class CaffeDropout(CaffeElementWise):
         super(CaffeDropout, self).display()
         print "  c- ratio (dropout rate):", self.ratio
 
+
 class CaffeData(CaffeLayer):
     def __init__(self, name, inputs, outputs):
         super(CaffeData, self).__init__(name, inputs, outputs)
@@ -343,6 +364,7 @@ class CaffeData(CaffeLayer):
     def toMatlabSimpleNN(self):
         return None
 
+
 # --------------------------------------------------------------------
 #                                                          Convolution
 # --------------------------------------------------------------------
@@ -359,10 +381,13 @@ class CaffeConv(CaffeLayer):
 
         super(CaffeConv, self).__init__(name, inputs, outputs)
 
-        if len(kernel_size) == 1 : kernel_size = kernel_size * 2
-        if len(stride) == 1 : stride = stride * 2
-        if len(pad) == 1 : pad = pad * 4
-        elif len(pad) == 2 : pad = [pad[0], pad[0], pad[1], pad[1]]
+        if len(kernel_size) == 1: kernel_size = kernel_size * 2
+        if len(stride) == 0: stride = [1]
+        if len(stride) == 1: stride = stride * 2
+        if len(pad) == 1:
+            pad = pad * 4
+        elif len(pad) == 2:
+            pad = [pad[0], pad[0], pad[1], pad[1]]
 
         self.num_output = num_output
         self.bias_term = bias_term
@@ -395,35 +420,36 @@ class CaffeConv(CaffeLayer):
                                            self.kernel_size,
                                            self.stride,
                                            self.pad) \
-                                           + [self.num_output, varin.shape[3]]
+                       + [self.num_output, varin.shape[3]]
         self.filter_depth = varin.shape[2] / self.group
 
     def getTransforms(self, model):
         return [[getFilterTransform(self.kernel_size, self.stride, self.pad)]]
 
     def setBlob(self, model, i, blob):
-        assert(i < 2)
+        assert (i < 2)
         if i == 0:
-            assert(blob.shape[0] == self.kernel_size[0])
-            assert(blob.shape[1] == self.kernel_size[1])
-            assert(blob.shape[3] == self.num_output)
+            assert (blob.shape[0] == self.kernel_size[0])
+            assert (blob.shape[1] == self.kernel_size[1])
+            assert (blob.shape[3] == self.num_output)
             self.filter_depth = blob.shape[2]
         elif i == 1:
-            assert(blob.shape[0] == self.num_output)
+            assert (blob.shape[0] == self.num_output)
         model.params[self.params[i]].value = blob
         model.params[self.params[i]].shape = blob.shape
 
     def transpose(self, model):
-        self.kernel_size = reorder(self.kernel_size, [1,0])
-        self.stride = reorder(self.stride, [1,0])
-        self.pad = reorder(self.pad, [2,3,0,1])
+        self.kernel_size = reorder(self.kernel_size, [1, 0])
+        self.stride = reorder(self.stride, [1, 0])
+        self.pad = reorder(self.pad, [2, 3, 0, 1])
         if model.params[self.params[0]].value.shape > 0:
             print "Layer %s: transposing filters" % self.name
             param = model.params[self.params[0]]
-            param.value = param.value.transpose([1,0,2,3])
-            if model.vars[self.inputs[0]].bgrInput:
-                print "Layer %s: BGR to RGB conversion" % self.name
-                param.value = param.value[:,:,: : -1,:]
+            if len(param.value) > 0:
+                param.value = param.value.transpose([1, 0, 2, 3])
+                if model.vars[self.inputs[0]].bgrInput:
+                    print "Layer %s: BGR to RGB conversion" % self.name
+                    param.value = param.value[:, :, :: -1, :]
 
     def toMatlab(self):
         size = self.kernel_size + [self.filter_depth, self.num_output]
@@ -440,13 +466,14 @@ class CaffeConv(CaffeLayer):
         size = self.kernel_size + [self.filter_depth, self.num_output]
         mlayer = super(CaffeConv, self).toMatlabSimpleNN()
         mlayer['type'] = u'conv'
-        mlayer['weights'] = np.empty([1,len(self.params)], dtype=np.object)
+        mlayer['weights'] = np.empty([1, len(self.params)], dtype=np.object)
         mlayer['size'] = row(size)
         mlayer['pad'] = row(self.pad)
         mlayer['stride'] = row(self.stride)
         for p, name in enumerate(self.params):
-            mlayer['weights'][0,p] = self.model.params[name].toMatlabSimpleNN()
+            mlayer['weights'][0, p] = self.model.params[name].toMatlabSimpleNN()
         return mlayer
+
 
 # --------------------------------------------------------------------
 #                                                         InnerProduct
@@ -456,24 +483,24 @@ class CaffeConv(CaffeLayer):
 class CaffeInnerProduct(CaffeConv):
     def __init__(self, name, inputs, outputs, num_output, bias_term, axis):
         super(CaffeInnerProduct, self).__init__(name, inputs, outputs,
-                                                num_output = num_output,
-                                                bias_term = bias_term,
-                                                pad = [0, 0, 0, 0],
-                                                kernel_size = [1, 1],
-                                                stride = [1, 1],
-                                                dilation = [],
-                                                group = 1)
+                                                num_output=num_output,
+                                                bias_term=bias_term,
+                                                pad=[0, 0, 0, 0],
+                                                kernel_size=[1, 1],
+                                                stride=[1, 1],
+                                                dilation=[],
+                                                group=1)
         self.axis = axis
-        assert(axis == 1)
+        assert (axis == 1)
 
     def setBlob(self, model, i, blob):
-        assert(i < 1 + self.bias_term)
+        assert (i < 1 + self.bias_term)
         if i == 0:
             self.filter_depth = blob.shape[0]
-            assert(blob.shape[1] == self.num_output)
+            assert (blob.shape[1] == self.num_output)
             blob = blob.reshape([1, 1, self.filter_depth, self.num_output])
         elif i == 1:
-            assert(blob.shape[0] == self.num_output)
+            assert (blob.shape[0] == self.num_output)
         model.params[self.params[i]].value = blob
         model.params[self.params[i]].shape = blob.shape
 
@@ -482,12 +509,14 @@ class CaffeInnerProduct(CaffeConv):
         s = model.vars[self.inputs[0]].shape
         self.kernel_size = [s[0], s[1], s[2], self.num_output]
         print "Layer %s: inner product converted to filter bank of shape %s" \
-            % (self.name, self.kernel_size)
+              % (self.name, self.kernel_size)
         param = model.params[self.params[0]]
         if param.value.shape > 0:
-            print "Layer %s: reshaping inner product paramters of shape %s into a filter bank" % (self.name, param.value.shape)
+            print "Layer %s: reshaping inner product paramters of shape %s into a filter bank" % (
+                self.name, param.value.shape)
             param.value = param.value.reshape(self.kernel_size, order='F')
         super(CaffeInnerProduct, self).reshape(model)
+
 
 # --------------------------------------------------------------------
 #                                                        Deconvolution
@@ -503,23 +532,23 @@ class CaffeDeconvolution(CaffeConv):
                  dilation,
                  group):
         super(CaffeDeconvolution, self).__init__(name, inputs, outputs,
-                                                 num_output = num_output,
-                                                 bias_term = bias_term,
-                                                 pad = pad,
-                                                 kernel_size = kernel_size,
-                                                 stride = stride,
-                                                 dilation = dilation,
-                                                 group = group)
+                                                 num_output=num_output,
+                                                 bias_term=bias_term,
+                                                 pad=pad,
+                                                 kernel_size=kernel_size,
+                                                 stride=stride,
+                                                 dilation=dilation,
+                                                 group=group)
 
     def setBlob(self, model, i, blob):
-        assert(i < 2)
+        assert (i < 2)
         if i == 0:
-            assert(blob.shape[0] == self.kernel_size[0])
-            assert(blob.shape[1] == self.kernel_size[1])
-            assert(blob.shape[2] == self.num_output)
+            assert (blob.shape[0] == self.kernel_size[0])
+            assert (blob.shape[1] == self.kernel_size[1])
+            assert (blob.shape[2] == self.num_output)
             self.filter_depth = blob.shape[3]
         elif i == 1:
-            assert(blob.shape[0] == self.num_output)
+            assert (blob.shape[0] == self.num_output)
         model.params[self.params[i]].value = blob
         model.params[self.params[i]].shape = blob.shape
 
@@ -538,19 +567,19 @@ class CaffeDeconvolution(CaffeConv):
         return [[t]]
 
     def transpose(self, model):
-        self.kernel_size = reorder(self.kernel_size, [1,0])
-        self.stride = reorder(self.stride, [1,0])
-        self.pad = reorder(self.pad, [2,3,0,1])
+        self.kernel_size = reorder(self.kernel_size, [1, 0])
+        self.stride = reorder(self.stride, [1, 0])
+        self.pad = reorder(self.pad, [2, 3, 0, 1])
         if model.params[self.params[0]].value.shape > 0:
             print "Layer %s transposing filters" % self.name
             param = model.params[self.params[0]]
-            param.value = param.value.transpose([1,0,2,3])
+            param.value = param.value.transpose([1, 0, 2, 3])
             if model.vars[self.inputs[0]].bgrInput:
                 print "Layer %s BGR to RGB conversion" % self.name
-                param.value = param.value[:,:,:,: : -1]
+                param.value = param.value[:, :, :, :: -1]
 
     def toMatlab(self):
-        size = self.kernel_size +  [self.num_output, self.filter_depth / self.group]
+        size = self.kernel_size + [self.num_output, self.filter_depth / self.group]
         mlayer = super(CaffeDeconvolution, self).toMatlab()
         mlayer['type'][0] = u'dagnn.ConvTranspose'
         mlayer['block'][0] = dictToMatlabStruct(
@@ -564,13 +593,14 @@ class CaffeDeconvolution(CaffeConv):
         size = self.kernel_size + [self.num_output, self.filter_depth / self.group]
         mlayer = super(CaffeDeconvolution, self).toMatlabSimpleNN()
         mlayer['type'] = u'convt'
-        mlayer['weights'] = np.empty([1,len(self.params)], dtype=np.object)
+        mlayer['weights'] = np.empty([1, len(self.params)], dtype=np.object)
         mlayer['size'] = row(size)
-        mlayer['upsample'] =  row(self.stride)
+        mlayer['upsample'] = row(self.stride)
         mlayer['crop'] = row(self.pad)
         for p, name in enumerate(self.params):
-            mlayer['weights'][0,p] = self.model.params[name].toMatlabSimpleNN()
+            mlayer['weights'][0, p] = self.model.params[name].toMatlabSimpleNN()
         return mlayer
+
 
 # --------------------------------------------------------------------
 #                                                              Pooling
@@ -585,10 +615,12 @@ class CaffePooling(CaffeLayer):
 
         super(CaffePooling, self).__init__(name, inputs, outputs)
 
-        if len(kernel_size) == 1 : kernel_size = kernel_size * 2
-        if len(stride) == 1 : stride = stride * 2
-        if len(pad) == 1 : pad = pad * 4
-        elif len(pad) == 2 : pad = [pad[0], pad[0], pad[1], pad[1]]
+        if len(kernel_size) == 1: kernel_size = kernel_size * 2
+        if len(stride) == 1: stride = stride * 2
+        if len(pad) == 1:
+            pad = pad * 4
+        elif len(pad) == 2:
+            pad = [pad[0], pad[0], pad[1], pad[1]]
 
         self.method = method
         self.pad = pad
@@ -612,8 +644,8 @@ class CaffePooling(CaffeLayer):
         # is the correct one (it corresponds to the filters)
         self.pad_corrected = copy.deepcopy(self.pad)
         for i in [0, 1]:
-            self.pad_corrected[1 + i*2] = min(
-                self.pad[1 + i*2] + self.stride[i] - 1,
+            self.pad_corrected[1 + i * 2] = min(
+                self.pad[1 + i * 2] + self.stride[i] - 1,
                 self.kernel_size[i] - 1)
         model.vars[self.outputs[0]].shape = \
             getFilterOutputSize(shape[0:2],
@@ -625,11 +657,11 @@ class CaffePooling(CaffeLayer):
         return [[getFilterTransform(self.kernel_size, self.stride, self.pad)]]
 
     def transpose(self, model):
-        self.kernel_size = reorder(self.kernel_size, [1,0])
-        self.stride = reorder(self.stride, [1,0])
-        self.pad = reorder(self.pad, [2,3,0,1])
+        self.kernel_size = reorder(self.kernel_size, [1, 0])
+        self.stride = reorder(self.stride, [1, 0])
+        self.pad = reorder(self.pad, [2, 3, 0, 1])
         if self.pad_corrected:
-            self.pad_corrected = reorder(self.pad_corrected, [2,3,0,1])
+            self.pad_corrected = reorder(self.pad_corrected, [2, 3, 0, 1])
 
     def toMatlab(self):
         mlayer = super(CaffePooling, self).toMatlab()
@@ -640,7 +672,8 @@ class CaffePooling(CaffeLayer):
              'stride': row(self.stride),
              'pad': row(self.pad_corrected)})
         if not self.pad_corrected:
-            print "Warning: pad correction for layer %s could not be computed because the layer input shape could not be determined" % (self.name)
+            print "Warning: pad correction for layer %s could not be computed because the layer input shape could not be determined" % (
+                self.name)
         return mlayer
 
     def toMatlabSimpleNN(self):
@@ -651,8 +684,10 @@ class CaffePooling(CaffeLayer):
         mlayer['stride'] = row(self.stride)
         mlayer['pad'] = row(self.pad_corrected)
         if not self.pad_corrected:
-            print "Warning: pad correction for layer %s could not be computed because the layer input shape could not be determined" % (self.name)
+            print "Warning: pad correction for layer %s could not be computed because the layer input shape could not be determined" % (
+                self.name)
         return mlayer
+
 
 # --------------------------------------------------------------------
 #                                                                Scale
@@ -688,7 +723,7 @@ class CaffeScale(CaffeLayer):
         model.vars[self.outputs[0]].shape = model.vars[self.inputs[0]].shape
 
     def setBlob(self, model, i, blob):
-        assert(i < self.bias_term + 1)
+        assert (i < self.bias_term + 1)
         # Caffe *ends* with WIDTH, we start with it, blobs are already swapped here
         k = 3 - self.axis
 
@@ -705,7 +740,7 @@ class CaffeScale(CaffeLayer):
     def getTransforms(self, model):
         # The second input can be either a variable or a paramter; in
         # both cases, there is no transform for it
-        return [[CaffeTransform([1.,1.], [1.,1.], [1.,1.])]]
+        return [[CaffeTransform([1., 1.], [1., 1.], [1., 1.])]]
 
     def transpose(self, model):
         if len(self.inputs) == 1:
@@ -735,6 +770,7 @@ class CaffeScale(CaffeLayer):
         mlayer['hasBias'] = self.bias_term
         return mlayer
 
+
 # --------------------------------------------------------------------
 #                                                            BatchNorm
 # --------------------------------------------------------------------
@@ -758,7 +794,7 @@ class CaffeBatchNorm(CaffeLayer):
         print "  c- eps: %s" % (self.eps)
 
     def setBlob(self, model, i, blob):
-        assert(i < 3)
+        assert (i < 3)
         model.params[self.params[i]].value = blob
         model.params[self.params[i]].shape = blob.shape
 
@@ -777,8 +813,8 @@ class CaffeBatchNorm(CaffeLayer):
         model.addParam(self.params[2])
 
         if shape:
-            mult = np.ones((shape[2],),dtype='float32')
-            bias = np.zeros((shape[2],),dtype='float32')
+            mult = np.ones((shape[2],), dtype='float32')
+            bias = np.zeros((shape[2],), dtype='float32')
             model.params[self.params[0]].value = mult
             model.params[self.params[0]].shape = mult.shape
             model.params[self.params[1]].value = bias
@@ -786,8 +822,8 @@ class CaffeBatchNorm(CaffeLayer):
 
         if mean.size:
             moments = np.concatenate(
-                (mean.reshape(-1,1) / scale_factor,
-                 np.sqrt(variance.reshape(-1,1) / scale_factor + self.eps)),
+                (mean.reshape(-1, 1) / scale_factor,
+                 np.sqrt(variance.reshape(-1, 1) / scale_factor + self.eps)),
                 axis=1)
             model.params[self.params[2]].value = moments
             model.params[self.params[2]].shape = moments.shape
@@ -806,6 +842,46 @@ class CaffeBatchNorm(CaffeLayer):
         mlayer['type'] = u'bnorm'
         mlayer['epsilon'] = self.eps
         return mlayer
+
+
+# --------------------------------------------------------------------
+#                                                               Slice
+# --------------------------------------------------------------------
+
+class CaffeSlice(CaffeLayer):
+    def __init__(self, name, inputs, outputs, sliceDim, slicePts):
+        super(CaffeSlice, self).__init__(name, inputs, outputs)
+        self.sliceDim = sliceDim
+        self.slicePts = slicePts
+
+    def transpose(self, model):
+        self.sliceDim = [1, 0, 2, 3][self.sliceDim]
+
+    def reshape(self, model):
+        sizes = [model.vars[x].shape for x in self.inputs]
+        isize = model.vars[self.inputs[0]].shape
+        osize = np.tile(isize, [len(self.slicePts) + 1, 1])
+        szd = np.diff([0, np.asarray(self.slicePts), isize[self.sliceDim]])
+        osize[:, self.sliceDim] = szd
+        for i in range(0, len(self.outputs)):
+            model.vars[self.outputs[i]].shape = osize[i, :].tolist()
+
+    def display(self):
+        super(CaffeSlice, self).display()
+        print "  Slice Dim: ", self.sliceDim
+        print "  Slice Points: ", self.slicePts
+
+    def toMatlab(self):
+        mlayer = super(CaffeSlice, self).toMatlab()
+        mlayer['type'][0] = u'dagnn.Slice'
+        mlayer['block'][0] = dictToMatlabStruct(
+            {'dim': float(self.sliceDim) + 1,
+             'pts': np.asarray(self.slicePts) + 1})
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        raise ConversionError('Slice layers do not work in a SimpleNN network')
+
 
 # --------------------------------------------------------------------
 #                                                               Concat
@@ -845,6 +921,7 @@ class CaffeConcat(CaffeLayer):
     def toMatlabSimpleNN(self):
         raise ConversionError('Concat layers do not work in a SimpleNN network')
 
+
 # --------------------------------------------------------------------
 #                                                   EltWise (Sum, ...)
 # --------------------------------------------------------------------
@@ -865,7 +942,7 @@ class CaffeEltWise(CaffeElementWise):
             mlayer['type'][0] = u'dagnn.Sum'
         else:
             # not implemented
-            assert(False)
+            assert (False)
         return mlayer
 
     def display(self):
@@ -878,10 +955,11 @@ class CaffeEltWise(CaffeElementWise):
         model.vars[self.outputs[0]].shape = \
             model.vars[self.inputs[0]].shape
         for i in range(1, len(self.inputs)):
-            assert(model.vars[self.inputs[0]].shape == model.vars[self.inputs[i]].shape)
+            assert (model.vars[self.inputs[0]].shape == model.vars[self.inputs[i]].shape)
 
     def toMatlabSimpleNN(self):
         raise ConversionError('EltWise (sum, ...) layers do not work in a SimpleNN network')
+
 
 # --------------------------------------------------------------------
 #                                                                 Crop
@@ -904,9 +982,9 @@ class CaffeCrop(CaffeLayer):
 
         print
         print self.name, self.inputs[0]
-        for a,x in enumerate(tfs1): print "%10s %s" % (x,tfs1[x])
+        for a, x in enumerate(tfs1): print "%10s %s" % (x, tfs1[x])
         print self.name, self.inputs[1]
-        for a,x in enumerate(tfs2): print "%10s %s" % (x,tfs2[x])
+        for a, x in enumerate(tfs2): print "%10s %s" % (x, tfs2[x])
 
         # the goal is to crop inputs[0] to make it as big as inputs[1] and
         # aligned to it; so now we find the map from inputs[0] to inputs[1]
@@ -918,19 +996,20 @@ class CaffeCrop(CaffeLayer):
                 tf = composeTransforms(transposeTransform(tf2), tf1)
                 break
         if tf is None:
-            print "Error: could not find common ancestor for inputs '%s' and '%s' of the CaffeCrop layer '%s'" % (self.inputs[0], self.inputs[1], self.name)
+            print "Error: could not find common ancestor for inputs '%s' and '%s' of the CaffeCrop layer '%s'" % (
+                self.inputs[0], self.inputs[1], self.name)
             sys.exit(1)
         print "  Transformation %s -> %s = %s" % (self.inputs[0],
                                                   self.inputs[1], tf)
         # for this to make sense it shoudl be tf.stride = 1
-        assert(tf.stride[0] == 1 and tf.stride[1] == 1)
+        assert (tf.stride[0] == 1 and tf.stride[1] == 1)
 
         # finally we can get the crops!
-        self.crop = [0.,0.]
-        for i in [0,1]:
+        self.crop = [0., 0.]
+        for i in [0, 1]:
             # i' = alpha (i - 1) + beta + crop = 1 for i = 1
             # crop = 1 - beta
-            self.crop[i] =  round(1 - tf.offset[i])
+            self.crop[i] = round(1 - tf.offset[i])
         print "  Crop %s" % self.crop
 
         # print
@@ -942,8 +1021,8 @@ class CaffeCrop(CaffeLayer):
         model.vars[self.outputs[0]].shape = model.vars[self.inputs[1]].shape
 
     def getTransforms(self, model):
-        t = CaffeTransform([1.,1.], [1.,1.], [1.+self.crop[0],1.+self.crop[1]])
-        return [[t],[None]]
+        t = CaffeTransform([1., 1.], [1., 1.], [1. + self.crop[0], 1. + self.crop[1]])
+        return [[t], [None]]
 
     def toMatlab(self):
         mlayer = super(CaffeCrop, self).toMatlab()
@@ -954,6 +1033,7 @@ class CaffeCrop(CaffeLayer):
     def toMatlabSimpleNN(self):
         # todo: simple 1 input crop layers should be supported though!
         raise ConversionError('Crop layers do not work in a SimpleNN network')
+
 
 # --------------------------------------------------------------------
 #                                                          Caffe Model
@@ -971,7 +1051,7 @@ class CaffeModel(object):
             ename = ename + 'x'
         if layer.name != ename:
             print "Warning: a layer with name %s was already found, using %s instead" % \
-                (layer.name, ename)
+                  (layer.name, ename)
             layer.name = ename
         for v in layer.inputs:  self.addVar(v)
         for v in layer.outputs: self.addVar(v)
@@ -989,8 +1069,8 @@ class CaffeModel(object):
     def renameLayer(self, old, new):
         self.layers[old].name = new
         # reinsert layer with new name -- this mess is to preserve the order
-        layers = OrderedDict([(new,v) if k==old else (k,v)
-                              for k,v in self.layers.items()])
+        layers = OrderedDict([(new, v) if k == old else (k, v)
+                              for k, v in self.layers.items()])
         self.layers = layers
 
     def renameVar(self, old, new, afterLayer=None):
@@ -1000,11 +1080,11 @@ class CaffeModel(object):
         else:
             start = 0
         # fix all references to the variable
-        for layer in self.layers.values()[start:-1]:
-            layer.inputs = [new if x==old else x for x in layer.inputs]
-            layer.outputs = [new if x==old else x for x in layer.outputs]
+        for layer in self.layers.values()[start:]:  # was [start:-1] - changed by Justin (caused a bug)
+            layer.inputs = [new if x == old else x for x in layer.inputs]
+            layer.outputs = [new if x == old else x for x in layer.outputs]
         self.vars[new] = copy.deepcopy(self.vars[old])
-        # check if we can delete the old one (for afterLayet != None)
+        # check if we can delete the old one (for afterLayer != None)
         stillUsed = False
         for layer in self.layers.values():
             stillUsed = stillUsed or old in layer.inputs or old in layer.outputs
@@ -1015,7 +1095,7 @@ class CaffeModel(object):
         self.params[old].name = new
         # fix all references to the variable
         for layer in self.layers.itervalues():
-            layer.params = [new if x==old else x for x in layer.params]
+            layer.params = [new if x == old else x for x in layer.params]
         var = self.params[old]
         del self.params[old]
         self.params[new] = var
@@ -1072,7 +1152,7 @@ class CaffeModel(object):
         else:
             layerIndex = len(self.layers) + 1
         transforms = OrderedDict()
-        transforms[variableName] = CaffeTransform([1.,1.], [1.,1.], [1.,1.])
+        transforms[variableName] = CaffeTransform([1., 1.], [1., 1.], [1., 1.])
         for layerName in reversed(layerNames[0:layerIndex]):
             layer = self.layers[layerName]
             layerTfs = layer.getTransforms(self)

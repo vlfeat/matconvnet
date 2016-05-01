@@ -79,7 +79,9 @@ if backMode, d(abs(d) < opts.hinge) = 0; end;
 if opts.normed, d = bsxfun(@rdivide, d, (x0+~x0)); end;
 
 if ~isempty(dzdy) && ~isempty(opts.hard_samples_percent)
-    
+   absd = abs(d) ;
+   th = prctile(absd,100-opts.hard_samples_percent);
+   d(absd<th) = 0;
 end
 
 if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
