@@ -32,8 +32,7 @@ classdef PDist < dagnn.ElementWise
         end
         
         function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
-            derInputs{1} = vl_nnpdist(inputs{1}, inputs{2}, obj.p, derOutputs{1}, 'noRoot', obj.noRoot, 'epsilon', obj.epsilon, 'aggregate', obj.aggregate, obj.opts{:}) ;
-            derInputs{2} = [] ;
+            [derInputs{1},  derInputs{2}] = vl_nnpdist(inputs{1}, inputs{2}, obj.p, derOutputs{1}, 'noRoot', obj.noRoot, 'epsilon', obj.epsilon, 'aggregate', obj.aggregate, obj.opts{:}) ;
             derParams = {} ;
         end
         
