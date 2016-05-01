@@ -50,6 +50,16 @@ classdef Layer < matlab.mixin.Copyable
     copied = []  % reference of deep copied object, used internally for deepCopy()
   end
   
+  methods  % methods defined in their own files
+    objs = find(obj, varargin)
+    sequentialNames(varargin)
+    display(obj, name)
+  end
+  methods (Access = {?Net, ?Layer})
+    objs = findRecursive(obj, what, n, depth, objs)
+    other = deepCopyRecursive(obj, shared)
+  end
+  
   methods
     function obj = Layer(func, varargin)  % wrap a function call
       obj.saveStack() ;  % record source file and line number, for debugging
@@ -83,58 +93,6 @@ classdef Layer < matlab.mixin.Copyable
       
     end
     
-    function objs = find(obj, varargin)
-      % OBJS = OBJ.FIND()
-      % OBJS = OBJ.FIND(NAME/FUNC/CLASS)
-      % Finds layers, starting at the given output layer. The search
-      % criteria can be a layer name, a function handle, or a class name
-      % (such as 'Input' or 'Param').
-      % By default a cell array is returned, which may be empty.
-      %
-      % OBJS = OBJ.FIND(..., N)
-      % Returns only the Nth object that fits the criteria, in the order of
-      % a forward pass (e.g. from the first layer). If N is negative, it is
-      % found in the order of a backward pass (e.g. from the last layer,
-      % which corresponds to N = -1).
-      % Raises an error if no object is found.
-      %
-      % OBJS = OBJ.FIND(..., 'depth', D)
-      % Only recurses D depth levels (i.e., D=1 means that only OBJ's
-      % inputs will be searched).
-      
-      % parse name-value pairs, and leave the rest in varargin
-      opts.depth = inf ;
-      firstArg = find(cellfun(@(s) ischar(s) && any(strcmp(s, fieldnames(opts))), varargin), 1) ;
-      if ~isempty(firstArg)
-        opts = vl_argparse(opts, varargin(firstArg:end), 'nonrecursive') ;
-        varargin(firstArg:end) = [] ;
-      end
-      
-      what = [] ;
-      n = 0 ;
-      if isscalar(varargin)
-        if isnumeric(varargin{1})
-          n = varargin{1} ;
-        else
-          what = varargin{1} ;
-        end
-      elseif numel(varargin) == 2
-        what = varargin{1} ;
-        n = varargin{2} ;
-      else
-        error('Too many input arguments.') ;
-      end
-      
-      % do the work
-      objs = obj.findRecursive(what, n, opts.depth, {}) ;
-      
-      % choose the Nth object
-      if n ~= 0
-        assert(numel(objs) >= abs(n), 'Cannot find a layer fitting the specified criteria.')
-        objs = objs{mod(n - 1, numel(objs)) + 1} ;
-      end
-    end
-    
     function other = deepCopy(obj, varargin)
       % OTHER = OBJ.DEEPCOPY(SHAREDLAYER1, SHAREDLAYER2, ...)
       % OTHER = OBJ.DEEPCOPY({SHAREDLAYER1, SHAREDLAYER2, ...})
@@ -149,77 +107,6 @@ classdef Layer < matlab.mixin.Copyable
       end
       obj.deepCopyReset() ;
       other = obj.deepCopyRecursive(varargin) ;
-    end
-    
-    function sequentialNames(varargin)
-      % OBJ.SEQUENTIALNAMES()
-      % Sets layer names sequentially, based on their function handle and
-      % execution order. E.g.: conv1, conv2, pool1...
-      % Only empty names are set.
-      %
-      % LAYER.SEQUENTIALNAMES(OBJ1, OBJ2, ...)
-      % Same but considering a network with outputs OBJ1, OBJ2, ...
-      %
-      % LAYER.SEQUENTIALNAMES(..., MODIFIER)
-      % Specifies a function handle to be evaluated on each name, possibly
-      % modifying it (e.g. append a prefix or suffix).
-      %
-      % See also WORKSPACENAMES.
-      
-      if ~isempty(varargin) && isa(varargin{end}, 'function_handle')
-        modifier = varargin{end} ;
-        varargin(end) = [] ;
-      else
-        modifier = @deal ;
-      end
-      
-      % figure out the execution order, and list layer objects
-      assert(~isempty(varargin), 'Not enough input arguments.') ;
-      for i = 1:numel(varargin)
-        varargin{i}.resetOrder() ;
-      end
-      objs = {} ;
-      for i = 1:numel(varargin)
-        objs = varargin{i}.buildOrder(objs) ;
-      end
-      
-      % automatically set missing names, according to the execution order
-      for k = 1:numel(objs)
-        if isa(objs{k}, 'Input')  % input1, input2, ...
-          if isempty(objs{k}.name)
-            n = nnz(cellfun(@(o) isa(o, 'Input'), objs(1:k))) ;
-            objs{k}.name = modifier(sprintf('input%i', n)) ;  %#ok<*AGROW>
-          end
-        elseif ~isempty(objs{k}.func)  % conv1, conv2...
-          name = objs{k}.name ;
-          if isempty(name)
-            n = nnz(cellfun(@(o) isequal(o.func, objs{k}.func), objs(1:k))) ;
-            name = func2str(objs{k}.func) ;  %#ok<*PROP>
-            
-            if strncmp(name, 'vl_nn', 5), name(1:5) = [] ; end  % shorten names
-            if strcmp(name, 'bnorm_wrapper'), name = 'bnorm' ; end
-            name = sprintf('%s%i', name, n) ;
-            objs{k}.name = modifier(name) ;
-          end
-          
-          % also set dependant Param names: conv1_p1, ..., regardless of
-          % whether the original name was empty (e.g. objective_p1, ...).
-          ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
-          for i = 1:numel(ps)
-            if isempty(objs{k}.inputs{ps(i)}.name)
-              objs{k}.inputs{ps(i)}.name = modifier(sprintf('%s_p%i', name, i)) ;
-            end
-          end
-        end
-      end
-      
-      % name any remaining objects by class
-      for k = 1:numel(objs)
-        if isempty(objs{k}.name)
-          n = nnz(cellfun(@(o) isa(o, class(objs{k})), objs(1:k))) ;
-          objs{k}.name = modifier(sprintf('%s%i', lower(class(objs{k})), n)) ;
-        end
-      end
     end
     
     
@@ -404,62 +291,6 @@ classdef Layer < matlab.mixin.Copyable
         [varargout{1:nargout}] = builtin('subsref', a, s) ;
       end
     end
-    
-    function display(obj, name)
-      % show hyperlinks in command window, allowing one to interactively
-      % traverse the network. note that the builtin disp is unchanged.
-      
-      if nargin < 2
-        name = inputname(1) ;
-      end
-      fprintf('\n%s', name) ;
-      
-      if numel(name) > 30  % line break for long names
-        fprintf('\n')
-      end
-      if isempty(obj.func)  % other classes, such as Input or Param
-        fprintf(' = %s\n\n', class(obj)) ;
-      else
-        % a standard Layer, expressing a function call
-        fprintf(' = %s(', char(obj.func)) ;
-        
-        for i = 1:numel(obj.inputs)
-          input = obj.inputs{i} ;
-          
-          if ~isa(input, 'Layer')
-            % use Matlab's native display of single cells, which provides a
-            % nice short representation of any object (e.g. '[3x3 double]')
-            fprintf(strtrim(evalc('disp({input})'))) ;
-          else
-            % another layer, display it along with a navigation hyperlink
-            if ~isempty(input.name)
-              label = input.name ;
-            elseif isa(input, 'Input')
-              label = 'Input' ;
-            elseif isa(input, 'Param')
-              label = sprintf('Param(%s)', strtrim(evalc('disp({input.value})'))) ;
-            else
-              label = sprintf('inputs{%i}', i) ;
-            end
-            cmd = sprintf('%s.inputs{%i}', name, i) ;
-
-            fprintf('<a href="matlab:display(%s,''%s'')">%s</a>', cmd, cmd, label) ;
-          end
-          if i < numel(obj.inputs)
-            fprintf(', ') ;
-          end
-        end
-        fprintf(')\n\n') ;
-      end
-      
-      disp(obj) ;
-      
-      if ~isempty(obj.source)
-        [~, file, ext] = fileparts(obj.source(1).file) ;
-        fprintf('Defined in <a href="matlab:opentoline(''%s'',%i)">%s%s, line %i</a>.\n', ...
-          obj.source(1).file, obj.source(1).line, file, ext, obj.source(1).line) ;
-      end
-    end
   end
   
   methods (Access = {?Net, ?Layer})
@@ -487,76 +318,11 @@ classdef Layer < matlab.mixin.Copyable
       obj.outputVar = numel(layers) * 2 - 1 ;
     end
     
-    function objs = findRecursive(obj, what, n, depth, objs)
-      if n > 0 && numel(objs) >= n
-        return  % early break, already found the object we're after
-      end
-      
-      % recurse on inputs not on the list yet (forward order)
-      if depth > 0
-        for i = 1:numel(obj.inputs)
-          if isa(obj.inputs{i}, 'Layer') && ~any(cellfun(@(o) isequal(obj.inputs{i}, o), objs))
-            objs = obj.inputs{i}.findRecursive(what, n, depth - 1, objs) ;
-          end
-        end
-      end
-      
-      % add self to list if it matches the pattern
-      if ischar(what)
-        if any(what == '*') || any(what == '?')  % wildcards
-          if ~isempty(regexp(obj.name, regexptranslate('wildcard', what), 'once'))
-            objs{end+1} = obj ;
-          end
-        elseif isequal(obj.name, what) || isa(obj, what)
-          objs{end+1} = obj ;
-        end
-      elseif isequal(obj.func, what)
-        objs{end+1} = obj ;
-      end
-    end
-    
     function deepCopyReset(obj)
       obj.copied = [] ;
       for i = 1:numel(obj.inputs)  % recurse on inputs
         if isa(obj.inputs{i}, 'Layer')
           obj.inputs{i}.deepCopyReset() ;
-        end
-      end
-    end
-    
-    function other = deepCopyRecursive(obj, shared)
-      % create a shallow copy first
-      other = obj.copy() ;
-      
-      % pointer to the copied object, to be reused by any subsequent deep
-      % copied layer that happens to share the same input
-      obj.copied = other ;
-      
-      % recurse on inputs that were not copied yet and are not shared
-      for i = 1:numel(other.inputs)
-        if isa(other.inputs{i}, 'Layer') && ...
-         ~any(cellfun(@(o) isequal(other.inputs{i}, o), shared))
-
-          if ~isempty(other.inputs{i}.copied)  % reuse same deep copy
-            other.inputs{i} = other.inputs{i}.copied ;
-          else  % create a new one
-            other.inputs{i} = other.inputs{i}.deepCopyRecursive(shared) ;
-          end
-        end
-      end
-      
-      % repeat for test-mode inputs
-      if ~isequal(other.testInputs, 'same')
-        for i = 1:numel(other.testInputs)
-          if isa(other.testInputs{i}, 'Layer') && ...
-           ~any(cellfun(@(o) isequal(other.testInputs{i}, o), shared))
-
-            if ~isempty(other.testInputs{i}.copied)  % reuse same deep copy
-              other.testInputs{i} = other.testInputs{i}.copied ;
-            else  % create a new one
-              other.testInputs{i} = other.testInputs{i}.deepCopyRecursive(shared) ;
-            end
-          end
         end
       end
     end

@@ -29,7 +29,7 @@ end
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts.train.plotStatistics = true ;
-opts.train.plotDiagnostics = true ;
+opts.train.plotDiagnostics = false ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
