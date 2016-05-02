@@ -266,9 +266,9 @@ The following table summarizes the MD5 checksums for the model files.
 | 1bcad2e93b0cc6da3b7d1bf610582279 | imagenet-matconvnet-vgg-m.mat           |
 | 314c982669e202e0d419803c54d1fb8f | imagenet-matconvnet-vgg-s.mat           |
 | 14ece491f7311f6dc33bc3186729de5b | imagenet-matconvnet-vgg-verydeep-16.mat |
-| c1f695a4cb02cfa74e30322c40b80cec | imagenet-resnet-101-dag.mat             |
-| 43a881178835c9c9b2b72a126b8ed315 | imagenet-resnet-152-dag.mat             |
-| 2eb1a9a20804ce0dbc0930f2fa33bf5e | imagenet-resnet-50-dag.mat              |
+| be19a35a2b4f4c46ed61df684d08b900 | imagenet-resnet-101-dag.mat             |
+| 4461d3640d55aa2f58d990f7c92ff28c | imagenet-resnet-152-dag.mat             |
+| 73a3e51b75230d431c88bb795e14e91d | imagenet-resnet-50-dag.mat              |
 | f666c61dc968c413ef664a7e17b01144 | imagenet-vgg-f.mat                      |
 | d15f53a30bba3abde4377eced695adab | imagenet-vgg-m-1024.mat                 |
 | 779b86f55d0534d9fd322256372007a5 | imagenet-vgg-m-128.mat                  |
@@ -286,6 +286,6 @@ The following table summarizes the MD5 checksums for the model files.
 ## Older file versions
 
 Older models for MatConvNet beta16 are available
-[here](models/beta16). They should be numerically equivalent, but in
+[here](models/). They should be numerically equivalent, but in
 beta17 the format has changed slightly for SimpleNN models. Older
 models can also be updated using the `vl_simplenn_tidy` function.

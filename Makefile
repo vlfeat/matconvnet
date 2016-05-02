@@ -340,3 +340,7 @@ post-doc: doc
 	        --exclude=models \
 	        --exclude=matconvnet-manual.pdf \
 	        --exclude=.htaccess doc/site/site/ $(HOST)/
+
+.PHONY: model-md5
+model-md5:
+	cd data/models ; md5sum *.mat | xargs  printf '| %-33s| %-40s|\n'
