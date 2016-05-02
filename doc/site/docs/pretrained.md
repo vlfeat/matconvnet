@@ -176,6 +176,11 @@ ILSVRC challenge data.
     - [imagenet-matconvnet-vgg-s](models/imagenet-matconvnet-vgg-s.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-s.svg)
     - [imagenet-matconvnet-vgg-verydeep-16](models/imagenet-matconvnet-vgg-verydeep-16.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-verydeep-16.svg)
 
+    > **Remark.** The `imagenet-matconvnet-*.mat` are *deployed*
+    > models. This means, in particular, that batch normalization
+    > layers have been removed for speed at test time. This, however,
+    > may affect fine-tuning.
+
 -   **Caffe reference model** [obtained
     here](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
     (version downloaded on September 2014).
