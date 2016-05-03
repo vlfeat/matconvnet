@@ -39,22 +39,35 @@ else
 end
 
 % determine mask
-mask = opts.mask ;
-scale = cast(1 / (1 - opts.rate), 'like', x) ;
-if backMode && isempty(mask)
+scale = 1 / (1 - opts.rate) ;
+if isa(x, 'gpuArray')
+  dataType = classUnderlying(x) ;
+else
+  dataType = class(x) ;
+end
+switch dataType
+  case 'single'
+    scale = single(scale) ;
+  case 'double'
+    scale = double(scale) ;
+end
+
+if backMode && isempty(opts.mask)
   warning('vl_nndropout: when using in backward mode, the mask should be specified') ;
 end
-if isempty(mask)
+if isempty(opts.mask)
+  % product determines data type
   if isa(x,'gpuArray')
-    mask = scale * (gpuArray.rand(size(x), classUnderlying(x)) >= opts.rate) ;
+    opts.mask = scale * (gpuArray.rand(size(x), 'single') >= opts.rate) ;
   else
-    mask = scale * (rand(size(x), 'like', x) >= opts.rate) ;
+    opts.mask = scale * (rand(size(x), 'single') >= opts.rate) ;
   end
 end
 
 % do job
 if ~backMode
-  y = mask .* x ;
+  y = opts.mask .* x ;
 else
-  y = mask .* dzdy ;
+  y = opts.mask .* dzdy ;
 end
+mask = opts.mask ;
