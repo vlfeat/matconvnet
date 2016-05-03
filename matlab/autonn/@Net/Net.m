@@ -58,6 +58,7 @@ classdef Net < handle
   end
   methods (Access = private)
     build(net, varargin)
+    optimizeVars(net, opts, objs)
   end
   
   methods

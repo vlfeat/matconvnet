@@ -61,16 +61,7 @@ function eval(net, mode, derOutput, accumulateParamDers)
       inputArgPos = layer.inputArgPos ;
       args(inputArgPos) = vars(layer.inputVars) ;
 
-      if isequal(layer.func, @slice)
-        % special case, indexing. the derivative update is sparse.
-        % args = {input, slicing indexes, output derivative}.
-        inputDer = layer.inputVars(1) + 1 ;  % index of input derivative var
-        if isequal(vars{inputDer}, 0)  % must initialize with the right size
-          vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
-        end
-        vars{inputDer}(args{2}{:}) = vars{inputDer}(args{2}{:}) + args{3} ;
-
-      else
+      if ~isequal(layer.func, @slice)
         % call function and collect outputs
         out = cell(1, layer.numInputDer) ;
         [out{:}] = layer.func(args{:}) ;
@@ -80,9 +71,24 @@ function eval(net, mode, derOutput, accumulateParamDers)
         % outputs may be ignored (because they're not input layers,
         % just constant arguments).
         inputDers = layer.inputVars(1:end-1) + 1 ;  % last input is dzdy, doesn't count
-        for i = find(inputArgPos <= numel(out))
-          vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;
+        if layer.accumDer
+          for i = find(inputArgPos <= numel(out))
+            vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;
+          end
+        else
+          % special case, do not accumulat derivatives; used to implement
+          % ReLU short-circuiting.
+          ii = inputArgPos <= numel(out) ;
+          vars(inputDers(ii)) = out(inputArgPos(ii)) ;
         end
+      else
+        % special case, indexing. the derivative update is sparse.
+        % args = {input, slicing indexes, output derivative}.
+        inputDer = layer.inputVars(1) + 1 ;  % index of input derivative var
+        if isequal(vars{inputDer}, 0)  % must initialize with the right size
+          vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
+        end
+        vars{inputDer}(args{2}{:}) = vars{inputDer}(args{2}{:}) + args{3} ;
       end
     end
   end
