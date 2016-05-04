@@ -33,8 +33,7 @@ switch opts.model
     bs = 128 ;
   case 'vgg-vd-16'
     prediction = vgg_vd(opts) ;
-%     bs = 32 ;
-    bs = 24 ;
+    bs = 32 ;
   case 'vgg-vd-19'
     prediction = vgg_vd(opts) ;
     bs = 24 ;
