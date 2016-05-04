@@ -153,8 +153,8 @@ hasIgnoreLabel = any(c(:) == 0);
 % progressively
 if isa(x, 'gpuArray')
   switch classUnderlying(x) ;
-    case 'single', cast = @(z) single(gpuArray(z)) ;
-    case 'double', cast = @(z) double(gpuArray(z)) ;
+    case 'single', cast = @(z) single(z) ;
+    case 'double', cast = @(z) double(z) ;
   end
 else
   switch class(x)
@@ -184,7 +184,7 @@ switch lower(opts.loss)
 
     if hasIgnoreLabel
       % null labels denote instances that should be skipped
-      instanceWeights = cast(c ~= 0) ; 
+      instanceWeights = cast(c ~= 0) ;
     end
 
   otherwise

@@ -26,8 +26,8 @@ function y = vl_nnsoftmaxloss(x,c,dzdy)
 % progressively
 if isa(x, 'gpuArray')
   switch classUnderlying(x) ;
-    case 'single', cast = @(z) single(gpuArray(z)) ;
-    case 'double', cast = @(z) double(gpuArray(z)) ;
+    case 'single', cast = @(z) single(z) ;
+    case 'double', cast = @(z) double(z) ;
   end
 else
   switch class(x)
