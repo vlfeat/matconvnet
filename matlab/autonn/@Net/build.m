@@ -23,25 +23,25 @@ function build(net, varargin)
 
   if isscalar(varargin)
     % a single output layer
-    root = varargin{1} ;
+    rootLayer = varargin{1} ;
 
-    if ~isa(root, 'Layer')  % convert SimpleNN or DagNN to Layer
-      root = Layer(root) ;
+    if ~isa(rootLayer, 'Layer')  % convert SimpleNN or DagNN to Layer
+      rootLayer = Layer(rootLayer) ;
     end
   else
     % several output layers; create a dummy layer to hold them together
-    root = Layer(@cat, 1, varargin{:}) ;
+    rootLayer = Layer(@root, varargin{:}) ;
   end
 
   % make sure all layers have names
   if opts.sequentialNames
-    root.sequentialNames() ;
+    rootLayer.sequentialNames() ;
   end
 
   
   % figure out the execution order, and list layer objects
-  root.resetOrder() ;
-  objs = root.buildOrder({}) ;
+  rootLayer.resetOrder() ;
+  objs = rootLayer.buildOrder({}) ;
   
   
   % do variable allocation optimizations, e.g. ReLU short-circuiting

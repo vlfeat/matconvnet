@@ -69,3 +69,9 @@ function size_der(~, ~, ~)
   % nothing to return; SIZE_SETUP (in AUTONN_SETUP) specifies 0 derivatives
 end
 
+function varargout = root_der(varargin)
+  % copy the output derivative to all input derivatives (see ROOT).
+  varargout = cell(1, numel(varargin) - 1) ;
+  varargout(:) = varargin(end) ;
+end
+
