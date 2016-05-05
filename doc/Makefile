@@ -62,7 +62,7 @@ doc: doc-site doc-manual
 doc-site: doc/site/site/index.html
 doc-manual: doc/matconvnet-manual.pdf
 
-doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex $(svg_tgt)
+doc/matconvnet-manual.pdf : doc/matconvnet-manual.tex doc/*.tex doc/*.bib $(svg_tgt)
 	mkdir -p doc/.build
 	ln -sf ../references.bib doc/.build/references.bib
 	cd "$(dir $(<))" ;\
