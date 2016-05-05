@@ -130,6 +130,12 @@ classdef Layer < matlab.mixin.Copyable
     function y = vl_nndropout(obj, varargin)
       y = Layer(@vl_nndropout, obj, varargin{:}) ;
     end
+    function y = vl_nnbilinearsampler(obj, varargin)
+      y = Layer(@vl_nnbilinearsampler, obj, varargin{:}) ;
+    end
+    function y = vl_nnaffinegrid(obj, varargin)
+      y = Layer(@vl_nnaffinegrid, obj, varargin{:}) ;
+    end
     function y = vl_nncrop(obj, varargin)
       y = Layer(@vl_nncrop, obj, varargin{:}) ;
     end
