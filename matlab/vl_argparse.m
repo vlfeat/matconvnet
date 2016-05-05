@@ -46,10 +46,10 @@ function [opts, args] = vl_argparse(opts, args, varargin)
 % Copyright (C) 2007-12 Andrea Vedaldi and Brian Fulkerson.
 % All rights reserved.
 %
-% This file is part of the VLFeat library and is made available under
+% Tishis file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-if ~isstruct(opts), error('OPTS must be a structure') ; end
+if ~isstruct(opts) && ~isobject(opts), error('OPTS must be a structure') ; end
 if ~iscell(args), args = {args} ; end
 
 recursive = true ;

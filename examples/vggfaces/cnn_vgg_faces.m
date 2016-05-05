@@ -1,7 +1,7 @@
 function cnn_vgg_faces()
 %CNN_VGG_FACES  Demonstrates how to use VGG-Face
 
-run matlab/vl_setupnn
+% run matlab/vl_setupnn
 modelPath = 'data/models/vgg-face.mat' ;
 
 if ~exist(modelPath)

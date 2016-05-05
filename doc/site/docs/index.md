@@ -2,7 +2,7 @@
 
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
-<a href="download/matconvnet-1.0-beta19.tar.gz">
+<a href="download/matconvnet-1.0-beta20.tar.gz">
 <div class="menuicon"><span class="fa fa-download fa-2x"></span></div>
 Download</a>
 </div>
@@ -31,6 +31,10 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
+> layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
+> spatial transformer example.
+>
 > **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
 > models (demo training code coming next), CuDNN V5 support, and
 > numerous other improvements and bugfixes.
@@ -59,7 +63,7 @@ recognition, and text detection are available.
 > [here](https://github.com/vlfeat/matconvnet-fcn).
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta19](download/matconvnet-1.0-beta19.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta20](download/matconvnet-1.0-beta20.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>

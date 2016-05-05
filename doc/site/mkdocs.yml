@@ -6,6 +6,7 @@ extra_css: ['css/fixes.css']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js', 'js/toggle.js']
 
 repo_url: https://github.com/vlfeat/matconvnet
+copyright: "Copyright &copy; 2014-16 The MatConvNet Team."
 
 pages:
 - Home: 'index.md'
@@ -15,6 +16,7 @@ pages:
   - CNN Wrappers: 'wrappers.md'
   - Pretrained CNNs: 'pretrained.md'
   - Training new CNNs: 'training.md'
+  - Spatial Transformers: 'spatial-transformer.md'
   - Using a GPU: 'gpu.md'
   - About: 'about.md'
   - Frequently-asked questions: 'faq.md'
@@ -22,6 +24,7 @@ pages:
 - Functions:
   - Index: 'functions.md'
   - vl_nnbnorm: 'mfiles/vl_nnbnorm.md'
+  - vl_nnbilinearsampler: 'mfiles/vl_nnbilinearsampler.md'
   - vl_nnconcat: 'mfiles/vl_nnconcat.md'
   - vl_nnspnorm: 'mfiles/vl_nnspnorm.md'
   - vl_nnpdist: 'mfiles/vl_nnpdist.md'

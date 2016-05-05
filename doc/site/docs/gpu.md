@@ -10,7 +10,7 @@ compile GPU support in MatConvNet (see
 
 All the core computational functions (e.g. `vl_nnconv`) in the toolbox
 can work with either MATLAB arrays or MATLAB GPU arrays. Therefore,
-switching to use the a GPU is as simple as converting the input CPU
+switching to use the GPU is as simple as converting the input CPU
 arrays in GPU arrays.
 
 In order to make the very best of powerful GPUs, it is important to

@@ -160,7 +160,7 @@ pooling_max_backward_with_pooled_data
 #endif
 
 // an implementation of atomicAdd() for double (really slow)
-__device__ double atomicAdd(double* address, double val)
+static __device__ double atomicAdd(double* address, double val)
 {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull, assumed;

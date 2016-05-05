@@ -43,7 +43,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %      bypassed. Note that, when a network is deployed, it may be
 %      preferable to *remove* such blocks altogether.
 %
-%   `ConserveMemory`:: `true`
+%   `ConserveMemory`:: `false`
 %      Aggressively delete intermediate results. This in practice has
 %      a very small performance hit and allows training much larger
 %      models. However, it can be useful to disable it for

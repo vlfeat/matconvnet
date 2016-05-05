@@ -161,6 +161,38 @@ Detailed calculation of the derivatives is provided in \cref{s:impl-pooling}.
 See \cref{s:impl-activation} for implementation details.
 
 % ------------------------------------------------------------------
+\section{Spatial bilinear resampling}\label{s:spatial-sampler}
+% ------------------------------------------------------------------
+
+!vl_nnbilinearsampler! uses bilinear interpolation to spatially warp the image according to an input transformation grid. This operator works with an input image $\bx$, a grid $\bg$, and an output image $\by$ as follows:
+\[
+  \bx \in \mathbb{R}^{H \times W \times C},
+  \qquad
+  \bg \in [-1,1]^{2 \times H' \times W'},
+  \qquad
+  \by \in \mathbb{R}^{H' \times W' \times C}.
+\]
+The same transformation is applied to all the features channels in the input, as follows:
+\begin{equation}\label{e:bilinear}
+  y_{i''j''c} 
+  = 
+  \sum_{i=1}^H
+  \sum_{j=1}^W 
+  x_{ijc}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v - i|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u - j|\},
+\end{equation}
+where, for each feature channel $c$, the output $y_{i''j''c}$ at the location $(i'',j'')$, is a weighted sum of the input values $x_{ijc}$ in the neighborhood of location $(g_{1i''j''},g_{2i''j''})$. The weights, as given in \eqref{e:bilinear}, correspond to performing bilinear interpolation. Furthermore, the grid coordinates are expressed not in pixels, but relative to a reference frame that extends from $-1$ to $1$ for all spatial dimensions of the input image; this is given by choosing the coefficients as:
+\[
+\alpha_v = \frac{H-1}{2},\quad
+\beta_v = -\frac{H+1}{2},\quad
+\alpha_u = \frac{W-1}{2},\quad
+\beta_u = -\frac{W+1}{2}. 
+\]
+
+See \cref{s:impl-sampler} for implementation details.
+
+% ------------------------------------------------------------------
 \section{Normalization}\label{s:normalization}
 % ------------------------------------------------------------------
 

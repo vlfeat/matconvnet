@@ -19,6 +19,7 @@ the terms of the BSD license (see the COPYING file).
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 #define STRINGIZE_HELPER(x) #x
 #define FILELINE STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__)
+#define divides(a,b) ((b) == (b)/(a)*(a))
 
 #ifdef _MSC_VER
 #define __func__ __FUNCTION__
