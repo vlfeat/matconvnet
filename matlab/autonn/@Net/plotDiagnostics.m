@@ -73,7 +73,7 @@ function plotDiagnostics(net, numPoints)
           set(s.ax(i), 'YLim', [min(s.mins{i}), max(s.maxs{i})]) ;
         end
       else
-        set(s.ax(i), 'YLim', [min(ps), max(ps) + 0.01 * abs(max(ps))]) ;
+        set(s.ax(i), 'YLim', [min(ps), max(ps) + 0.01 * max(0.01, abs(max(ps)))]) ;
       end
     end
   end

@@ -29,7 +29,7 @@ function dx = repmat_der(~, varargin)
   % iterate dimensions, summing derivative accross all repetitions in that
   % dimension
   dx = dzdy ;
-  for dim = 1:reps
+  for dim = 1:numel(reps)
     if reps(dim) > 1
       % split dimension in 2: one for the original, one for the repetitions
       sz = size(dx) ;
