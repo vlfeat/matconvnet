@@ -60,31 +60,31 @@ static inline int nextMultipleOf(int x, int factor)
  # Reduction over the whole batch
 
  `bnorm` works by accumulating statistics over planes (channels) and
- images in a batch. It then uses these statistics to renormaliza the values.
+ images in a batch. It then uses these statistics to renormalize the values.
 
  Summing over plens efficiently over planes is a little complex on the GPU.
  What we have are threads, block of threads, and a grid of blocks:
 
- * Warps (up to 32 threads). Highly coupledm, and in fact *coalesced* and run essentially
- in a single stream of vector instructions on the GPU, which also
- means that they stay syncrhonized implicitly.
+ * Warps (up to 32 threads). Highly coupled, and in fact *coalesced* and 
+ run essentially in a single stream of vector instructions on the GPU, 
+ which also means that they stay syncrhonized implicitly.
 
  * Blocks (up to 512 threads). Blocks are assigned to a SM, and the SM
  breaks them down into warps for execution. Threads in the same block
- can be synchronised explicityle using __syncthreads(). They all run
+ can be synchronised explicity using __syncthreads(). They all run
  concurrently in the same SM.
 
- * Grid. A grid is an array of blocks that are scheduled onto multiple SMs. Threads
- in a grid can be synchronised only implicitly at the end of a kernel.
+ * Grid. A grid is an array of blocks that are scheduled onto multiple SMs. 
+ Threads in a grid can only  be synchronised implicitly at the end of a kernel.
 
- Given these constraints, we expalin next how operations are mapped to the
+ Given these constraints, we explain next how operations are mapped to the
  blocks and the threads.
 
- The input data is organised in SIZE images, each of which is composed of DEPTH
- planes. The goal is to compute the mean and std of each
- plane (across images). In the follwing diagram, planes are enumerated from left to right
- and top to bottom, listing first all the plane for one image (a row) and then
- subsequent images (in different rows).
+ The input data is organised in SIZE images, each of which is composed of 
+ DEPTH planes. The goal is to compute the mean and std deviation of each
+ plane (across images). In the follwing diagram, planes are enumerated 
+ from left to right and top to bottom, first listing all the planes for 
+ one image (a row) and then subsequent images (in different rows).
 
       +-------+   +-------+   +-------+   +-------+
       |plane 1|   |p 2    |   |p 3    |   |p 4    |  numPlanes = 12
@@ -109,21 +109,20 @@ static inline int nextMultipleOf(int x, int factor)
 
  We create a certain number of thread blocks. Call this number gridSize.
  Each block operates (sums) over a certain number of planes, with
- subsequente blocks taking over subsequent planes.
+ subsequent blocks taking over subsequent planes.
 
- Since there may be less blocks
- than planes overall, a single block does more than one plane in general,
- but skips over the ones that are already porcessed by neighbour blocks.
- In the example, the thread block 1
- integrates planes 1 and planes 9).
+ Since there may be less blocks than planes overall, a single block 
+ does more than one plane in general but skips over the ones that are 
+ already processed by neighbour blocks. In the example, the thread block 1
+ integrates plane 1 and plane 9).
 
  It is important to optimise how blocks access memory. This is organised
  in three phases:
 
- 1. Blocks accumulate in a shared scratch space (of blockSize elements, for each block)
- partial sums. In this manner, the scratch space of each block
- contains the statistics for a particularl plane (feature channels)
- and subset of the images.
+ 1. Blocks accumulate in a shared scratch space (of blockSize elements, 
+ for each block) partial sums. In this manner, the scratch space of each block
+ contains the statistics for a particular plane (feature channels) and subset 
+ of the images.
 
  2. Blocks reduce the data in their scratch space using within-block reduction.
 
@@ -132,9 +131,9 @@ static inline int nextMultipleOf(int x, int factor)
 
  # Sliding-window accumulation
 
- As blocks accumulate over different planes and images and these
- are not necessarily aligned to nice memory boundaries, the problem
- is how to make computations efficient.
+ As blocks accumulate over different planes and images and these are not 
+ necessarily aligned to nice memory boundaries, the problem is how to make 
+ computations efficient.
 
  The trick is to look at the block as a jumping window, sliding over the memory
  that needs to be summed, but always aligned at good block boundaries. This means
@@ -175,7 +174,7 @@ static inline int nextMultipleOf(int x, int factor)
 
  Note that half of the threads are idle
 
- 2. Then, the first quarter of the threads reduce the resutl futher:
+ 2. Then, the first quarter of the threads reduce the result further:
 
  tid=0:             mdata[0] = mdata[0] + mdata[blockSize/4]
  ...
@@ -190,7 +189,7 @@ static inline int nextMultipleOf(int x, int factor)
  the code must be explicitly snychronized.
 
  In the second regime, tid < WARP_SIZE, and synchronization is not
- requlred as threads are coalesced.
+ required as threads are coalesced.
  */
 
 template<typename T>
@@ -834,7 +833,7 @@ namespace vl { namespace impl {
 
       // Each channel is processed by one or more blocks.
       // There are numChunks >= 1 blocks per channel, each working
-      // on a sub set of one or more images. There are
+      // on a subset of one or more images. There are
       //
       //     gridSize = numChunks * depth
       //

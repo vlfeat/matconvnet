@@ -23,6 +23,18 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta20 (May 2016).
+
+    **New features**
+
+    * New spatial bilinear resampler `vl_nnbilinearsampler.m` to warp
+      images spatially.
+
+    * New `cnn_stn_cluttered_mnist.m` example to demonstrate
+      spatial transformer networks.
+
+    * MATLAB R2016a compatibility.
+
 -   1.0-beta19 (April 2016).
 
     **New features**
@@ -178,22 +190,22 @@ This package was originally created by
 and it is currently developed by a small community of contributors. It
 is distributed under the permissive BSD license (see also the file
 `COPYING`):
+```no-highlight
+Copyright (c) 2014-16 The MatConvNet team.
+All rights reserved.
 
-    Copyright (c) 2014-15 The MatConvNet team.
-    All rights reserved.
-
-    Redistribution and use in source and binary forms are permitted
-    provided that the above copyright notice and this paragraph are
-    duplicated in all such forms and that any documentation,
-    advertising materials, and other materials related to such
-    distribution and use acknowledge that the software was developed
-    by the <organization>. The name of the <organization> may not be
-    used to endorse or promote products derived from this software
-    without specific prior written permission.  THIS SOFTWARE IS
-    PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES,
-    INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
-    MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-
+Redistribution and use in source and binary forms are permitted
+provided that the above copyright notice and this paragraph are
+duplicated in all such forms and that any documentation,
+advertising materials, and other materials related to such
+distribution and use acknowledge that the software was developed
+by the <organization>. The name of the <organization> may not be
+used to endorse or promote products derived from this software
+without specific prior written permission.  THIS SOFTWARE IS
+PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+```
 # Acknowledgments
 
 The implementation of the computational blocks in this library, and in

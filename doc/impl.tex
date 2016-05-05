@@ -225,6 +225,58 @@ In matrix notation:
 (\bone\bone^\top - \by).
 \]
 
+
+% ------------------------------------------------------------------
+\section{Spatial bilinear resampling}\label{s:impl-sampler}
+% ------------------------------------------------------------------
+
+The projected derivative $d\langle \bp, \phi(\bx,\bg)\rangle / d\bx$ of the spatial bilinaer resampler operator with respect to the input image $\bx$ can be found as follows:
+\begin{multline}\label{e:bilinear-back-x}
+  \frac{\partial}{\partial x_{ijc}}
+  \left[
+  \sum_{i''j''c''}
+  p_{i''k''c''}
+  \sum_{i'=1}^H
+  \sum_{j'=1}^W 
+  x_{i'j'c''}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v -i'|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u -j'|\}
+  \right]
+  \\
+=
+  \sum_{i''j''}
+  p_{i''k''c}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v -i|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u -j|\}.
+\end{multline}
+Note that the formula is similar to Eq.~\ref{e:bilinear}, with the difference that summation is on $i''$ rather than $i$.
+
+The projected derivative $d\langle \bp, \phi(\bx,\bg)\rangle / d\bg$ with respect to the grid is similar:
+\begin{multline}\label{e:bilinear-back-g}
+  \frac{\partial}{\partial g_{1i'j'}}
+  \left[
+  \sum_{i''j''c}
+  p_{i''k''c}
+  \sum_{i=1}^H
+  \sum_{j=1}^W 
+  x_{ijc}
+  \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v -i|\}
+  \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u -j|\}
+  \right]
+  \\
+=
+  -
+  \sum_c
+  p_{i'j'c}
+  \sum_{i=1}^H
+  \sum_{j=1}^W
+  \alpha_v x_{ijc}
+  \max\{0, 1-|\alpha_v g_{2i'j'} + \beta_v -j|\}
+  \sign(\alpha_v g_{1i'j'} + \beta_v -j)
+  \mathbf{1}_{\{-1 < \alpha_u g_{2i'j'} + \beta_u < 1\}}.
+\end{multline}
+A similar expression holds for $\partial g_{2i'j'}$
+
 % ------------------------------------------------------------------
 \section{Normalization}\label{s:normalization}
 % ------------------------------------------------------------------

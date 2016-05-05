@@ -47,6 +47,9 @@ for l = 1:numel(net.layers)
         layer = rmfield(layer, 'biases') ;
       end
   end
+  if ~isfield(layer, 'weights')
+    layer.weights = {} ;
+  end
 
   % check that weights inlcude moments in batch normalization
   if strcmp(layer.type, 'bnorm')

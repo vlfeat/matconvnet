@@ -70,7 +70,7 @@ Increase the verbosity level to 2 to get even more information.
 <a name='gpu'></a>
 ### Compiling the GPU support
 
-To use the the GPU-accelerated version of the library, you will need a
+To use the GPU-accelerated version of the library, you will need a
 NVIDA GPU card with compute capability 2.0 or greater and a copy of
 the NVIDIA CUDA toolkit. Ideally, the version of the CUDA toolkit
 should match your MATLAB version:
