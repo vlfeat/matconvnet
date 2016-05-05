@@ -43,7 +43,7 @@ function objs = find(obj, varargin)
   elseif numel(varargin) == 2
     what = varargin{1} ;
     n = varargin{2} ;
-  else
+  elseif numel(varargin) > 3
     error('Too many input arguments.') ;
   end
 

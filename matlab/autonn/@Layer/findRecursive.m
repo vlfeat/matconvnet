@@ -30,7 +30,7 @@ function objs = findRecursive(obj, what, n, depth, objs)
     elseif isequal(obj.name, what) || isa(obj, what)
       objs{end+1} = obj ;
     end
-  elseif isequal(obj.func, what)
+  elseif isempty(what) || isequal(obj.func, what)
     objs{end+1} = obj ;
   end
 end

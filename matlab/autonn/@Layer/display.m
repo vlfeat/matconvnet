@@ -15,6 +15,13 @@ function display(obj, name)
     name = inputname(1) ;
   end
   fprintf('\n%s', name) ;
+  
+  % non-scalar, use standard display
+  if ~builtin('isscalar', obj)
+    fprintf(' =\n\n') ;
+    disp(obj) ;
+    return
+  end
 
   if numel(name) > 30  % line break for long names
     fprintf('\n')

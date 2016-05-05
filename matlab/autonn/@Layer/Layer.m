@@ -55,6 +55,7 @@ classdef Layer < matlab.mixin.Copyable
     objs = find(obj, varargin)
     sequentialNames(varargin)
     display(obj, name)
+    print(obj)
   end
   methods (Access = {?Net, ?Layer})
     objs = findRecursive(obj, what, n, depth, objs)
