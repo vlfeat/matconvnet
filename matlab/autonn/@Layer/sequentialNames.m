@@ -56,12 +56,27 @@ function sequentialNames(varargin)
         objs{k}.name = modifier(name) ;
       end
 
-      % also set dependant Param names: conv1_p1, ..., regardless of
-      % whether the original name was empty (e.g. objective_p1, ...).
-      ps = find(cellfun(@(o) isa(o, 'Param'), objs{k}.inputs)) ;
+      % set dependant Param names for vl_nnconv and vl_nnbnorm
+      suffix = [] ;
+      if isequal(objs{k}.func, @vl_nnconv)
+        suffix = {[], 'filters', 'biases'} ;
+      elseif isequal(objs{k}.func, @vl_nnbnorm_wrapper)
+        suffix = {[], 'g', 'b', 'moments'} ;
+      end
+      inputs = objs{k}.inputs ;
+      if ~isempty(suffix)
+        for i = 2 : min(numel(suffix), numel(inputs))
+          if isa(inputs{i}, 'Param') && isempty(inputs{i}.name)
+            inputs{i}.name = modifier(sprintf('%s_%s', name, suffix{i})) ;
+          end
+        end
+      end
+      
+      % set dependant Param names for general layers: name_p1, name_p2, ...
+      ps = find(cellfun(@(o) isa(o, 'Param'), inputs)) ;
       for i = 1:numel(ps)
-        if isempty(objs{k}.inputs{ps(i)}.name)
-          objs{k}.inputs{ps(i)}.name = modifier(sprintf('%s_p%i', name, i)) ;
+        if isempty(inputs{ps(i)}.name)
+          inputs{ps(i)}.name = modifier(sprintf('%s_p%i', name, i)) ;
         end
       end
     end
