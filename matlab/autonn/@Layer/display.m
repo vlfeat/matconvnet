@@ -17,7 +17,7 @@ function display(obj, name)
   fprintf('\n%s', name) ;
   
   % non-scalar, use standard display
-  if ~builtin('isscalar', obj)
+  if builtin('numel', obj) ~= 1
     fprintf(' =\n\n') ;
     disp(obj) ;
     return

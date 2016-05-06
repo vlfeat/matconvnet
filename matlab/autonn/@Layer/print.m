@@ -68,9 +68,11 @@ function displayDot(str)
   cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotexe, out, in) ;
   [status, result] = system(cmd) ;
   if status ~= 0
-    error('Unable to run %s\n%s', cmd, result);
+    error('Unable to run %s\n%s', cmd, result) ;
   end
-  fprintf('Dot output:\n%s\n', result);
+  if ~isempty(result)
+    fprintf('Dot output:\n%s\n', result) ;
+  end
 
   %f = fopen(out,'r') ; file=fread(f, 'char=>char')' ; fclose(f) ;
   switch computer
@@ -79,6 +81,8 @@ function displayDot(str)
     case 'GLNXA64'
 %       system(sprintf('display "%s"', out)) ;
       system(sprintf('xdg-open "%s"', out)) ;
+    case 'PCWIN64'
+      system(sprintf('start "%s"', out)) ;
     otherwise
       fprintf('PDF figure saved at "%s"\n', out) ;
   end
