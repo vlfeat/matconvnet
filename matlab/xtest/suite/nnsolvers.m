@@ -56,8 +56,8 @@ classdef nnsolvers < nntest
           end
           
           net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
-          net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
-                      {'prediction','label'}, 'error') ;
+          net.addLayer('top1err', dagnn.Loss('loss', 'classerror'), ...
+                      {'prediction','label'}, 'top1err') ;
       end
 
       % train 1 epoch with small batches and check convergence
@@ -66,7 +66,7 @@ classdef nnsolvers < nntest
         'solver',solver, 'batchSize', 10, 'numEpochs',1, 'continue', false, ...
         'gpus', gpus, 'plotStatistics', false) ;
 
-      test.verifyLessThan(info.train.error(1), 0.35);
+      test.verifyLessThan(info.train.top1err, 0.35);
       test.verifyLessThan(info.train.objective, 0.45);
     end
   end
