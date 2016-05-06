@@ -178,6 +178,7 @@ MatConvNet is developed by several hands:
 * Karel Lenc, DaG, several building blocks and examples
 * Sébastien Ehrhardt, GPU implementation of batch normalization, FCN
   building blocks and examples
+* Ankush Gupta, spatial transformer implementation and examples
 * Max Jaderberg, general improvements and bugfixes
 
 MatConvNet quality also depends on the many people using the toolbox
