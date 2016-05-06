@@ -98,8 +98,8 @@ end
 % setup solver function
 if isstr(opts.solver)
   opts.solver = str2func(['solver_' opts.solver]) ;
-  if isequal(opts.solver, @solver_sgd)
-    opts.solverOpts = struct('momentum', opts.momentum) ;  % backward compatibility
+  if isequal(opts.solver, @solver_sgd) && ~isfield(opts.solverOpts, 'momentum')
+    opts.solverOpts.momentum = opts.momentum ;  % backward compatibility
   end
 end
 state.getBatch = getBatch ;
