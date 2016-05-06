@@ -12,7 +12,7 @@ function info = getVarsInfo(net)
 %     Reference for the layer that outputs this var.
 %     If type is 'layer', contains its index in NET.FORWARD.
 %     If type is 'param', contains its index in NET.PARAMS.
-%     If type is 'input', this is empty (use name for struct NET.INPUTS).
+%     If type is 'input', this is 0 (use name for struct NET.INPUTS).
 %
 %   `isDer`::
 %     Whether the var is a derivative (all vars come in pairs, the main
@@ -44,19 +44,22 @@ function info = getVarsInfo(net)
   for k = 1:numel(inputNames)
     var = net.inputs.(inputNames{k}) ;
     info(var).type = 'input' ;
+    info(var).index = 0 ;
     info(var).name = inputNames{k} ;
   end
 
   % vars that correspond to params
   var = [net.params.var] ;
+  idx = num2cell(1:numel(var)) ;
   [info(var).type] = deal('param') ;
-  [info(var).index] = deal(num2cell(1:numel(var))) ;
+  [info(var).index] = deal(idx{:}) ;
   [info(var).name] = deal(net.params.name) ;
 
   % vars that correspond to layer outputs
   var = [net.forward.outputVar] ;
+  idx = num2cell(1:numel(var)) ;
   [info(var).type] = deal('layer') ;
-  [info(var).index] = deal(num2cell(1:numel(var))) ;
+  [info(var).index] = deal(idx{:}) ;
   [info(var).name] = deal(net.forward.name) ;
 
   % vars that correspond to derivatives (every even-numbered var)

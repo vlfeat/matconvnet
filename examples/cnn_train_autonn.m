@@ -72,6 +72,12 @@ else
   opts.stats = stats ;
 end
 
+% get fan-out of each parameter; this is needed for trainMethod = 'average'
+varInfo = net.getVarsInfo() ;
+p = strcmp({varInfo.type}, 'param') & ~[varInfo.isDer] ;
+state.paramsFanout = ones(nnz(p), 1) ;
+state.paramsFanout([varInfo(p).index]) = cellfun(@numel, {varInfo(p).fanout}) ;
+
 % setup GPUs
 numGpus = numel(opts.gpus) ;
 if numGpus > 1
@@ -315,8 +321,7 @@ for p=1:numel(paramVars)
 
     case 2  % average, mainly for batch normalization
       thisLR = net.params(p).learningRate ;
-      w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) * dw{p} ;
-      % NOTE: used to divide by net.params(p).fanout !
+      w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) / state.paramsFanout(p) * dw{p} ;
 
     case 3  % none
     otherwise
