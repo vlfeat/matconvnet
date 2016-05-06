@@ -6,8 +6,10 @@ run(fullfile(fileparts(mfilename('fullpath')), ...
 
 opts.dataDir = fullfile('data', 'ILSVRC2012') ;
 opts.expDir = fullfile('data', 'imagenet12-eval-vgg-f') ;
-opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.modelPath = fullfile('data', 'models', 'imagenet-vgg-f.mat') ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 opts.networkType = [] ;
 opts.lite = false ;
 opts.numFetchThreads = 12 ;

@@ -5,6 +5,11 @@ h2 { font-size: 1.5em ; }
 h3 { font-size: 1.2em ; }
 a  { color: #00438E ; }
 
+.h1, .h2, .h3, h1, h2, h3 {
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
 #logo {
     height: 40px;
 }
@@ -109,10 +114,11 @@ code {
     /*font-weight: 600;*/
 }
 
-h1 code, h2 code {
+h1 code, h2 code, h3 code {
     color: #333;
     font-weight: 600;
     background-color: #FFF;
+    font-size: 90%;
 }
 
 a code {

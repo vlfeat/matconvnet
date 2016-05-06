@@ -46,7 +46,7 @@ if opts.batchNormalization
 end
 
 % Meta parameters
-net.meta.inputSize = [27 27 1] ;
+net.meta.inputSize = [28 28 1] ;
 net.meta.trainOpts.learningRate = 0.001 ;
 net.meta.trainOpts.numEpochs = 20 ;
 net.meta.trainOpts.batchSize = 100 ;
@@ -60,8 +60,10 @@ switch lower(opts.networkType)
     % done
   case 'dagnn'
     net = dagnn.DagNN.fromSimpleNN(net, 'canonicalNames', true) ;
-    net.addLayer('error', dagnn.Loss('loss', 'classerror'), ...
-             {'prediction','label'}, 'error') ;
+    net.addLayer('top1err', dagnn.Loss('loss', 'classerror'), ...
+      {'prediction', 'label'}, 'error') ;
+    net.addLayer('top5err', dagnn.Loss('loss', 'topkerror', ...
+      'opts', {'topk', 5}), {'prediction', 'label'}, 'top5err') ;
   otherwise
     assert(false) ;
 end

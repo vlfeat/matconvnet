@@ -19,6 +19,10 @@ function tnet = vl_simplenn_tidy(net)
 tnet = struct('layers', {{}}, 'meta', struct()) ;
 
 % copy meta information in net.meta subfield
+if isfield(net, 'meta')
+  tnet.meta = net.meta ;
+end
+
 if isfield(net, 'classes')
   tnet.meta.classes = net.classes ;
 end
@@ -27,13 +31,9 @@ if isfield(net, 'normalization')
   tnet.meta.normalization = net.normalization ;
 end
 
-if isfield(net, 'meta')
-  tnet.meta = net.meta ;
-end
-
 % copy layers
 for l = 1:numel(net.layers)
-  defaults = {'precious', false};
+  defaults = {'name', sprintf('layer%d', l), 'precious', false};
   layer = net.layers{l} ;
 
   % check weights format
@@ -46,6 +46,9 @@ for l = 1:numel(net.layers)
         layer = rmfield(layer, 'filters') ;
         layer = rmfield(layer, 'biases') ;
       end
+  end
+  if ~isfield(layer, 'weights')
+    layer.weights = {} ;
   end
 
   % check that weights inlcude moments in batch normalization

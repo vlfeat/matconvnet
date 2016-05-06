@@ -69,6 +69,11 @@ public:
   : vl::Image(im), hasMatlabMemory(im.hasMatlabMemory), isMemoryOwner(false)
   { }
 
+  ~ImageBuffer()
+  {
+    clear() ;
+  }
+
   ImageBuffer & operator = (ImageBuffer const & imb)
   {
     clear() ;
@@ -87,9 +92,9 @@ public:
         free(memory) ;
       }
     }
-    vl::Image::clear() ;
     isMemoryOwner = false ;
     hasMatlabMemory = false ;
+    vl::Image::clear() ;
   }
 
   float * relinquishMemory()
@@ -131,6 +136,12 @@ struct Task
   vl::Error error ;
   bool requireResize ;
   char errorMessage [TASK_ERROR_MSG_MAX_LEN] ;
+
+  Task() { }
+
+private:
+  Task(Task const &) ;
+  Task & operator= (Task const &) ;
 } ;
 
 typedef std::vector<Task*> Tasks ;
@@ -324,17 +335,15 @@ void mexFunction(int nout, mxArray *out[],
   // prepare reader tasks
   create_readers(requestedNumThreads, verbosity) ;
 
-
-
   if (verbosity) {
     mexPrintf("vl_imreadjpeg: numThreads = %d, prefetch = %d\n",
               readers.size(), prefetch) ;
     switch (resizeMode) {
       case kResizeIsotropic:
-        mexPrintf("vl_imreadjpeg: isotropic resize to x %d\n", resizeHeight) ;
+        mexPrintf("vl_imreadjpeg: isotropic resize to x%d\n", resizeHeight) ;
         break ;
       case kResizeAnisotropic:
-        mexPrintf("vl_imreadjpeg: anisotropic resize to %d x %d\n", resizeHeight, resizeWidth) ;
+        mexPrintf("vl_imreadjpeg: anisotropic resize to %dx%d\n", resizeHeight, resizeWidth) ;
         break ;
       default:
         break ;
@@ -388,7 +397,8 @@ void mexFunction(int nout, mxArray *out[],
             break ;
           case kResizeIsotropic:
           {
-            float scale = (std::max)((float)resizeWidth / shape.width,
+            // note: not a bug below, resizeHeight contains the only resize param
+            float scale = (std::max)((float)resizeHeight / shape.width,
                                      (float)resizeHeight / shape.height);
             resizedShape.height = roundf(resizedShape.height * scale) ;
             resizedShape.width = roundf(resizedShape.width * scale) ;
@@ -404,8 +414,9 @@ void mexFunction(int nout, mxArray *out[],
             newTask->error = resizedImage.init(resizedShape, true) ;
           }
         } else {
-          newTask->error = inputImage.init(shape, true) ;
-          resizedImage = inputImage ; // alias
+          newTask->error = resizedImage.init(shape, true) ;
+          // alias: remark: resized image will be asked to release memory so it *must* be the owner
+          inputImage  = resizedImage ;
         }
       } else {
         strncpy(newTask->errorMessage, readers[0].second->getLastErrorMessage(), TASK_ERROR_MSG_MAX_LEN) ;

@@ -21,9 +21,9 @@ popd > /dev/null
 
 #converter="python -m pdb $SCRIPTPATH/import-caffe.py"
 converter="python $SCRIPTPATH/import-caffe.py"
-data="$SCRIPTPATH/../data"
+data="$SCRIPTPATH/../data/models-import"
 
-mkdir -pv "$data"/{tmp/caffe,tmp/googlenet,models}
+mkdir -pv "$data/tmp/googlenet"
 
 function get()
 {
@@ -42,13 +42,13 @@ get "$GOOGLENET_MODEL_URL"
 get "$GOOGLENET_MEAN_URL"
 
 (
-    cd $"data/tmp/googlenet" ;
+    cd "$data/tmp/googlenet" ;
     cp -v train_val_googlenet.prototxt train_val_googlenet_patched.prototxt
-    patch -Np0 < "$SCRIPTPATH/googlenet_prototxt_patch.diff"
+    patch -Np0 < "$SCRIPTPATH/proto/googlenet_prototxt_patch.diff"
 )
 
 base="$data/tmp/googlenet"
-out="$data/models/imagenet-googlenet-dag.mat"
+out="$data/imagenet-googlenet-dag.mat"
 
 if test -f "$out" -a -z "$overwrite"
 then
@@ -56,7 +56,7 @@ then
 else
     $converter \
         --caffe-variant=caffe_0115 \
-        --preproc=caffe \
+        --preproc=vgg-caffe \
 	--remove-dropout \
         --remove-loss \
         --append-softmax="cls3_fc" \

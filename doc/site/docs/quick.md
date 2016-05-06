@@ -11,26 +11,27 @@ speed, downloading the CNN model may require some time.
 
 ```matlab
 % install and compile MatConvNet (needed once)
-untar('http://www.vlfeat.org/matconvnet/download/matconvnet-1.0-beta18.tar.gz') ;
-cd matconvnet-1.0-beta18
+untar('http://www.vlfeat.org/matconvnet/download/matconvnet-1.0-beta20.tar.gz') ;
+cd matconvnet-1.0-beta20
 run matlab/vl_compilenn
 
 % download a pre-trained CNN from the web (needed once)
 urlwrite(...
   'http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat', ...
   'imagenet-vgg-f.mat') ;
-  
+
 % setup MatConvNet
 run  matlab/vl_setupnn
 
 % load the pre-trained CNN
 net = load('imagenet-vgg-f.mat') ;
+net = vl_simplenn_tidy(net) ;
 
 % load and preprocess an image
 im = imread('peppers.png') ;
 im_ = single(im) ; % note: 0-255 range
 im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
-im_ = im_ - net.meta.normalization.averageImage ;
+im_ = bsxfun(@minus, im_, net.meta.normalization.averageImage) ;
 
 % run the CNN
 res = vl_simplenn(net, im_) ;
@@ -51,10 +52,13 @@ the [installation instructions](install.md).
 ## Using DAG models
 
 The example above exemplifies using a model using the SimpleNN
-wrapper. More complex models use instead the DagNN wrapper. For
+wrapper. More complex models use the DagNN wrapper instead. For
 example, to run GoogLeNet use:
 
 ```matlab
+% setup MatConvNet
+run  matlab/vl_setupnn
+
 % download a pre-trained CNN from the web (needed once)
 urlwrite(...
   'http://www.vlfeat.org/matconvnet/models/imagenet-googlenet-dag.mat', ...
@@ -62,12 +66,13 @@ urlwrite(...
 
 % load the pre-trained CNN
 net = dagnn.DagNN.loadobj(load('imagenet-googlenet-dag.mat')) ;
+net.mode = 'test' ;
 
 % load and preprocess an image
 im = imread('peppers.png') ;
 im_ = single(im) ; % note: 0-255 range
 im_ = imresize(im_, net.meta.normalization.imageSize(1:2)) ;
-im_ = im_ - net.meta.normalization.averageImage ;
+im_ = bsxfun(@minus, im_, net.meta.normalization.averageImage) ;
 
 % run the CNN
 net.eval({'data', im_}) ;

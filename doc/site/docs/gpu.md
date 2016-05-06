@@ -1,14 +1,16 @@
 # Using GPU acceleration
 
 GPU support in MatConvNet builds on top of MATLAB GPU support in the
-Parallel Programming Toolbox. This toolbox requires CUDA-compatible
-cards, and you will need a copy of the corresponding
+[Parallel Computing Toolbox](http://www.mathworks.com/products/parallel-computing/). This
+toolbox requires CUDA-compatible cards, and you will need a copy of
+the corresponding
 [CUDA devkit](https://developer.nvidia.com/cuda-toolkit-archive) to
-compile GPU support in MatConvNet (see [compiling](install#compiling)).
+compile GPU support in MatConvNet (see
+[compiling](install#compiling)).
 
 All the core computational functions (e.g. `vl_nnconv`) in the toolbox
 can work with either MATLAB arrays or MATLAB GPU arrays. Therefore,
-switching to use the a GPU is as simple as converting the input CPU
+switching to use the GPU is as simple as converting the input CPU
 arrays in GPU arrays.
 
 In order to make the very best of powerful GPUs, it is important to

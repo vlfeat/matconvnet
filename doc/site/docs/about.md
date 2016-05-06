@@ -23,7 +23,39 @@ here.
 <a name='changes'></a>
 # Changes
 
--   1.0-beta18 (January 2015).
+-   1.0-beta20 (May 2016).
+
+    **New features**
+
+    * New spatial bilinear resampler `vl_nnbilinearsampler.m` to warp
+      images spatially.
+
+    * New `cnn_stn_cluttered_mnist.m` example to demonstrate
+      spatial transformer networks.
+
+    * MATLAB R2016a compatibility.
+
+-   1.0-beta19 (April 2016).
+
+    **New features**
+
+    * Support for pre-trained ResNet models.
+
+    * New `Scale` layer in DagNN.
+
+    * Numerous improvements to DagNN.
+
+    * Numerous refinements to example training scripts `cnn_train.m`
+      and `cnn_train_dag.m`.
+
+    * `vl_nnpdist` now can backpropagate both inputs.
+
+    * CuDNN v5 support.
+
+    * Improved the `import-caffe.py` script for compatibility with
+      newer versions of Caffe.
+
+-   1.0-beta18 (January 2016).
 
     **New features**
 
@@ -32,7 +64,7 @@ here.
 
     * VL_IMREADJPEG() can now resize images.
 
-    * More thourough unit testing and several bugfixes.
+    * More thorough unit testing and several bugfixes.
 
 -   1.0-beta17 (December 2015).
 
@@ -40,7 +72,7 @@ here.
 
     * Mac OS X 10.11 support. Since setting `LD_LIBRARY_PATH` is not
       supported under this OS due to security reasons, now MatConvNet
-      binaries hardcodes the location of the CUDA/cuDNN libraries as
+      binaries hardcode the location of the CUDA/cuDNN libraries as
       needed. This also simplifies starting up MATLAB.
 
     * This version changes slightly how cuDNN is configured; the cuDNN
@@ -72,7 +104,7 @@ here.
 
     * The AlexNet, VGG-F, VGG-M, VGG-S examples provided in the
       `examples/imagenet` directory have been refined in order to
-      produced deployable models. MatConvNet pretrained versions of
+      produce deployable models. MatConvNet pretrained versions of
       these models are available for download.
 
     * A new option in `vl_nnconv` and `vl_nnconvt` allows setting the
@@ -84,8 +116,8 @@ here.
       handled. Use the `vl_simplenn_tidy()` to upgrade existing
       networks to the latest version of MatConvNet. This function is
       also useful to fill in missing default values for the parameters
-      of the network layers. It is therefore recommended to use
-      `vl_simplenn_tidy()` also when new models are defined.
+      of the network layers. It is therefore also recommended to use
+      `vl_simplenn_tidy()` when new models are defined.
 
     * The downloadable pre-trained models have been updated to match
       the new version of SimpleNN. The older models are still
@@ -158,22 +190,22 @@ This package was originally created by
 and it is currently developed by a small community of contributors. It
 is distributed under the permissive BSD license (see also the file
 `COPYING`):
+```no-highlight
+Copyright (c) 2014-16 The MatConvNet team.
+All rights reserved.
 
-    Copyright (c) 2014-15 The MatConvNet team.
-    All rights reserved.
-
-    Redistribution and use in source and binary forms are permitted
-    provided that the above copyright notice and this paragraph are
-    duplicated in all such forms and that any documentation,
-    advertising materials, and other materials related to such
-    distribution and use acknowledge that the software was developed
-    by the <organization>. The name of the <organization> may not be
-    used to endorse or promote products derived from this software
-    without specific prior written permission.  THIS SOFTWARE IS
-    PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES,
-    INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
-    MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-
+Redistribution and use in source and binary forms are permitted
+provided that the above copyright notice and this paragraph are
+duplicated in all such forms and that any documentation,
+advertising materials, and other materials related to such
+distribution and use acknowledge that the software was developed
+by the <organization>. The name of the <organization> may not be
+used to endorse or promote products derived from this software
+without specific prior written permission.  THIS SOFTWARE IS
+PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+```
 # Acknowledgments
 
 The implementation of the computational blocks in this library, and in

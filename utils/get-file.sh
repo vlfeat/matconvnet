@@ -36,7 +36,7 @@ then
             echo "     Download completed successfully"
             exit 0
         else
-            echo "    Could not resume"
+            echo "     Could not resume"
         fi
     fi
 fi

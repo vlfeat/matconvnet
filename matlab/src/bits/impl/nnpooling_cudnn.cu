@@ -104,6 +104,7 @@ namespace vl { namespace impl {
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
                                       (method == vl::vlPoolingAverage) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
                                       poolWidth, poolHeight,
                                       padLeft, padTop,
                                       strideX, strideY)) ;
@@ -202,6 +203,7 @@ namespace vl { namespace impl {
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
                                       (method == vl::vlPoolingAverage) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
                                       poolWidth, poolHeight,
                                       padLeft, padTop,
                                       strideX, strideY)) ;
