@@ -59,7 +59,7 @@ classdef Layer < matlab.mixin.Copyable
   end
   methods (Access = {?Net, ?Layer})
     objs = findRecursive(obj, what, n, depth, objs)
-    other = deepCopyRecursive(obj, shared)
+    other = deepCopyRecursive(obj, shared, rename)
   end
   
   methods
@@ -102,13 +102,32 @@ classdef Layer < matlab.mixin.Copyable
       % SHAREDLAYER2, etc, which are optional. This can be used to
       % implement shared Params, or define the boundaries of the deep copy.
       %
+      % OTHER = OBJ.DEEPCOPY(..., RENAME)
+      % Specifies a function handle to be evaluated on each name, possibly
+      % modifying it (e.g. append a prefix or suffix).
+      %
+      % OTHER = OBJ.DEEPCOPY(..., 'noName')
+      % Does not copy object names (they are left empty).
+      %
       % To create a shallow copy, use OTHER = OBJ.COPY().
       
-      if isscalar(varargin) && iscell(varargin{1})
+      rename = @deal ;  % no renaming by default
+      if ~isempty(varargin)
+        if isa(varargin{end}, 'function_handle')
+          rename = varargin{end} ;  % specified rename function
+          varargin(end) = [] ;
+        elseif ischar(varargin{end})
+          assert(strcmp(varargin{end}, 'noName'), 'Invalid option.') ;
+          rename = @(~) [] ;  % assign empty to name
+          varargin(end) = [] ;
+        end
+      end
+      
+      if isscalar(varargin) && iscell(varargin{1})  % passed in cell array
         varargin = varargin{1} ;
       end
       obj.deepCopyReset() ;
-      other = obj.deepCopyRecursive(varargin) ;
+      other = obj.deepCopyRecursive(varargin, rename) ;
     end
     
     
