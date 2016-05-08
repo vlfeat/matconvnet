@@ -34,18 +34,22 @@ function [da, db] = max_der(a, b, dim, dy)
     dim = find([size(a), 2] ~= 1, 1) ;  % find first non-singleton dim
   end
   
+  % permute so that dim is 1 (otherwise the masked assignment later on
+  % won't index the correct elements, for 1 < dim <= ndims(a))
+  perm = [dim, 1:dim-1, dim+1:ndims(a)] ;
+  a = permute(a, perm) ;
+  
   % max elements along dim have a derivative (the corresponding element
   % from dy), others are 0
-  [~, i] = max(a, [], dim) ;
+  [~, i] = max(a, [], 1) ;
   
-  % indexes 1:size(a,dim), pushed to dimension dim
-  idx = reshape(1:size(a,dim), [ones(1, dim-1), size(a,dim), 1, 1]) ;
-
   % select max elements
-  mask = bsxfun(@eq, idx, i) ;
+  mask = bsxfun(@eq, (1:size(a,1)).', i) ;
   
   da = zeros(size(a), 'like', a) ;
-  da(mask) = dy(mask) ;
+  da(mask) = dy ;
+  
+  da = ipermute(da, perm) ;
 
 end
 
