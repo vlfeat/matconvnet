@@ -2,12 +2,15 @@ function [weights, state] = solver_adadelta(weights, state, grad, opts, ~)
 %SOLVER_ADADELTA
 %   Example AdaDelta solver, for use with CNN_TRAIN and CNN_TRAIN_DAG.
 %
+%   AdaDelta sets its own learning rate, so any learning rate set in the
+%   options of CNN_TRAIN and CNN_TRAIN_DAG will be ignored.
+%
 %   Solver options: (opts.train.solverOpts)
 %
-%   `epsilon`:: 1e-8
+%   `epsilon`:: 1e-6
 %      Small additive constant to regularize variance estimate.
 %
-%   `rho`:: 0.95
+%   `rho`:: 0.9
 %      Moving average window for variance update (larger values result in
 %      slower/more stable updating).
 

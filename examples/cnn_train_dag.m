@@ -14,7 +14,7 @@ opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
 opts.solver = 'sgd' ;
-opts.solverOpts = struct('rho',0.95, 'epsilon',1e-8) ;  % AdaGrad uses epsilon, AdaDelta uses both
+opts.solverOpts = struct() ;
 opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
@@ -51,12 +51,23 @@ end
 state.getBatch = getBatch ;
 stats = [] ;
 
-% setup solver function
-if isstr(opts.solver)
-  opts.solver = str2func(['solver_' opts.solver]) ;
-  if isequal(opts.solver, @solver_sgd) && ~isfield(opts.solverOpts, 'momentum')
-    opts.solverOpts.momentum = opts.momentum ;  % backward compatibility
+% setup solver function, and default hyper-parameters for each solver
+if ischar(opts.solver)
+  solverOpts = struct() ;
+  switch opts.solver
+  case 'sgd'
+    solverOpts.momentum = opts.momentum ;  % backward compatibility
+  case 'adagrad'
+    solverOpts.epsilon = 1e-10 ;
+  case 'adadelta'
+    solverOpts.epsilon = 1e-6 ;
+    solverOpts.rho = 0.9 ;
+  case 'rmsprop'
+    solverOpts.epsilon = 1e-8 ;
+    solverOpts.rho = 0.99 ;
   end
+  [opts.solverOpts, ~] = vl_argparse(solverOpts, opts.solverOpts) ;
+  opts.solver = str2func(['solver_' opts.solver]) ;
 end
 
 % -------------------------------------------------------------------------

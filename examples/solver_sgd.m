@@ -1,6 +1,10 @@
 function [weights, momentum] = solver_sgd(weights, momentum, grad, opts, lr)
 %SOLVER_SGD
-%   Example SGD solver, for use with CNN_TRAIN and CNN_TRAIN_DAG.
+%   Example SGD solver, with momentum, for use with CNN_TRAIN and
+%   CNN_TRAIN_DAG.
+%
+%   The convergence of SGD depends heavily on the learning rate (set in the
+%   options for CNN_TRAIN and CNN_TRAIN_DAG).
 %
 %   Solver options: (opts.train.solverOpts)
 %
