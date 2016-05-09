@@ -37,11 +37,6 @@ function [y, dzdg, dzdb, moments] = vl_nnbnorm_wrapper(x, g, b, moments, test, v
     if numel(varargin) >= 1 && isnumeric(varargin{1})
       % backward mode
       [y, dzdg, dzdb, moments] = vl_nnbnorm(x, g, b, varargin{:}) ;
-      
-      % multiply the moments update by the number of images in the batch
-      % this is required to make the update additive for subbatches
-      % and will eventually be normalized away
-      moments = moments * size(x, 4) ;
     else
       % forward
       y = vl_nnbnorm(x, g, b, varargin{:}) ;

@@ -321,7 +321,7 @@ for p=1:numel(paramVars)
 
     case 2  % average, mainly for batch normalization
       thisLR = net.params(p).learningRate ;
-      w{p} = (1 - thisLR) * w{p} + (thisLR/batchSize) / state.paramsFanout(p) * dw{p} ;
+      w{p} = (1 - thisLR) * w{p} + (thisLR/opts.numSubBatches) / state.paramsFanout(p) * dw{p} ;
 
     case 3  % none
     otherwise
