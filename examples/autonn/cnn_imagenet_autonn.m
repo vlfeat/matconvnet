@@ -157,8 +157,9 @@ function [averageImage, rgbMean, rgbCovariance] = getImageStats(opts, meta, imdb
 train = find(imdb.images.set == 1) ;
 train = train(1: 101: end);
 bs = 256 ;
-opts.networkType = 'simplenn' ;
-fn = getBatchFn(opts, meta) ;
+fnOpts = opts ;
+fnOpts.train.gpus = [] ;
+fn = getBatchFn(fnOpts, meta) ;
 avg = {}; rgbm1 = {}; rgbm2 = {};
 
 for t=1:bs:numel(train)
@@ -166,9 +167,9 @@ for t=1:bs:numel(train)
   batch = train(t:min(t+bs-1, numel(train))) ;
   fprintf('collecting image stats: batch starting with image %d ...', batch(1)) ;
   temp = fn(imdb, batch) ;
-  z = reshape(permute(temp,[3 1 2 4]),3,[]) ;
+  z = reshape(permute(temp{2},[3 1 2 4]),3,[]) ;
   n = size(z,2) ;
-  avg{end+1} = mean(temp, 4) ;
+  avg{end+1} = mean(temp{2}, 4) ;
   rgbm1{end+1} = sum(z,2)/n ;
   rgbm2{end+1} = z*z'/n ;
   batch_time = toc(batch_time) ;

@@ -1,4 +1,4 @@
-function [net, loss, top1err, top5err] = cnn_imagenet_init_autonn(varargin)
+function [net, loss, top1err, top5err, prediction] = cnn_imagenet_init_autonn(varargin)
 % CNN_IMAGENET_INIT_AUTONN  Initialize a standard CNN for ImageNet
 
 opts.scale = 1 ;
@@ -11,11 +11,16 @@ opts.batchNormalization = false ;
 opts.networkType = 'autonn' ;
 opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
 opts.normalization = [5 1 0.0001/5 0.75] ; % for vl_nnnormalize layer
+opts.inputLayer = [] ;  % replaces the standard input with the given layer, to easily use this as a subnetwork
+opts.labelLayer = [] ;  % same as above, but replaces the labels
 opts = vl_argparse(opts, varargin) ;
 
 assert(strcmp(opts.networkType, 'autonn')) ;
 
 % Define layers
+if isempty(opts.inputLayer)
+  opts.inputLayer = Input('input') ;
+end
 imageSize = [224, 224, 3] ;
 switch opts.model
   case 'alexnet'
@@ -48,8 +53,12 @@ end
 % end
 
 % create loss and error metrics
-label = Input('label') ;
-loss = vl_nnsoftmaxloss(prediction, label) ;
+if isempty(opts.labelLayer)
+  label = Input('label') ;
+else
+  label = opts.labelLayer ;
+end
+loss = vl_nnsoftmaxloss(prediction,  label) ;
 top1err = vl_nnloss(prediction, label, 'loss', 'classerror') ;
 top5err = vl_nnloss(prediction, label, 'loss', 'topkerror', 'topK', 5) ;
 
@@ -117,7 +126,7 @@ end
 % --------------------------------------------------------------------
 function net = alexnet(opts)
 % --------------------------------------------------------------------
-net = Input('input') ;
+net = opts.inputLayer ;
 bn = opts.batchNormalization ;
 
 net = add_block(net, opts, [11, 11, 3, 96], 'stride', 4, 'pad', 0) ;
@@ -155,7 +164,7 @@ if bn, net = net.inputs{1} ; end
 % --------------------------------------------------------------------
 function net = vgg_s(opts)
 % --------------------------------------------------------------------
-net = Input('input') ;
+net = opts.inputLayer ;
 bn = opts.batchNormalization ;
 
 net = add_block(net, opts, [7, 7, 3, 96], 'stride', 2, 'pad', 0) ;
@@ -193,7 +202,7 @@ if bn, net = net.inputs{1} ; end
 % --------------------------------------------------------------------
 function net = vgg_m(opts)
 % --------------------------------------------------------------------
-net = Input('input') ;
+net = opts.inputLayer ;
 bn = opts.batchNormalization ;
 
 net = add_block(net, opts, [7, 7, 3, 96], 'stride', 2, 'pad', 0) ;
@@ -231,7 +240,7 @@ if bn, net = net.inputs{1} ; end
 % --------------------------------------------------------------------
 function net = vgg_f(opts)
 % --------------------------------------------------------------------
-net = Input('input') ;
+net = opts.inputLayer ;
 bn = opts.batchNormalization ;
 
 net = add_block(net, opts, [11, 11, 3, 64], 'stride', 4, 'pad', 0) ;
@@ -269,7 +278,7 @@ if bn, net = net.inputs{1} ; end
 % --------------------------------------------------------------------
 function net = vgg_vd(opts)
 % --------------------------------------------------------------------
-net = Input('input') ;
+net = opts.inputLayer ;
 bn = opts.batchNormalization ;
 
 net = add_block(net, opts, [3, 3, 3, 64], 'stride', 1, 'pad', 1) ;
