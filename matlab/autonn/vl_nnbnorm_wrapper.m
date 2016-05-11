@@ -30,16 +30,22 @@ function [y, dzdg, dzdb, moments] = vl_nnbnorm_wrapper(x, g, b, moments, test, v
     moments(1:size(x,3),1:2) = moments;
   end
 
-  if test
-    % test mode, pass in moments
-    y = vl_nnbnorm(x, g, b, 'moments', moments, varargin{:}) ;
-  else
+  if ~test
     if numel(varargin) >= 1 && isnumeric(varargin{1})
-      % backward mode
+      % training backward mode
       [y, dzdg, dzdb, moments] = vl_nnbnorm(x, g, b, varargin{:}) ;
     else
-      % forward
+      % training forward mode
       y = vl_nnbnorm(x, g, b, varargin{:}) ;
+    end
+  else
+    % test mode, pass in moments
+    if numel(varargin) >= 1 && isnumeric(varargin{1})
+      % test backward mode (to implement e.g. bnorm frozen during training)
+      [y, dzdg, dzdb, moments] = vl_nnbnorm(x, g, b, varargin{1}, 'moments', moments, varargin{2:end}) ;
+    else
+      % test forward mode
+      y = vl_nnbnorm(x, g, b, 'moments', moments, varargin{:}) ;
     end
   end
 
