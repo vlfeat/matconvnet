@@ -1,4 +1,4 @@
-function cnn_imagenet(varargin)
+function [net, info] = cnn_imagenet(varargin)
 %CNN_IMAGENET   Demonstrates training a CNN on ImageNet
 %  This demo demonstrates training the AlexNet, VGG-F, VGG-S, VGG-M,
 %  VGG-VD-16, and VGG-VD-19 architectures on ImageNet data.
@@ -6,7 +6,7 @@ function cnn_imagenet(varargin)
 run(fullfile(fileparts(mfilename('fullpath')), ...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
-opts.dataDir = fullfile('data','ILSVRC2012') ;
+opts.dataDir = fullfile(vl_rootnn, 'data','ILSVRC2012') ;
 opts.modelType = 'alexnet' ;
 opts.networkType = 'simplenn' ;
 opts.batchNormalization = true ;
@@ -16,17 +16,18 @@ opts.weightInitMethod = 'gaussian' ;
 sfx = opts.modelType ;
 if opts.batchNormalization, sfx = [sfx '-bnorm'] ; end
 sfx = [sfx '-' opts.networkType] ;
-opts.expDir = fullfile('data', ['imagenet12-' sfx]) ;
+opts.expDir = fullfile(vl_rootnn, 'data', ['imagenet12-' sfx]) ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.numFetchThreads = 12 ;
 opts.lite = false ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.train = struct([]) ;
-[opts, varargin] = vl_argparse(opts, varargin) ;
+opts.train = struct() ;
+opts = vl_argparse(opts, varargin) ;
+if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % -------------------------------------------------------------------------
-%                                                            Prepare model
+%                                                             Prepare model
 % -------------------------------------------------------------------------
 
 net = cnn_imagenet_init('model', opts.modelType, ...
@@ -93,7 +94,7 @@ switch opts.networkType
   case 'simplenn'
     save(modelPath, '-struct', 'net') ;
   case 'dagnn'
-    net_ = net.saveobj()
+    net_ = net.saveobj() ;
     save(modelPath, '-struct', 'net_') ;
     clear net_ ;
 end
@@ -160,7 +161,7 @@ if nargout > 0
     im = gpuArray(im) ;
   end
   labels = imdb.images.label(batch) ;
-  inputs = {'input', im, 'label', imdb.images.label(batch)} ;
+  inputs = {'input', im, 'label', labels} ;
 end
 
 % -------------------------------------------------------------------------
@@ -171,6 +172,7 @@ train = train(1: 101: end);
 bs = 256 ;
 opts.networkType = 'simplenn' ;
 fn = getBatchFn(opts, meta) ;
+avg = {}; rgbm1 = {}; rgbm2 = {};
 
 for t=1:bs:numel(train)
   batch_time = tic ;
@@ -179,9 +181,9 @@ for t=1:bs:numel(train)
   temp = fn(imdb, batch) ;
   z = reshape(permute(temp,[3 1 2 4]),3,[]) ;
   n = size(z,2) ;
-  avg{t} = mean(temp, 4) ;
-  rgbm1{t} = sum(z,2)/n ;
-  rgbm2{t} = z*z'/n ;
+  avg{end+1} = mean(temp, 4) ;
+  rgbm1{end+1} = sum(z,2)/n ;
+  rgbm2{end+1} = z*z'/n ;
   batch_time = toc(batch_time) ;
   fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
 end

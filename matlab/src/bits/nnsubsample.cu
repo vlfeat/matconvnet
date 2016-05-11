@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -21,7 +21,7 @@ using namespace vl ;
 /* Implementations                                                  */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device arch, typename type> vl::Error
+template<vl::Device deviceType, vl::Type dataType> vl::Error
 nnsubsample_forward_impl(Context& context,
                          Tensor output,
                          Tensor data,
@@ -34,11 +34,11 @@ nnsubsample_forward_impl(Context& context,
   assert(data) ;
 
   vl::Error error ;
+  typedef typename vl::DataTypeTraits<dataType>::type type ;
 
   ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
-  type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                         get_vl_type<type>(),
-                                                         numOutputPixels) ;
+  type const* allOnesMemory = (type*) context.getAllOnes(deviceType, dataType, numOutputPixels) ;
+
   if (allOnesMemory == NULL) {
     error = context.getLastError() ;
     goto done ;
@@ -47,32 +47,34 @@ nnsubsample_forward_impl(Context& context,
   for (int image = 0 ; image < data.getSize() ; ++image) {
     ptrdiff_t dataOffset = (data.getHeight()*data.getWidth()*data.getDepth()) * image ;
     ptrdiff_t outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
-    error = vl::impl::subsample_forward<arch,type>(context,
-                                                   output.getMemory() + outputOffset,
-                                                   data.getMemory() + dataOffset,
-                                                   data.getHeight(), data.getWidth(), data.getDepth(),
-                                                   strideY, strideX,
-                                                   padTop, padBottom, padLeft, padRight) ;
+    error = vl::impl::subsample<deviceType,type>::forward
+    (context,
+     (type*)output.getMemory() + outputOffset,
+     (type const*)data.getMemory() + dataOffset,
+     data.getHeight(), data.getWidth(), data.getDepth(),
+     strideY, strideX,
+     padTop, padBottom, padLeft, padRight) ;
     if (error != vl::vlSuccess) { goto done ; }
     if (biases) {
       type alpha = 1 ;
       type beta = 1 ;
-      error = gemm<arch,type>(context,
-                              'n', 'n',
-                              numOutputPixels, biases.getNumElements(), 1,
-                              alpha,
-                              allOnesMemory, numOutputPixels,
-                              (type*)biases.getMemory(), 1,
-                              beta,
-                              (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+      error = vl::impl::blas<deviceType, dataType>::gemm
+      (context,
+       'n', 'n',
+       numOutputPixels, biases.getNumElements(), 1,
+       alpha,
+       allOnesMemory, numOutputPixels,
+       (type*)biases.getMemory(), 1,
+       beta,
+       (type*)output.getMemory() + outputOffset, numOutputPixels) ;
       if (error != vl::vlSuccess) { goto done ; }
     }
   }
 done:
-  return context.passError(error, "nnsubsample_forward_impl<>: ") ;
+  return context.passError(error, __func__) ;
 }
 
-template<vl::Device arch, typename type> vl::Error
+template<vl::Device deviceType, vl::Type dataType> vl::Error
 nnsubsample_backward_impl(Context& context,
                           Tensor derData,
                           Tensor derBiases,
@@ -84,11 +86,11 @@ nnsubsample_backward_impl(Context& context,
   assert(derOutput) ;
 
   vl::Error error ;
+  typedef typename vl::DataTypeTraits<dataType>::type type ;
 
   ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
-  type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                         get_vl_type<type>(),
-                                                         numOutputPixels) ;
+  type const* allOnesMemory = (type*) context.getAllOnes(deviceType, dataType, numOutputPixels) ;
+
   if (allOnesMemory == NULL) {
     error = context.getLastError() ;
     goto done ;
@@ -101,36 +103,52 @@ nnsubsample_backward_impl(Context& context,
     if (derBiases) {
       type alpha = 1 ;
       type beta = (image > 0) ; /* this saves init. the output array with 0 */
-      error = gemv<arch,type>(context,
-                      't',
-                      numOutputPixels, derOutput.getDepth(),
-                      alpha,
-                      derOutput.getMemory() + derOutputOffset, numOutputPixels,
-                      allOnesMemory, 1,
-                      beta,
-                      derBiases.getMemory(), 1) ;
+      error = vl::impl::blas<deviceType,dataType>::gemv
+      (context,
+       't',
+       numOutputPixels, derOutput.getDepth(),
+       alpha,
+       (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
+       allOnesMemory, 1,
+       beta,
+       (type*)derBiases.getMemory(), 1) ;
       if (error != vl::vlSuccess) { goto done ; }
     }
 
     /* compute derData = dz/dx */
     if (derData) {
       ptrdiff_t derDataOffset = (derData.getHeight()*derData.getWidth()*derData.getDepth()) * image ;
-      error = vl::impl::subsample_backward<arch,type>(context,
-                                              derData.getMemory() + derDataOffset,
-                                              derOutput.getMemory() + derOutputOffset,
-                                              derData.getHeight(), derData.getWidth(), derData.getDepth(),
-                                              strideY, strideX,
-                                              padTop, padBottom, padLeft, padRight) ;
+      error = vl::impl::subsample<deviceType,type>::backward
+      (context,
+       (type*)derData.getMemory() + derDataOffset,
+       (type const*)derOutput.getMemory() + derOutputOffset,
+       derData.getHeight(), derData.getWidth(), derData.getDepth(),
+       strideY, strideX,
+       padTop, padBottom, padLeft, padRight) ;
       if (error != vl::vlSuccess) { goto done ; }
     }
   }
 done:
-  return context.passError(error, "nnsubsample_forward_impl<>: ") ;
+  return context.passError(error, __func__) ;
 }
 
 /* ---------------------------------------------------------------- */
-/* Dispatchers                                                     */
+/* Dispatchers                                                      */
 /* ---------------------------------------------------------------- */
+
+#define DISPATCH(deviceType, dataType) \
+error = nnsubsample_forward_impl<deviceType, dataType> \
+(context, output, data, biases, \
+ strideY, strideX, \
+ padTop, padBottom, \
+ padLeft, padRight) ;
+
+#define DISPATCH2(deviceType) \
+switch (dataType) { \
+case vlTypeFloat : DISPATCH(deviceType, vlTypeFloat) ; break ; \
+IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, vlTypeDouble) ; break ;) \
+default: assert(false) ; return vlErrorUnknown ; \
+}
 
 vl::Error
 vl::nnsubsample_forward(Context& context,
@@ -142,32 +160,38 @@ vl::nnsubsample_forward(Context& context,
                         int padLeft, int padRight)
 {
   vl::Error error = vl::vlSuccess ;
-  switch (output.getMemoryType()) {
+  vl::Device deviceType = output.getDeviceType() ;
+  vl::Type dataType = output.getDataType() ;
+
+  switch (deviceType) {
     default:
       assert(false) ;
       error = vl::vlErrorUnknown ;
       break ;
 
     case vl::CPU:
-      error = nnsubsample_forward_impl<CPU,float>
-      (context, output, data, biases,
-       strideY, strideX,
-       padTop, padBottom,
-       padLeft, padRight) ;
+      DISPATCH2(vl::CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
     case vl::GPU:
-      error = nnsubsample_forward_impl<GPU,float>
-      (context, output, data, biases,
-       strideY, strideX,
-       padTop, padBottom,
-       padLeft, padRight) ;
+      DISPATCH2(vl::GPU) ;
+      if (error == vlErrorCuda) {
+        context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
+      }
       break ;
 #endif
   }
-  return context.passError(error, "nnsubsample_forward: ") ;
+  return context.passError(error, __func__) ;
 }
+
+#undef DISPATCH
+#define DISPATCH(deviceType, dataType) \
+error = nnsubsample_backward_impl<deviceType, dataType> \
+(context, derData, derBiases, derOutput, \
+strideY, strideX, \
+padTop, padBottom, \
+padLeft, padRight) ;
 
 vl::Error
 vl::nnsubsample_backward(vl::Context& context,
@@ -178,32 +202,28 @@ vl::nnsubsample_backward(vl::Context& context,
                          int padTop, int padBottom,
                          int padLeft, int padRight)
 {
-  vl::Error status = vl::vlSuccess ;
-  switch (derOutput.getMemoryType()) {
+  vl::Error error = vl::vlSuccess ;
+  vl::Device deviceType = derOutput.getDeviceType() ;
+  vl::Type dataType = derOutput.getDataType() ;
+
+  switch (deviceType) {
     default:
       assert(false) ;
-      status = vl::vlErrorUnknown ;
+      error = vl::vlErrorUnknown ;
       break ;
 
     case vl::CPU:
-      status = nnsubsample_backward_impl<CPU,float>
-      (context,
-       derData, derBiases, derOutput,
-       strideY, strideX,
-       padTop, padBottom,
-       padLeft, padRight) ;
+      DISPATCH2(vl::CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
     case vl::GPU:
-      status = nnsubsample_backward_impl<GPU,float>
-      (context,
-       derData, derBiases, derOutput,
-       strideY, strideX,
-       padTop, padBottom,
-       padLeft, padRight) ;
+      DISPATCH2(vl::GPU) ;
+      if (error == vlErrorCuda) {
+        context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
+      }
       break ;
 #endif
   }
-  return status ;
+  return context.passError(error, __func__) ;
 }

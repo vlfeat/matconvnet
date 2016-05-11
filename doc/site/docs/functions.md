@@ -21,18 +21,22 @@ showing how to train CNNs.
 ## Building blocks
 
 - [`vl_nnbnorm`](mfiles/vl_nnbnorm.md) Batch normalization.
+- [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) Bilinear Samppler.
 - [`vl_nnconv`](mfiles/vl_nnconv.md) Linear convolution by a filter.
-- [`vl_nnconvt`](mfiles/vl_nnconvt.md) Convolution transopose.
+- [`vl_nnconcat`](mfiles/vl_nnconcat.md) Concatenation.
+- [`vl_nnconvt`](mfiles/vl_nnconvt.md) Convolution transpose.
+- [`vl_nncrop`](mfiles/vl_nncrop.md) Cropping.
 - [`vl_nndropout`](mfiles/vl_nndropout.md) Dropout.
 - [`vl_nnloss`](mfiles/vl_nnloss.md) Classification log-loss.
 - [`vl_nnnoffset`](mfiles/vl_nnnoffset.md) Norm-dependent offset.
-- [`vl_nnnormalize`](mfiles/vl_nnnormalize.md) Local Channel Normalization (LCN).
+- [`vl_nnnormalize`](mfiles/vl_nnnormalize.md) Local Response Normalization (LRN).
 - [`vl_nnpdist`](mfiles/vl_nnpdist.md) Pairwise distances.
 - [`vl_nnpool`](mfiles/vl_nnpool.md) Max and sum pooling.
-- [`vl_nnrelu`](mfiles/vl_nnrelu.md) REctified Linear Unit.
+- [`vl_nnrelu`](mfiles/vl_nnrelu.md) Rectified Linear Unit.
 - [`vl_nnsigmoid`](mfiles/vl_nnsigmoid.md) Sigmoid.
 - [`vl_nnsoftmax`](mfiles/vl_nnsoftmax.md) Channel soft-max.
 - [`vl_nnsoftmaxloss`](mfiles/vl_nnsoftmaxloss.md) *Deprecated*
+- [`vl_nnspnorm`](mfiles/vl_nnspnorm.md) Spatial normalization.
 
 <a name="simplenn"></a>
 
@@ -59,7 +63,8 @@ showing how to train CNNs.
 ## Other functions
 
 - [`vl_argparse`](mfiles/vl_argparse.md) A helper function to parse
-  optional arugments.
-- [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fiels in the toolbox.
+  optional arguments.
+- [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fields in the toolbox.
 - [`vl_rootnn`](mfiles/vl_rootnn.md) Return the path to the MatConvNet toolbox installation.
 - [`vl_setpunn`](mfiles/vl_setupnn.md) Setup MatConvNet for use in MATLAB.
+- [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) Quickly load a batch of JPEG images.

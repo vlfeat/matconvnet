@@ -83,7 +83,9 @@ classdef Layer < handle
 
       % call the simplified interface
       outputs = obj.forward(inputs, {net.params(par).value}) ;
-      [net.vars(out).value] = deal(outputs{:}) ;
+      for oi = 1:numel(out)
+        net.vars(out(oi)).value = outputs{oi};
+      end
     end
 
     function backwardAdvanced(obj, layer)
@@ -117,6 +119,9 @@ classdef Layer < handle
       % compute derivatives of inputs and paramerters
       [derInputs, derParams] = obj.backward ...
         (inputs, {net.params(par).value}, derOutputs) ;
+      if ~iscell(derInputs) || numel(derInputs) ~= numel(in)
+        error('Invalid derivatives returned by layer "%s".', layer.name);
+      end
 
       % accumuate derivatives
       for i = 1:numel(in)
@@ -179,22 +184,17 @@ classdef Layer < handle
     %
     %  LOAD(OBJ, {OPT1, VAL1, OPT2, VAL2, ...}) is an equivalent form
     %  to the previous call.
-      if numel(varargin) == 1 && isstruct(varargin{1})
-        s = varargin{1} ;
-      else
-        if numel(varargin) == 1 && iscell(varargin{1})
-          args = varargin{1} ;
-        else
-          args = varargin ;
-        end
-        s = cell2struct(args(2:2:end),args(1:2:end),2) ;
-      end
+      s = dagnn.Layer.argsToStruct(varargin{:}) ;
       for f = fieldnames(s)'
-        f = char(f) ;
-        obj.(f) = s.(f) ;
+        fc = char(f) ;
+        if ~isprop(obj, fc)
+          error('No property `%s` for a layer of type `%s`.', ...
+            fc, class(obj));
+        end;
+        obj.(fc) = s.(fc) ;
       end
     end
-        
+
     function s = save(obj)
     %SAVE Save the layer configuration to a parameter structure
     %  S = SAVE(OBJ) extracts all the properties of the layer object OBJ
@@ -210,13 +210,13 @@ classdef Layer < handle
         s.(p.Name) = obj.(p.Name) ;
       end
     end
-    
+
     function attach(obj, net, index)
     %ATTACH  Attach the layer to a DAG.
     %   ATTACH(OBJ, NET, INDEX). Override this function to
     %   configure parameters or variables.
       obj.net = net ;
-      obj.layerIndex = index ;     
+      obj.layerIndex = index ;
       for input = net.layers(index).inputs
         net.addVar(char(input)) ;
       end
@@ -230,4 +230,29 @@ classdef Layer < handle
     end
 
   end % methods
+
+  methods (Static)
+    function s = argsToStruct(varargin)
+    %ARGSTOSTRUCT  Convert varadic arguments to structure
+    %  S = ARGSTOSTRCUT('opt1', val1, ....) converts the list of options
+    %  into a structure.
+    %
+    %  S = ARGSTOSTRUCT({'opt1', val1, ...}) is equivalent to the
+    %  previous call.
+    %
+    %  S = ARGSTOSTRUCT(S) where S is a structure returns S as is.
+
+      if numel(varargin) == 1 && isstruct(varargin{1})
+        s = varargin{1} ;
+      else
+        if numel(varargin) == 1 && iscell(varargin{1})
+          args = varargin{1} ;
+        else
+          args = varargin ;
+        end
+        s = cell2struct(args(2:2:end),args(1:2:end),2) ;
+      end
+    end
+  end
+
 end % classdef

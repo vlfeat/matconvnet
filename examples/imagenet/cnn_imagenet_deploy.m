@@ -1,5 +1,5 @@
 function net = cnn_imagenet_deploy(net)
-%CNN_IMAGENET_DEPLOY  Deploy ImageNet model
+%CNN_IMAGENET_DEPLOY  Deploy a CNN
 
 isDag = isa(net, 'dagnn.DagNN') ;
 if isDag
@@ -22,6 +22,42 @@ if isDag
 else
   net = simpleMergeBatchNorm(net) ;
   net = simpleRemoveLayersOfType(net, 'bnorm') ;
+end
+
+if ~isDag
+  net = simpleRemoveMomentum(net) ;
+end
+
+% Switch to use MatConvNet default memory limit for CuDNN (512 MB)
+if ~isDag
+  for l = simpleFindLayersOfType(net, 'conv')
+    net.layers{l}.opts = removeCuDNNMemoryLimit(net.layers{l}.opts) ;
+  end
+else
+  for name = dagFindLayersOfType(net, 'dagnn.Conv')
+    l = net.getLayerIndex(char(name)) ;
+    net.layers(l).block.opts = removeCuDNNMemoryLimit(net.layers(l).block.opts) ;
+  end
+end
+
+% -------------------------------------------------------------------------
+function opts = removeCuDNNMemoryLimit(opts)
+% -------------------------------------------------------------------------
+remove = false(1, numel(opts)) ;
+for i = 1:numel(opts)
+  if isstr(opts{i}) && strcmp(lower(opts{i}), 'CudnnWorkspaceLimit')
+    remove([i i+1]) = true ;
+  end
+end
+opts = opts(~remove) ;
+
+% -------------------------------------------------------------------------
+function net = simpleRemoveMomentum(net)
+% -------------------------------------------------------------------------
+for l = 1:numel(net.layers)
+  if isfield(net.layers{l}, 'momentum')
+    net.layers{l} = rmfield(net.layers{l}, 'momentum') ;
+  end
 end
 
 % -------------------------------------------------------------------------
@@ -74,10 +110,30 @@ for name = names
   layer = net.layers(net.getLayerIndex(name)) ;
 
   % merge into previous conv layer
-  player = dagFindLayersWithOutput(net, layer.inputs{1}) ;
-  player = net.layers(net.getLayerIndex(player)) ;
+  playerName = dagFindLayersWithOutput(net, layer.inputs{1}) ;
+  playerName = playerName{1} ;
+  playerIndex = net.getLayerIndex(playerName) ;
+  player = net.layers(playerIndex)
   if ~isa(player.block, 'dagnn.Conv')
     error('Batch normalization cannot be merged as it is not preceded by a conv layer.') ;
+  end
+
+  % if the convolution layer does not have a bias,
+  % recreate it to have one
+  if ~player.block.hasBias
+    block = player.block ;
+    block.hasBias = true ;
+    net.renameLayer(playerName, 'tmp') ;
+    net.addLayer(playerName, ...
+                 block, ...
+                 player.inputs, ...
+                 player.outputs, ...
+                 {player.params{1}, sprintf('%s_b',playerName)}) ;
+    net.removeLayer('tmp') ;
+    playerIndex = net.getLayerIndex(playerName) ;
+    player = net.layers(playerIndex) ;
+    biases = net.getParamIndex(player.params{2}) ;
+    net.params(biases).value = zeros(block.size(4), 1, 'single') ;
   end
 
   filters = net.getParamIndex(player.params{1}) ;

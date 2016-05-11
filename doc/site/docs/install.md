@@ -18,7 +18,7 @@ the command (using MATLAB R2014a or later):
 
 To test GPU support (if you have [compiled it](#gpu)) use instead:
 
-    > vl_testnn('gpu',true)
+    > vl_testnn('gpu', true)
 
 Note that the second tests runs slower than the CPU version; do not
 worry, this is an artefact of the test procedure.
@@ -50,7 +50,7 @@ library:
 
 At this point MatConvNet should start compiling. If all goes well, you
 are ready to use the library. If not, you can try debugging the
-problem by running the complation script again in verbose mode:
+problem by running the compilation script again in verbose mode:
 
     > vl_compilenn('verbose', 1)
 
@@ -70,7 +70,7 @@ Increase the verbosity level to 2 to get even more information.
 <a name='gpu'></a>
 ### Compiling the GPU support
 
-To use the the GPU-accelerated version of the library, you will need a
+To use the GPU-accelerated version of the library, you will need a
 NVIDA GPU card with compute capability 2.0 or greater and a copy of
 the NVIDIA CUDA toolkit. Ideally, the version of the CUDA toolkit
 should match your MATLAB version:

@@ -3,12 +3,12 @@
 // @author Sebastien Ehrhardt
 
 /*
- Copyright (C) 2015 Sebastien Ehrhardt.
- All rights reserved.
+Copyright (C) 2015-16 Sebastien Ehrhardt.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef __vl__bnorm__
 #define __vl__bnorm__
@@ -24,11 +24,11 @@ namespace vl { namespace impl {
     static vl::Error
     forward(Context& context,
             type* output,
-            type* moments, // can be null and it will be allocated internally
+            type* moments, // can be null and it will be allocated size_ternally
             type const* data,
             type const* multipliers,
             type const* biases,
-            int height, int width, int depth, int size,
+            size_t height, size_t width, size_t depth, size_t size,
             type epsilon) ;
 
     static vl::Error
@@ -38,19 +38,19 @@ namespace vl { namespace impl {
                           type const* data,
                           type const* multipliers,
                           type const* biases,
-                          int height, int width, int depth, int size) ;
+                          size_t height, size_t width, size_t depth, size_t size) ;
 
     static vl::Error
     backward(Context& context,
              type* derData,
              type* derMultipliers,
              type* derBiases,
-             type* moments, // can be null and it will be allocated internally
+             type* moments, // can be null and it will be allocated size_ternally
              type const* data,
              type const* multipliers,
              type const* biases,
              type const* derOutput,
-             int height, int width, int depth, int size,
+             size_t height, size_t width, size_t depth, size_t size,
              type epsilon) ;
 
     static vl::Error
@@ -63,7 +63,7 @@ namespace vl { namespace impl {
                            type const* multipliers,
                            type const* biases,
                            type const* derOutput,
-                           int height, int width, int depth, int size,
+                           size_t height, size_t width, size_t depth, size_t size,
                            type epsilon) ;
   } ;
 

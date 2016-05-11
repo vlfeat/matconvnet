@@ -29,7 +29,8 @@ classdef ReLU < dagnn.ElementWise
       net.vars(out).value = vl_nnrelu(net.vars(in).value, [], ...
                                       'leak', obj.leak, ...
                                       obj.opts{:}) ;
-      if ~net.vars(in).precious
+      net.numPendingVarRefs(in) = net.numPendingVarRefs(in) - 1;
+      if ~net.vars(in).precious & net.numPendingVarRefs(in) == 0
         net.vars(in).value = [] ;
       end
     end
@@ -56,7 +57,7 @@ classdef ReLU < dagnn.ElementWise
       if net.numPendingVarRefs(in) == 0
           net.vars(in).der = derInput ;
       else
-          net.vars(in).der = net.vars(in).der + derInputs ;
+          net.vars(in).der = net.vars(in).der + derInput ;
       end
       net.numPendingVarRefs(in) = net.numPendingVarRefs(in) + 1 ;
     end

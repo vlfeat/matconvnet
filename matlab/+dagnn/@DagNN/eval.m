@@ -42,10 +42,11 @@ function eval(obj, inputs, derOutputs)
 %
 %   There are several factors affecting evaluation:
 %
-%   * The *evaluation mode* can be either `train` or `test`. Layers
-%     may behave differently depending on the mode. For example, dropout
-%     becomes a pass-through layer in test mode (this usually improves
-%     the test performance significantly).
+%   * The *evaluation mode* can be either `normal` or `test`. Layers
+%     may behave differently depending on the mode. For example,
+%     dropout becomes a pass-through layer in test mode and batch
+%     normalization use fixed moments (this usually improves the test
+%     performance significantly).
 %
 %   * By default, the DaG aggressively conserves memory. This is
 %     particularly important on the GPU, where memory is
@@ -95,7 +96,12 @@ end
 if ~obj.computingDerivative, return ; end
 
 % set output derivatives
-v = obj.getVarIndex(derOutputs(1:2:end)) ;
+derOutputsNames = derOutputs(1:2:end);
+v = obj.getVarIndex(derOutputsNames) ;
+if isnan(v)
+  error('Invalid `derOutputs`, variables {%s} do not exist in the network.', ...
+    strjoin(derOutputsNames(isnan(v)), ', '));
+end
 [obj.vars(v).der] = deal(derOutputs{2:2:end}) ;
 derOutputs = [] ;
 
