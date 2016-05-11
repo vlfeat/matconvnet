@@ -64,9 +64,6 @@ if ~evaluateMode
   for i=1:numel(net.layers)
     if isfield(net.layers{i}, 'weights')
       J = numel(net.layers{i}.weights) ;
-      for j=1:J
-        net.layers{i}.state{j} = [] ;
-      end
       if ~isfield(net.layers{i}, 'learningRate')
         net.layers{i}.learningRate = ones(1, J, 'single') ;
       end
