@@ -167,7 +167,7 @@ function [stats, prof] = process_epoch(net, state, opts, mode)
 
 % initialize empty momentum
 if strcmp(mode,'train')
-  state.solver = cell(1, numel(net.params)) ;
+  state.solverState = cell(1, numel(net.params)) ;
 end
 
 % move CNN  to GPU as needed
@@ -319,8 +319,8 @@ for p=1:numel(net.params)
       grad = (1 / batchSize) * net.params(p).der + thisDecay * net.params(p).value;
       
       % call solver function to update weights
-      [net.params(p).value, state.solver{p}] = ...
-          opts.solver(net.params(p).value, state.solver{p}, ...
+      [net.params(p).value, state.solverState{p}] = ...
+          opts.solver(net.params(p).value, state.solverState{p}, ...
           grad, opts.solverOpts, thisLR) ;
 
     case 'otherwise'

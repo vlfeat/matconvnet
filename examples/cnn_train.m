@@ -22,7 +22,7 @@ opts.continue = true ;
 opts.batchSize = 256 ;
 opts.numSubBatches = 1 ;
 opts.solver = 'sgd' ;
-opts.solverOpts = struct('rho',0.95, 'epsilon',1e-8) ;  % AdaGrad uses epsilon, AdaDelta uses both
+opts.solverOpts = struct() ;
 opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
@@ -249,11 +249,10 @@ function  [net_cpu,stats,prof] = process_epoch(net, state, opts, mode)
 
 % initialize empty momentum
 if strcmp(mode,'train')
-  state.momentum = {} ;
   for i = 1:numel(net.layers)
     if isfield(net.layers{i}, 'weights')
       for j = 1:numel(net.layers{i}.weights)
-        state.layers{i}.momentum{j} = [] ;
+        state.layers{i}.solverState{j} = [] ;
       end
     end
   end
@@ -439,8 +438,8 @@ for l=numel(net.layers):-1:1
       grad = (1 / batchSize) * res(l).dzdw{j} + thisDecay * net.layers{l}.weights{j};
       
       % call solver function to update weights
-      [net.layers{l}.weights{j}, state.layers{l}.momentum{j}] = ...
-          opts.solver(net.layers{l}.weights{j}, state.layers{l}.momentum{j}, ...
+      [net.layers{l}.weights{j}, state.layers{l}.solverState{j}] = ...
+          opts.solver(net.layers{l}.weights{j}, state.layers{l}.solverState{j}, ...
           grad, opts.solverOpts, thisLR) ;
     end
 
@@ -451,7 +450,7 @@ for l=numel(net.layers):-1:1
       switch net.layers{l}.type
         case {'conv','convt'}
           assert(isequal(opts.solver, @solver_sgd), 'plotDiagnostics is only supported when the solver is SGD.')
-          variation = thisLR * mean(abs(state.layers{l}.momentum{j}(:))) ;
+          variation = thisLR * mean(abs(state.layers{l}.solverState{j}(:))) ;
           if j == 1 % fiters
             base = mean(abs(net.layers{l}.weights{j}(:))) ;
             label = 'filters' ;

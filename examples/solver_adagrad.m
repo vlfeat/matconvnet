@@ -3,8 +3,8 @@ function [weights, g_sqr] = solver_adagrad(weights, g_sqr, grad, opts, lr)
 %   Example AdaGrad solver, for use with CNN_TRAIN and CNN_TRAIN_DAG.
 %
 %   Set the initial learning rate for AdaGrad in the options for
-%   CNN_TRAIN and CNN_TRAIN_DAG. Note the default learning rate is probably
-%   inappropriate for AdaGrad; values around 0.001 may work better.
+%   CNN_TRAIN and CNN_TRAIN_DAG. Note that a learning rate that works for
+%   SGD may be inappropriate for AdaGrad; the default is 0.001.
 %
 %   Solver options: (opts.train.solverOpts)
 %
