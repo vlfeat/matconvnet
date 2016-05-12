@@ -11,19 +11,18 @@ function [weights, g_sqr] = solver_adagrad(weights, g_sqr, grad, opts, lr)
 %   `epsilon`:: 1e-10
 %      Small additive constant to regularize variance estimate.
 %
-%   `rho`:: []
+%   `rho`:: 1
 %      Moving average window for variance update, between 0 and 1 (larger
-%      values result in slower/more stable updating). This has the same
-%      effect as RHO for AdaDelta and RMSProp. However, because it is not
-%      part of standard AdaGrad, it is disabled by default (RHO is empty).
+%      values result in slower/more stable updating). This is similar to
+%      RHO in AdaDelta and RMSProp. Standard AdaGrad is obtained with a RHO
+%      value of 1 (use total average instead of a moving average).
 %
 %   A possibly undesirable effect of standard AdaGrad is that the update
 %   will monotonically decrease to 0, until training eventually stops. This
 %   is because the AdaGrad update is inversely proportional to the total
 %   variance of the gradients seen so far.
-%   By setting RHO to non-empty, a moving average window of the variance
-%   is used instead of the total variance, so the update does not
-%   monotonically decrease to 0.
+%   With RHO smaller than 1, a moving average is used instead. This
+%   prevents the final update from monotonically decreasing to 0.
 
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.
@@ -35,10 +34,6 @@ if isempty(g_sqr)
   g_sqr = 0 ;
 end
 
-if isempty(opts.rho)  % standard, accumulate total variance
-  g_sqr = g_sqr + grad.^2 ;
-else  % moving average window, similar to RMSProp/AdaDelta
-  g_sqr = g_sqr * rho + grad.^2 * (1 - rho) ;
-end
+g_sqr = g_sqr * opts.rho + grad.^2 ;
 
 weights = weights - lr * grad ./ (sqrt(g_sqr) + opts.epsilon) ;
