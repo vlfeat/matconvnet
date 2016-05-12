@@ -12,8 +12,8 @@ function [weights, g_sqr] = solver_rmsprop(weights, g_sqr, grad, opts, lr)
 %      Small additive constant to regularize variance estimate.
 %
 %   `rho`:: 0.99
-%      Moving average window for variance update (larger values result in
-%      slower/more stable updating).
+%      Moving average window for variance update, between 0 and 1 (larger
+%      values result in slower/more stable updating).
 
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.

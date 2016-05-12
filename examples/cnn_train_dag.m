@@ -59,6 +59,7 @@ if ischar(opts.solver)
     solverOpts.momentum = opts.momentum ;  % backward compatibility
   case 'adagrad'
     solverOpts.epsilon = 1e-10 ;
+    solverOpts.rho = [] ;
   case 'adadelta'
     solverOpts.epsilon = 1e-6 ;
     solverOpts.rho = 0.9 ;
