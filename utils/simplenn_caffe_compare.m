@@ -51,7 +51,7 @@ opts.device = 'cpu';
 opts.silent = false;
 opts = vl_argparse(opts, varargin);
 
-info = @(varargin) fprintf(varargin);
+info = @(varargin) fprintf(1, varargin{:});
 if opts.silent, info = @(varargin) []; end;
 
 if ~exist('caffe.Net', 'class'), error('MatCaffe not in path.'); end

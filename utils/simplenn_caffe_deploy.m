@@ -54,7 +54,7 @@ opts.silent = false;
 opts = vl_argparse(opts, varargin);
 if ~exist('caffe.Net', 'class'), error('MatCaffe not in path.'); end
 
-info = @(varargin) fprintf(varargin);
+info = @(varargin) fprintf(1, varargin{:});
 if opts.silent, info = @(varargin) []; end;
 
 info('Exporting simplenn model to caffe model %s\n', caffeModelBaseName);
