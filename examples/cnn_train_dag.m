@@ -53,7 +53,7 @@ stats = [] ;
 
 % setup solver function, and default hyper-parameters for each solver
 if ischar(opts.solver)
-  solverOpts = struct() ;
+  solverOpts = [] ;
   switch opts.solver
   case 'sgd'
     solverOpts.momentum = opts.momentum ;  % backward compatibility
@@ -67,7 +67,9 @@ if ischar(opts.solver)
     solverOpts.epsilon = 1e-8 ;
     solverOpts.rho = 0.99 ;
   end
-  [opts.solverOpts, ~] = vl_argparse(solverOpts, opts.solverOpts) ;
+  if ~isempty(solverOpts)
+    [opts.solverOpts, ~] = vl_argparse(solverOpts, opts.solverOpts) ;
+  end
   opts.solver = str2func(['solver_' opts.solver]) ;
 end
 
