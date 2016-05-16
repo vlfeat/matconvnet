@@ -184,16 +184,14 @@ for idx = 1:numel(net.layers)
       if numel(net.layers{idx}.pool) == 1
         net.layers{idx}.pool = repmat(net.layers{idx}.pool, 1, 2);
       end
-
       pad = net.layers{idx}.pad;
-      % TODO fix this to be exact inverse of the Caffe->Matconv convertor
-      % (layers.py:615), may be incorrect now
-      if all((pad([2, 4]) - pad([1, 3])) == 1)
-        pad([2, 4]) = pad([2, 4]) - 1;
+      if pad([2, 4]) == net.layers{idx}.pool - 1
+        pad([2, 4]) = 0;
+      else
+        pad([2, 4]) = pad([2, 4]) - net.layers{idx}.stride + 1;
       end
-      if numel(pad) == 4 && any(pad([1, 3]) ~= pad([2, 3]))
-        error('Caffe only supports symmetrical padding');
-      end
+      % Some older versions did not use these upper bounds
+      pad = max(pad, 0);
 
       write_connection(fid, net.layers, idx);
       fprintf(fid, '  pooling_param {\n');
