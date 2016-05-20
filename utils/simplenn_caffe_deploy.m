@@ -107,6 +107,9 @@ if isfield(net.meta, 'normalization') && ...
   imSize = net.meta.normalization.imageSize;
   if isfield(net.meta.normalization, 'averageImage')
     avImage = net.meta.normalization.averageImage;
+    if numel(avImage) == imSize(3)
+      avImage = reshape(avImage, 1, 1, imSize(3));
+    end
   end
 else
   error('Missing image size. Please set `net.normalization.imageSize`.');
