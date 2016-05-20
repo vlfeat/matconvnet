@@ -35,6 +35,18 @@ function simplenn_caffe_deploy(net, caffeModelBaseName, varargin)
 %   `testData`:: Random
 %      Perform the test on the given data.
 %
+%   `inputBlobName`:: 'data'
+%      Name of the input data blob in the final protobuf.
+%
+%   `labelBlobName`:: 'label'
+%      Name of the input label blob in the final protobuf.
+%
+%   `outputBlobName`:: 'prob'
+%      Name of the output blob in the resulting protobuf.
+%
+%   `silent`:: false
+%      When true, suppresses all output to stdout.
+%
 %  See Also: simplenn_caffe_compare
 
 % Copyright (C) 2015-16 Zohar Bar-Yehuda, Karel Lenc
