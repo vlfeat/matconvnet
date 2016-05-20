@@ -35,6 +35,18 @@ function simplenn_caffe_deploy(net, caffeModelBaseName, varargin)
 %   `testData`:: Random
 %      Perform the test on the given data.
 %
+%   `inputBlobName`:: 'data'
+%      Name of the input data blob in the final protobuf.
+%
+%   `labelBlobName`:: 'label'
+%      Name of the input label blob in the final protobuf.
+%
+%   `outputBlobName`:: 'prob'
+%      Name of the output blob in the resulting protobuf.
+%
+%   `silent`:: false
+%      When true, suppresses all output to stdout.
+%
 %  See Also: simplenn_caffe_compare
 
 % Copyright (C) 2015-16 Zohar Bar-Yehuda, Karel Lenc
@@ -54,7 +66,7 @@ opts.silent = false;
 opts = vl_argparse(opts, varargin);
 if ~exist('caffe.Net', 'class'), error('MatCaffe not in path.'); end
 
-info = @(varargin) fprintf(varargin);
+info = @(varargin) fprintf(1, varargin{:});
 if opts.silent, info = @(varargin) []; end;
 
 info('Exporting simplenn model to caffe model %s\n', caffeModelBaseName);
@@ -95,6 +107,9 @@ if isfield(net.meta, 'normalization') && ...
   imSize = net.meta.normalization.imageSize;
   if isfield(net.meta.normalization, 'averageImage')
     avImage = net.meta.normalization.averageImage;
+    if numel(avImage) == imSize(3)
+      avImage = reshape(avImage, 1, 1, imSize(3));
+    end
   end
 else
   error('Missing image size. Please set `net.normalization.imageSize`.');
@@ -184,16 +199,14 @@ for idx = 1:numel(net.layers)
       if numel(net.layers{idx}.pool) == 1
         net.layers{idx}.pool = repmat(net.layers{idx}.pool, 1, 2);
       end
-
       pad = net.layers{idx}.pad;
-      % TODO fix this to be exact inverse of the Caffe->Matconv convertor
-      % (layers.py:615), may be incorrect now
-      if all((pad([2, 4]) - pad([1, 3])) == 1)
-        pad([2, 4]) = pad([2, 4]) - 1;
+      if pad([2, 4]) == net.layers{idx}.pool - 1
+        pad([2, 4]) = 0;
+      else
+        pad([2, 4]) = pad([2, 4]) - net.layers{idx}.stride + 1;
       end
-      if numel(pad) == 4 && any(pad([1, 3]) ~= pad([2, 3]))
-        error('Caffe only supports symmetrical padding');
-      end
+      % Some older versions did not use these upper bounds
+      pad = max(pad, 0);
 
       write_connection(fid, net.layers, idx);
       fprintf(fid, '  pooling_param {\n');
