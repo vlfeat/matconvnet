@@ -182,6 +182,8 @@ if ~isempty(opts.instanceWeights)
   % an array of the same size as c
   if isempty(instanceWeights)
     instanceWeights = bsxfun(@times, onesLike(c), opts.instanceWeights) ;
+  else
+    instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights);
   end
 end
 

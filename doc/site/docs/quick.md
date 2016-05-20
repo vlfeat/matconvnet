@@ -19,7 +19,7 @@ run matlab/vl_compilenn
 urlwrite(...
   'http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat', ...
   'imagenet-vgg-f.mat') ;
-  
+
 % setup MatConvNet
 run  matlab/vl_setupnn
 
@@ -56,6 +56,9 @@ wrapper. More complex models use instead the DagNN wrapper. For
 example, to run GoogLeNet use:
 
 ```matlab
+% setup MatConvNet
+run  matlab/vl_setupnn
+
 % download a pre-trained CNN from the web (needed once)
 urlwrite(...
   'http://www.vlfeat.org/matconvnet/models/imagenet-googlenet-dag.mat', ...
@@ -63,6 +66,7 @@ urlwrite(...
 
 % load the pre-trained CNN
 net = dagnn.DagNN.loadobj(load('imagenet-googlenet-dag.mat')) ;
+net.mode = 'test' ;
 
 % load and preprocess an image
 im = imread('peppers.png') ;
