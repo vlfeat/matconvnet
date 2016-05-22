@@ -25,7 +25,7 @@ classdef AffineGridGenerator < dagnn.Layer
       % i.e., [x_out] = [c1 c2]  * [x_in] + [c5]
       %       [y_out]   [c3 c4]    [y_in]   [c6]
       %
-      % OUTPUT is a HoxWox2xN grid which corresponds to applying
+      % OUTPUT is a 2xHoxWoxN grid which corresponds to applying
       % the above affine transform to the [-1,1] normalized x,y
       % coordinates.
 
@@ -89,7 +89,6 @@ classdef AffineGridGenerator < dagnn.Layer
       outputSizes = {[2, obj.Ho, obj.Wo, nBatch]};
     end
 
-    % ---------------------------------------------------------------------
     function obj = AffineGridGenerator(varargin)
       obj.load(varargin) ;
       % get the output sizes:

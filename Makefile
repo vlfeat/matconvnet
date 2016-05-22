@@ -78,8 +78,9 @@ $(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,) \
 $(if $(VERB),-v,)
 CXXFLAGS_PASS =
 CXXOPTIMFLAGS =
-LDFLAGS = -lmwblas
+LDFLAGS =
 LDOPTIMFLAGS =
+LINKLIBS = -lmwblas
 
 NVCCFLAGS_PASS = -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 NVCCVER = $(shell $(NVCC) --version | \
@@ -96,7 +97,8 @@ LDFLAGS += \
 -mmacosx-version-min=10.9 \
 $(if $(ENABLE_GPU),-Wl$(comma)-rpath -Wl$(comma)"$(CUDAROOT)/lib") \
 $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib") \
-$(if $(NVCCVER_LT_70),-stdlib=libstdc++) \
+$(if $(NVCCVER_LT_70),-stdlib=libstdc++)
+LINKLIBS += \
 $(if $(ENABLE_GPU),-L"$(CUDAROOT)/lib" -lmwgpu -lcudart -lcublas) \
 $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib" -lcudnn)
 endif
@@ -107,17 +109,18 @@ IMAGELIB ?= $(if $(ENABLE_IMREADJPEG),libjpeg,none)
 CXXOPTIMFLAGS += -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops
 LDFLAGS += \
 $(if $(ENABLE_GPU),-Wl$(comma)-rpath -Wl$(comma)"$(CUDAROOT)/lib64") \
-$(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib64") \
+$(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib64")
+LINKLIBS += \
 $(if $(ENABLE_GPU),-L"$(CUDAROOT)/lib64" -lmwgpu -lcudart -lcublas) \
 $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64" -lcudnn)
 endif
 
 # Image library
 ifeq ($(IMAGELIB),libjpeg)
-LDFLAGS += -ljpeg
+LINKLIBS += -ljpeg
 endif
 ifeq ($(IMAGELIB),quartz)
-LDFLAGS += -framework Cocoa -framework ImageIO
+LINKLIBS += -framework Cocoa -framework ImageIO
 endif
 
 MEXFLAGS = $(CXXFLAGS) -largeArrayDims
@@ -245,7 +248,8 @@ CXXOPTIMFLAGS='$$CXXOPTIMFLAGS -Xcompiler $(call nvcc-quote,$(CXXOPTIMFLAGS))'
 
 MEXFLAGS_LD := $(MEXFLAGS) \
 LDFLAGS='$$LDFLAGS $(LDFLAGS)' \
-LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)'
+LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)' \
+LINKLIBS='$$LINKLIBS $(LINKLIBS)' \
 
 NVCCFLAGS = $(CXXFLAGS) $(NVCCFLAGS_PASS) \
 -I"$(MATLABROOT)/extern/include" \
@@ -293,6 +297,7 @@ info: doc-info
 	@echo 'CXXOPTIMFLAGS=$(CXXOPTIMFLAGS)'
 	@echo 'LDFLAGS=$(LDFLAGS)'
 	@echo 'LDOPTIMFLAGS=$(LDOPTIMFLAGS)'
+	@echo 'LINKLIBS=$(LINKLIBS)'
 	@echo '------------------------------'
 	@echo 'MEXARCH=$(MEXARCH)'
 	@echo 'MEXFLAGS=$(MEXFLAGS)'
