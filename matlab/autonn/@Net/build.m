@@ -148,19 +148,26 @@ function build(net, varargin)
     else  % manual override
       layer.numInputDer = obj.numInputDer ;
     end
+    
+    if layer.numInputDer == 0
+      % there are no output derivatives, so this layer can be skipped
+      layer.func = @deal ;
+      [layer.args, layer.inputArgPos, layer.inputVars] = deal({}, [], []) ;
+      
+    else
+      % store args for backward mode, with an empty slot for der arg
+      layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
 
-    % store args for backward mode, with an empty slot for der arg
-    layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
+      % modify argument positions according to the new empty slot
+      next = layer.inputArgPos > lastInput ;
+      layer.inputArgPos(next) = layer.inputArgPos(next) + 1 ;
 
-    % modify argument positions according to the new empty slot
-    next = layer.inputArgPos > lastInput ;
-    layer.inputArgPos(next) = layer.inputArgPos(next) + 1 ;
+      % position of der arg
+      layer.inputArgPos(end+1) = lastInput + 1 ;
 
-    % position of der arg
-    layer.inputArgPos(end+1) = lastInput + 1 ;
-
-    % its var index: it's the output derivative for the current layer
-    layer.inputVars(end+1) = obj.outputVar + 1 ;
+      % its var index: it's the output derivative for the current layer
+      layer.inputVars(end+1) = obj.outputVar + 1 ;
+    end
 
     net.backward(numel(idx) - k + 1) = layer ;
   end
