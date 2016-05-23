@@ -241,6 +241,7 @@ forward_backward
  size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
  size_t inHeight, size_t inWidth, size_t inCardinality)
 {
+  bool backward = backwardData || backwardGrid ;
   // common conditions
   assert(grid) ;
   assert(divides(inCardinality, outCardinality)) ;
