@@ -12,11 +12,15 @@ net.layers = {};
 net.meta = dag.meta;
 
 % Init state
-currentVars = { inputVar };
+currentVars = inputVar;
+if ~iscell(currentVars), currentVars = { currentVars }; end;
+
 usedVars = {};
 
 % Boolean array of visited layers
 layerVisited = false(size(dag.layers));
+isloss = arrayfun(@(l) ismember(class(l.block), {'dagnn.Loss', 'dagnn.PDist'}), dag.layers);
+layerVisited(isloss) = true;
 
 splitSize = 1;
 convSplitSeen = false;
@@ -129,6 +133,8 @@ while ~isempty(currentVars)
                     'pad', block.pad); 
             case 'dagnn.Sigmoid'
                 net.layers{end+1} = struct('type', 'sigmoid') ;
+            case 'dagnn.SoftMax'
+                net.layers{end+1} = struct('type', 'softmax') ;
             case 'dagnn.Concat'
                 % Nothing, we already concated layers if it was possible
             case 'dagnn.DropOut'
@@ -137,6 +143,10 @@ while ~isempty(currentVars)
                 error('Unsupported layer type ''%s''', class(block))
         end
     end
+end
+
+if ~all(layerVisited)
+    error('Couldn''t convert to simpleNN');
 end
 
 net = vl_simplenn_tidy(net);
