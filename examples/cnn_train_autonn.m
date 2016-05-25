@@ -211,6 +211,7 @@ end
 subset = state.(mode) ;
 start = tic ;
 num = 0 ;
+time = 0 ;
 
 for t=1:opts.batchSize:numel(subset)
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
