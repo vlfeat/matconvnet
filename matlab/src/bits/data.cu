@@ -394,6 +394,15 @@ void vl::TensorShape::clear()
   numDimensions = 0 ;
 }
 
+void vl::TensorShape::setDimensions(size_t const * newDimensions, size_t newNumDimensions)
+{
+  assert(newNumDimensions  <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  for (int k = 0 ; k < newNumDimensions ; ++k) {
+    dimensions[k] = newDimensions[k] ;
+  }
+  numDimensions = newNumDimensions ;
+}
+
 void vl::TensorShape::setDimension(size_t num, size_t dimension)
 {
   assert(num + 1 <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
