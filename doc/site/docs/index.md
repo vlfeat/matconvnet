@@ -74,7 +74,7 @@ recognition, and text detection are available.
   @inproceedings{vedaldi15matconvnet,
       author    = {A. Vedaldi and K. Lenc},
       title     = {MatConvNet -- Convolutional Neural Networks for MATLAB},
-      booktitle = {Proceeding of the {ACM} Int. Conf. on Multimedia}
+      booktitle = {Proceeding of the {ACM} Int. Conf. on Multimedia},
       year      = {2015},
   }</pre>
   </div>
