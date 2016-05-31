@@ -51,7 +51,7 @@ opts.device = 'cpu';
 opts.silent = false;
 opts = vl_argparse(opts, varargin);
 
-info = @(varargin) fprintf(varargin);
+info = @(varargin) fprintf(1, varargin{:});
 if opts.silent, info = @(varargin) []; end;
 
 if ~exist('caffe.Net', 'class'), error('MatCaffe not in path.'); end
@@ -99,7 +99,11 @@ testData = single(testData);
 dataCaffe = matlab_img_to_caffe(testData);
 if isfield(net.meta.normalization, 'averageImage') && ...
     ~isempty(net.meta.normalization.averageImage)
-  testData = bsxfun(@minus, testData, net.meta.normalization.averageImage);
+  avImage = net.meta.normalization.averageImage;
+  if numel(avImage) == imSize(3)
+    avImage = reshape(avImage, 1, 1, imSize(3));
+  end
+  testData = bsxfun(@minus, testData, avImage);
 end
 
 % Test MatConvNet model

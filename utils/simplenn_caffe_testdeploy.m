@@ -1,7 +1,6 @@
 % Compare basic MatConvNet and Caffe blocks numerically
-run matlab/vl_setupnn.m;
-addpath('../caffe/matlab/');
-addpath('utils/');
+rootpath = fileparts(fileparts(mfilename('fullpath')));
+run(fullfile(rootpath, 'matlab', 'vl_setupnn.m'));
 
 inputScale = 100;
 
