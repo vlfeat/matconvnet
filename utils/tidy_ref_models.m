@@ -4,6 +4,9 @@ function tidy_ref_models()
 run(fullfile(fileparts(mfilename('fullpath')), '..', 'matlab', 'vl_setupnn.m')) ;
 
 models = {...
+  'imagenet-resnet-152-dag', ...
+  'imagenet-resnet-101-dag', ...
+  'imagenet-resnet-50-dag', ...
   'imagenet-matconvnet-alex', ...
   'imagenet-matconvnet-vgg-f', ...
   'imagenet-matconvnet-vgg-m', ...
@@ -28,15 +31,16 @@ models = {...
   'vgg-face', ...
          }  ;
 
-mkdir(fullfile('data', 'models-tidy')) ;
+mkdir(fullfile('data', 'models')) ;
 
 for i = 1:numel(models)
-  inPath = fullfile('data', 'models', [models{i} '.mat']) ;
-  outPath = fullfile('data', 'models-tidy', [models{i} '.mat']) ;
+  inPath = fullfile('data', 'models-import', [models{i} '.mat']) ;
+  outPath = fullfile('data', 'models', [models{i} '.mat']) ;
   if exist(outPath), continue ; end
 
   fprintf('%s: loading ''%s''\n', mfilename, inPath) ;
   net = load(inPath) ;
+  % Cannot use isa('dagnn.DagNN') because it is not an object yet
   isDag = isfield(net, 'params') ;
 
   if isDag
@@ -47,5 +51,5 @@ for i = 1:numel(models)
   end
 
   fprintf('%s: saving ''%s''\n', mfilename, outPath) ;
-  save(fullfile('data', 'models-tidy', [models{i} '.mat']), '-struct', 'net') ;
+  save(fullfile('data', 'models', [models{i} '.mat']), '-struct', 'net') ;
 end

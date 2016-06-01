@@ -21,19 +21,19 @@ using namespace vl ;
 /* ---------------------------------------------------------------- */
 
 template <typename T> __global__ void
-im2row_gpu_kernel(T* stacked,
-                  T const* data,
-                  const int numPatchesX,
-                  const int numPatchesY,
-                  const int numPatchSlices,
-                  const int width,
-                  const int height,
-                  const int windowWidth,
-                  const int windowHeight,
-                  const int strideX,
-                  const int strideY,
-                  const int padLeft,
-                  const int padTop)
+im2row_forward_kernel(T* stacked,
+                      T const* data,
+                      const int numPatchesX,
+                      const int numPatchesY,
+                      const int numPatchSlices,
+                      const int width,
+                      const int height,
+                      const int windowWidth,
+                      const int windowHeight,
+                      const int strideX,
+                      const int strideY,
+                      const int padLeft,
+                      const int padTop)
 {
   /* each kernel copies the pixels in an image patch for one channel */
   int index = threadIdx.x + blockIdx.x * blockDim.x ;
@@ -80,81 +80,25 @@ im2row_gpu_kernel(T* stacked,
   }
 }
 
-template <typename T> static inline cudaError_t
-im2row_gpu(T* stacked,
-           T const* data,
-           size_t width,
-           size_t height,
-           size_t depth,
-           size_t windowWidth,
-           size_t windowHeight,
-           size_t strideX,
-           size_t strideY,
-           size_t padLeft,
-           size_t padRight,
-           size_t padTop,
-           size_t padBottom)
-{
-  /* Each kernel instance copies a feature dimension of a patch */
-
-  int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-  int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
-  int numPatchSlices = numPatchesX * numPatchesY * depth ;
-
-  im2row_gpu_kernel<T>
-  <<< divideUpwards(numPatchSlices, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (stacked,
-   data,
-   numPatchesX,
-   numPatchesY,
-   numPatchSlices,
-   width, height,
-   windowWidth, windowHeight,
-   strideX, strideY,
-   padLeft, padTop) ;
-
-  return cudaPeekAtLastError() ;
-}
-
-
-template <> vl::Error
-vl::impl::im2row<vl::GPU, float>(vl::Context& context,
-                                 float* stacked,
-                                 float const* data,
-                                 size_t height, size_t width, size_t depth,
-                                 size_t windowHeight, size_t windowWidth,
-                                 size_t strideY, size_t strideX,
-                                 size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  int status ;
-  status = im2row_gpu<float>(stacked, data,
-                             height, width, depth,
-                             windowHeight, windowWidth,
-                             strideY, strideX,
-                             padTop, padBottom, padLeft, padRight) ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
-
-
 /* ---------------------------------------------------------------- */
-/*                                                           row2im */
+/*                                           im2row backward kernel */
 /* ---------------------------------------------------------------- */
 
-template <typename T>
-__global__ void row2im_gpu_kernel(T* data,
-                                  T const* stacked,
-                                  const int numPatchesX,
-                                  const int numPatchesY,
-                                  const int dataVolume,
-                                  const int width,
-                                  const int height,
-                                  const int depth,
-                                  const int windowWidth,
-                                  const int windowHeight,
-                                  const int strideX,
-                                  const int strideY,
-                                  const int padLeft,
-                                  const int padTop)
+template <typename T> __global__ void
+im2row_backward_kernel(T* data,
+                        T const* stacked,
+                       const int numPatchesX,
+                       const int numPatchesY,
+                       const int dataVolume,
+                       const int width,
+                       const int height,
+                       const int depth,
+                       const int windowWidth,
+                       const int windowHeight,
+                       const int strideX,
+                       const int strideY,
+                       const int padLeft,
+                       const int padTop)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   if (index < dataVolume)
@@ -252,59 +196,104 @@ __global__ void row2im_gpu_kernel(T* data,
   }
 }
 
-template <typename T> static inline cudaError_t
-row2im_gpu(T* data,
-           T const* stacked,
-           size_t width,
-           size_t height,
-           size_t depth,
-           size_t windowWidth,
-           size_t windowHeight,
-           size_t strideX,
-           size_t strideY,
-           size_t padLeft,
-           size_t padRight,
-           size_t padTop,
-           size_t padBottom)
-{
-  /*
-   Each kernel integrates all contributions to a particular element
-   of data.
-   */
+namespace vl { namespace impl {
 
-  int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-  int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
-  int dataVolume = width * height * depth ;
+  template<typename type>
+  struct im2row<vl::GPU, type>
+  {
 
-  row2im_gpu_kernel<T>
-  <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (data,
-   stacked,
-   numPatchesX,
-   numPatchesY,
-   dataVolume,
-   width, height, depth,
-   windowWidth, windowHeight,
-   strideX, strideY,
-   padLeft, padTop) ;
+    /* ------------------------------------------------------------ */
+    /*                                                      forward */
+    /* ------------------------------------------------------------ */
 
-  return cudaPeekAtLastError() ;
-}
+    static vl::Error
+    forward(Context & context,
+            type* stacked,
+            type const* data,
+            size_t width,
+            size_t height,
+            size_t depth,
+            size_t windowWidth,
+            size_t windowHeight,
+            size_t strideX,
+            size_t strideY,
+            size_t padLeft,
+            size_t padRight,
+            size_t padTop,
+            size_t padBottom)
+    {
+      /* Each kernel instance copies a feature dimension of a patch */
 
-template <> vl::Error
-vl::impl::row2im<vl::GPU, float>(vl::Context& context,
-                                 float* data,
-                                 float const* stacked,
-                                 size_t height, size_t width, size_t depth,
-                                 size_t windowHeight, size_t windowWidth,
-                                 size_t strideY, size_t strideX,
-                                 size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  int status ;
-  status = row2im_gpu<float>(data, stacked,
-                             height, width, depth,
-                             windowHeight, windowWidth,
-                             strideY, strideX,
-                             padTop, padBottom, padLeft, padRight) ;
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
-}
+      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int numPatchSlices = numPatchesX * numPatchesY * depth ;
+
+      im2row_forward_kernel<type>
+      <<< divideUpwards(numPatchSlices, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (stacked,
+       data,
+       numPatchesX,
+       numPatchesY,
+       numPatchSlices,
+       width, height,
+       windowWidth, windowHeight,
+       strideX, strideY,
+       padLeft, padTop) ;
+
+      return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
+    }
+
+    /* ------------------------------------------------------------ */
+    /*                                                     backward */
+    /* ------------------------------------------------------------ */
+
+    static vl::Error
+    backward(Context & context,
+             type* data,
+             type const* stacked,
+             size_t width,
+             size_t height,
+             size_t depth,
+             size_t windowWidth,
+             size_t windowHeight,
+             size_t strideX,
+             size_t strideY,
+             size_t padLeft,
+             size_t padRight,
+             size_t padTop,
+             size_t padBottom)
+    {
+      /*
+       Each kernel integrates all contributions to a particular element
+       of data.
+       */
+
+      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int dataVolume = width * height * depth ;
+
+      im2row_backward_kernel<type>
+      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (data,
+       stacked,
+       numPatchesX,
+       numPatchesY,
+       dataVolume,
+       width, height, depth,
+       windowWidth, windowHeight,
+       strideX, strideY,
+       padLeft, padTop) ;
+
+      return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
+    }
+
+  } ;
+
+} }
+
+// Instantiations
+template struct vl::impl::im2row<vl::GPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::im2row<vl::GPU, double> ;
+#endif

@@ -2,7 +2,7 @@
 
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
-<a href="download/matconvnet-1.0-beta17.tar.gz">
+<a href="download/matconvnet-1.0-beta20.tar.gz">
 <div class="menuicon"><span class="fa fa-download fa-2x"></span></div>
 Download</a>
 </div>
@@ -31,7 +31,18 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
-
+> **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
+> layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
+> spatial transformer example.
+>
+> **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
+> models (demo training code coming next), CuDNN V5 support, and
+> numerous other improvements and bugfixes.
+>
+> **New:** [1.0-beta18](about.md#changes) adds support fod DOUBLE data
+> type. [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) can now resize
+> images. This version also contains numerous bugfixes.
+>
 > **New:** [1.0-beta17](about.md#changes) tidies up the library in
 > many ways. It also improves how batch normalization is
 > handled. Please check carefully the [changes](about.md#changes) to
@@ -52,7 +63,7 @@ recognition, and text detection are available.
 > [here](https://github.com/vlfeat/matconvnet-fcn).
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta17](download/matconvnet-1.0-beta17.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta20](download/matconvnet-1.0-beta20.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>
@@ -81,7 +92,7 @@ recognition, and text detection are available.
 - [Training your own models](training.md)
 - [CNN wrappers: linear chains or DAGs](wrappers.md)
 - [Working with GPU accelerated code](gpu.md)
-- [Tutorial](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html),
+- [Tutorial (classification)](http://www.robots.ox.ac.uk/~vgg/practicals/cnn/index.html), [tutorial (regression)](http://www.robots.ox.ac.uk/~vgg/practicals/cnn-reg/index.html),
   [slides](http://www.robots.ox.ac.uk/~vedaldi/assets/teach/2015/vedaldi15aims-bigdata-lecture-4-deep-learning-handout.pdf)
 
 ## Use cases

@@ -4,7 +4,7 @@
 // @author Karel Lenc
 
 /*
-Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -24,167 +24,143 @@ the terms of the BSD license (see the COPYING file).
 using namespace vl ;
 
 /* ---------------------------------------------------------------- */
-/*                                                subsample forward */
+/*                                         subsample forward kernel */
 /* ---------------------------------------------------------------- */
 
 template<typename T> __global__ void
-subsample_gpu_kernel
-(T* subsampled,
+subsample_forward_kernel
+(T* output,
  const T* data,
- const int subsampledWidth,
- const int subsampledHeight,
- const int subsampledVolume,
- const int width,
+ const int outputHeight,
+ const int outputWidth,
+ const int outputVolume,
  const int height,
- const int strideX,
+ const int width,
  const int strideY,
- const int padLeft,
- const int padTop)
+ const int strideX,
+ const int padTop,
+ const int padLeft)
 {
-  int subsampledIndex = threadIdx.x + blockIdx.x * blockDim.x;
-  if (subsampledIndex < subsampledVolume) {
-    /* subsampledIndex = x
-     + y * subsampledWidth
-     + z * (subsampledWidth * subsampledHeight) ;
+  int outputIndex = threadIdx.x + blockIdx.x * blockDim.x;
+  if (outputIndex < outputVolume) {
+    /* outputIndex = x
+     + y * outputWidth
+     + z * (outputWidth * outputHeight) ;
      */
-    int px = subsampledIndex ;
-    int py = px / subsampledWidth ;
-    int pz = py / subsampledHeight ;
-    px %= subsampledWidth ;
-    py %= subsampledHeight ;
+    int py = outputIndex ;
+    int px = py / outputHeight ;
+    int channel = px / outputWidth ;
+    px %= outputWidth ;
+    py %= outputHeight ;
     int x1 = px * strideX - padLeft ;
     int y1 = py * strideY - padTop ;
-    data += pz * (width*height) ;
+    data += channel * (width*height) ;
     T value = 0 ;
     if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-      value = data[y1 * width + x1] ;
+      value = data[x1 * height + y1] ;
     }
-    subsampled[subsampledIndex] = value ;
+    output[outputIndex] =  value ;
   }
 }
 
-template<typename T> static vl::Error
-subsample_forward_gpu(Context & context,
-                      T* subsampled,
-                      T const* data,
-                      size_t width,
-                      size_t height,
-                      size_t depth,
-                      size_t strideX,
-                      size_t strideY,
-                      size_t padLeft,
-                      size_t padRight,
-                      size_t padTop,
-                      size_t padBottom)
-{
-  int subsampledWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
-  int subsampledHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
-  int subsampledVolume = subsampledWidth * subsampledHeight * depth ;
-  subsample_gpu_kernel<T>
-  <<< divideUpwards(subsampledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (subsampled, data,
-   subsampledWidth, subsampledHeight, subsampledVolume,
-   width, height,
-   strideX, strideY,
-   padLeft, padTop);
-  return context.setError(context.getCudaHelper().catchCudaError("subsample_backward_gpu<>: ")) ;
-}
-
-template <> vl::Error
-vl::impl::subsample_forward<vl::GPU, float>(vl::Context& context,
-                                            float* subsampled,
-                                            float const* data,
-                                            size_t height, size_t width, size_t depth,
-                                            size_t strideY, size_t strideX,
-                                            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  vl::Error error ;
-  error = subsample_forward_gpu<float>(context,
-                                       subsampled, data,
-                                       height, width, depth,
-                                       strideY, strideX,
-                                       padTop, padBottom, padLeft, padRight) ;
-  return context.passError(error, "subsample_forward<GPU,float>: ") ;
-}
-
 /* ---------------------------------------------------------------- */
-/*                                          subsampleBackward (GPU) */
+/*                                        subsample backward kernel */
 /* ---------------------------------------------------------------- */
 
 template<typename T>
-__global__ void subsampleBackward_gpu_kernel
-(T* dzdx,
- const T* dzdy,
- const int subsampledWidth,
- const int subsampledHeight,
+__global__ void subsample_backward_kernel
+(T* derData,
+ const T* derOutput,
+ const int outputHeight,
+ const int outputWidth,
  const int dataVolume,
- const int width,
  const int height,
- const int strideX,
+ const int width,
  const int strideY,
- const int padLeft,
- const int padTop)
+ const int strideX,
+ const int padTop,
+ const int padLeft)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   if (index < dataVolume) {
-    int x = index ;
-    int y = x / width ;
-    int z = y / height ;
+    int y = index ;
+    int x = y / height ;
+    int channel = x / width ;
     x %= width ;
     y %= height ;
-    dzdy += z * subsampledHeight * subsampledWidth ;
+    derOutput += channel * outputHeight * outputWidth ;
     int px = (x + padLeft) / strideX ;
     int py = (y + padTop) / strideY ;
     if (x == strideX * px - padLeft &&
         y == strideY * py - padTop) {
-      dzdx[index] = dzdy[py * subsampledWidth + px] ;
+      derData[index] = derOutput[px * outputHeight + py] ;
     } else {
-      dzdx[index] = 0 ;
+      derData[index] = 0 ;
     }
   }
 }
 
-template<typename T> vl::Error
-subsample_backward_gpu(vl::Context& context,
-                       T* dzdx,
-                       T const* dzdy,
-                       size_t width,
-                       size_t height,
-                       size_t depth,
-                       size_t strideX,
-                       size_t strideY,
-                       size_t padLeft,
-                       size_t padRight,
-                       size_t padTop,
-                       size_t padBottom)
-{
-  int subsampledWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
-  int subsampledHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
-  int nthreads = width * height * depth ;
-  subsampleBackward_gpu_kernel<T>
-  <<< divideUpwards(nthreads, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-  (dzdx,
-   dzdy,
-   subsampledWidth, subsampledHeight, nthreads,
-   width, height,
-   strideX, strideY,
-   padLeft, padTop);
-  return context.setError(context.getCudaHelper().catchCudaError("subsample_backward_gpu<>: ")) ;
-}
+/* ---------------------------------------------------------------- */
+/*                                                          drivers */
+/* ---------------------------------------------------------------- */
 
-template <> vl::Error
-vl::impl::subsample_backward<vl::GPU, float>(vl::Context& context,
-                                             float* derData,
-                                             float const* derSubsampled,
-                                             size_t height, size_t width, size_t depth,
-                                             size_t strideY, size_t strideX,
-                                             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
-{
-  vl::Error error ;
-  error = subsample_backward_gpu<float>(context,
-                                        derData, derSubsampled,
-                                        height, width, depth,
-                                        strideY, strideX,
-                                        padTop, padBottom, padLeft, padRight) ;
-  return context.passError(error, "subsample_backward<GPU,float>: ") ;
-}
+namespace vl { namespace impl {
+
+  template <typename type>
+  struct subsample<vl::GPU, type>
+  {
+
+    static vl::Error
+    forward(vl::Context& context,
+            type* output,
+            type const* data,
+            size_t height, size_t width, size_t depth,
+            size_t strideY, size_t strideX,
+            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      int outputWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
+      int outputHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
+      int outputVolume = outputWidth * outputHeight * depth ;
+
+      subsample_forward_kernel<type>
+      <<< divideUpwards(outputVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (output, data,
+       outputHeight, outputWidth, outputVolume,
+       height, width,
+       strideY, strideX,
+       padTop, padLeft);
+      return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
+    }
+
+    static vl::Error
+    backward(vl::Context& context,
+             type* derData,
+             type const* derOutput,
+             size_t height, size_t width, size_t depth,
+             size_t strideY, size_t strideX,
+             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight)
+    {
+      int outputWidth = (width + (padLeft+padRight) - 1)/strideX + 1 ;
+      int outputHeight = (height + (padTop+padBottom) - 1)/strideY + 1 ;
+      int dataVolume = width * height * depth ;
+
+      subsample_backward_kernel<type>
+      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derData,
+       derOutput,
+       outputHeight, outputWidth, dataVolume,
+       height, width,
+       strideY, strideX,
+       padTop, padLeft);
+      return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
+    }
+  } ;
+
+} }
+
+// Instantiations
+template struct vl::impl::subsample<vl::GPU, float> ;
+
+#ifdef ENABLE_DOUBLE
+template struct vl::impl::subsample<vl::GPU, double> ;
+#endif

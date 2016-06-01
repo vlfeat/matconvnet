@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -18,13 +18,15 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device arch, typename type> inline vl::Error
+  template<vl::Device deviceType, vl::Type dataType>
+  inline vl::Error
   nnbias_forward_blas(vl::Context& context,
                       vl::Tensor output, double outputMult,
                       vl::Tensor data, double dataMult,
                       vl::Tensor biases, double biasesMult) ;
 
-  template<vl::Device arch, typename type> inline vl::Error
+  template<vl::Device deviceType, vl::Type dataType>
+  inline vl::Error
   nnbias_backward_blas(vl::Context& context,
                        vl::Tensor derData, double derDataMult,
                        vl::Tensor derBiases, double derBiasesMult,
@@ -32,8 +34,8 @@ namespace vl { namespace impl {
 
 } }
 
-
-template<vl::Device arch, typename type> inline vl::Error
+template<vl::Device deviceType, vl::Type dataType>
+inline vl::Error
 vl::impl::nnbias_forward_blas(vl::Context& context,
                               vl::Tensor output, double outputMult,
                               vl::Tensor data, double dataMult,
@@ -41,8 +43,10 @@ vl::impl::nnbias_forward_blas(vl::Context& context,
 {
   vl::Error error ;
   ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
-  type const* allOnesMemory = (type*) context.getAllOnes(arch,
-                                                         get_vl_type<type>(),
+  typedef typename vl::DataTypeTraits<dataType>::type type ;
+
+  type const* allOnesMemory = (type*) context.getAllOnes(deviceType,
+                                                         dataType,
                                                          numOutputPixels) ;
   if (allOnesMemory == NULL) {
     error = context.getLastError() ;
@@ -54,34 +58,36 @@ vl::impl::nnbias_forward_blas(vl::Context& context,
     double alpha = outputMult ;
 
     if (biases) {
-      error = gemm<arch,type>(context,
-                              'n', 'n',
-                              numOutputPixels, biases.getNumElements(), 1,
-                              biasesMult,
-                              allOnesMemory, numOutputPixels,
-                              (type*)biases.getMemory(), 1,
-                              alpha,
-                              (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+      error = vl::impl::blas<deviceType,dataType>::gemm
+      (context,
+       'n', 'n',
+       numOutputPixels, biases.getNumElements(), 1,
+       biasesMult,
+       allOnesMemory, numOutputPixels,
+       (type*)biases.getMemory(), 1,
+       alpha,
+       (type*)output.getMemory() + outputOffset, numOutputPixels) ;
       if (error != vl::vlSuccess) { goto done ; }
       alpha = 1 ;
     }
 
     if (data) {
-      assert(false) ; // not implemented
+      assert(false) ; // todo: not implemented
       if (error != vl::vlSuccess) { goto done ; }
     }
   }
 done:
-  return context.passError(error, "nnbias_forward_blas<>: ") ;
+  return context.passError(error, __func__) ;
 }
 
-template<vl::Device arch, typename type> inline vl::Error
+template<vl::Device deviceType, vl::Type dataType> inline vl::Error
 vl::impl::nnbias_backward_blas(vl::Context& context,
                                vl::Tensor derData, double derDataMult,
                                vl::Tensor derBiases, double derBiasesMult,
                                vl::Tensor derOutput, double derOutputMult)
 {
   vl::Error error ;
+  typedef typename vl::DataTypeTraits<dataType>::type type ;
   type const* allOnesMemory = NULL ;
 
   // for all derivatives
@@ -90,8 +96,8 @@ vl::impl::nnbias_backward_blas(vl::Context& context,
 
   if (derBiases) {
     // for derivative w.r.t. bias
-    allOnesMemory = (type*) context.getAllOnes(arch,
-                                               get_vl_type<type>(),
+    allOnesMemory = (type*) context.getAllOnes(deviceType,
+                                               dataType,
                                                numOutputPixels) ;
     if (allOnesMemory == NULL) {
       error = context.getLastError() ;
@@ -111,26 +117,27 @@ vl::impl::nnbias_backward_blas(vl::Context& context,
     /* compute derData dz/dbias */
     if (derBiases) {
       // has derBiases, derOutput
-      error = gemv<arch,type>(context,
-                              't',
-                              numOutputPixels, derOutput.getDepth(),
-                              derOutputMult, /* alpha */
-                              derOutput.getMemory() + derOutputOffset, numOutputPixels,
-                              allOnesMemory, 1,
-                              (image == 0) ? derBiasesMult : 1.0, /* beta */
-                              derBiases.getMemory(), 1) ;
+      error = vl::impl::blas<deviceType,dataType>::gemv
+      (context,
+       't',
+       numOutputPixels, derOutput.getDepth(),
+       derOutputMult, /* alpha */
+       (type*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
+       allOnesMemory, 1,
+       (image == 0) ? derBiasesMult : 1.0, /* beta */
+       (type*)derBiases.getMemory(), 1) ;
       if (error != vl::vlSuccess) { return error ; }
     }
 
     /* compute derData dz/dx */
     if (derData) {
-      // not implemented
+      assert(false) ; // todo: not implemented
       if (error != vl::vlSuccess) { return error ; }
     }
   }
 
 done:
-  return context.passError(error, "nnbias_backward_blas<>: ") ;
+  return context.passError(error, __func__) ;
 }
 
 #endif /* defined(__vl__nnbias_blas__) */

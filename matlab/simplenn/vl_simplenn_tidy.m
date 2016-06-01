@@ -3,7 +3,7 @@ function tnet = vl_simplenn_tidy(net)
 %   NET = VL_SIMPLENN_TIDY(NET) takes the NET object and upgrades
 %   it to the current version of MatConvNet. This is necessary in
 %   order to allow MatConvNet to evolve, while maintaining the NET
-%   objects clean.
+%   objects clean. This function ignores custom layers.
 %
 %   The function is also generally useful to fill in missing default
 %   values in NET.
@@ -19,6 +19,10 @@ function tnet = vl_simplenn_tidy(net)
 tnet = struct('layers', {{}}, 'meta', struct()) ;
 
 % copy meta information in net.meta subfield
+if isfield(net, 'meta')
+  tnet.meta = net.meta ;
+end
+
 if isfield(net, 'classes')
   tnet.meta.classes = net.classes ;
 end
@@ -27,14 +31,16 @@ if isfield(net, 'normalization')
   tnet.meta.normalization = net.normalization ;
 end
 
-if isfield(net, 'meta')
-  tnet.meta = net.meta ;
-end
-
 % copy layers
 for l = 1:numel(net.layers)
-  defaults = {};
+  defaults = {'name', sprintf('layer%d', l), 'precious', false};
   layer = net.layers{l} ;
+
+  % Ignore custom layers
+  if strcmp(layer.type, 'custom')
+    tnet.layers{l} = layer ;
+    continue;
+  end
 
   % check weights format
   switch layer.type
@@ -46,6 +52,9 @@ for l = 1:numel(net.layers)
         layer = rmfield(layer, 'filters') ;
         layer = rmfield(layer, 'biases') ;
       end
+  end
+  if ~isfield(layer, 'weights')
+    layer.weights = {} ;
   end
 
   % check that weights inlcude moments in batch normalization
@@ -89,6 +98,14 @@ for l = 1:numel(net.layers)
     case {'normalize', 'lrn'}
       defaults = [ defaults {...
         'param', [5 1 0.0001/5 0.75]}] ;
+
+    case {'pdist'}
+      defaults = [ defaults {...
+        'noRoot', false, ...
+        'aggregate', false, ...
+        'p', 2, ...
+        'epsilon', 1e-3, ...
+        'instanceWeights', []} ];
   end
 
   for i = 1:2:numel(defaults)

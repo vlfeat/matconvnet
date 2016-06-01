@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -20,51 +20,34 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<typename type> vl::Error
-  nnpooling_forward_cudnn(Context& context,
-                          Tensor output,
-                          Tensor data,
-                          vl::PoolingMethod method,
-                          int poolHeight, int poolWidth,
-                          int strideY, int strideX,
-                          int padTop, int padBottom,
-                          int padLeft, int padRight) ;
+  // todo: data type should be handled internally?
 
-  template<typename type> vl::Error
-  nnpooling_backward_cudnn(Context& context,
-                           Tensor derData,
-                           Tensor data,
-                           Tensor output,
-                           Tensor derOutput,
-                           vl::PoolingMethod method,
-                           int poolHeight, int poolWidth,
-                           int strideY, int strideX,
-                           int padTop, int padBottom,
-                           int padLeft, int padRight) ;
+  template<vl::Type dataType>
+  struct nnpooling_cudnn
+  {
+    static vl::Error
+    forward(Context& context,
+            Tensor output,
+            Tensor data,
+            vl::PoolingMethod method,
+            int poolHeight, int poolWidth,
+            int strideY, int strideX,
+            int padTop, int padBottom,
+            int padLeft, int padRight) ;
 
-  /* specialisations */
+    static vl::Error
+    backward(Context& context,
+             Tensor derData,
+             Tensor data,
+             Tensor output,
+             Tensor derOutput,
+             vl::PoolingMethod method,
+             int poolHeight, int poolWidth,
+             int strideY, int strideX,
+             int padTop, int padBottom,
+             int padLeft, int padRight) ;
+  };
 
-  template<> vl::Error
-  nnpooling_forward_cudnn<float>(Context& context,
-                                 Tensor output,
-                                 Tensor data,
-                                 vl::PoolingMethod method,
-                                 int poolHeight, int poolWidth,
-                                 int strideY, int strideX,
-                                 int padTop, int padBottom,
-                                 int padLeft, int padRight) ;
-
-  template<> vl::Error
-  nnpooling_backward_cudnn<float>(Context& context,
-                                  Tensor derData,
-                                  Tensor data,
-                                  Tensor output,
-                                  Tensor derOutput,
-                                  vl::PoolingMethod method,
-                                  int poolHeight, int poolWidth,
-                                  int strideY, int strideX,
-                                  int padTop, int padBottom,
-                                  int padLeft, int padRight) ;
 } }
 
 #endif /* defined(__vl__nnpooling_cudnn__) */

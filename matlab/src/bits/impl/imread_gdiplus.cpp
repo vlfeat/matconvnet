@@ -1,9 +1,9 @@
-// @file imread_win.cpp
+// @file imread_gdiplus.cpp
 // @brief Image reader based on Windows GDI+.
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -29,6 +29,8 @@ using namespace Gdiplus;
 #define check(x) \
 if (!x) { image.error = 1 ; goto done ; }
 
+#define ERR_MAX_LEN 1024
+
 class vl::ImageReader::Impl
 {
 public:
@@ -36,12 +38,14 @@ public:
   ~Impl() ;
   GdiplusStartupInput gdiplusStartupInput;
   ULONG_PTR           gdiplusToken;
-  vl::Image read(char const * filename, float * memory) ;
-  vl::Image readDimensions(char const * filename) ;
+  vl::Error readPixels(float * memory, char const * filename) ;
+  vl::Error readShape(vl::ImageShape & shape, char const * filename) ;
+  char lastErrorMessage[ERR_MAX_LEN];
 } ;
 
 vl::ImageReader::Impl::Impl()
 {
+  lastErrorMessage[0] = 0;
   GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 }
 
@@ -50,25 +54,19 @@ vl::ImageReader::Impl::~Impl()
   GdiplusShutdown(gdiplusToken);
 }
 
-static void getImagePropertiesHelper(vl::Image & image, Gdiplus::Bitmap & bitmap)
+static void getImagePropertiesHelper(vl::ImageShape & shape, Gdiplus::Bitmap & bitmap)
 {
   bool grayscale = (bitmap.GetFlags() & ImageFlagsColorSpaceGRAY) ;
-  image.width = bitmap.GetWidth() ;
-  image.height = bitmap.GetHeight() ;
-  image.depth = grayscale ? 1 : 3 ;
+  shape.width = bitmap.GetWidth() ;
+  shape.height = bitmap.GetHeight() ;
+  shape.depth = grayscale ? 1 : 3 ;
 }
 
-vl::Image
-vl::ImageReader::Impl::read(char const * filename, float * memory)
+vl::Error
+vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
 {
-  // initialize the image as null
-  Image image ;
-  image.width = 0 ;
-  image.height = 0 ;
-  image.depth = 0 ;
-  image.memory = NULL ;
-  image.error = 0 ;
-
+  vl::Error error = vl::vlSuccess ;
+  vl::ImageShape shape ;
   Status status ;
   Rect rect ;
   bool grayscale = false ;
@@ -81,24 +79,19 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   BitmapData data ;
   Bitmap bitmap(filenamew);
   if (bitmap.GetLastStatus() != Ok) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown ;
     goto done ;
   }
 
-  getImagePropertiesHelper(image, bitmap) ;
-
-  if (memory == NULL) {
-    image.memory = (float*)malloc(image.height * image.width * image.depth * sizeof(float)) ;
-    check(image.memory) ;
-  } else {
-    image.memory = memory ;
-  }
+  getImagePropertiesHelper(shape, bitmap) ;
 
   // get the pixels
   // by default let GDIplus read as 32bpp RGB, unless the image is indexed 8bit grayscale
+  Image image(shape, memory);
+
   Gdiplus::PixelFormat targetPixelFormat = PixelFormat32bppRGB ;
 
-  if (image.depth == 1) {
+  if (shape.depth == 1) {
     Gdiplus::PixelFormat gdiPixelFormat = bitmap.GetPixelFormat();
     if (gdiPixelFormat == PixelFormat8bppIndexed) {
       int paletteSize = bitmap.GetPaletteSize() ;
@@ -119,18 +112,18 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
     }
   }
 
-  rect = Rect(0,0,image.width,image.height);
+  rect = Rect(0,0,shape.width,shape.height);
   status = bitmap.LockBits(&rect,
                            ImageLockModeRead,
                            targetPixelFormat,
                            &data) ;
   if (status != Ok) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown;
     goto done ;
   }
 
   // copy RGB to MATLAB format
-  switch (image.depth) {
+  switch (shape.depth) {
 	case 3:
 	  vl::impl::imageFromPixels<impl::pixelFormatBGRA>(image, (char unsigned const *)data.Scan0, data.Stride) ;
     break ;
@@ -149,19 +142,13 @@ vl::ImageReader::Impl::read(char const * filename, float * memory)
   bitmap.UnlockBits(&data) ;
 
 done:
-  return image ;
+  return error ;
 }
 
-vl::Image
-vl::ImageReader::Impl::readDimensions(char const * filename)
+vl::Error
+vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
 {
-  Image image ;
-  image.width = 0 ;
-  image.height = 0 ;
-  image.depth = 0 ;
-  image.memory = NULL ;
-  image.error = 0 ;
-
+  vl::Error error = vl::vlSuccess ;
   Status status ;
 
   wchar_t filenamew [1024*4] ;
@@ -171,14 +158,14 @@ vl::ImageReader::Impl::readDimensions(char const * filename)
 
   Bitmap bitmap(filenamew);
   if (bitmap.GetLastStatus() != Ok) {
-    image.error = 1 ;
+    error = vl::vlErrorUnknown ;
     goto done ;
   }
 
-  getImagePropertiesHelper(image, bitmap) ;
+  getImagePropertiesHelper(shape, bitmap) ;
 
 done:
-  return image ;
+  return error ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -196,14 +183,20 @@ vl::ImageReader::~ImageReader()
   delete impl ;
 }
 
-vl::Image
-vl::ImageReader::read(char const * filename, float * memory)
+vl::Error
+vl::ImageReader::readPixels(float * memory, char const * filename)
 {
-  return impl->read(filename, memory) ;
+  return impl->readPixels(memory, filename) ;
 }
 
-vl::Image
-vl::ImageReader::readDimensions(char const * filename)
+vl::Error
+vl::ImageReader::readShape(vl::ImageShape & shape, char const * filename)
 {
-  return impl->readDimensions(filename) ;
+  return impl->readShape(shape, filename) ;
+}
+
+char const *
+vl::ImageReader::getLastErrorMessage() const
+{
+  return impl->lastErrorMessage ;
 }

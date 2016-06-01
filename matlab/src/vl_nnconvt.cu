@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -77,7 +77,7 @@ enum {
 } ;
 
 enum {
-  OUT_RESULT = 0, OUT_DERFILTERS, OUT_derBiases, OUT_END
+  OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIASES, OUT_END
 } ;
 
 void mexFunction(int nout, mxArray *out[],
@@ -205,17 +205,17 @@ void mexFunction(int nout, mxArray *out[],
           mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
         }
         context.getCudaHelper().setCudnnConvolutionFwdPreference
-        ((std::isinf(x) ?
+        ((x==mxGetInf() ?
           CUDNN_CONVOLUTION_FWD_PREFER_FASTEST :
           CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
         context.getCudaHelper().setCudnnConvolutionBwdFilterPreference
-        ((std::isinf(x) ?
+        ((x==mxGetInf() ?
           CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
         context.getCudaHelper().setCudnnConvolutionBwdDataPreference
-        ((std::isinf(x) ?
+        ((x==mxGetInf() ?
           CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
@@ -233,21 +233,29 @@ void mexFunction(int nout, mxArray *out[],
   vl::MexTensor derOutput(context) ;
 
   data.init(in[IN_DATA]) ;
+  data.reshape(4) ;
+
   filters.init(in[IN_FILTERS]) ;
+  filters.reshape(4) ;
+
   biases.init(in[IN_BIASES]) ;
-  if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
+
+  if (backMode) {
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    derOutput.reshape(4) ;
+  }
 
   hasBiases = !biases.isEmpty() ;
 
   /* check for GPU/data class consistency */
   if (! vl::areCompatible(data, filters)) {
-    mexErrMsgTxt("DATA and FILTERS are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and FILTERS do not have compatible formats.") ;
   }
   if (hasBiases && ! vl::areCompatible(data, biases)) {
-    mexErrMsgTxt("DATA and BIASES are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and BIASES do not have compatible formats.") ;
   }
   if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT are not both CPU or GPU arrays.") ;
+    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
   }
 
   /* basic argument checks */
@@ -261,10 +269,10 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("An element of CROP is negative.") ;
   }
 
-  /* Get the filter geometry */
-  vl::TensorGeometry filtersGeom(filters) ;
+  /* Get the filter shape */
+  vl::TensorShape filtersShape(filters) ;
 
-  if (filtersGeom.getHeight() == 0 || filtersGeom.getWidth() == 0 || filtersGeom.getDepth() == 0) {
+  if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getDepth() == 0) {
     mexErrMsgTxt("A dimension of FILTERS is void.") ;
   }
 
@@ -279,51 +287,52 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("The filter bank depth (fourth dimension of FILTERS) is not the same as the data depth (third dimension of X).") ;
   }
 
-  /* Get the output geometry */
-  vl::TensorGeometry outputGeom((data.getHeight()-1)*upsampleY - (cropTop+cropBottom) + filtersGeom.getHeight(),
-                                (data.getWidth()-1)*upsampleX  - (cropLeft+cropRight) + filtersGeom.getWidth(),
-                                filtersGeom.getDepth() * numFilterGroups,
+  /* Get the output Shapeetry */
+  vl::TensorShape outputShape((data.getHeight()-1)*upsampleY - (cropTop+cropBottom) + filtersShape.getHeight(),
+                                (data.getWidth()-1)*upsampleX  - (cropLeft+cropRight) + filtersShape.getWidth(),
+                                filtersShape.getDepth() * numFilterGroups,
                                 data.getSize()) ;
 
-  if (outputGeom.getHeight() < 1 || outputGeom.getWidth() < 1) {
+  if (outputShape.getHeight() < 1 || outputShape.getWidth() < 1) {
     mexErrMsgTxt("The output array is empty due to CROP being too large.") ;
   }
 
-  if (backMode && (derOutput != outputGeom)) {
+  if (backMode && (derOutput != outputShape)) {
     mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and FILTERS.") ;
   }
 
   /* Check the biases sizes */
   if (hasBiases) {
-    if (biases.getNumElements() != outputGeom.getDepth()) {
+    if (biases.getNumElements() != outputShape.getDepth()) {
       mexErrMsgTxt("The number of elements of BIASES is not the same as the dimenison of the filters.") ;
     }
   }
 
   /* create output buffers */
-  vl::Device type = data.getMemoryType() ;
+  vl::Device deviceType = data.getDeviceType() ;
+  vl::Type dataType = data.getDataType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
   vl::MexTensor derFilters(context) ;
   vl::MexTensor derBiases(context) ;
 
   if (!backMode) {
-    output.init(type, outputGeom) ;
+    output.init(deviceType, dataType, outputShape) ;
   } else {
     if (computeDerData) {
-      derData.init(type, data.getGeometry()) ;
+      derData.init(deviceType, dataType, data.getShape()) ;
     }
     if (computeDerFilters) {
-      derFilters.init(type, filters.getGeometry()) ;
+      derFilters.init(deviceType, dataType, filters.getShape()) ;
     }
     if (computederBiases && hasBiases) {
-      derBiases.init(type, biases.getGeometry()) ;
+      derBiases.init(deviceType, dataType, biases.getShape()) ;
     }
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnconvt: %s; %s", backMode?"backward":"forward", (data.getMemoryType()==vl::GPU) ? "GPU" : "CPU") ;
-    if (data.getMemoryType() == vl::GPU) {
+    mexPrintf("vl_nnconvt: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::GPU) ? "GPU" : "CPU") ;
+    if (data.getDeviceType() == vl::GPU) {
 #if ENABLE_CUDNN
       mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "cuBLAS") ;
 #else
@@ -381,9 +390,9 @@ void mexFunction(int nout, mxArray *out[],
 #if ENABLE_CUDNN
     if (context.getCudaHelper().getCudnnEnabled()) {
       mexPrintf("vl_nnconvt: cuDNN workspace used: "
-                "fwd %.2f MB"
-                ", bwd filter %.2f MB"
-                ", bwd data %.2f MB\n",
+                "fwd %.6g MB"
+                ", bwd filter %.6g MB"
+                ", bwd data %.6g MB\n",
                 (double)context.getCudaHelper().getCudnnConvolutionFwdWorkSpaceUsed() / (1024*1024),
                 (double)context.getCudaHelper().getCudnnConvolutionBwdFilterWorkSpaceUsed() / (1024*1024),
                 (double)context.getCudaHelper().getCudnnConvolutionBwdDataWorkSpaceUsed() / (1024*1024)) ;
@@ -399,9 +408,15 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
   if (backMode) {
-    out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateDoubleMatrix(0,0,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
-    out[OUT_derBiases] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,mxSINGLE_CLASS,mxREAL) ;
+    mxClassID classID ;
+    switch (derOutput.getDataType()) {
+      case vl::vlTypeFloat: classID = mxSINGLE_CLASS ; break ;
+      case vl::vlTypeDouble: classID = mxDOUBLE_CLASS ; break ;
+      default: abort() ;
+    }
+    out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;
+    out[OUT_DERFILTERS] = (computeDerFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;
+    out[OUT_DERBIASES] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;
   } else {
     out[OUT_RESULT] = output.relinquish() ;
   }

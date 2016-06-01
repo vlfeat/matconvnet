@@ -14,18 +14,31 @@ function obj = loadobj(s)
 
 if ischar(s) s = load(s); end
 if isstruct(s)
-  obj = dagnn.DagNN() ;
-  for l = 1:numel(s.layers)
-    constr = str2func(s.layers(l).type) ;
-    block = constr() ;
-    block.load(struct(s.layers(l).block)) ;
-    obj.addLayer(...
-      s.layers(l).name, ...
-      block, ...
-      s.layers(l).inputs, ...
-      s.layers(l).outputs, ...
-      s.layers(l).params) ;
+  assert(isfield(s, 'layers'), 'Invalid model.');
+  if ~isstruct(s.layers)
+    warning('The model appears to be `simplenn` model. Using `fromSimpleNN` instead.');
+    obj = dagnn.DagNN.fromSimpleNN(s);
+    return;
   end
+  obj = dagnn.DagNN() ;
+  try
+    for l = 1:numel(s.layers)
+      constr = str2func(s.layers(l).type) ;
+      block = constr() ;
+      block.load(struct(s.layers(l).block)) ;
+      obj.addLayer(...
+        s.layers(l).name, ...
+        block, ...
+        s.layers(l).inputs, ...
+        s.layers(l).outputs, ...
+        s.layers(l).params,...
+        'skipRebuild', true) ;
+    end
+  catch e % Make sure the DagNN object is in valid state
+    obj.rebuild();
+    rethrow(e);
+  end
+  obj.rebuild();
   if isfield(s, 'params')
     for f = setdiff(fieldnames(s.params)','name')
       f = char(f) ;

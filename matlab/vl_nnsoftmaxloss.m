@@ -39,7 +39,7 @@ assert(isequal(sz_, [sz(1) sz(2) sz_(3) sz(4)])) ;
 assert(sz_(3)==1 | sz_(3)==2) ;
 
 % class c = 0 skips a spatial location
-mass = single(c(:,:,1,:) > 0) ;
+mass = cast(c(:,:,1,:) > 0, 'like', c) ;
 if sz_(3) == 2
   % the second channel of c (if present) is used as weights
   mass = mass .* c(:,:,2,:) ;

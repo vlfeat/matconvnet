@@ -26,10 +26,13 @@ sizes = num2cell(NaN(nv, 4),2)' ;
 
 for i = 1:2:numel(inputSizes)
   v = obj.getVarIndex(inputSizes{i}) ;
-  sizes{v} = inputSizes{i+1}(:)' ;
+  if isnan(v)
+    error('Variable `%s` not found in the network.', inputSizes{i});
+  end;
+  sizes{v} = [inputSizes{i+1}(:)' ones(1, 4 - numel(inputSizes{i+1}))] ;
 end
 
-for layer = obj.layers
+for layer = obj.layers(obj.executionOrder)
   in = layer.inputIndexes ;
   out = layer.outputIndexes ;
   sizes(out) = layer.block.getOutputSizes(sizes(in)) ;

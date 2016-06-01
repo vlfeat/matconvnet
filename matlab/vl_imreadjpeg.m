@@ -17,10 +17,10 @@
 %
 %   The function takes the following options:
 %
-%   `Prefetch`:: `not specified`
+%   `Prefetch`:: not specified
 %     If specified, run without blocking (see above).
 %
-%   `Verbose`:: `not specified`
+%   `Verbose`:: not specified
 %     Increase the verbosity level.
 %
 %   `NumThreads`:: `1`
@@ -29,8 +29,20 @@
 %     a number larger than the number of available CPU cores, and
 %     often fewer threads are sufficient as reading images is memory
 %     access bound rather than CPU bound.
+%
+%   `Resize`:: not specified
+%     If specified, turn on image resizing. The argument can either
+%     specify the desired [HEIGHT, WIDTH] or be simply a scalar
+%     SIZE. In the latter case, the image is resized isotropically so
+%     that the shorter side is equal to SIZE.
+%
+%     Resizing uses bilinear interpolation. When shrinking, a simple
+%     form of antialiasing is used by stretching the bilinear filter
+%     over several input pixels to average them. The method is the
+%     same as MATLAB IMRESIZE() function (the two functions are
+%     numerically equivalent).
 
-% Copyright (C) 2014-15 Andrea Vedaldi.
+% Copyright (C) 2014-16 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

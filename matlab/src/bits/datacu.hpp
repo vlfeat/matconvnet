@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -34,7 +34,7 @@ the terms of the BSD license (see the COPYING file).
 namespace vl {
 
 #if ENABLE_CUDNN
-  namespace impl { template<typename T> struct nnconv_cudnn ; }
+  namespace impl { template<vl::Type type> struct nnconv_cudnn ; }
 #endif
 
   class CudaHelper {
@@ -81,7 +81,7 @@ namespace vl {
     vl::Error catchCudnnError(cudnnStatus_t status,
                               char const* description = NULL) ;
 
-    template<typename T> friend struct vl::impl::nnconv_cudnn ;
+    template<vl::Type type> friend struct vl::impl::nnconv_cudnn ;
 #endif
 
   protected:

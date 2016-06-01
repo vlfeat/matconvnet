@@ -17,17 +17,18 @@
 %
 %   Means and variances are accumulated across all the data items
 %   (images) stored in the 4D tensor X (from which the name batch
-%   normalization). The constant EPSILON is used to regularize the
-%   computation of sigma(k) and to avoid division by zero.
+%   normalization is derived). The constant EPSILON is used to 
+%   regularize the computation of sigma(k) and to avoid division by 
+%   zero.
 %
 %   [DZDX,DZDG,DZDB] = VL_NNBNORM(X,G,B,DZDY) computes the derviatives
 %   of the block projected onto DZDY. DZDX, DZDG, DZDB and DZDY have
 %   the same dimensions as X, G, B, and Y respectivey.
 %
-%   Optionally, [Y,MEAN,MOMENTS] = VL_NNBNORM(...) and
+%   Optionally, [Y,MOMENTS] = VL_NNBNORM(...) and
 %   [DZDX,DZDG,DZDB,MOMENTS] = VL_NNBNORM(...,DZDY) return the values
 %   of the vectors mu and sigma in the formulas above. Here, MOMENTS
-%   is a DEPTH x 2 array, where the vectors mu and sigma are the rows.
+%   is a DEPTH x 2 array [MU, SIGMA].
 %
 %   VL_NNBNROM(..., 'Option', value) takes the following options:
 %

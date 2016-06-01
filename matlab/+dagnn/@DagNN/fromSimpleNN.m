@@ -4,20 +4,20 @@ function obj = fromSimpleNN(net, varargin)
 %   specified CNN using the SimpleNN format.
 %
 %   SimpleNN objects are linear chains of computational layers. These
-%   layers echange information through variables and parameters that
-%   are not explicitly named.Hence, FROMSIMPLENN() uses a number of
+%   layers exchange information through variables and parameters that
+%   are not explicitly named. Hence, FROMSIMPLENN() uses a number of
 %   rules to assign such names automatically:
 %
 %   * From the input to the output of the CNN, variables are called
 %     `x0` (input of the first layer), `x1`, `x2`, .... In this
-%     manner `xi` is the outut of the i-th layer.
+%     manner `xi` is the output of the i-th layer.
 %
 %   * Any loss layer requires two inputs, the second being a label.
 %     These are called `label` (for the first such layers), and then
 %     `label2`, `label3`,... for any other similar layer.
 %
-%   Additinoally, the option `CanonicalNames` the function can change
-%   the names of some variables to make them more convenient to
+%   Additionally, given the option `CanonicalNames` the function can 
+%   change the names of some variables to make them more convenient to
 %   use. With this option turned on:
 %
 %   * The network input is called `input` instead of `x0`.
@@ -31,13 +31,13 @@ function obj = fromSimpleNN(net, varargin)
 %   * The input of each SoftMax or Loss layer of type *softmax log
 %     loss* is called `prediction` (or `prediction2`, ...). If a Loss
 %     layer immediately follows a SoftMax layer, then the rule above
-%     takes the precendence and the input name is not changed.
+%     takes precendence and the input name is not changed.
 %
 %   FROMSIMPLENN(___, 'OPT', VAL, ...) accepts the following options:
 %
 %   `CanonicalNames`:: false
 %      If `true` use the rules above to assign more meaningful
-%      names to some of the varibles.
+%      names to some of the variables.
 
 % Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.

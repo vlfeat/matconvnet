@@ -43,6 +43,10 @@ function vl_compilenn(varargin)
 %   `EnableImreadJpeg`:: `true`
 %      Set this option to `true` to compile `vl_imreadjpeg`.
 %
+%   `EnableDouble`:: `true`
+%      Set this optino to `true` to compile the support for DOUBLE
+%      data types.
+%
 %   `ImageLibrary`:: `libjpeg` (Linux), `gdiplus` (Windows), `quartz` (Mac)
 %      The image library to use for `vl_impreadjpeg`.
 %
@@ -55,7 +59,8 @@ function vl_compilenn(varargin)
 %      `vl_imreadjpeg`.
 %
 %   `EnableCudnn`:: `false`
-%      Set to `true` to compile CuDNN support.
+%      Set to `true` to compile CuDNN support. See CuDNN
+%      documentation for the Hardware/CUDA version requirements.
 %
 %   `CudnnRoot`:: `'local/'`
 %      Directory containing the unpacked binaries and header files of
@@ -66,7 +71,7 @@ function vl_compilenn(varargin)
 %   By default, the `EnableGpu` option is switched to off, such that
 %   the GPU code support is not compiled in.
 %
-%   Generally, you only need a C/C++ compiler (usually Xcode, GCC or
+%   Generally, you only need a 64bit C/C++ compiler (usually Xcode, GCC or
 %   Visual Studio for Mac, Linux, and Windows respectively). The
 %   compiler can be setup in MATLAB using the
 %
@@ -92,25 +97,29 @@ function vl_compilenn(varargin)
 %     from NVIDIA. Note that each MATLAB version requires a
 %     particular CUDA Devkit version:
 %
-%     | MATLAB version | Release | CUDA Devkit |
-%     |----------------|---------|-------------|
-%     | 2013b          | 2013b   | 5.5         |
-%     | 2014a          | 2014a   | 5.5         |
-%     | 2014b          | 2014b   | 6.0         |
+%     | MATLAB version | Release | CUDA Devkit  |
+%     |----------------|---------|--------------|
+%     | 8.2            | 2013b   | 5.5          |
+%     | 8.3            | 2014a   | 5.5          |
+%     | 8.4            | 2014b   | 6.0          |
+%     | 8.6            | 2015b   | Latest(>7.0) |
 %
 %     A different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
 %
 %   The following configurations have been tested successfully:
 %
-%   * Windows 7 x64, MATLAB R2014a, Visual C++ 2010 and CUDA Toolkit
-%     6.5 (unable to compile with Visual C++ 2013).
+%   * Windows 7 x64, MATLAB R2014a, Visual C++ 2010, 2013 and CUDA Toolkit
+%     6.5. VS 2015 CPU version only (not supported by CUDA Toolkit yet).
 %   * Windows 8 x64, MATLAB R2014a, Visual C++ 2013 and CUDA
 %     Toolkit 6.5.
 %   * Mac OS X 10.9 and 10.10, MATLAB R2013a and R2013b, Xcode, CUDA
 %     Toolkit 5.5.
-%   * GNU/Linux, MATALB R2014a, gcc, CUDA Toolkit 5.5.
+%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
 %
+%   Compilation on Windows with MinGW compiler (the default mex compiler in
+%   Matlab) is not supported. For Windows, please reconfigure mex to use
+%   Visual Studio C/C++ compiler.
 %   Furthermore your GPU card must have ComputeCapability >= 2.0 (see
 %   output of `gpuDevice()`) in order to be able to run the GPU code.
 %   To change the compute capabilities, for `mex` `CudaMethod` edit
@@ -124,7 +133,7 @@ function vl_compilenn(varargin)
 %   code](http://mathworks.com/help/distcomp/run-mex-functions-containing-cuda-code.html),
 %   `vl_setup()`, `vl_imreadjpeg()`.
 
-% Copyright (C) 2014-15 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2014-16 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -141,6 +150,7 @@ addpath(fullfile(root, 'matlab')) ;
 opts.enableGpu        = false;
 opts.enableImreadJpeg = true;
 opts.enableCudnn      = false;
+opts.enableDouble     = true;
 opts.imageLibrary = [] ;
 opts.imageLibraryCompileFlags = {} ;
 opts.imageLibraryLinkFlags = [] ;
@@ -170,8 +180,8 @@ end
 if isempty(opts.imageLibraryLinkFlags)
   switch opts.imageLibrary
     case 'libjpeg', opts.imageLibraryLinkFlags = {'-ljpeg'} ;
-    case 'quartz', opts.imageLibraryLinkFlags = {'LDFLAGS=$LDFLAGS -framework Cocoa -framework ImageIO'} ;
-    case 'gdiplus', opts.imageLibraryLinkFlags = {'-lgdiplus'} ;
+    case 'quartz', opts.imageLibraryLinkFlags = {'-framework Cocoa -framework ImageIO'} ;
+    case 'gdiplus', opts.imageLibraryLinkFlags = {'gdiplus.lib'} ;
   end
 end
 
@@ -180,7 +190,7 @@ mex_src = {} ;
 
 % Files that are compiled as CPP or CU depending on whether GPU support
 % is enabled.
-if opts.enableGpu, ext = 'cu' ; else, ext='cpp' ; end
+if opts.enableGpu, ext = 'cu' ; else ext='cpp' ; end
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['data.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['datamex.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnconv.' ext]) ;
@@ -190,11 +200,13 @@ lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnpooling.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnnormalize.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbnorm.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbias.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbilinearsampler.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconv.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconvt.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbnorm.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbilinearsampler.' ext]) ;
 
 % CPU-specific files
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_cpu.cpp') ;
@@ -204,6 +216,8 @@ lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','pooling_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','tinythread.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','imread.cpp') ;
 
 % GPU-specific files
 if opts.enableGpu
@@ -213,6 +227,7 @@ if opts.enableGpu
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','pooling_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','datacu.cu') ;
 end
 
@@ -221,6 +236,7 @@ if opts.enableCudnn
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnconv_cudnn.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbias_cudnn.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnpooling_cudnn.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbilinearsampler_cudnn.cu') ;
 end
 
 % Other files
@@ -249,6 +265,11 @@ if opts.enableGpu
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
 
+  % Set the nvcc method as default for Win platforms
+  if strcmp(arch, 'win64') && isempty(opts.cudaMethod)
+    opts.cudaMethod = 'nvcc';
+  end
+
   % Activate the CUDA Devkit
   cuver = activate_nvcc(opts.nvccPath) ;
   opts.verbose && fprintf('%s:\tCUDA: using NVCC ''%s'' (%d).\n', ...
@@ -268,7 +289,7 @@ if opts.enableCudnn
     case 'glnxa64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib64') ;
     otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
-end  
+end
 
 % --------------------------------------------------------------------
 %                                                     Compiler options
@@ -283,20 +304,31 @@ end
 
 % Compiler flags
 flags.cc = {} ;
+flags.ccpass = {} ;
+flags.ccoptim = {} ;
 flags.link = {} ;
+flags.linklibs = {} ;
+flags.linkpass = {} ;
+flags.nvccpass = {char(opts.cudaArch)} ;
+
 if opts.verbose > 1
   flags.cc{end+1} = '-v' ;
-  flags.link{end+1} = '-v' ;
 end
 if opts.debug
   flags.cc{end+1} = '-g' ;
+  flags.nvccpass{end+1} = '-O0' ;
 else
   flags.cc{end+1} = '-DNDEBUG' ;
 end
-if opts.enableGpu, flags.cc{end+1} = '-DENABLE_GPU' ; end
-if opts.enableCudnn,
+if opts.enableGpu
+  flags.cc{end+1} = '-DENABLE_GPU' ;
+end
+if opts.enableCudnn
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
   flags.cc{end+1} = ['-I' opts.cudnnIncludeDir] ;
+end
+if opts.enableDouble
+  flags.cc{end+1} = '-DENABLE_DOUBLE' ;
 end
 flags.link{end+1} = '-lmwblas' ;
 switch arch
@@ -308,13 +340,11 @@ end
 
 if opts.enableImreadJpeg
   flags.cc = horzcat(flags.cc, opts.imageLibraryCompileFlags) ;
-  flags.link = horzcat(flags.link, opts.imageLibraryLinkFlags) ;
+  flags.linklibs = horzcat(flags.linklibs, opts.imageLibraryLinkFlags) ;
 end
 
 if opts.enableGpu
-  flags.link{end+1} = ['-L' opts.cudaLibDir] ;
-  flags.link{end+1} = '-lcudart' ;
-  flags.link{end+1} = '-lcublas' ;
+  flags.link = horzcat(flags.link, {['-L' opts.cudaLibDir], '-lcudart', '-lcublas'}) ;
   switch arch
     case {'maci64', 'glnxa64'}
       flags.link{end+1} = '-lmwgpu' ;
@@ -327,73 +357,94 @@ if opts.enableGpu
   end
 end
 
-% For the MEX command
-flags.link{end+1} = '-largeArrayDims' ;
-flags.mexcc = flags.cc ;
-flags.mexcc{end+1} = '-largeArrayDims' ;
-flags.mexcc{end+1} = '-cxx' ;
-if strcmp(arch, 'maci64') && opts.enableGpu && cuver < 70000
-  % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
-  % Clang libc++. This should go away in the future.
-  flags.mexcc{end+1} = 'CXXFLAGS=$CXXFLAGS -stdlib=libstdc++' ;
-  flags.link{end+1} = 'LDFLAGS=$LDFLAGS -stdlib=libstdc++' ;
-  if  ~verLessThan('matlab', '8.5.0')
-    % Complicating matters, MATLAB 8.5.0 links to Clang's libc++ by
-    % default when linking MEX files overriding the option above. We
-    % force it to use GCC libstdc++
-    flags.link{end+1} = 'LINKLIBS=$LINKLIBS -L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
-  end
-end
-if strcmp(arch, 'maci64') && opts.enableGpu
-  % Mac OS X 10.11 disables LD_LIBRARY_PATH for security reason. To
-  % address this issue, we need to rpath the required CUDA and
-  % cuDNN libraries.
-  flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
-  if opts.enableCudnn
-    flags.link{end+1} = sprintf('LDFLAGS=$LDFLAGS -Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
-  end
-end
-if opts.enableGpu
-  flags.mexcu = flags.cc ;
-  flags.mexcu{end+1} = '-largeArrayDims' ;
-  flags.mexcu{end+1} = '-cxx' ;
-  flags.mexcu(end+1:end+2) = {'-f' mex_cuda_config(root)} ;
-  flags.mexcu{end+1} = ['NVCCFLAGS=' opts.cudaArch '$NVCC_FLAGS'] ;
+switch arch
+  case {'maci64'}
+    flags.ccpass{end+1} = '-mmacosx-version-min=10.9' ;
+    flags.linkpass{end+1} = '-mmacosx-version-min=10.9' ;
+    flags.ccoptim{end+1} = '-mssse3 -ffast-math' ;
+    flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
+
+    if opts.enableGpu
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+    end
+    if opts.enableGpu && opts.enableCudnn
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+    end
+
+    if opts.enableGpu && cuver < 70000
+      % CUDA prior to 7.0 on Mac require GCC libstdc++ instead of the native
+      % clang libc++. This should go away in the future.
+      flags.ccpass{end+1} = '-stdlib=libstdc++' ;
+      flags.linkpass{end+1} = '-stdlib=libstdc++' ;
+      if  ~verLessThan('matlab', '8.5.0')
+        % Complicating matters, MATLAB 8.5.0 links to clang's libc++ by
+        % default when linking MEX files overriding the option above. We
+        % force it to use GCC libstdc++
+        flags.linkpass{end+1} = '-L"$MATLABROOT/bin/maci64" -lmx -lmex -lmat -lstdc++' ;
+      end
+    end
+
+  case {'glnxa64'}
+    flags.ccoptim{end+1} = '-mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
+    flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
+
+    if opts.enableGpu
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
+    end
+    if opts.enableGpu && opts.enableCudnn
+      flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
+    end
+
+  case {'win64'}
+    flags.nvccpass{end+1} = '-Xcompiler /MD' ;
+    check_clpath(); % check whether cl.exe in path
 end
 
-% For the cudaMethod='nvcc'
-if opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
-  flags.nvcc = flags.cc ;
-  flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'extern', 'include') '"'] ;
-  flags.nvcc{end+1} = ['-I"' fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include') '"'] ;
-  if opts.debug
-    flags.nvcc{end+1} = '-O0' ;
-  end
-  flags.nvcc{end+1} = '-Xcompiler' ;
-  switch arch
-    case {'maci64', 'glnxa64'}
-      flags.nvcc{end+1} = '-fPIC' ;
-    case 'win64'
-      flags.nvcc{end+1} = '/MD' ;
-      check_clpath(); % check whether cl.exe in path
-  end
-  flags.nvcc{end+1} = opts.cudaArch;
-end
+% --------------------------------------------------------------------
+%                                                        Command flags
+% --------------------------------------------------------------------
+
+flags.mexcc = horzcat(flags.cc, ...
+                      {'-largeArrayDims'}, ...
+                      {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.ccpass)]}, ...
+                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' strjoin(flags.ccoptim)]}) ;
+if ~ispc, flags.mexcc{end+1} = '-cxx'; end
+
+% mex: compile GPU
+flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
+                     flags.cc, ...
+                     {'-largeArrayDims'}, ...
+                     {['CXXFLAGS=$CXXFLAGS ' quote_nvcc(flags.ccpass) ' ' strjoin(flags.nvccpass)]}, ...
+                     {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
+
+% mex: link
+flags.mexlink = horzcat(flags.cc, flags.link, ...
+                        {'-largeArrayDims'}, ...
+                        {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
+                        {['LINKLIBS=$LINKLIBS ', strjoin(flags.linklibs)]}) ;
+
+% nvcc: compile GPU
+flags.nvcc = horzcat(flags.cc, ...
+                     {opts.cudaArch}, ...
+                     {sprintf('-I"%s"', fullfile(matlabroot, 'extern', 'include'))}, ...
+                     {sprintf('-I"%s"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include'))}, ...
+                     { quote_nvcc(flags.ccpass)}, ...
+                     flags.nvccpass) ;
 
 if opts.verbose
   fprintf('%s: * Compiler and linker configurations *\n', mfilename) ;
   fprintf('%s: \tintermediate build products directory: %s\n', mfilename, bld_dir) ;
   fprintf('%s: \tMEX files: %s/\n', mfilename, mex_dir) ;
-  fprintf('%s: \tMEX compiler options: %s\n', mfilename, strjoin(flags.mexcc)) ;
-  fprintf('%s: \tMEX linker options: %s\n', mfilename, strjoin(flags.link)) ;
+  fprintf('%s: \tMEX options [CC CPU]: %s\n', mfilename, strjoin(flags.mexcc)) ;
+  fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.mexlink)) ;
 end
-if opts.verbose & opts.enableGpu
-  fprintf('%s: \tMEX compiler options (CUDA): %s\n', mfilename, strjoin(flags.mexcu)) ;
+if opts.verbose && opts.enableGpu
+  fprintf('%s: \tMEX options [CC GPU]: %s\n', mfilename, strjoin(flags.mexcu)) ;
 end
-if opts.verbose & opts.enableGpu & strcmp(opts.cudaMethod,'nvcc')
-  fprintf('%s: \tNVCC compiler options: %s\n', mfilename, strjoin(flags.nvcc)) ;
+if opts.verbose && opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
+  fprintf('%s: \tNVCC options [CC GPU]: %s\n', mfilename, strjoin(flags.nvcc)) ;
 end
-if opts.verbose & opts.enableImreadJpeg
+if opts.verbose && opts.enableImreadJpeg
   fprintf('%s: * Reading images *\n', mfilename) ;
   fprintf('%s: \tvl_imreadjpeg enabled\n', mfilename) ;
   fprintf('%s: \timage library: %s\n', mfilename, opts.imageLibrary) ;
@@ -409,22 +460,23 @@ end
 srcs = horzcat(lib_src,mex_src) ;
 for i = 1:numel(horzcat(lib_src, mex_src))
   [~,~,ext] = fileparts(srcs{i}) ; ext(1) = [] ;
+  objfile = toobj(bld_dir,srcs{i});
   if strcmp(ext,'cu')
     if strcmp(opts.cudaMethod,'nvcc')
-      nvcc_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.nvcc) ;
+      nvcc_compile(opts, srcs{i}, objfile, flags.nvcc) ;
     else
-      mex_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.mexcu) ;
+      mex_compile(opts, srcs{i}, objfile, flags.mexcu) ;
     end
   else
-    mex_compile(opts, srcs{i}, toobj(bld_dir,srcs{i}), flags.mexcc) ;
+    mex_compile(opts, srcs{i}, objfile, flags.mexcc) ;
   end
+  assert(exist(objfile, 'file') ~= 0, 'Compilation of %s failed.', objfile);
 end
 
 % Link into MEX files
 for i = 1:numel(mex_src)
-  [~,base,~] = fileparts(mex_src{i}) ;
-  objs = toobj(bld_dir, {mex_src{i}, lib_src{:}}) ;
-  mex_link(opts, objs, mex_dir, flags.link) ;
+  objs = toobj(bld_dir, [mex_src(i), lib_src]) ;
+  mex_link(opts, objs, mex_dir, flags.mexlink) ;
 end
 
 % Reset path adding the mex subdirectory just created
@@ -440,24 +492,25 @@ function objs = toobj(bld_dir,srcs)
 str = fullfile('matlab','src') ;
 multiple = iscell(srcs) ;
 if ~multiple, srcs = {srcs} ; end
+objs = cell(1, numel(srcs));
 for t = 1:numel(srcs)
   i = strfind(srcs{t},str);
   objs{t} = fullfile(bld_dir, srcs{t}(i+numel(str):end)) ;
 end
 if ~multiple, objs = objs{1} ; end
-objs = strrep(objs,'.cpp',['.' objext]) ;
-objs = strrep(objs,'.cu',['.' objext]) ;
-objs = strrep(objs,'.c',['.' objext]) ;
+objs = regexprep(objs,'.cpp$',['.' objext]) ;
+objs = regexprep(objs,'.cu$',['.' objext]) ;
+objs = regexprep(objs,'.c$',['.' objext]) ;
 
 % --------------------------------------------------------------------
-function objs = mex_compile(opts, src, tgt, mex_opts)
+function mex_compile(opts, src, tgt, mex_opts)
 % --------------------------------------------------------------------
 mopts = {'-outdir', fileparts(tgt), src, '-c', mex_opts{:}} ;
 opts.verbose && fprintf('%s: MEX CC: %s\n', mfilename, strjoin(mopts)) ;
 mex(mopts{:}) ;
 
 % --------------------------------------------------------------------
-function obj = nvcc_compile(opts, src, tgt, nvcc_opts)
+function nvcc_compile(opts, src, tgt, nvcc_opts)
 % --------------------------------------------------------------------
 nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
 nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', ...
@@ -508,7 +561,7 @@ function check_clpath()
 % --------------------------------------------------------------------
 % Checks whether the cl.exe is in the path (needed for the nvcc). If
 % not, tries to guess the location out of mex configuration.
-status = system('cl.exe -help');
+[status, ~] = system('cl.exe -help');
 if status == 1
   warning('CL.EXE not found in PATH. Trying to guess out of mex setup.');
   cc = mex.getCompilerConfigurations('c++');
@@ -516,7 +569,7 @@ if status == 1
     error('Mex is not configured. Run "mex -setup".');
   end
   prev_path = getenv('PATH');
-  cl_path = fullfile(cc.Location, 'VC','bin','x86_amd64');
+  cl_path = fullfile(cc.Location, 'VC','bin','amd64');
   setenv('PATH', [prev_path ';' cl_path]);
   status = system('cl.exe');
   if status == 1
@@ -529,7 +582,7 @@ if status == 1
 end
 
 % -------------------------------------------------------------------------
-function paths = which_nvcc(opts)
+function paths = which_nvcc()
 % -------------------------------------------------------------------------
 switch computer('arch')
   case 'win64'
@@ -546,13 +599,13 @@ function cuda_root = search_cuda_devkit(opts)
 % -------------------------------------------------------------------------
 % This function tries to to locate a working copy of the CUDA Devkit.
 
-opts.verbose && fprintf(['%s:\tCUDA: seraching for the CUDA Devkit' ...
+opts.verbose && fprintf(['%s:\tCUDA: searching for the CUDA Devkit' ...
                     ' (use the option ''CudaRoot'' to override):\n'], mfilename);
 
 % Propose a number of candidate paths for NVCC
 paths = {getenv('MW_NVCC_PATH')} ;
-paths = [paths, which_nvcc(opts)] ;
-for v = {'5.5', '6.0', '6.5', '7.0'}
+paths = [paths, which_nvcc()] ;
+for v = {'5.5', '6.0', '6.5', '7.0', '7.5'}
   switch computer('arch')
     case 'glnxa64'
       paths{end+1} = sprintf('/usr/local/cuda-%s/bin/nvcc', char(v)) ;
@@ -582,7 +635,8 @@ index = find([nvcc.isvalid]) ;
 if isempty(index)
   error('Could not find a valid NVCC executable\n') ;
 end
-nvcc = nvcc(index(1)) ;
+[~, newest] = max([nvcc(index).version]);
+nvcc = nvcc(index(newest)) ;
 cuda_root = fileparts(fileparts(nvcc.path)) ;
 
 if opts.verbose
@@ -624,7 +678,7 @@ end
 % available in the command line search path. Make sure that this is%
 % the case.
 [valid_, cuver_] = validate_nvcc('nvcc') ;
-if ~valid || cuver_ ~= cuver
+if ~valid_ || cuver_ ~= cuver
   warning('NVCC not found in the command line path or the one found does not matches ''%s''.', nvccPath);
   nvccDir = fileparts(nvccPath) ;
   prevPath = getenv('PATH') ;
@@ -642,6 +696,12 @@ if ~valid || cuver_ ~= cuver
   end
 end
 
+% -------------------------------------------------------------------------
+function str = quote_nvcc(str)
+% -------------------------------------------------------------------------
+if iscell(str), str = strjoin(str) ; end
+str = strrep(strtrim(str), ' ', ',') ;
+if ~isempty(str), str = ['-Xcompiler ' str] ; end
 
 % --------------------------------------------------------------------
 function cudaArch = get_cuda_arch(opts)

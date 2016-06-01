@@ -21,9 +21,10 @@ showing how to train CNNs.
 ## Building blocks
 
 - [`vl_nnbnorm`](mfiles/vl_nnbnorm.md) Batch normalization.
+- [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) Bilinear Samppler.
 - [`vl_nnconv`](mfiles/vl_nnconv.md) Linear convolution by a filter.
 - [`vl_nnconcat`](mfiles/vl_nnconcat.md) Concatenation.
-- [`vl_nnconvt`](mfiles/vl_nnconvt.md) Convolution transopose.
+- [`vl_nnconvt`](mfiles/vl_nnconvt.md) Convolution transpose.
 - [`vl_nncrop`](mfiles/vl_nncrop.md) Cropping.
 - [`vl_nndropout`](mfiles/vl_nndropout.md) Dropout.
 - [`vl_nnloss`](mfiles/vl_nnloss.md) Classification log-loss.
@@ -62,8 +63,8 @@ showing how to train CNNs.
 ## Other functions
 
 - [`vl_argparse`](mfiles/vl_argparse.md) A helper function to parse
-  optional arugments.
-- [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fiels in the toolbox.
+  optional arguments.
+- [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fields in the toolbox.
 - [`vl_rootnn`](mfiles/vl_rootnn.md) Return the path to the MatConvNet toolbox installation.
 - [`vl_setpunn`](mfiles/vl_setupnn.md) Setup MatConvNet for use in MATLAB.
 - [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) Quickly load a batch of JPEG images.
