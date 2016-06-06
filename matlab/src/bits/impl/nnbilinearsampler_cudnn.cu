@@ -21,7 +21,7 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 
 #if CUDNN_VERSION < 5000
-#warning "bilinearsampler_cudnn.cu will be disabled as it requires CUDNN v5 or higher."
+//#warning "bilinearsampler_cudnn.cu will be disabled as it requires CUDNN v5 or higher."
 
 namespace vl { namespace impl {
   template<vl::DataType dataType>
