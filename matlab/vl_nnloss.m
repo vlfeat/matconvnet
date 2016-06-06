@@ -1,4 +1,4 @@
-function Y = vl_nnloss(X,c,dzdy,varargin)
+function y = vl_nnloss(x,c,dzdy,varargin)
 %VL_NNLOSS CNN categorical or attribute loss.
 %   Y = VL_NNLOSS(X, C) computes the loss incurred by the prediction
 %   scores X given the categorical labels C.
@@ -133,7 +133,7 @@ opts.loss = 'softmaxlog' ;
 opts.topK = 5 ;
 opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
-inputSize = [size(X,1) size(X,2) size(X,3) size(X,4)] ;
+inputSize = [size(x,1) size(x,2) size(x,3) size(x,4)] ;
 
 % Form 1: C has one label per image. In this case, get C in form 2 or
 % form 3.
@@ -149,6 +149,20 @@ hasIgnoreLabel = any(c(:) == 0);
 % Spatial weighting
 % --------------------------------------------------------------------
 
+% work around a bug in MATLAB, where native cast() would slow
+% progressively
+if isa(x, 'gpuArray')
+  switch classUnderlying(x) ;
+    case 'single', cast = @(z) single(z) ;
+    case 'double', cast = @(z) double(z) ;
+  end
+else
+  switch class(x)
+    case 'single', cast = @(z) single(z) ;
+    case 'double', cast = @(z) double(z) ;
+  end
+end
+
 labelSize = [size(c,1) size(c,2) size(c,3) size(c,4)] ;
 assert(isequal(labelSize(1:2), inputSize(1:2))) ;
 assert(labelSize(4) == inputSize(4)) ;
@@ -160,7 +174,7 @@ switch lower(opts.loss)
 
     if hasIgnoreLabel
       % null labels denote instances that should be skipped
-      instanceWeights = cast(c(:,:,1,:) ~= 0, 'like', c) ;
+      instanceWeights = cast(c(:,:,1,:) ~= 0) ;
     end
 
   case {'binaryerror', 'binarylog', 'logistic', 'hinge'}
@@ -170,7 +184,7 @@ switch lower(opts.loss)
 
     if hasIgnoreLabel
       % null labels denote instances that should be skipped
-      instanceWeights = cast(c ~= 0, 'like', c) ;
+      instanceWeights = cast(c ~= 0) ;
     end
 
   otherwise
@@ -207,39 +221,39 @@ end
 if nargin <= 2 || isempty(dzdy)
   switch lower(opts.loss)
     case 'classerror'
-      [~,chat] = max(X,[],3) ;
-      t = cast(c ~= chat, 'like', c) ;
+      [~,chat] = max(x,[],3) ;
+      t = cast(c ~= chat) ;
     case 'topkerror'
-      [~,predictions] = sort(X,3,'descend') ;
+      [~,predictions] = sort(x,3,'descend') ;
       t = 1 - sum(bsxfun(@eq, c, predictions(:,:,1:opts.topK,:)), 3) ;
     case 'log'
-      t = - log(X(ci)) ;
+      t = - log(x(ci)) ;
     case 'softmaxlog'
-      Xmax = max(X,[],3) ;
-      ex = exp(bsxfun(@minus, X, Xmax)) ;
-      t = Xmax + log(sum(ex,3)) - X(ci) ;
+      Xmax = max(x,[],3) ;
+      ex = exp(bsxfun(@minus, x, Xmax)) ;
+      t = Xmax + log(sum(ex,3)) - x(ci) ;
     case 'mhinge'
-      t = max(0, 1 - X(ci)) ;
+      t = max(0, 1 - x(ci)) ;
     case 'mshinge'
-      Q = X ;
+      Q = x ;
       Q(ci) = -inf ;
-      t = max(0, 1 - X(ci) + max(Q,[],3)) ;
+      t = max(0, 1 - x(ci) + max(Q,[],3)) ;
     case 'binaryerror'
-      t = cast(sign(X - opts.threshold) ~= c, 'like', c) ;
+      t = cast(sign(x - opts.threshold) ~= c) ;
     case 'binarylog'
-      t = -log(c.*(X-0.5) + 0.5) ;
+      t = -log(c.*(x-0.5) + 0.5) ;
     case 'logistic'
       %t = log(1 + exp(-c.*X)) ;
-      a = -c.*X ;
+      a = -c.*x ;
       b = max(0, a) ;
       t = b + log(exp(-b) + exp(a-b)) ;
     case 'hinge'
-      t = max(0, 1 - c.*X) ;
+      t = max(0, 1 - c.*x) ;
   end
   if ~isempty(instanceWeights)
-    Y = instanceWeights(:)' * t(:) ;
+    y = instanceWeights(:)' * t(:) ;
   else
-    Y = sum(t(:));
+    y = sum(t(:));
   end
 else
   if ~isempty(instanceWeights)
@@ -247,38 +261,38 @@ else
   end
   switch lower(opts.loss)
     case {'classerror', 'topkerror'}
-      Y = zerosLike(X) ;
+      y = zerosLike(x) ;
     case 'log'
-      Y = zerosLike(X) ;
-      Y(ci) = - dzdy ./ max(X(ci), 1e-8) ;
+      y = zerosLike(x) ;
+      y(ci) = - dzdy ./ max(x(ci), 1e-8) ;
     case 'softmaxlog'
-      Xmax = max(X,[],3) ;
-      ex = exp(bsxfun(@minus, X, Xmax)) ;
-      Y = bsxfun(@rdivide, ex, sum(ex,3)) ;
-      Y(ci) = Y(ci) - 1 ;
-      Y = bsxfun(@times, dzdy, Y) ;
+      Xmax = max(x,[],3) ;
+      ex = exp(bsxfun(@minus, x, Xmax)) ;
+      y = bsxfun(@rdivide, ex, sum(ex,3)) ;
+      y(ci) = y(ci) - 1 ;
+      y = bsxfun(@times, dzdy, y) ;
     case 'mhinge'
-      Y = zerosLike(X) ;
-      Y(ci) = - dzdy .* (X(ci) < 1) ;
+      y = zerosLike(x) ;
+      y(ci) = - dzdy .* (x(ci) < 1) ;
     case 'mshinge'
-      Q = X ;
+      Q = x ;
       Q(ci) = -inf ;
       [~, q] = max(Q,[],3) ;
       qi = offset + numPixelsPerImage * (q - 1) ;
-      W = dzdy .* (X(ci) - X(qi) < 1) ;
-      Y = zerosLike(X) ;
-      Y(ci) = - W ;
-      Y(qi) = + W ;
+      W = dzdy .* (x(ci) - x(qi) < 1) ;
+      y = zerosLike(x) ;
+      y(ci) = - W ;
+      y(qi) = + W ;
     case 'binaryerror'
-      Y = zerosLike(X) ;
+      y = zerosLike(x) ;
     case 'binarylog'
-      Y = - dzdy ./ (X + (c-1)*0.5) ;
+      y = - dzdy ./ (x + (c-1)*0.5) ;
     case 'logistic'
       % t = exp(-Y.*X) / (1 + exp(-Y.*X)) .* (-Y)
       % t = 1 / (1 + exp(Y.*X)) .* (-Y)
-      Y = - dzdy .* c ./ (1 + exp(c.*X)) ;
+      y = - dzdy .* c ./ (1 + exp(c.*x)) ;
     case 'hinge'
-      Y = - dzdy .* c .* (c.*X < 1) ;
+      y = - dzdy .* c .* (c.*x < 1) ;
   end
 end
 
