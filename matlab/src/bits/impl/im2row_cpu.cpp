@@ -63,12 +63,17 @@ namespace vl { namespace impl {
             size_t padLeft,
             size_t padRight,
             size_t padTop,
-            size_t padBottom)
+            size_t padBottom,
+            size_t dilateX,
+            size_t dilateY)
     {
-      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int nWindowWidth = ((windowWidth - 1) * dilateX + 1);
+      int nWindowHeight = ((windowHeight - 1) * dilateY + 1);
+      int numPatchesX = (width + (padLeft + padRight) - nWindowWidth)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - nWindowHeight)/strideY + 1 ;
       int numRows = windowWidth * windowHeight * depth ;
-
+      int empty_rows = ((dilateY - 1) * nWindowWidth);
+      int blank_per_height = empty_rows - dilateX + 1;
       /*
        Fill a row of the stacked image at a time. Since patches are stored
        along the columns, scanning a row menas visiting all patche once.
@@ -83,11 +88,14 @@ namespace vl { namespace impl {
          Get the patch offset corresponding to this row of the stacked
          image.
          */
-        int u = row ;
-        int v = u / windowWidth ;
-        int z = v / windowHeight ;
-        u %= windowWidth ;
-        v %= windowHeight ;
+        int nRow = ( row * dilateX ) + 
+              ( row / windowWidth ) * blank_per_height -
+              ( row / (windowWidth*windowHeight)) * empty_rows;
+        int u = nRow ;
+        int v = u / nWindowWidth ;
+        int z = v / nWindowHeight ;
+        u %= nWindowWidth ;
+        v %= nWindowHeight ;
 
         /*
          Filling this row amounts to visiting all the pixels in the input
@@ -169,11 +177,17 @@ namespace vl { namespace impl {
              size_t padLeft,
              size_t padRight,
              size_t padTop,
-             size_t padBottom)
+             size_t padBottom,
+             size_t dilateX,
+             size_t dilateY)
     {
-      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int nWindowWidth = ((windowWidth - 1) * dilateX + 1);
+      int nWindowHeight = ((windowHeight - 1) * dilateY + 1);
+      int numPatchesX = (width + (padLeft + padRight) - nWindowWidth)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - nWindowHeight)/strideY + 1 ;
       int numRows = windowWidth * windowHeight * depth ;
+      int empty_rows = ((dilateY - 1) * nWindowWidth);
+      int blank_per_height = empty_rows - dilateX + 1;
 
       memset(data, 0, sizeof(type) * width * height * depth) ;
 
@@ -182,11 +196,14 @@ namespace vl { namespace impl {
        See comments of im2col for an explanation of the algorithm.
        */
       for (int row = 0; row < numRows ; ++row) {
-        int u = row ;
-        int v = u / windowWidth ;
-        int z = v / windowHeight ;
-        u %= windowWidth ;
-        v %= windowHeight ;
+        int nRow = ( row * dilateX ) + 
+              ( row / windowWidth ) * blank_per_height -
+              ( row / (windowWidth*windowHeight)) * empty_rows;
+        int u = nRow ;
+        int v = u / nWindowWidth ;
+        int z = v / nWindowHeight ;
+        u %= nWindowWidth ;
+        v %= nWindowHeight ;
 
         int x0 = static_min(numPatchesX, ceil_divide(padLeft - u, strideX)) ;
         int y0 = static_min(numPatchesY, ceil_divide(padTop - v, strideY)) ;

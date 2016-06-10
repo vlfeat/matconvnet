@@ -40,7 +40,8 @@ data, dataMult, \
 filters, biases, \
 strideY, strideX, \
 padTop, padBottom, \
-padLeft, padRight) ;
+padLeft, padRight, \
+dilateY, dilateX) ;
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
@@ -74,7 +75,8 @@ vl::nnconv_forward(Context& context,
                    Tensor biases,
                    int strideY, int strideX,
                    int padTop, int padBottom,
-                   int padLeft, int padRight)
+                   int padLeft, int padRight, 
+                   int dilateY, int dilateX)
 {
   vl::Error error = vlSuccess ;
   vl::Type dataType = output.getDataType() ;
@@ -92,7 +94,8 @@ vl::nnconv_forward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().getCudnnEnabled()) {
+      if ((dilateX == 1 && dilateY == 1) &&
+           context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
         if (error == vl::vlSuccess) { return error ; }
         if (error != vl::vlErrorUnsupported) { goto done ; }
@@ -128,7 +131,8 @@ error = vl::impl::nnconv_backward_blas<deviceType, dataType> \
  data, filters, derOutput, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
 #undef DISPATCHCUDNN
 #define DISPATCHCUDNN(dataType) \
@@ -150,7 +154,8 @@ vl::nnconv_backward(Context& context,
                     Tensor derOutput,
                     int strideY, int strideX,
                     int padTop, int padBottom,
-                    int padLeft, int padRight)
+                    int padLeft, int padRight,
+                    int dilateY, int dilateX)
 {
   vl::Error error = vl::vlSuccess ;
   vl::Type dataType = derOutput.getDataType() ;
@@ -168,7 +173,8 @@ vl::nnconv_backward(Context& context,
 #if ENABLE_GPU
     case vl::GPU:
 #if ENABLE_CUDNN
-      if (context.getCudaHelper().getCudnnEnabled()) {
+      if ((dilateX == 1 && dilateY == 1) && 
+          context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
         if (error == vl::vlSuccess) { return error ; }
         if (error != vl::vlErrorUnsupported) { goto done ; }

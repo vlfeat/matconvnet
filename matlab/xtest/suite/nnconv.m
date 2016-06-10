@@ -12,9 +12,42 @@ classdef nnconv < nntest
     padx2 = {0 1 2}
     pady1 = {0 1 2}
     pady2 = {0 1 2}
+    dilationx = {1 2 3 4}
+    dilationy = {1 2 3 4}
   end
 
   methods (Test)
+    function dilation_correctness(test, dilationx, dilationy, stride, pad)
+      x = test.randn(9,9,4,1) ;
+      w = test.randn(3,3,4,1) ;
+
+      % dilated convolution is like a regular but larger convolution
+      % with 0 holes in middle of the filter. We construct the larger
+      % convolution to test the dilated convolution implementation.
+      
+      [szY, szX, C, N] = size(w);
+      new_W = test.zeros((szY-1)*dilationy + 1, (szX-1)*dilationx + 1, C, N);
+      y_points = 1:dilationy:(szY-1)*dilationy+1;
+      x_points = 1:dilationx:(szX-1)*dilationx+1;
+      for yi = 1:numel(y_points),
+        for xi = 1:numel(x_points),
+          new_W(y_points(yi), x_points(xi), :, :) = w(yi, xi, :, :);
+        end
+      end
+      y = vl_nnconv(x,new_W,[],'pad',pad,'stride',stride) ;
+      in_dilation = [dilationy dilationx] ;
+      y_ = vl_nnconv(x,w,[],'dilate',in_dilation,'pad',pad,'stride',stride) ;
+
+      test.eq(y,y_) ;
+
+      dzdy = test.randn(size(y)) ;
+      [dzdx,dzdw] = vl_nnconv(x,new_W,[],dzdy,'pad',pad,'stride',stride) ;
+      [dzdx_,dzdw_] = vl_nnconv(x,w,[],dzdy,'dilate',in_dilation,'pad',pad,'stride',stride) ;
+      test.eq(dzdx,dzdx_);
+      test.eq(dzdw(y_points, x_points, :),dzdw_);
+    end
+	  
+	  
     function identity_filters(test)
       x = test.randn(1,1,10,4) ;
       b = test.randn(1,size(x,3)) ;

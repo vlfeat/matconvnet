@@ -33,10 +33,14 @@ im2row_forward_kernel(T* stacked,
                       const int strideX,
                       const int strideY,
                       const int padLeft,
-                      const int padTop)
+                      const int padTop,
+                      const int dilateX,
+                      const int dilateY)
 {
   /* each kernel copies the pixels in an image patch for one channel */
   int index = threadIdx.x + blockIdx.x * blockDim.x ;
+  int nWindowWidth = ((windowWidth - 1) * dilateX + 1);
+  int nWindowHeight = ((windowHeight - 1) * dilateY + 1);
   if (index < numPatchSlices) {
     /*
      get the patch slice (x,y,z) to copy
@@ -64,8 +68,8 @@ im2row_forward_kernel(T* stacked,
     /*
      copy the patch slice
      */
-    for (int v = 0 ; v < windowHeight ; ++v) {
-      for (int u = 0 ; u < windowWidth ; ++u) {
+    for (int v = 0 ; v < nWindowHeight ; v+=dilateY) {
+      for (int u = 0 ; u < nWindowWidth ; u+=dilateX) {
         if (y_data + v >= 0 &&
             y_data + v < height &&
             x_data + u >= 0 &&
@@ -80,8 +84,9 @@ im2row_forward_kernel(T* stacked,
   }
 }
 
+
 /* ---------------------------------------------------------------- */
-/*                                           im2row backward kernel */
+/*                          im2row backward kernel without dilation */
 /* ---------------------------------------------------------------- */
 
 template <typename T> __global__ void
@@ -196,6 +201,70 @@ im2row_backward_kernel(T* data,
   }
 }
 
+/* ---------------------------------------------------------------- */
+/*                             im2row backward kernel with dilation */
+/* ---------------------------------------------------------------- */
+
+template <typename T> __global__ void
+im2row_backward_kernel(T* data,
+                        T const* stacked,
+                       const int numPatchesX,
+                       const int numPatchesY,
+                       const int dataVolume,
+                       const int width,
+                       const int height,
+                       const int depth,
+                       const int windowWidth,
+                       const int windowHeight,
+                       const int strideX,
+                       const int strideY,
+                       const int padLeft,
+                       const int padTop,
+                       const int dilateX,
+                       const int dilateY)
+{
+  int index = threadIdx.x + blockIdx.x * blockDim.x;
+  int nWindowWidth = ((windowWidth - 1) * dilateX + 1);
+  int nWindowHeight = ((windowHeight - 1) * dilateY + 1);
+
+  if (index < dataVolume)
+  {
+    T accumulator = 0 ;
+
+    int x_data = index ;
+    int y_data = x_data / width ;
+    int z = y_data / height ;
+    x_data %= width ;
+    y_data %= height ;
+
+    int dx = x_data + padLeft - nWindowWidth ;
+    int dy = y_data + padTop - nWindowHeight ;
+    int x1 = (dx >= 0) ? dx/strideX + 1 : 0 ;
+    int y1 = (dy >= 0) ? dy/strideY + 1 : 0 ;
+    int x2 = min((x_data + padLeft) / strideX, numPatchesX - 1) ;
+    int y2 = min((y_data + padTop) / strideY, numPatchesY - 1) ;
+
+    stacked += ((z * windowHeight) * windowWidth) * (numPatchesX*numPatchesY);
+    for (int y = y1 ; y <= y2 ; ++y ) {
+      int v_y = (y_data - (y * strideY - padTop));
+      if (v_y % dilateY != 0){
+        continue;
+      }
+      v_y = v_y/dilateY;
+      for (int x = x1 ; x <= x2 ; ++x ) {
+        int u_x = (x_data - (x * strideX - padLeft));
+        if (u_x % dilateX != 0){
+          continue;
+        }
+        u_x = u_x/dilateX;
+        int ptr = (y * numPatchesX + x) + (u_x + v_y * windowWidth) * (numPatchesX*numPatchesY);
+        accumulator += stacked[ptr];
+      }
+    }
+    data[index] = accumulator;
+  }
+}
+
 namespace vl { namespace impl {
 
   template<typename type>
@@ -220,12 +289,15 @@ namespace vl { namespace impl {
             size_t padLeft,
             size_t padRight,
             size_t padTop,
-            size_t padBottom)
+            size_t padBottom,
+            size_t dilateX,
+            size_t dilateY)
     {
       /* Each kernel instance copies a feature dimension of a patch */
-
-      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int nWindowWidth = ((windowWidth - 1) * dilateX + 1);
+      int nWindowHeight = ((windowHeight - 1) * dilateY + 1);
+      int numPatchesX = (width + (padLeft + padRight) - nWindowWidth)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - nWindowHeight)/strideY + 1 ;
       int numPatchSlices = numPatchesX * numPatchesY * depth ;
 
       im2row_forward_kernel<type>
@@ -238,7 +310,8 @@ namespace vl { namespace impl {
        width, height,
        windowWidth, windowHeight,
        strideX, strideY,
-       padLeft, padTop) ;
+       padLeft, padTop,
+       dilateX, dilateY) ;
 
       return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
     }
@@ -261,29 +334,52 @@ namespace vl { namespace impl {
              size_t padLeft,
              size_t padRight,
              size_t padTop,
-             size_t padBottom)
+             size_t padBottom,
+             size_t dilateX,
+             size_t dilateY)
     {
       /*
        Each kernel integrates all contributions to a particular element
        of data.
        */
+      int nWindowWidth = ((windowWidth - 1) * dilateX + 1);
+      int nWindowHeight = ((windowHeight - 1) * dilateY + 1);
+      int numPatchesX = (width + (padLeft + padRight) - nWindowWidth)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - nWindowHeight)/strideY + 1 ;
 
-      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
       int dataVolume = width * height * depth ;
 
-      im2row_backward_kernel<type>
-      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (data,
-       stacked,
-       numPatchesX,
-       numPatchesY,
-       dataVolume,
-       width, height, depth,
-       windowWidth, windowHeight,
-       strideX, strideY,
-       padLeft, padTop) ;
-
+      /*
+        The backward operation for dilated convolution is not as efficient
+        as the backward operation for regular convolutions, so if no dilation
+        is necessary, we use the previous implementation.
+      */
+      if (dilateX == 1 && dilateY == 1){
+        im2row_backward_kernel<type>
+        <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+        (data,
+         stacked,
+         numPatchesX,
+         numPatchesY,
+         dataVolume,
+         width, height, depth,
+         windowWidth, windowHeight,
+         strideX, strideY,
+         padLeft, padTop) ;
+      }else{
+        im2row_backward_kernel<type>
+        <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+        (data,
+         stacked,
+         numPatchesX,
+         numPatchesY,
+         dataVolume,
+         width, height, depth,
+         windowWidth, windowHeight,
+         strideX, strideY,
+         padLeft, padTop,
+         dilateX, dilateY) ;
+      }
       return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
     }
 
