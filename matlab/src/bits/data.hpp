@@ -61,6 +61,15 @@ namespace vl {
   } ;
   const char * getErrorMessage(Error error) ;
 
+  inline size_t getDataTypeSizeInBytes(DataType dataType) {
+    switch (dataType) {
+      case VLDT_Char:   return sizeof(DataTypeTraits<VLDT_Char>::type) ;
+      case VLDT_Float:  return sizeof(DataTypeTraits<VLDT_Float>::type) ;
+      case VLDT_Double: return sizeof(DataTypeTraits<VLDT_Double>::type) ;
+      default:          return 0 ;
+    }
+  }
+
   class CudaHelper ;
 
   /* -----------------------------------------------------------------
