@@ -29,7 +29,7 @@ enum {
 } ;
 
 /* options */
-vlmxOption  options [] = {
+VLMXOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
   {"Epsilon",	       1,   opt_epsilon           },
   {"Moments",          1,   opt_moments           },
@@ -180,8 +180,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Create output buffers */
-  vl::Device deviceType = data.getDeviceType() ;
-  vl::Type dataType = data.getDataType() ;
+  vl::DeviceType deviceType = data.getDeviceType() ;
+  vl::DataType dataType = data.getDataType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
   vl::MexTensor derMultipliers(context) ;
@@ -208,7 +208,7 @@ void mexFunction(int nout, mxArray *out[],
 
   if (verbosity > 0) {
     mexPrintf("vl_nnbnorm: mode %s; %s; moments %s/%s\n",
-              (data.getDeviceType()==vl::GPU)?"gpu":"cpu",
+              (data.getDeviceType()==vl::VLDT_GPU)?"gpu":"cpu",
               backMode?"backward":"forward",
               givenMomentsMode?"given":"computed",
               returnMomentsMode?"returned":"discared") ;
@@ -230,7 +230,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
-  vl::Error error ;
+  vl::ErrorCode error ;
 
   if (!backMode) {
     if (!givenMomentsMode) {
@@ -279,7 +279,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
   if (!backMode) {

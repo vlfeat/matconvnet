@@ -10,11 +10,13 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __vl__data_hpp__
-#define __vl__data_hpp__
+#ifndef __vl_data_hpp__
+#define __vl_data_hpp__
 
 #include <cstddef>
 #include <string>
+#include <time.h>
+#include <sys/time.h>
 
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 #define STRINGIZE_HELPER(x) #x
@@ -32,34 +34,48 @@ the terms of the BSD license (see the COPYING file).
 #endif
 
 namespace vl {
-  enum Device { CPU = 0, GPU }  ;
-  enum Type {
-    vlTypeChar,
-    vlTypeFloat,
-    vlTypeDouble
+
+  /// Error codes
+  enum ErrorCode {
+    VLE_Success = 0,
+    VLE_Unsupported,
+    VLE_Cuda,
+    VLE_Cudnn,
+    VLE_Cublas,
+    VLE_OutOfMemory,
+    VLE_OutOfGPUMemeory,
+    VLE_IllegalArgument,
+    VLE_Unknown,
+    VLE_Timeout,
+    VLE_NoData,
+    VLE_IllegalMessage
   } ;
 
-  template <vl::Type id> struct DataTypeTraits { } ;
-  template <> struct DataTypeTraits<vlTypeChar> { typedef char type ; } ;
-  template <> struct DataTypeTraits<vlTypeFloat> { typedef float type ; } ;
-  template <> struct DataTypeTraits<vlTypeDouble> { typedef double type ; } ;
+  /// Get an error message for a given code
+  const char * getErrorMessage(ErrorCode error) ;
+
+  /// Type of device: CPU or GPU
+  enum DeviceType {
+    VLDT_CPU = 0,
+    VLDT_GPU
+  }  ;
+
+  /// Type of data (char, float, double, ...)
+  enum DataType {
+    VLDT_Char,
+    VLDT_Float,
+    VLDT_Double
+  } ;
+
+  template <vl::DataType id> struct DataTypeTraits { } ;
+  template <> struct DataTypeTraits<VLDT_Char> { typedef char type ; } ;
+  template <> struct DataTypeTraits<VLDT_Float> { typedef float type ; } ;
+  template <> struct DataTypeTraits<VLDT_Double> { typedef double type ; } ;
 
   template <typename type> struct BuiltinToDataType {} ;
-  template <> struct BuiltinToDataType<char> { enum { dataType = vlTypeChar } ; } ;
-  template <> struct BuiltinToDataType<float> { enum { dataType = vlTypeFloat } ; } ;
-  template <> struct BuiltinToDataType<double> { enum { dataType = vlTypeDouble } ; } ;
-
-  enum Error {
-    vlSuccess = 0,
-    vlErrorUnsupported,
-    vlErrorCuda,
-    vlErrorCudnn,
-    vlErrorCublas,
-    vlErrorOutOfMemory,
-    vlErrorOutOfGPUMemeory,
-    vlErrorUnknown
-  } ;
-  const char * getErrorMessage(Error error) ;
+  template <> struct BuiltinToDataType<char> { enum { dataType = VLDT_Char } ; } ;
+  template <> struct BuiltinToDataType<float> { enum { dataType = VLDT_Float } ; } ;
+  template <> struct BuiltinToDataType<double> { enum { dataType = VLDT_Double } ; } ;
 
   inline size_t getDataTypeSizeInBytes(DataType dataType) {
     switch (dataType) {
@@ -76,7 +92,9 @@ namespace vl {
    * Helpers
    * -------------------------------------------------------------- */
 
-  inline int divideUpwards(int a, int b)
+  /// Computes the smallest multiple of @a b which is greater
+  /// or equal to @a a.
+  inline int divideAndRoundUp(int a, int b)
   {
     return (a + b - 1) / b ;
   }
@@ -86,14 +104,14 @@ namespace vl {
     {
     public:
       Buffer() ;
-      vl::Error init(Device deviceType, Type dataType, size_t size) ;
+      vl::ErrorCode init(DeviceType deviceType, DataType dataType, size_t size) ;
       void * getMemory() ;
       int getNumReallocations() const ;
       void clear() ;
       void invalidateGpu() ;
     protected:
-      Device deviceType ;
-      Type dataType ;
+      DeviceType deviceType ;
+      DataType dataType ;
       size_t size ;
       void * memory ;
       int numReallocations ;
@@ -110,26 +128,26 @@ namespace vl {
     Context() ;
     ~Context() ;
 
-    void * getWorkspace(Device device, size_t size) ;
-    void clearWorkspace(Device device) ;
-    void * getAllOnes(Device device, Type type, size_t size) ;
-    void clearAllOnes(Device device) ;
+    void * getWorkspace(DeviceType device, size_t size) ;
+    void clearWorkspace(DeviceType device) ;
+    void * getAllOnes(DeviceType device, DataType type, size_t size) ;
+    void clearAllOnes(DeviceType device) ;
     CudaHelper& getCudaHelper() ;
 
     void clear() ; // do a reset
     void invalidateGpu() ; // drop CUDA memory and handles
 
-    vl::Error passError(vl::Error error, char const * message = NULL) ;
-    vl::Error setError(vl::Error error, char const * message = NULL) ;
+    vl::ErrorCode passError(vl::ErrorCode error, char const * message = NULL) ;
+    vl::ErrorCode setError(vl::ErrorCode error, char const * message = NULL) ;
     void resetLastError() ;
-    vl::Error getLastError() const ;
+    vl::ErrorCode getLastError() const ;
     std::string const& getLastErrorMessage() const ;
 
   private:
     impl::Buffer workspace[2] ;
     impl::Buffer allOnes[2] ;
 
-    Error lastError ;
+    ErrorCode lastError ;
     std::string lastErrorMessage ;
 
     CudaHelper * cudaHelper ;
@@ -191,19 +209,19 @@ namespace vl {
   public:
     Tensor() ;
     Tensor(Tensor const &) ;
-    Tensor(TensorShape const & shape, Type dataType,
-           Device deviceType, void * memory, size_t memorySize) ;
+    Tensor(TensorShape const & shape, DataType dataType,
+           DeviceType deviceType, void * memory, size_t memorySize) ;
     void * getMemory() ;
-    Device getDeviceType() const ;
+    DeviceType getDeviceType() const ;
     TensorShape getShape() const ;
-    Type getDataType() const ;
+    DataType getDataType() const ;
     operator bool() const ;
     bool isNull() const ;
     void setMemory(void * x) ;
 
   protected:
-    Device deviceType ;
-    Type dataType ;
+    DeviceType deviceType ;
+    DataType dataType ;
     void * memory ;
     size_t memorySize ;
   } ;

@@ -34,7 +34,7 @@ the terms of the BSD license (see the COPYING file).
 namespace vl {
 
 #if ENABLE_CUDNN
-  namespace impl { template<vl::Type type> struct nnconv_cudnn ; }
+  namespace impl { template<vl::DataType type> struct nnconv_cudnn ; }
 #endif
 
   class CudaHelper {
@@ -42,14 +42,14 @@ namespace vl {
     // Cuda errors
     cudaError_t getLastCudaError() const ;
     std::string const& getLastCudaErrorMessage() const ;
-    vl::Error catchCudaError(char const* description = NULL) ;
+    vl::ErrorCode catchCudaError(char const* description = NULL) ;
 
     // CuBLAS support
     cublasStatus_t getCublasHandle(cublasHandle_t* handle) ;
     void clearCublas() ;
     cublasStatus_t getLastCublasError() const ;
     std::string const& getLastCublasErrorMessage() const ;
-    vl::Error catchCublasError(cublasStatus_t status,
+    vl::ErrorCode catchCublasError(cublasStatus_t status,
                                char const* description = NULL) ;
 
 #if ENABLE_CUDNN
@@ -78,10 +78,10 @@ namespace vl {
 
     cudnnStatus_t getLastCudnnError() const ;
     std::string const& getLastCudnnErrorMessage() const ;
-    vl::Error catchCudnnError(cudnnStatus_t status,
+    vl::ErrorCode catchCudnnError(cudnnStatus_t status,
                               char const* description = NULL) ;
 
-    template<vl::Type type> friend struct vl::impl::nnconv_cudnn ;
+    template<vl::DataType type> friend struct vl::impl::nnconv_cudnn ;
 #endif
 
   protected:

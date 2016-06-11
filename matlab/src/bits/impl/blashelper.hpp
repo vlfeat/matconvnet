@@ -27,12 +27,12 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-template<vl::Device deviceType, vl::Type dataType>
+template<vl::DeviceType deviceType, vl::DataType dataType>
 struct blas
 {
   typedef typename DataTypeTraits<dataType>::type type ;
 
-  static vl::Error
+  static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
        ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -42,7 +42,7 @@ struct blas
        type beta,
        type * c, ptrdiff_t ldc) ;
 
-  static vl::Error
+  static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
        ptrdiff_t m, ptrdiff_t n,
@@ -52,14 +52,14 @@ struct blas
        type beta,
        type * y, ptrdiff_t incy) ;
 
-  static vl::Error
+  static vl::ErrorCode
   axpy(vl::Context& context,
        ptrdiff_t n,
        type alpha,
        type const *x, ptrdiff_t incx,
        type *y, ptrdiff_t incy) ;
 
-  static vl::Error
+  static vl::ErrorCode
   scal(vl::Context& context,
        ptrdiff_t n,
        type alpha,
@@ -72,11 +72,11 @@ struct blas
 /* ---------------------------------------------------------------- */
 
 template<>
-struct blas<vl::CPU, vl::vlTypeFloat>
+struct blas<vl::VLDT_CPU, vl::VLDT_Float>
 {
   typedef float type ;
 
-  static vl::Error
+  static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
        ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -93,10 +93,10 @@ struct blas<vl::CPU, vl::vlTypeFloat>
           (type*)b, &ldb,
           &beta,
           c, &ldc) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
        ptrdiff_t m, ptrdiff_t n,
@@ -112,10 +112,10 @@ struct blas<vl::CPU, vl::vlTypeFloat>
           (float*)x, &incx,
           &beta,
           y, &incy) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   axpy(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -126,10 +126,10 @@ struct blas<vl::CPU, vl::vlTypeFloat>
           &alpha,
           (float*)x, &incx,
           (float*)y, &incy) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   scal(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -138,16 +138,16 @@ struct blas<vl::CPU, vl::vlTypeFloat>
     sscal(&n,
           &alpha,
           (float*)x, &incx) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 } ;
 
 template<>
-struct blas<vl::CPU, vl::vlTypeDouble>
+struct blas<vl::VLDT_CPU, vl::VLDT_Double>
 {
   typedef double type ;
 
-  static vl::Error
+  static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
        ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -164,10 +164,10 @@ struct blas<vl::CPU, vl::vlTypeDouble>
           (type*)b, &ldb,
           &beta,
           c, &ldc) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
        ptrdiff_t m, ptrdiff_t n,
@@ -183,10 +183,10 @@ struct blas<vl::CPU, vl::vlTypeDouble>
           (type*)x, &incx,
           &beta,
           y, &incy) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   axpy(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -197,10 +197,10 @@ struct blas<vl::CPU, vl::vlTypeDouble>
           &alpha,
           (double*)x, &incx,
           (double*)y, &incy) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   scal(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -209,7 +209,7 @@ struct blas<vl::CPU, vl::vlTypeDouble>
     dscal(&n,
           &alpha,
           (double*)x, &incx) ;
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 } ;
 
@@ -220,11 +220,11 @@ struct blas<vl::CPU, vl::vlTypeDouble>
 #ifdef ENABLE_GPU
 
 template<>
-struct blas<vl::GPU, vl::vlTypeFloat>
+struct blas<vl::VLDT_GPU, vl::VLDT_Float>
 {
   typedef float type ;
 
-  static vl::Error
+  static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
        ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -253,7 +253,7 @@ struct blas<vl::GPU, vl::vlTypeFloat>
     (context.getCudaHelper().catchCublasError(status, "cublasSgemm"), __func__) ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
        ptrdiff_t m, ptrdiff_t n,
@@ -281,7 +281,7 @@ struct blas<vl::GPU, vl::vlTypeFloat>
       (context.getCudaHelper().catchCublasError(status, "cublasSgemv"), __func__) ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   scal(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -300,7 +300,7 @@ struct blas<vl::GPU, vl::vlTypeFloat>
       (context.getCudaHelper().catchCublasError(status, "cublasSscal"), __func__) ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   axpy(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -323,11 +323,11 @@ struct blas<vl::GPU, vl::vlTypeFloat>
 } ;
 
 template<>
-struct blas<vl::GPU, vl::vlTypeDouble>
+struct blas<vl::VLDT_GPU, vl::VLDT_Double>
 {
   typedef double type ;
 
-  static vl::Error
+  static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
        ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
@@ -356,7 +356,7 @@ struct blas<vl::GPU, vl::vlTypeDouble>
     (context.getCudaHelper().catchCublasError(status, "cublasDgemm"), __func__) ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
        ptrdiff_t m, ptrdiff_t n,
@@ -384,7 +384,7 @@ struct blas<vl::GPU, vl::vlTypeDouble>
     (context.getCudaHelper().catchCublasError(status, "cublasDgemv"), __func__) ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   scal(vl::Context & context,
        ptrdiff_t n,
        type alpha,
@@ -403,7 +403,7 @@ struct blas<vl::GPU, vl::vlTypeDouble>
       (context.getCudaHelper().catchCublasError(status, "cublasDscal"), __func__) ;
   }
 
-  static vl::Error
+  static vl::ErrorCode
   axpy(vl::Context & context,
        ptrdiff_t n,
        type alpha,

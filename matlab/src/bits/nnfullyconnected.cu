@@ -21,14 +21,14 @@ using namespace vl ;
 /* nnfullyconnected_forward_impl                                    */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device deviceType, vl::Type dataType> vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType> vl::ErrorCode
 nnfullyconnected_forward_impl(Context& context,
                               Tensor output,
                               Tensor data,
                               Tensor filters,
                               Tensor biases)
 {
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
   type alpha = 1 ;
   type beta = 0 ;
@@ -46,7 +46,7 @@ nnfullyconnected_forward_impl(Context& context,
        (type const*)data.getMemory(), 1,
        beta,
        (type*)output.getMemory(), 1) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     } else {
       /* multiple images in the stack */
       error = vl::impl::blas<deviceType,dataType>::gemm
@@ -58,7 +58,7 @@ nnfullyconnected_forward_impl(Context& context,
        (type const*)data.getMemory(), filtersVolume,
        beta,
        (type*)output.getMemory(), filters.getSize()) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
   } else {
     error = vl::impl::operations<deviceType,type>::copy
@@ -84,7 +84,7 @@ nnfullyconnected_forward_impl(Context& context,
      allOnesMemory, 1,
      beta,
      (type*)output.getMemory(), biases.getNumElements()) ;
-    if (error != vl::vlSuccess) { goto done ; }
+    if (error != vl::VLE_Success) { goto done ; }
   }
 done:
   return context.passError(error, __func__) ;
@@ -94,7 +94,7 @@ done:
 /* nnfullyconnected_backward_impl                                   */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device deviceType, vl::Type dataType> vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType> vl::ErrorCode
 nnfullyconnected_backward_impl(vl::Context& context,
                                vl::Tensor derData,
                                vl::Tensor derFilters,
@@ -103,7 +103,7 @@ nnfullyconnected_backward_impl(vl::Context& context,
                                vl::Tensor filters,
                                vl::Tensor derOutput)
 {
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
   type alpha = 1 ;
   type beta = 0 ;
@@ -121,7 +121,7 @@ nnfullyconnected_backward_impl(vl::Context& context,
        (type*)derOutput.getMemory(), filters.getSize(),
        beta,
        (type*)derFilters.getMemory(), filtersVolume) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
 
     if (derData) {
@@ -134,7 +134,7 @@ nnfullyconnected_backward_impl(vl::Context& context,
        (type*)derOutput.getMemory(), filters.getSize(),
        beta,
        (type*)derData.getMemory(), filtersVolume) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
   } else {
     vl::impl::operations<deviceType,type>::copy
@@ -161,7 +161,7 @@ nnfullyconnected_backward_impl(vl::Context& context,
      (type*)derOutput.getMemory(), derOutput.getDepth(),
      beta,
      (type*)derBiases.getMemory(), 1) ;
-    if (error != vl::vlSuccess) { goto done ; }
+    if (error != vl::VLE_Success) { goto done ; }
 
   }
 done:
@@ -178,34 +178,34 @@ error = nnfullyconnected_forward_impl<deviceType,dataType> \
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnfullyconnected_forward(Context& context,
                              Tensor output,
                              Tensor data,
                              Tensor filters,
                              Tensor biases)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = data.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = data.getDataType() ;
 
   switch (data.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
       break ;
 #endif
   }
@@ -221,7 +221,7 @@ vl::nnfullyconnected_forward(Context& context,
 error = nnfullyconnected_backward_impl<deviceType,dataType> \
 (context, derData, derFilters, derBiases, data, filters, derOutput) ;
 
-vl::Error
+vl::ErrorCode
 vl::nnfullyconnected_backward(vl::Context& context,
                               vl::Tensor derData,
                               vl::Tensor derFilters,
@@ -230,22 +230,22 @@ vl::nnfullyconnected_backward(vl::Context& context,
                               vl::Tensor filters,
                               vl::Tensor derOutput)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = data.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = data.getDataType() ;
 
   switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
       break ;
 #endif
   }

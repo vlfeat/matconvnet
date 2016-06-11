@@ -16,20 +16,20 @@ the terms of the BSD license (see the COPYING file).
 namespace vl { namespace impl {
 
   template <typename type>
-  struct operations<vl::CPU, type>
+  struct operations<vl::VLDT_CPU, type>
   {
     typedef type data_type ;
 
-    static vl::Error
+    static vl::ErrorCode
     copy(data_type * dest,
          data_type const * src,
          size_t numElements)
     {
       memcpy(dest, src, numElements * sizeof(data_type)) ;
-      return vlSuccess ;
+      return VLE_Success ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     fill(data_type * dest,
          size_t numElements,
          data_type value)
@@ -37,16 +37,16 @@ namespace vl { namespace impl {
       for (size_t k = 0 ; k < numElements ; ++k) {
         dest[k] = value ;
       }
-      return vlSuccess ;
+      return VLE_Success ;
     }
   } ;
 
 } }
 
-template struct vl::impl::operations<vl::CPU, float> ;
+template struct vl::impl::operations<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::operations<vl::CPU, double> ;
+template struct vl::impl::operations<vl::VLDT_CPU, double> ;
 #endif
 
 

@@ -157,14 +157,14 @@ batch_normalize_backward(T * derData,
 namespace vl { namespace impl {
 
   template<typename T>
-  struct bnorm<vl::CPU,T>
+  struct bnorm<vl::VLDT_CPU,T>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward_given_moments(Context& context,
                           T* output,
                           T const* moments,
@@ -187,10 +187,10 @@ namespace vl { namespace impl {
           }
         }
       }
-      return vlSuccess;
+      return VLE_Success;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             T* output,
             T* moments,
@@ -200,12 +200,12 @@ namespace vl { namespace impl {
             size_t height, size_t width, size_t depth, size_t size,
             T epsilon)
     {
-      vl::Error error = vlSuccess ;
+      vl::ErrorCode error = VLE_Success ;
       bool ownMoments = false ;
       if (moments == NULL) {
         moments = (T*)calloc(sizeof(T),2*depth);
         if (!moments) {
-          error = vlErrorOutOfMemory ;
+          error = VLE_OutOfMemory ;
           goto done ;
         }
         ownMoments = true ;
@@ -216,7 +216,7 @@ namespace vl { namespace impl {
                          data, width*height, depth, size,
                          epsilon) ;
 
-      error = bnorm<vl::CPU,T>::forward_given_moments
+      error = bnorm<vl::VLDT_CPU,T>::forward_given_moments
       (context,
        output,
        moments, data,
@@ -233,7 +233,7 @@ namespace vl { namespace impl {
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward_given_moments(Context& context,
                            T* derData,
                            T* derMultipliers,
@@ -246,14 +246,14 @@ namespace vl { namespace impl {
                            size_t height, size_t width, size_t depth, size_t size,
                            T epsilon)
     {
-      vl::Error error = vlSuccess ;
+      vl::ErrorCode error = VLE_Success ;
       T * muz;
       int WH = width * height;
 
       // Allocate muz
       muz = (T*)calloc(sizeof(T),depth);
       if (!muz) {
-        error = vlErrorOutOfMemory ;
+        error = VLE_OutOfMemory ;
         goto done ;
       }
 
@@ -274,7 +274,7 @@ namespace vl { namespace impl {
       return error ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              T* derData,
              T* derMultipliers,
@@ -287,7 +287,7 @@ namespace vl { namespace impl {
              size_t height, size_t width, size_t depth, size_t size,
              T epsilon)
     {
-      vl::Error error = vlSuccess ;
+      vl::ErrorCode error = VLE_Success ;
       T* muz = NULL ;
       bool ownMoments = false ;
       int WH = width * height;
@@ -296,7 +296,7 @@ namespace vl { namespace impl {
       if (moments == NULL) {
         moments = (T*)calloc(sizeof(T),2*depth);
         if (!moments) {
-          error = vlErrorOutOfMemory ;
+          error = VLE_OutOfMemory ;
           goto done ;
         }
         ownMoments = true ;
@@ -326,9 +326,9 @@ namespace vl { namespace impl {
 
 } } // namespace vl::impl
 
-template struct vl::impl::bnorm<vl::CPU, float> ;
+template struct vl::impl::bnorm<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::bnorm<vl::CPU, double> ;
+template struct vl::impl::bnorm<vl::VLDT_CPU, double> ;
 #endif
 

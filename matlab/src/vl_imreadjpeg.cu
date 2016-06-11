@@ -31,7 +31,7 @@ enum {
 } ;
 
 /* options */
-vlmxOption  options [] = {
+VLMXOption  options [] = {
   {"NumThreads",       1,   opt_num_threads        },
   {"Prefetch",         0,   opt_prefetch           },
   {"Verbose",          0,   opt_verbose            },
@@ -105,7 +105,7 @@ public:
     return memory_ ;
   }
 
-  vl::Error init(vl::ImageShape const & shape_, bool matlab_)
+  vl::ErrorCode init(vl::ImageShape const & shape_, bool matlab_)
   {
     clear() ;
     shape = shape_ ;
@@ -118,7 +118,7 @@ public:
       memory = (float*)malloc(sizeof(float)*shape.getNumElements()) ;
       hasMatlabMemory = false ;
     }
-    return vl::vlSuccess ;
+    return vl::VLE_Success ;
   }
 
   bool hasMatlabMemory ;
@@ -133,7 +133,7 @@ struct Task
   bool done ;
   ImageBuffer resizedImage ;
   ImageBuffer inputImage ;
-  vl::Error error ;
+  vl::ErrorCode error ;
   bool requireResize ;
   char errorMessage [TASK_ERROR_MSG_MAX_LEN] ;
 
@@ -179,15 +179,15 @@ void reader_function(void* reader_)
     Task & thisTask = *tasks[taskIndex] ;
 
     tasksMutex.unlock() ;
-    if (thisTask.error == vl::vlSuccess) {
+    if (thisTask.error == vl::VLE_Success) {
       // the memory has been pre-allocated
       thisTask.error = reader->readPixels(thisTask.inputImage.getMemory(), thisTask.name.c_str()) ;
-      if (thisTask.error != vl::vlSuccess) {
+      if (thisTask.error != vl::VLE_Success) {
         strncpy(thisTask.errorMessage, reader->getLastErrorMessage(), TASK_ERROR_MSG_MAX_LEN) ;
       }
     }
 
-    if ((thisTask.error == vl::vlSuccess) && thisTask.requireResize) {
+    if ((thisTask.error == vl::VLE_Success) && thisTask.requireResize) {
       vl::impl::resizeImage(thisTask.resizedImage, thisTask.inputImage) ;
     }
 
@@ -388,7 +388,7 @@ void mexFunction(int nout, mxArray *out[],
 
       vl::ImageShape shape ;
       newTask->error = readers[0].second->readShape(shape, filenames[t].c_str()) ;
-      if (newTask->error == vl::vlSuccess) {
+      if (newTask->error == vl::VLE_Success) {
         vl::ImageShape resizedShape = shape ;
         switch (resizeMode) {
           case kResizeAnisotropic:
@@ -410,7 +410,7 @@ void mexFunction(int nout, mxArray *out[],
         newTask->requireResize = ! (resizedShape == shape) ;
         if (newTask->requireResize) {
           newTask->error = inputImage.init(shape, false) ;
-          if (newTask->error == vl::vlSuccess) {
+          if (newTask->error == vl::VLE_Success) {
             newTask->error = resizedImage.init(resizedShape, true) ;
           }
         } else {
@@ -450,7 +450,7 @@ void mexFunction(int nout, mxArray *out[],
     ImageBuffer & image = tasks[t]->resizedImage ;
     tasksMutex.unlock() ;
 
-    if (tasks[t]->error == vl::vlSuccess) {
+    if (tasks[t]->error == vl::VLE_Success) {
       vl::ImageShape const & shape = image.getShape() ;
       mwSize dimensions [3] = {
         (mwSize)shape.height,

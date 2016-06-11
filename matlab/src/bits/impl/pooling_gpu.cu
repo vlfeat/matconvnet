@@ -294,9 +294,9 @@ pooling_average_backward_kernel(T* derData,
 namespace vl { namespace impl {
 
   template <typename type>
-  struct pooling_max<vl::GPU, type>
+  struct pooling_max<vl::VLDT_GPU, type>
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(type* pooled,
             type const* data,
             size_t height, size_t width, size_t depth,
@@ -310,7 +310,7 @@ namespace vl { namespace impl {
       int pooledVolume = pooledWidth * pooledHeight * depth ;
 
       pooling_max_kernel<type>
-      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (pooled, data,
        pooledHeight, pooledWidth, pooledVolume,
        height, width,
@@ -319,10 +319,10 @@ namespace vl { namespace impl {
        padTop, padLeft);
 
       cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type* derData,
              type const* data,
              type const* derOutput,
@@ -337,7 +337,7 @@ namespace vl { namespace impl {
       int pooledVolume = pooledWidth * pooledHeight * depth ;
 
       pooling_max_backward_kernel<type>
-      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData, data, derOutput,
        pooledHeight, pooledWidth, pooledVolume,
        height, width,
@@ -346,15 +346,15 @@ namespace vl { namespace impl {
        padTop, padLeft);
 
       cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
   } ; // pooling_max
 
   template <typename type>
-  struct pooling_average<vl::GPU, type>
+  struct pooling_average<vl::VLDT_GPU, type>
   {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(type* pooled,
             type const* data,
             size_t height, size_t width, size_t depth,
@@ -367,7 +367,7 @@ namespace vl { namespace impl {
       int pooledVolume = pooledWidth * pooledHeight * depth ;
 
       pooling_average_kernel<type>
-      <<< divideUpwards(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(pooledVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (pooled, data,
        pooledHeight, pooledWidth, pooledVolume,
        height, width,
@@ -376,10 +376,10 @@ namespace vl { namespace impl {
        padTop, padLeft);
 
       cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type* derData,
              type const* derPooled,
              size_t height, size_t width, size_t depth,
@@ -393,7 +393,7 @@ namespace vl { namespace impl {
       int dataVolume = width * height * depth ;
 
       pooling_average_backward_kernel<type>
-      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData, derPooled,
        dataVolume,
        pooledHeight, pooledWidth,
@@ -403,18 +403,18 @@ namespace vl { namespace impl {
        padTop, padLeft);
 
       cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
   } ; // pooling_average
 
 } } ; // namespace vl::impl
 
 // Instantiations
-template struct vl::impl::pooling_max<vl::GPU, float> ;
-template struct vl::impl::pooling_average<vl::GPU, float> ;
+template struct vl::impl::pooling_max<vl::VLDT_GPU, float> ;
+template struct vl::impl::pooling_average<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::pooling_max<vl::GPU, double> ;
-template struct vl::impl::pooling_average<vl::GPU, double> ;
+template struct vl::impl::pooling_max<vl::VLDT_GPU, double> ;
+template struct vl::impl::pooling_average<vl::VLDT_GPU, double> ;
 #endif
 
