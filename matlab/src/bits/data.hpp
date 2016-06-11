@@ -99,6 +99,9 @@ namespace vl {
     return (a + b - 1) / b ;
   }
 
+  /// Get realtime monotnic clock in microseconds
+  size_t getTime() ;
+
   namespace impl {
     class Buffer
     {

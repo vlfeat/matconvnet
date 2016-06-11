@@ -28,6 +28,14 @@ using namespace vl ;
  * Helpers
  * ---------------------------------------------------------------- */
 
+size_t vl::getTime()
+{
+  struct timeval time ;
+  int error = gettimeofday(&time, NULL) ;
+  assert(error == 0) ;
+  return (size_t)time.tv_sec * 1000000 + (size_t)time.tv_usec ;
+}
+
 const char *
 vl::getErrorMessage(ErrorCode error)
 {
