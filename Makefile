@@ -268,6 +268,10 @@ matlab/mex/.build/%.o : matlab/src/%.cu matlab/mex/.build/.stamp
 endif
 endif
 
+matlab/mex/.build/%.o : matlab/src/%.cpp matlab/src/%.cu matlab/mex/.build/.stamp
+	$(MEX) -c $(MEXFLAGS_CC_CPU) "$(<)"
+	mv -f "$(notdir $(@))" "$(@)"
+
 matlab/mex/.build/%.o : matlab/src/%.cpp matlab/mex/.build/.stamp
 	$(MEX) -c $(MEXFLAGS_CC_CPU) "$(<)"
 	mv -f "$(notdir $(@))" "$(@)"
