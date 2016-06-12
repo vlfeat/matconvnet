@@ -111,6 +111,7 @@ LDFLAGS += \
 $(if $(ENABLE_GPU),-Wl$(comma)-rpath -Wl$(comma)"$(CUDAROOT)/lib64") \
 $(if $(ENABLE_CUDNN),-Wl$(comma)-rpath -Wl$(comma)"$(CUDNNROOT)/lib64")
 LINKLIBS += \
+-lrt \
 $(if $(ENABLE_GPU),-L"$(CUDAROOT)/lib64" -lmwgpu -lcudart -lcublas) \
 $(if $(ENABLE_CUDNN),-L"$(CUDNNROOT)/lib64" -lcudnn)
 endif
