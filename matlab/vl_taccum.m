@@ -1,7 +1,14 @@
 function a = vl_taccum(alpha, a, beta, b)
 %VL_TACCUM  Compute A = alpha A + beta B
-%   C = VL_TACCUM(ALPHA, A, BETA, B) computes efficiently
-%   C = alpha A + beta B. For GPU array, it uses inplace computations.
+%   A = VL_TACCUM(ALPHA, A, BETA, B) computes efficiently A = alpha A
+%   + beta B. For GPU array, it performs its computation in place, by
+%   modifiying A without creating an additional copy.
+
+% Copyright (C) 2016 Andrea Vedaldi.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
 
 if isscalar(a)
   a = alpha * a + beta * b ;
