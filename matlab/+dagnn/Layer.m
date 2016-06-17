@@ -143,6 +143,12 @@ classdef Layer < handle
           net.params(p).der = net.params(p).der + derParams{i} ;
         end
         net.numPendingParamRefs(p) = net.numPendingParamRefs(p) + 1 ;
+        if net.numPendingParamRefs(p) == net.params(p).fanout
+          if ~isempty(net.parameterServer)
+            net.parameterServer.pushWithIndex(p, net.params(p).der) ;
+            net.params(p).der = [] ;
+          end
+        end
       end
     end
 
