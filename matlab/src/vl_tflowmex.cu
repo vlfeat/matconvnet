@@ -350,8 +350,10 @@ private:
     bool operator==(std::string const & theName) { return name == theName ; }
     SharedTensorInstance()
     : state(ready), transaction(0),
-      cpuMemory(NULL), gpuMemory(NULL), gpuMemoryIsOwned(false),
-      gpuEvent(0), gpuEventIsInitialized(false)
+      cpuMemory(NULL), gpuMemory(NULL), gpuMemoryIsOwned(false)
+#if ENABLE_GPU
+    , gpuEvent(0), gpuEventIsInitialized(false)
+#endif
     { }
   } ;
   typedef std::vector<SharedTensorInstance> tensors_t ;
@@ -398,10 +400,12 @@ private:
 
 SharedTensorSpace::SharedTensorSpace()
   : initialized(false), memoryMapFD(-1), memoryMap(NULL), gpuDevice(-1),
-    gpuDispatchMemory(NULL),
-    gpuHelperStream(0),
+    gpuDispatchMemory(NULL)
+#if ENABLE_GPU
+,   gpuHelperStream(0),
     gpuHelperStreamInitialized(false),
     gpuHelperEventInitialized(false)
+#endif
 { }
 
 SharedTensorSpace::~SharedTensorSpace()
@@ -2013,6 +2017,7 @@ void ProcessPool::threadLoop()
                   break ;
 
                 case vl::VLDT_GPU: {
+#if ENABLE_GPU
                   if (T.gpuMemory == NULL) {
                     LOGERROR << "internal: GPU memory not allocated for tensor " << T.name ;
                     error = vl::VLE_Unknown ;
@@ -2029,6 +2034,7 @@ void ProcessPool::threadLoop()
                       << cudaGetErrorString(cerror) << '\'' ;
                     error = vl::VLE_Cuda ;
                   }
+#endif
                   break ;
                 }
               }
