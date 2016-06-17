@@ -54,7 +54,7 @@ the terms of the BSD license (see the COPYING file).
 typedef enum {
   VLMXE_Success = 0,
   VLMXE_Alloc,
-  VLMXE_InvalidArgument,
+  VLMXE_IllegalArgument,
   VLMXE_NotEnoughInputArguments,
   VLMXE_TooManyInputArguments,
   VLMXE_NotEnoughOutputArguments,
@@ -65,7 +65,7 @@ typedef enum {
   VLMXE_TimeOut,
   VLMXE_Undefined,
   VLMXE_NumCodes // must be last
-} vlmxErrorCode ;
+} VLMXErrorCode ;
 
 static char const * vlmxErrorMessageTable [] = {
   "Success",                 "Success.",
@@ -83,7 +83,7 @@ static char const * vlmxErrorMessageTable [] = {
 } ;
 
 static inline void
-vlmxErrorHelper(bool isError, vlmxErrorCode errorCode,
+vlmxErrorHelper(bool isError, VLMXErrorCode errorCode,
                 char const * errorMessage,  va_list args)
 {
   char const * errorString ;
@@ -126,7 +126,7 @@ static void __attribute__((noreturn))
 #else
 static void
 #endif
-vlmxError (vlmxErrorCode errorCode, char const * errorMessage, ...)
+vlmxError (VLMXErrorCode errorCode, char const * errorMessage, ...)
 {
   va_list args ;
   va_start(args, errorMessage) ;
@@ -143,7 +143,7 @@ vlmxError (vlmxErrorCode errorCode, char const * errorMessage, ...)
  **/
 
 static void
-vlmxWarning (vlmxErrorCode errorCode, char const * errorMessage, ...)
+vlmxWarning (VLMXErrorCode errorCode, char const * errorMessage, ...)
 {
   va_list args ;
   va_start(args, errorMessage) ;
@@ -676,12 +676,12 @@ vlmxDecodeEnumeration (mxArray const *name_array,
 
   /* check the array is a string */
   if (! vlmxIsString (name_array, -1)) {
-    vlmxError (VLMXE_InvalidArgument, "The array is not a string.") ;
+    vlmxError (VLMXE_IllegalArgument, "The array is not a string.") ;
   }
 
   /* retrieve option name */
   if (mxGetString (name_array, name, sizeof(name))) {
-    vlmxError (VLMXE_InvalidArgument, "The string array is too long.") ;
+    vlmxError (VLMXE_IllegalArgument, "The string array is too long.") ;
   }
 
   if (caseInsensitive) {

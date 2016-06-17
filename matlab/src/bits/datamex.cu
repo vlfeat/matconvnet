@@ -349,7 +349,7 @@ vl::MexTensor::init(mxArray const * array_)
 #ifdef ENABLE_GPU
   context.initGpu() ;
   if (mxIsGPUArray(array_)) {
-    newDeviceType = GPU ;
+    newDeviceType = vl::VLDT_GPU ;
     newGpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(newArray) ;
     newMemory = mxGPUGetDataReadOnly(newGpuArray) ;
     newClassID = mxGPUGetClassID(newGpuArray) ;

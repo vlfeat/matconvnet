@@ -100,7 +100,7 @@ vl::nnpooling_forward(vl::Context& context,
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH3(GPU) ;
+      DISPATCH3(vl::VLDT_GPU) ;
       if (status == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
       }

@@ -153,14 +153,14 @@ void mexFunction(int nout, mxArray *out[],
 
       case opt_method :
         if (!vlmxIsString(optarg,-1)) {
-           vlmxError(VLMXE_InvalidArgument, "METHOD is not a string.") ;
+           vlmxError(VLMXE_IllegalArgument, "METHOD is not a string.") ;
         }
         if (vlmxIsEqualToStringI(optarg, "max")) {
           method = vl::vlPoolingMax ;
         } else if (vlmxIsEqualToStringI(optarg, "avg")) {
           method = vl::vlPoolingAverage ;
         } else {
-          vlmxError(VLMXE_InvalidArgument, "METHOD is not a supported method.") ;
+          vlmxError(VLMXE_IllegalArgument, "METHOD is not a supported method.") ;
         }
         break;
 
