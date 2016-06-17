@@ -23,6 +23,21 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta21 (June 2016).
+    
+    **New features**
+
+    * A new function `vl_tacc.m` to accumulate tensors efficiently.
+    * A new under-the-hood infrastructure to move data efficiently
+      between multiple GPUs.
+    * Overhauled ImageNet experiments, including training ResNet
+      and Inception v3.
+
+    **Changes affecting backward compatibility**
+
+    The changs to the ImageNet examples may affect users reusing some
+    of those functions in their experiments.
+
 -   1.0-beta20 (May 2016).
 
     **New features**
