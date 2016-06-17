@@ -166,6 +166,7 @@ mex_src+=matlab/src/vl_nnnormalize.$(ext)
 mex_src+=matlab/src/vl_nnbnorm.$(ext)
 mex_src+=matlab/src/vl_nnbilinearsampler.$(ext)
 mex_src+=matlab/src/vl_taccummex.$(ext)
+mex_src+=matlab/src/vl_tflowmex.$(ext)
 ifdef ENABLE_IMREADJPEG
 mex_src+=matlab/src/vl_imreadjpeg.cpp
 endif
