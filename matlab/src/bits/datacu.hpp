@@ -39,10 +39,14 @@ namespace vl {
 
   class CudaHelper {
   public:
-    // Cuda errors
+    // CUDA errors
     cudaError_t getLastCudaError() const ;
     std::string const& getLastCudaErrorMessage() const ;
     vl::ErrorCode catchCudaError(char const* description = NULL) ;
+
+    // CUDA control
+    vl::ErrorCode setStream(cudaStream_t streamId) ;
+    cudaStream_t getStream() const ;
 
     // CuBLAS support
     cublasStatus_t getCublasHandle(cublasHandle_t* handle) ;
@@ -50,7 +54,7 @@ namespace vl {
     cublasStatus_t getLastCublasError() const ;
     std::string const& getLastCublasErrorMessage() const ;
     vl::ErrorCode catchCublasError(cublasStatus_t status,
-                               char const* description = NULL) ;
+                                   char const* description = NULL) ;
 
 #if ENABLE_CUDNN
     // CuDNN support
@@ -94,6 +98,9 @@ namespace vl {
   private:
     cudaError_t lastCudaError ;
     std::string lastCudaErrorMessage ;
+
+    // Streams support
+    cudaStream_t cudaStream ;
 
     // CuBLAS
     cublasHandle_t cublasHandle ;

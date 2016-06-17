@@ -29,7 +29,7 @@ using namespace vl ;
  * ---------------------------------------------------------------- */
 
 vl::CudaHelper::CudaHelper()
-: isCublasInitialized(false)
+: isCublasInitialized(false), cudaStream(0)
 #if ENABLE_CUDNN
 , isCudnnInitialized(false), cudnnEnabled(true)
 #endif
@@ -65,6 +65,37 @@ vl::CudaHelper::invalidateGpu()
 #endif
 }
 
+vl::ErrorCode
+CudaHelper::setStream(cudaStream_t streamId)
+{
+  if (isCublasInitialized) {
+    cublasStatus_t status = cublasSetStream(cublasHandle, streamId) ;
+    if (status != CUBLAS_STATUS_SUCCESS) {
+      return catchCublasError(status, __func__) ;
+    }
+  }
+#ifdef ENABLE_CUDNN
+  if (isCudnnInitialized) {
+    cudnnStatus_t status = cudnnSetStream(cudnnHandle, streamId) ;
+    if (status != CUDNN_STATUS_SUCCESS) {
+      if (isCublasInitialized) {
+        // restore cuBLAS state
+        cublasSetStream(cublasHandle, this->cudaStream) ;
+      }
+      return catchCudnnError(status, __func__) ;
+    }
+  }
+#endif
+  this->cudaStream = streamId ;
+  return VLE_Success ;
+}
+
+cudaStream_t
+CudaHelper::getStream() const
+{
+  return this->cudaStream ;
+}
+
 /* -------------------------------------------------------------------
  * getCublasHandle
  * ---------------------------------------------------------------- */
@@ -74,8 +105,14 @@ vl::CudaHelper::getCublasHandle(cublasHandle_t* handle)
 {
   if (!isCublasInitialized) {
     clearCublas() ;
-    cublasStatus_t stat = cublasCreate(&cublasHandle) ;
-    if (stat != CUBLAS_STATUS_SUCCESS) { return stat ; }
+    cublasStatus_t status = cublasCreate(&cublasHandle) ;
+    if (status != CUBLAS_STATUS_SUCCESS) { return status ; }
+
+    status = cublasSetStream(cublasHandle, cudaStream) ;
+    if (status != CUBLAS_STATUS_SUCCESS) {
+      cublasDestroy(cublasHandle) ;
+      return status ;
+    }
     isCublasInitialized = true ;
   }
   *handle = cublasHandle ;
