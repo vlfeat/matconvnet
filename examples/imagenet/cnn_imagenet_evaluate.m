@@ -107,41 +107,31 @@ imdb = cnn_imagenet_sync_labels(imdb, net);
 function fn = getBatchFn(opts, meta)
 % -------------------------------------------------------------------------
 useGpu = numel(opts.train.gpus) > 0 ;
-bopts = meta.normalization ;
 bopts.numThreads = opts.numFetchThreads ;
-
-% Most networks are trained by resizing images to 256 pixels and then
-% cropping a slightly smaller subarea. Reproduce this effect (center
-% crop) for a more accurate evaluation (it also avoids resizing the
-% images if these have been pre-processed to be of this size, which
-% accelerates everything).
-
-bopts.border = 256 - meta.normalization.imageSize ;
-
-switch lower(opts.networkType)
-  case 'simplenn'
-    fn = @(x,y) getSimpleNNBatch(bopts,x,y) ;
-  case 'dagnn'
-    fn = @(x,y) getDagNNBatch(bopts,useGpu,x,y) ;
-end
+bopts.imageSize = meta.normalization.imageSize ;
+bopts.fullImageSize = meta.normalization.fullImageSize ;
+bopts.averageImage = meta.normalization.averageImage ;
+bopts.jitter = false ;
+fn = @(x,y) getBatch(bopts,useGpu,lower(opts.networkType),x,y) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getSimpleNNBatch(opts, imdb, batch)
+function varargout = getBatch(opts, useGpu, networkType, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-im = cnn_imagenet_get_batch(images, opts, ...
-                            'prefetch', nargout == 0) ;
-labels = imdb.images.label(batch) ;
-
-% -------------------------------------------------------------------------
-function inputs = getDagNNBatch(opts, useGpu, imdb, batch)
-% -------------------------------------------------------------------------
-images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-im = cnn_imagenet_get_batch(images, opts, ...
-                            'prefetch', nargout == 0) ;
+isTrain = ~isempty(batch) && imdb.images.set(batch(1)) == 1 ;
+data = getImageBatch(images, ...
+                     opts, ...
+                     'prefetch', nargout == 0, ...
+                     'jitter', isTrain) ;
 if nargout > 0
   if useGpu
-    im = gpuArray(im) ;
+    data = gpuArray(data) ;
   end
-  inputs = {'input', im, 'label', imdb.images.label(batch)} ;
+  labels = imdb.images.label(batch) ;
+  switch networkType
+    case 'simplenn'
+      varargout = {data, labels} ;
+    case 'dagnn'
+      varargout{1} = {'input', data, 'label', labels} ;
+  end
 end

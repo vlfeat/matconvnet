@@ -30,10 +30,21 @@ if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 %                                                             Prepare model
 % -------------------------------------------------------------------------
 
-net = cnn_imagenet_init('model', opts.modelType, ...
-                        'batchNormalization', opts.batchNormalization, ...
-                        'weightInitMethod', opts.weightInitMethod, ...
-                        'networkType', opts.networkType) ;
+switch opts.modelType
+  case 'resnet-50'
+    net = cnn_imagenet_init_resnet() ;
+    opts.networkType = 'dagnn' ;
+
+  case 'inception'
+    net = cnn_imagenet_init_inception() ;
+    opts.networkType = 'dagnn' ;
+
+  otherwise
+    net = cnn_imagenet_init('model', opts.modelType, ...
+                            'batchNormalization', opts.batchNormalization, ...
+                            'weightInitMethod', opts.weightInitMethod, ...
+                            'networkType', opts.networkType) ;
+end
 
 % -------------------------------------------------------------------------
 %                                                              Prepare data
@@ -47,26 +58,28 @@ else
   save(opts.imdbPath, '-struct', 'imdb') ;
 end
 
-% Set the class names in the network
-net.meta.classes.name = imdb.classes.name ;
-net.meta.classes.description = imdb.classes.description ;
-
 % Compute image statistics (mean, RGB covariances, etc.)
 imageStatsPath = fullfile(opts.expDir, 'imageStats.mat') ;
 if exist(imageStatsPath)
   load(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 else
-  [averageImage, rgbMean, rgbCovariance] = getImageStats(opts, net.meta, imdb) ;
+  train = find(imdb.images.set == 1) ;
+  images = fullfile(imdb.imageDir, imdb.images.name(train(1:100:end))) ;
+  [averageImage, rgbMean, rgbCovariance] = getImageStats(...
+    images, 'imageSize', net.meta.normalization.imageSize) ;
   save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 end
 
-% Set the image average (use either an image or a color)
-%net.meta.normalization.averageImage = averageImage ;
+% Set the class names in the network
+net.meta.classes.name = imdb.classes.name ;
+net.meta.classes.description = imdb.classes.description ;
+
+% Set average image
 net.meta.normalization.averageImage = rgbMean ;
 
 % Set data augmentation statistics
 [v,d] = eig(rgbCovariance) ;
-net.meta.augmentation.rgbVariance = 0.1*sqrt(d)*v' ;
+net.meta.augmentation.rgbSqrtCovariance = sqrt(d)*v' ;
 clear v d ;
 
 % -------------------------------------------------------------------------
@@ -103,92 +116,36 @@ end
 function fn = getBatchFn(opts, meta)
 % -------------------------------------------------------------------------
 useGpu = numel(opts.train.gpus) > 0 ;
-
 bopts.numThreads = opts.numFetchThreads ;
+bopts.fullImageSize = meta.normalization.fullImageSize ;
 bopts.imageSize = meta.normalization.imageSize ;
-bopts.border = meta.normalization.border ;
 bopts.averageImage = meta.normalization.averageImage ;
-bopts.rgbVariance = meta.augmentation.rgbVariance ;
-bopts.transformation = meta.augmentation.transformation ;
-
-switch lower(opts.networkType)
-  case 'simplenn'
-    fn = @(x,y) getSimpleNNBatch(bopts,x,y) ;
-  case 'dagnn'
-    fn = @(x,y) getDagNNBatch(bopts,useGpu,x,y) ;
-end
+bopts.rgbSqrtCovariance = meta.augmentation.rgbSqrtCovariance ;
+bopts.jitter = meta.augmentation.jitter ;
+bopts.jitterLight = meta.augmentation.jitterLight ;
+bopts.jitterBrightness = meta.augmentation.jitterBrightness ;
+bopts.jitterSaturation = meta.augmentation.jitterSaturation ;
+bopts.jitterContrast = meta.augmentation.jitterContrast ;
+fn = @(x,y) getBatch(bopts,useGpu,lower(opts.networkType),x,y) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getSimpleNNBatch(opts, imdb, batch)
+function varargout = getBatch(opts, useGpu, networkType, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-isVal = ~isempty(batch) && imdb.images.set(batch(1)) ~= 1 ;
-
-if ~isVal
-  % training
-  im = cnn_imagenet_get_batch(images, opts, ...
-                              'prefetch', nargout == 0) ;
-else
-  % validation: disable data augmentation
-  im = cnn_imagenet_get_batch(images, opts, ...
-                              'prefetch', nargout == 0, ...
-                              'transformation', 'none') ;
-end
-
-if nargout > 0
-  labels = imdb.images.label(batch) ;
-end
-
-% -------------------------------------------------------------------------
-function inputs = getDagNNBatch(opts, useGpu, imdb, batch)
-% -------------------------------------------------------------------------
-images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-isVal = ~isempty(batch) && imdb.images.set(batch(1)) ~= 1 ;
-
-if ~isVal
-  % training
-  im = cnn_imagenet_get_batch(images, opts, ...
-                              'prefetch', nargout == 0) ;
-else
-  % validation: disable data augmentation
-  im = cnn_imagenet_get_batch(images, opts, ...
-                              'prefetch', nargout == 0, ...
-                              'transformation', 'none') ;
-end
-
+isTrain = ~isempty(batch) && imdb.images.set(batch(1)) == 1 ;
+data = getImageBatch(images, ...
+                     opts, ...
+                     'prefetch', nargout == 0, ...
+                     'jitter', isTrain) ;
 if nargout > 0
   if useGpu
-    im = gpuArray(im) ;
+    data = gpuArray(data) ;
   end
   labels = imdb.images.label(batch) ;
-  inputs = {'input', im, 'label', labels} ;
+  switch networkType
+    case 'simplenn'
+      varargout = {data, labels} ;
+    case 'dagnn'
+      varargout{1} = {'input', data, 'label', labels} ;
+  end
 end
-
-% -------------------------------------------------------------------------
-function [averageImage, rgbMean, rgbCovariance] = getImageStats(opts, meta, imdb)
-% -------------------------------------------------------------------------
-train = find(imdb.images.set == 1) ;
-train = train(1: 101: end);
-bs = 256 ;
-opts.networkType = 'simplenn' ;
-fn = getBatchFn(opts, meta) ;
-avg = {}; rgbm1 = {}; rgbm2 = {};
-
-for t=1:bs:numel(train)
-  batch_time = tic ;
-  batch = train(t:min(t+bs-1, numel(train))) ;
-  fprintf('collecting image stats: batch starting with image %d ...', batch(1)) ;
-  temp = fn(imdb, batch) ;
-  z = reshape(permute(temp,[3 1 2 4]),3,[]) ;
-  n = size(z,2) ;
-  avg{end+1} = mean(temp, 4) ;
-  rgbm1{end+1} = sum(z,2)/n ;
-  rgbm2{end+1} = z*z'/n ;
-  batch_time = toc(batch_time) ;
-  fprintf(' %.2f s (%.1f images/s)\n', batch_time, numel(batch)/ batch_time) ;
-end
-averageImage = mean(cat(4,avg{:}),4) ;
-rgbm1 = mean(cat(2,rgbm1{:}),2) ;
-rgbm2 = mean(cat(3,rgbm2{:}),3) ;
-rgbMean = rgbm1 ;
-rgbCovariance = rgbm2 - rgbm1*rgbm1' ;

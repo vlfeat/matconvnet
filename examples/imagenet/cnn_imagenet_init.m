@@ -50,13 +50,15 @@ end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 % Meta parameters
-net.meta.inputSize = net.meta.normalization.imageSize ;
-net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
-net.meta.normalization.interpolation = 'bicubic' ;
+net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
+net.meta.normalization.fullImageSize = 256 ;
 net.meta.normalization.averageImage = [] ;
-net.meta.normalization.keepAspect = true ;
-net.meta.augmentation.rgbVariance = zeros(0,3) ;
-net.meta.augmentation.transformation = 'stretch' ;
+net.meta.augmentation.rgbSqrtCovariance = zeros(3,'single') ;
+net.meta.augmentation.jitter = true ;
+net.meta.augmentation.jitterLight = 0.1 ;
+net.meta.augmentation.jitterBrightness = 0 ;
+net.meta.augmentation.jitterSaturation = 0 ;
+net.meta.augmentation.jitterContrast = 0 ;
 
 if ~opts.batchNormalization
   lr = logspace(-2, -4, 60) ;
