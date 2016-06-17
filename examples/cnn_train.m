@@ -60,14 +60,12 @@ vl_simplenn_display(net, 'batchSize', opts.batchSize) ;
 evaluateMode = isempty(opts.train) ;
 if ~evaluateMode
   for i=1:numel(net.layers)
-    if isfield(net.layers{i}, 'weights')
-      J = numel(net.layers{i}.weights) ;
-      if ~isfield(net.layers{i}, 'learningRate')
-        net.layers{i}.learningRate = ones(1, J, 'single') ;
-      end
-      if ~isfield(net.layers{i}, 'weightDecay')
-        net.layers{i}.weightDecay = ones(1, J, 'single') ;
-      end
+    J = numel(net.layers{i}.weights) ;
+    if ~isfield(net.layers{i}, 'learningRate')
+      net.layers{i}.learningRate = ones(1, J) ;
+    end
+    if ~isfield(net.layers{i}, 'weightDecay')
+      net.layers{i}.weightDecay = ones(1, J) ;
     end
   end
 end
@@ -227,10 +225,8 @@ function  [net_cpu,stats,prof] = process_epoch(net, state, opts, mode)
 if strcmp(mode,'train')
   state.momentum = {} ;
   for i = 1:numel(net.layers)
-    if isfield(net.layers{i}, 'weights')
-      for j = 1:numel(net.layers{i}.weights)
-        state.layers{i}.momentum{j} = 0 ;
-      end
+    for j = 1:numel(net.layers{i}.weights)
+      state.layers{i}.momentum{j} = 0 ;
     end
   end
 end
@@ -241,9 +237,18 @@ if numGpus >= 1
   net = vl_simplenn_move(net, 'gpu') ;
 end
 if numGpus > 1
-  mmap = map_gradients(opts.memoryMapFile, net, numGpus) ;
+  parserv = ParameterServer('memoryMapFile', opts.memoryMapFile) ;
+  parserv.register('errors', [3 1], 'double') ;
+  for l=1:numel(net.layers)
+    for j=1:numel(net.layers{l}.weights)
+      parserv.register(sprintf('l%d_%d',l,j), ...
+                       size(net.layers{l}.weights{j}), ...
+                       class(gather(net.layers{l}.weights{j}))) ;
+    end
+  end
+  parserv.start() ;
 else
-  mmap = [] ;
+  parserv = [] ;
 end
 
 % profile
@@ -320,11 +325,15 @@ for t=1:opts.batchSize:numel(subset)
 
   % accumulate gradient
   if strcmp(mode, 'train')
-    if ~isempty(mmap)
-      write_gradients(mmap, net) ;
+    if ~isempty(parserv)
+      for l=numel(net.layers):-1:1
+        for j=numel(res(l).dzdw):-1:1
+          parserv.write(sprintf('l%d_%d',l,j),  res(l).dzdw{j}) ;
+        end
+      end
       labBarrier() ;
     end
-    [state, net] = accumulate_gradients(state, net, res, opts, batchSize, mmap) ;
+    [state, net] = accumulate_gradients(state, net, res, opts, batchSize, parserv) ;
   end
 
   % get statistics
@@ -365,10 +374,6 @@ for t=1:opts.batchSize:numel(subset)
   end
 end
 
-if ~isempty(mmap)
-  unmap_gradients(mmap) ;
-end
-
 if opts.profile
   if numGpus <= 1
     prof = profile('info') ;
@@ -384,38 +389,44 @@ end
 net_cpu = vl_simplenn_move(net, 'cpu') ;
 
 % -------------------------------------------------------------------------
-function [state, net] = accumulate_gradients(state, net, res, opts, batchSize, mmap)
+function [state, net] = accumulate_gradients(state, net, res, opts, batchSize, parserv)
 % -------------------------------------------------------------------------
 numGpus = numel(opts.gpus) ;
 otherGpus = setdiff(1:numGpus, labindex) ;
 
 for l=numel(net.layers):-1:1
-  for j=1:numel(res(l).dzdw)
+  for j=numel(res(l).dzdw):-1:1
 
     % accumualte gradients from multiple labs (GPUs) if needed
-    if numGpus > 1
-      tag = sprintf('l%d_%d',l,j) ;
-      for g = otherGpus
-        tmp = gpuArray(mmap.Data(g).(tag)) ;
-        res(l).dzdw{j} = res(l).dzdw{j} + tmp ;
-      end
+    tag = sprintf('l%d_%d',l,j) ;
+    for g = otherGpus
+      res(l).dzdw{j} = res(l).dzdw{j} + parserv.read(g, tag) ;
     end
 
     if j == 3 && strcmp(net.layers{l}.type, 'bnorm')
       % special case for learning bnorm moments
       thisLR = net.layers{l}.learningRate(j) ;
-      net.layers{l}.weights{j} = ...
-        (1 - thisLR) * net.layers{l}.weights{j} + ...
-        (thisLR/batchSize) * res(l).dzdw{j} ;
+      net.layers{l}.weights{j} = vl_taccum(...
+        1 - thisLR, ...
+        net.layers{l}.weights{j}, ...
+        thisLR / batchSize, ...
+        res(l).dzdw{j}) ;
     else
       % standard gradient training
       thisDecay = opts.weightDecay * net.layers{l}.weightDecay(j) ;
       thisLR = state.learningRate * net.layers{l}.learningRate(j) ;
-      state.layers{l}.momentum{j} = opts.momentum * state.layers{l}.momentum{j} ...
-        - thisDecay * net.layers{l}.weights{j} ...
-        - (1 / batchSize) * res(l).dzdw{j} ;
-      net.layers{l}.weights{j} = net.layers{l}.weights{j} + ...
-        thisLR * state.layers{l}.momentum{j} ;
+
+      state.layers{l}.momentum{j} = vl_taccum(...
+        opts.momentum, ...
+        state.layers{l}.momentum{j}, ...
+        - (1 / batchSize), ...
+        res(l).dzdw{j}) ;
+
+      net.layers{l}.weights{j} = vl_taccum(...
+        (1 - thisLR * thisDecay / (1 - opts.momentum)), ...
+        net.layers{l}.weights{j}, ...
+        thisLR, ...
+        state.layers{l}.momentum{j}) ;
     end
 
     % if requested, collect some useful stats for debugging
@@ -440,45 +451,6 @@ for l=numel(net.layers):-1:1
     end
   end
 end
-
-% -------------------------------------------------------------------------
-function mmap = map_gradients(fname, net, numGpus)
-% -------------------------------------------------------------------------
-format = {} ;
-for i=1:numel(net.layers)
-  for j=1:numel(net.layers(i).params)
-    par = net.layers(i).params{j} ;
-    format(end+1,1:3) = {'single', size(par), sprintf('l%d_%d',i,j)} ;
-  end
-end
-format(end+1,1:3) = {'double', [3 1], 'errors'} ;
-if ~exist(fname) && (labindex == 1)
-  f = fopen(fname,'wb') ;
-  for g=1:numGpus
-    for i=1:size(format,1)
-      fwrite(f,zeros(format{i,2},format{i,1}),format{i,1}) ;
-    end
-  end
-  fclose(f) ;
-end
-labBarrier() ;
-mmap = memmapfile(fname, ...
-                  'Format', format, ...
-                  'Repeat', numGpus, ...
-                  'Writable', true) ;
-
-% -------------------------------------------------------------------------
-function write_gradients(mmap, net, res)
-% -------------------------------------------------------------------------
-for i=1:numel(net.layers)
-  for j=1:numel(res(i).dzdw)
-    mmap.Data(labindex).(sprintf('l%d_%d',i,j)) = gather(res(i).dzdw{j}) ;
-  end
-end
-
-% -------------------------------------------------------------------------
-function unmap_gradients(mmap)
-% -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
 function stats = accumulateStats(stats_)
@@ -575,6 +547,8 @@ if numGpus >= 1 && cold
   if numGpus == 1
     gpuDevice(opts.gpus)
   else
-    spmd, gpuDevice(opts.gpus(labindex)), end
+    spmd
+      gpuDevice(opts.gpus(labindex))
+    end
   end
 end

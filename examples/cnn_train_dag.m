@@ -22,8 +22,9 @@ opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
 opts.randomSeed = 0 ;
-opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
+opts.parameterServer.method = 'mmap' ;
+opts.parameterServer.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
@@ -34,6 +35,7 @@ if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
 if isnan(opts.train), opts.train = [] ; end
+if isnan(opts.val), opts.val = [] ; end
 
 % -------------------------------------------------------------------------
 %                                                            Initialization
@@ -153,14 +155,12 @@ end
 numGpus = numel(opts.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
-  if strcmp(mode,'train')
-    state.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
-  end
 end
 if numGpus > 1
-  mmap = map_gradients(opts.memoryMapFile, net, numGpus) ;
+  parserv = ParameterServer(opts.parameterServer) ;
+  net.setParameterServer(parserv) ;
 else
-  mmap = [] ;
+  parserv = [] ;
 end
 
 % profile
@@ -219,11 +219,8 @@ for t=1:opts.batchSize:numel(subset)
 
   % accumulate gradient
   if strcmp(mode, 'train')
-    if ~isempty(mmap)
-      write_gradients(mmap, net) ;
-      labBarrier() ;
-    end
-    state = accumulate_gradients(state, net, opts, batchSize, mmap) ;
+    if ~isempty(parserv), parserv.sync() ; end
+    state = accumulate_gradients(state, net, opts, batchSize, parserv) ;
   end
 
   % get statistics
@@ -234,9 +231,9 @@ for t=1:opts.batchSize:numel(subset)
   stats.time = time ;
   currentSpeed = batchSize / batchTime ;
   averageSpeed = (t + batchSize - 1) / time ;
-  if t == opts.batchSize + 1
-    % compensate for the first iteration, which is an outlier
-    adjustTime = 2*batchTime - time ;
+  if t == 3*opts.batchSize + 1
+    % compensate for the first three iterations, which are outliers
+    adjustTime = 4*batchTime - time ;
     stats.time = time + adjustTime ;
   end
 
@@ -247,10 +244,6 @@ for t=1:opts.batchSize:numel(subset)
     fprintf(' %.3f', stats.(f)) ;
   end
   fprintf('\n') ;
-end
-
-if ~isempty(mmap)
-  unmap_gradients(mmap) ;
 end
 
 if opts.profile
@@ -269,37 +262,36 @@ net.reset() ;
 net.move('cpu') ;
 
 % -------------------------------------------------------------------------
-function state = accumulate_gradients(state, net, opts, batchSize, mmap)
+function state = accumulate_gradients(state, net, opts, batchSize, parserv)
 % -------------------------------------------------------------------------
 numGpus = numel(opts.gpus) ;
 otherGpus = setdiff(1:numGpus, labindex) ;
 
 for p=1:numel(net.params)
 
-  % accumualte gradients from multiple labs (GPUs) if needed
-  if numGpus > 1
-    tag = net.params(p).name ;
-    for g = otherGpus
-      tmp = gpuArray(mmap.Data(g).(tag)) ;
-      net.params(p).der = net.params(p).der + tmp ;
-    end
+  if ~isempty(parserv)
+    parDer = parserv.pullWithIndex(p) ;
+  else
+    parDer = net.params(p).der ;
   end
 
   switch net.params(p).trainMethod
 
     case 'average' % mainly for batch normalization
       thisLR = net.params(p).learningRate ;
-      net.params(p).value = ...
-          (1 - thisLR) * net.params(p).value + ...
-          (thisLR/batchSize/net.params(p).fanout) * net.params(p).der ;
+      net.params(p).value = vl_taccum(...
+          1 - thisLR, net.params(p).value, ...
+          (thisLR/batchSize/net.params(p).fanout),  parDer) ;
 
     case 'gradient'
       thisDecay = opts.weightDecay * net.params(p).weightDecay ;
       thisLR = state.learningRate * net.params(p).learningRate ;
-      state.momentum{p} = opts.momentum * state.momentum{p} ...
-        - thisDecay * net.params(p).value ...
-        - (1 / batchSize) * net.params(p).der ;
-      net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
+      state.momentum{p} = vl_taccum(...
+        opts.momentum,  state.momentum{p}, ...
+        - (1 / batchSize), parDer) ;
+      net.params(p).value = vl_taccum(...
+        (1 - thisLR * thisDecay / (1 - opts.momentum)),  net.params(p).value, ...
+        thisLR, state.momentum{p}) ;
 
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
@@ -307,40 +299,6 @@ for p=1:numel(net.params)
         net.params(p).name) ;
   end
 end
-
-% -------------------------------------------------------------------------
-function mmap = map_gradients(fname, net, numGpus)
-% -------------------------------------------------------------------------
-format = {} ;
-for i=1:numel(net.params)
-  format(end+1,1:3) = {'single', size(net.params(i).value), net.params(i).name} ;
-end
-format(end+1,1:3) = {'double', [3 1], 'errors'} ;
-if ~exist(fname) && (labindex == 1)
-  f = fopen(fname,'wb') ;
-  for g=1:numGpus
-    for i=1:size(format,1)
-      fwrite(f,zeros(format{i,2},format{i,1}),format{i,1}) ;
-    end
-  end
-  fclose(f) ;
-end
-labBarrier() ;
-mmap = memmapfile(fname, ...
-                  'Format', format, ...
-                  'Repeat', numGpus, ...
-                  'Writable', true) ;
-
-% -------------------------------------------------------------------------
-function write_gradients(mmap, net)
-% -------------------------------------------------------------------------
-for i=1:numel(net.params)
-  mmap.Data(labindex).(net.params(i).name) = gather(net.params(i).der) ;
-end
-
-% -------------------------------------------------------------------------
-function unmap_gradients(mmap)
-% -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
 function stats = accumulateStats(stats_)
@@ -431,9 +389,6 @@ if numGpus > 1
     parpool('local', numGpus) ;
     cold = true ;
   end
-  if exist(opts.memoryMapFile)
-    delete(opts.memoryMapFile) ;
-  end
 
 end
 if numGpus >= 1 && cold
@@ -441,7 +396,10 @@ if numGpus >= 1 && cold
   if numGpus == 1
     gpuDevice(opts.gpus)
   else
-    spmd, gpuDevice(opts.gpus(labindex)), end
+    spmd
+      maxNumCompThreads(4) ;
+      gpuDevice(opts.gpus(labindex))
+    end
   end
 end
 
