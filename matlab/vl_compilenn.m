@@ -387,7 +387,7 @@ switch arch
 
   case {'glnxa64'}
     flags.ccoptim{end+1} = '-mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
-    flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
+    flags.nvccpass{end+1} = '-Xcompiler -fPIC -D_FORCE_INLINES' ;
 
     if opts.enableGpu
       flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
