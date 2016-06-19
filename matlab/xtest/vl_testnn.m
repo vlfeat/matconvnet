@@ -13,7 +13,7 @@ function vl_testnn(varargin)
 %  `double`:: false
 %    Perform tests in double precision.
 %
-%  `command`:: 'nn'
+%  `command`:: `'nn'`
 %    Run only tests which name starts with the specified substring.
 %    E.g. `vl_testnn('command', 'nnloss') would run only the nnloss tests.
 %
@@ -49,17 +49,17 @@ import matlab.unittest.plugins.ToFile;
 
 % Choose which tests to run
 sel = HasName(StartsWithSubstring(opts.command)) ;
-if opts.cpu & ~opts.gpu
-  sel = sel & HasName(ContainsSubstring('cpu')) ;
+if ~opts.gpu
+  sel = sel & ~HasName(ContainsSubstring('device=gpu')) ;
 end
-if opts.gpu & ~opts.cpu
-  sel = sel & HasName(ContainsSubstring('gpu')) ;
+if ~opts.cpu
+  sel = sel & ~HasName(ContainsSubstring('device=cpu')) ;
 end
-if opts.single & ~opts.double
-  sel = sel & HasName(ContainsSubstring('single')) ;
+if ~opts.double
+  sel = sel & ~HasName(ContainsSubstring('dataType=double')) ;
 end
-if opts.double & ~opts.single
-  sel = sel & HasName(ContainsSubstring('double')) ;
+if ~opts.single
+  sel = sel & ~HasName(ContainsSubstring('dataType=single')) ;
 end
 
 % Run tests

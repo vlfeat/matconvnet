@@ -396,7 +396,8 @@ private:
 } ;
 
 SharedTensorSpace::SharedTensorSpace()
-  : initialized(false), memoryMapFD(-1), memoryMap(NULL), gpuDevice(-1),
+  : initialized(false), memoryMapFD(-1), memoryMap(NULL),
+    gpuDevice(-1),
     gpuDispatchMemory(NULL)
 #if ENABLE_GPU
 ,   gpuHelperStream(0),
@@ -492,6 +493,10 @@ vl::ErrorCode SharedTensorSpace::mexInit(mxArray const *descriptor)
 
       offset +=
       vl::divideAndRoundUp(tensor.descriptor.getSizeInBytes(), alignFactor) * alignFactor ;
+
+      if (verbosity >= 2) {
+        mexPrintf("[info] %s: registered tensor %s\n", __func__, name.c_str()) ;
+      }
     }
   }
 
@@ -620,7 +625,7 @@ vl::ErrorCode SharedTensorSpace::attach(int lab, int numLabs)
       return vl::VLE_Cuda ;
     }
 
-#if 1
+    // To parallelize memory transfers we use a separate CUDA stream.
     cerror = cudaStreamCreateWithFlags(&gpuHelperStream, cudaStreamNonBlocking) ;
     if (cerror != cudaSuccess) {
       LOGERROR
@@ -629,26 +634,14 @@ vl::ErrorCode SharedTensorSpace::attach(int lab, int numLabs)
       return vl::VLE_Cuda ;
     }
     gpuHelperStreamInitialized = true ;
-#endif
 
-    // cerror = cudaEventCreateWithFlags(&gpuHelperEvent, cudaEventDisableTiming) ;
-    // if (cerror != cudaSuccess) {
-    //   LOGERROR
-    //     << "could not create a CUDA event because '"
-    //     << cudaGetErrorString(cerror) << '\'' ;
-    //   return vl::VLE_Cuda ;
-    // }
-    // gpuHelperEventInitialized = true ;
-  }
-
-  {
-    // Pin shared memory (all of it in one go).
-    cudaError_t cerror = cudaHostRegister(memoryMap,
-                                          memoryMapSize,
-                                          cudaHostRegisterDefault) ;
+    // Pin all shared host memory.
+    cerror = cudaHostRegister(memoryMap,
+                              memoryMapSize,
+                              cudaHostRegisterDefault) ;
     if (cerror != cudaSuccess) {
       LOGERROR
-        << "could not pin memory because of CUDA error '"
+        << "CUDA generated an error while pinning the shared host memory: '"
         << cudaGetErrorString(cerror) << '\'' ;
     } else {
       LOG(2) << "pinned shared memory" ;
@@ -967,7 +960,11 @@ vl::ErrorCode ProcessPool::init(int newLab, int newNumLabs, SharedTensorSpace * 
   sharedSpace = newSharedSpace ;
   timeoutInterval = 30UL * 1000UL * 1000UL * 1000UL ; // 30s in ns
 
-  return supervisor.init() ;
+  error = supervisor.init() ;
+  if (error == vl::VLE_Success) {
+    initialized = true ;
+  }
+  return error ;
 }
 
 vl::ErrorCode ProcessPool::shutdown()
@@ -1593,7 +1590,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
   // Lock for entire duration of handshake()
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
 
-  LOG(2) << "begin" ;
+  LOG(2) << "handshake begins" ;
 
   // receive message from parent (except for root)
   if (pool.lab == 0) {
@@ -1643,6 +1640,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
     }
     // now we can identify the child lab index
     peers[p].lab = msg.from ;
+    LOG(2) << "connected lab " << msg.from ;
   }
 
   // register peer tensors in the same order as peer[]
@@ -1665,7 +1663,7 @@ done:
   if (error != vl::VLE_Success) {
     LOGERROR << "handshake failed" ;
   } else {
-    LOG(2) << "handshake successful" ;
+    LOG(2) << "handshake terminated successfully" ;
   }
   return error ;
 }
@@ -1678,6 +1676,7 @@ void ProcessPool::Supervisor::entryPoint()
   // as the main thread.
 #if ENABLE_GPU
   if (pool.sharedSpace->gpuDevice >= 0) {
+    LOG(2) << "setting CUDA device" ;
     cudaError_t cerror = cudaSetDevice(pool.sharedSpace->gpuDevice) ;
     if (cerror != cudaSuccess) {
       LOGERROR
@@ -1695,7 +1694,7 @@ void ProcessPool::Supervisor::entryPoint()
   }
 
   if (error == vl::VLE_Success) {
-    handshake() ;
+    error = handshake() ;
   }
 
   if (error == vl::VLE_Success) {
@@ -2022,6 +2021,8 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 {
   vl::ErrorCode error = vl::VLE_Success ;
 
+  LOG(2) << "loop begins" ;
+
   // Advertise. Note that we do not lock extensively in the main
   // loop. Syncrhonization with the main thread is kept efficient
   // using lock-free mechanisms.
@@ -2261,32 +2262,32 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   if (nin < 1) {
-    mexErrMsgTxt("There are no arguments") ;
+    vlmxError(VLMXE_IllegalArgument, "There are no arguments") ;
   }
 
   if (!vlmxIsString(in[0], -1)) {
-    mexErrMsgTxt("COMMAND is not a string.") ;
+    vlmxError(VLMXE_IllegalArgument, "COMMAND is not a string.") ;
   }
 
   if (vlmxCompareToStringI(in[0],"init") == 0) {
     command = init ;
     if (nin < 4) {
-      mexErrMsgTxt("Less than three arguments passed to INIT.") ;
+      vlmxError(VLMXE_IllegalArgument, "Less than three arguments passed to INIT.") ;
     }
     arg = in[1] ;
     if (!vlmxIsPlainScalar(in[2])) {
-      mexErrMsgTxt("LABINDEX is not a plain scalar.") ;
+      vlmxError(VLMXE_IllegalArgument, "LABINDEX is not a plain scalar.") ;
     }
     labIndex = mxGetScalar(in[2]) ;
     if (labIndex < 1) {
-      mexErrMsgTxt("LABINDEX must be an integer greater than 0.") ;
+      vlmxError(VLMXE_IllegalArgument, "LABINDEX must be an integer greater than 0.") ;
     }
     if (!vlmxIsPlainScalar(in[3])) {
-      mexErrMsgTxt("NUMLABS is not a plain scalar.") ;
+      vlmxError(VLMXE_IllegalArgument, "NUMLABS is not a plain scalar.") ;
     }
     numLabs = mxGetScalar(in[3]) ;
     if (numLabs < labIndex) {
-      mexErrMsgTxt("NUMLABS must be an integer greater or equal to LABINDEX.") ;
+      vlmxError(VLMXE_IllegalArgument, "NUMLABS must be an integer greater or equal to LABINDEX.") ;
     }
     next = 4 ;
   } else if (vlmxCompareToStringI(in[0], "stats") == 0)  {
@@ -2297,10 +2298,13 @@ void mexFunction(int nout, mxArray *out[],
     next = 1 ;
   } else if (vlmxCompareToStringI(in[0], "push") == 0) {
     if (nin < 3) {
-      mexErrMsgTxt("Less than three arguments passed to PUSH.") ;
+      vlmxError(VLMXE_IllegalArgument, "Less than three arguments passed to PUSH.") ;
     }
     command = push ;
-    vlmxParseString(tensorName, in[1]) ;
+    VLMXErrorCode error = vlmxParseString(tensorName, in[1]) ;
+    if (error != VLMXE_Success) {
+      vlmxError(error, "NAME is not a string.") ;
+    }
     arg = in[2] ;
     next = 3 ;
   } else if (vlmxCompareToStringI(in[0], "pull") == 0) {
@@ -2308,11 +2312,14 @@ void mexFunction(int nout, mxArray *out[],
       mexErrMsgTxt("Less than two arguments passed to PULL.") ;
     }
     command = pull ;
-    vlmxParseString(tensorName, in[1]) ;
+    VLMXErrorCode error = vlmxParseString(tensorName, in[1]) ;
+    if (error != VLMXE_Success) {
+      vlmxError(error, "NAME is not a string.") ;
+    }
     next = 2 ;
   }
   else {
-    mexErrMsgTxt("Unknown COMMAND string.") ;
+    vlmxError(VLMXE_IllegalArgument, "Unknown COMMAND.") ;
   }
 
   // optional arguments
@@ -2352,11 +2359,7 @@ void mexFunction(int nout, mxArray *out[],
 
     case stats :
       (verbosity >= 2) && mexPrintf("vl_tflowmex: command 'stats'\n") ;
-      if (processPool.isInitialized() == false) {
-        vlmxWarning(VLMXE_Execution, "vl_tflowmex: the MATLAB process pool is not initialized.") ;
-      } else {
-        processPool.mexPrint() ;
-      }
+      processPool.mexPrint() ;
       break ;
 
     case push :
