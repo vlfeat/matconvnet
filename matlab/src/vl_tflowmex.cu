@@ -244,9 +244,6 @@ public:
   size_t getSizeInBytes() const ;
   SharedTensorDescriptor & operator=(SharedTensorDescriptor const & tensor) ;
 
-  vl::ErrorCode load(std::istream & is) ;
-  vl::ErrorCode save(std::ostream & os) ;
-
   // Data.
   vl::DeviceType deviceType ;
   vl::DataType dataType ;
@@ -828,32 +825,16 @@ public:
   /// a MEX error on error and an time out.
   mxArray * mexPull(std::string const & name, bool inplace = false) ;
 
+
+  /// Check whether the instance is intialized or not.
+  bool isInitialized() const { return initialized ; }
+
 private:
   bool initialized ;
-  uint32_t session ;
   int lab ;
   int numLabs ;
   size_t timeoutInterval ;
-  int socketFD ;
   SharedTensorSpace * sharedSpace ;
-
-  // Peer processes.
-  struct Peer
-  {
-    int lab ;
-    int socketFD ;
-    bool cudaCanAccessPeer ; //cudaDeviceCanAccessPeer
-    bool canShutdown ;
-
-    Peer(int lab)
-      : lab(lab), socketFD(-1), cudaCanAccessPeer(false), canShutdown(false)
-    { }
-
-    bool operator== (int lab) { return this->lab == lab ; }
-  } ;
-
-  typedef std::vector<Peer> peers_t ;
-  peers_t peers ;
 
   // Messages between peer processes.
   struct Message
@@ -895,59 +876,78 @@ private:
     Message() : transaction(0), tensorId(0) { }
   } ;
 
-  // Create a socket and wait for children to connect
-  vl::ErrorCode makeSocket() ;
+  struct Supervisor {
+  public:
+    Supervisor(ProcessPool& pool)
+    : pool(pool), thread(NULL), state(down) { }
+    ~Supervisor() { finalize() ; }
 
-  // Connect to parent
-  vl::ErrorCode connectParent() ;
+    vl::ErrorCode init() ;
+    void finalize() ;
+    vl::ErrorCode shutdown() ;
+    vl::ErrorCode beginTransaction(int tensorIndex) ;
+    vl::ErrorCode waitTensor(int tensorIndex) ;
 
-  // Delete all sockets, closing the connections with peer processes
-  void deleteSockets() ;
+  private:
+    ProcessPool & pool ;
 
-  // Send a message to a process, based on its index. The function
-  // times out.
-  vl::ErrorCode send(Message &msg, int to) ;
+    tthread::thread * thread ;
+    enum State {
+      connecting,
+      running,
+      shuttingDown,
+      down} state ;
 
-  // Receive a message from a process, based on its index.
-  //
-  // The function times out. If \a timeout is set to zero,
-  // the function returns immediately
-  // with code vl::VLE_NoData. If \a timeout is negative, the
-  // default timeout is used. Otherwise, the specified timeout is used.
-  vl::ErrorCode receive(Message &msg, int from, int timeout = -1) ;
+    // Peer processes.
+    struct Peer
+    {
+      int lab ;
+      int socketFD ;
+      bool cudaCanAccessPeer ; //cudaDeviceCanAccessPeer
+      bool canShutdown ;
+      Peer(int lab)
+      : lab(lab), socketFD(-1),
+      cudaCanAccessPeer(false),
+      canShutdown(false)
+      { }
+      bool operator== (int lab) { return this->lab == lab ; }
+    } ;
+    typedef std::vector<Peer> peers_t ;
+    peers_t peers ;
 
-  // Supervisory thread.
-  tthread::thread * thread ;
-  tthread::mutex mutex ;
-  tthread::condition_variable condition ;
-  int threadError ;
-  int threadPipe [2] ;
-  bool threadShouldShutdown ;
-  enum ThreadState {
-    threadPerformingHandshake,
-    threadRunning,
-    threadShutdownRequested,
-    threadQuittingOnError,
-    threadDone } threadState ;
-  static void threadEntryPoint(void * thing) ;
-  void threadLoop() ;
-  void threadHandshake() ;
-  void threadQuit() ;
+    // Comms.
+    uint32_t session ;
+    int pipeFD [2] ;
+    int socketFD ;
+    tthread::mutex mutex ;
+    tthread::condition_variable waitingList ;
+    bool shutdownRequested ;
+    bool forceQuit ;
+
+    static void threadEntryPoint(void * thing) ;
+    void entryPoint() ;
+
+    vl::ErrorCode connect() ;
+    void disconnect() ;
+    vl::ErrorCode handshake() ;
+    vl::ErrorCode loop() ;
+    vl::ErrorCode send(Message &msg, int to) ;
+    vl::ErrorCode receive(Message &msg, int from, int timeout = -1) ;
+    vl::ErrorCode handleAccumulateChildren(int tensorIndex) ;
+    vl::ErrorCode handleWaitParent(int tensorIndex) ;
+    vl::ErrorCode handleWaitChildren(int tensorIndex) ;
+  } supervisor ;
 } ;
 
 
 ProcessPool::ProcessPool()
-: initialized(false),
-lab(-1), numLabs(0),
-session(0), thread(NULL),
-socketFD(-1)
-{
-  threadPipe[0] = -1 ;
-  threadPipe[1] = -1 ;
-}
+: supervisor(*this), initialized(false), lab(-1), numLabs(0)
+{ }
 
 ProcessPool::~ProcessPool()
-{ finalize() ; }
+{
+  finalize() ;
+}
 
 vl::ErrorCode ProcessPool::init(int newLab, int newNumLabs, SharedTensorSpace * newSharedSpace)
 {
@@ -965,109 +965,19 @@ vl::ErrorCode ProcessPool::init(int newLab, int newNumLabs, SharedTensorSpace * 
   lab = newLab ;
   numLabs = newNumLabs ;
   sharedSpace = newSharedSpace ;
-  timeoutInterval = 60UL * 60UL * 1000UL * 1000UL ; // 60s
-  //timeoutInterval = 1000000000 ; // 1000s
+  timeoutInterval = 30UL * 1000UL * 1000UL * 1000UL ; // 30s in ns
 
-  // infer parent and children labs
-  int bit = ffs(lab) - 1 ;
-  if (bit == -1) { bit = 31 ; }
-
-  parent = lab & (~(1 << bit)) ;
-  if (parent != lab) {
-    // peers[0] always contain the parent (except for root)
-    peers.push_back(Peer(parent)) ;
-  }
-
-  for (int k = 0 ; k < bit ; ++k) {
-    int child = lab | (1 << k) ;
-    if (child < numLabs) {
-      // Which peers[] gets which children is determined later
-      // during hadshake based on the random connection order.
-      // Here we assign a provisional lab index using negative indexes
-      // as these are needed to use send().
-      peers.push_back(Peer(-child)) ;
-    }
-  }
-
-  error = makeSocket() ;
-  if (error != vl::VLE_Success) goto done ;
-
-  error = connectParent() ;
-  if (error != vl::VLE_Success) goto done ;
-
-  // create a thread
-  threadShouldShutdown = false ;
-  threadState = threadPerformingHandshake ;
-  thread = new tthread::thread(threadEntryPoint, this) ;
-
-  // wait for handshake to be complete
-  {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
-    while (threadState == threadPerformingHandshake) {
-      condition.wait(mutex) ;
-    }
-    if (threadState == threadRunning) {
-      error = vl::VLE_Success ;
-    } else {
-      error = vl::VLE_Unknown ;
-    }
-  }
-
-done:
-  if (error != vl::VLE_Success) {
-    finalize() ;
-    return error ;
-  } else {
-    initialized = true ;
-    return vl::VLE_Success ;
-  }
+  return supervisor.init() ;
 }
 
 vl::ErrorCode ProcessPool::shutdown()
 {
-  size_t start = vl::getTime() ;
-  threadShouldShutdown = true ;
-  // Signal the supervisory thread
-  char dummy = 1 ;
-  write(threadPipe[1], &dummy, 1) ;
-
-  {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
-    while (threadState == threadRunning ||
-           threadState == threadShutdownRequested) {
-      if (vl::getTime() > start + timeoutInterval) {
-        LOGERROR << "timeout while shutting down" ;
-        return vl::VLE_Timeout ;
-      }
-      condition.wait(mutex) ;
-    }
-  }
-
-  return vl::VLE_Success ;
+  return supervisor.shutdown() ;
 }
 
 void ProcessPool::finalize()
 {
-  if (thread) {
-    // Tell thread to quit.
-    {
-      tthread::lock_guard<tthread::mutex> lock(mutex) ;
-      if (threadState != threadQuittingOnError) {
-        threadState = threadDone ;
-        condition.notify_all() ;
-      }
-    }
-    // Wait for the thread to quit.
-    if (thread->joinable()) {
-      thread->join() ;
-    }
-    // Delete the thread object.
-    delete thread ;
-    thread = NULL ;
-  }
-  deleteSockets() ;
-  peers.clear() ;
-
+  supervisor.finalize() ;
   if (sharedSpace) {
     sharedSpace->finalize() ;
     delete sharedSpace ;
@@ -1075,293 +985,7 @@ void ProcessPool::finalize()
   }
   lab = -1 ;
   numLabs = 0 ;
-  session = 0 ;
   initialized = false ;
-}
-
-// make the pipe to or from a peer
-vl::ErrorCode ProcessPool::makeSocket()
-{
-  int error ;
-  char socketName [256] ;
-  struct sockaddr_un socketAddress ;
-  size_t start = vl::getTime() ;
-  snprintf(socketName, sizeof(socketName), "/tmp/mcn-socket-%02d", lab) ;
-
-  // Cerate a pipe FD for notification between MATLAB's thread
-  // and the supervisory thread. This is needed to allow awaking
-  // the supervisory thread.
-  error = pipe(threadPipe) ;
-  if (error == -1) {
-    LOGERROR
-    << "cannot create inter-threads pipe because: '"
-    << strerror(errno) << '\'' ;
-    return vl::VLE_Unknown ;
-  }
-
-  // create socket FD
-  socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
-  if (socketFD == -1) {
-    LOGERROR
-    << "cannot create socket " << socketName
-    << "because: " << strerror(errno) ;
-    return vl::VLE_Unknown ;
-  }
-
-  // copy socket path into socketAddress
-  memset(&socketAddress, 0, sizeof(socketAddress)) ;
-  socketAddress.sun_family = AF_UNIX;
-  strncpy(socketAddress.sun_path, socketName,
-          sizeof(socketAddress.sun_path) - 1) ;
-
-  // delete socket path if it exists before binding
-  if (access(socketAddress.sun_path, F_OK) == 0) {
-    unlink(socketAddress.sun_path) ;
-  }
-
-  // bind socket
-  error = bind(socketFD,
-               (struct sockaddr *)&socketAddress,
-               sizeof(socketAddress)) ;
-
-  if (error == -1) {
-    LOGERROR
-    << "cannot bind socket " << socketName
-    << "because: " << strerror(errno) ;
-    return vl::VLE_Unknown ;
-  }
-
-  // start listening for children connections
-  size_t numChildren = peers.size() - (lab > 0) ;
-  if (numChildren == 0) return vl::VLE_Success ;
-
-  error = listen(socketFD, numChildren) ;
-  if (error == -1) {
-    LOGERROR
-    << "cannot listen to socket " << socketName
-    << "because: " << strerror(errno) ;
-    return vl::VLE_Unknown ;
-  }
-
-  // do not block on accept()
-  fcntl(socketFD, F_SETFL, fcntl(socketFD, F_GETFL, 0) | O_NONBLOCK);
-
-  // Accept one connection per child.
-  for (int p = (lab > 0) ; p < peers.size() ; ++p) {
-    for (;;) {
-      peers[p].socketFD = accept(socketFD, NULL, NULL) ;
-      if (peers[p].socketFD == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          if (vl::getTime() < start + timeoutInterval) continue ; // retry
-          LOGERROR
-          << "timed out while accepting connection from peer " << peers[p].lab ;
-          return vl::VLE_Timeout ;
-        }
-        LOGERROR
-        << " cannot accept connection from peer " << peers[p].lab
-        << " because: " << strerror(errno) ;
-        return vl::VLE_Unknown ;
-      }
-      break ;
-    }
-    fcntl(peers[p].socketFD, F_SETFL,
-          fcntl(peers[p].socketFD ,F_GETFL, 0) | O_NONBLOCK) ;
-  }
-
-  return vl::VLE_Success ;
-}
-
-// Make the pipe to or from a peer.
-vl::ErrorCode ProcessPool::connectParent()
-{
-  int error ;
-  char socketName [256] ;
-  struct sockaddr_un socketAddress ;
-  size_t start = vl::getTime() ;
-
-  if (lab == 0) {
-    return vl::VLE_Success ;
-  }
-
-  snprintf(socketName, sizeof(socketName),
-           "/tmp/mcn-socket-%02d", peers[0].lab) ;
-
-  for (;;) {
-    peers[0].socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
-    if (peers[0].socketFD == -1) {
-      if (vl::getTime() < start + timeoutInterval) {
-        usleep(30000) ;
-        continue ; // try again
-      }
-      LOGERROR
-      << "cannot create socket '" << socketName
-      << "' because '" << strerror(errno) << '"' ;
-      return vl::VLE_Unknown ;
-    }
-    break ;
-  }
-  fcntl(peers[0].socketFD, F_SETFL,
-        fcntl(peers[0].socketFD ,F_GETFL, 0) | O_NONBLOCK) ;
-
-  // copy socket path into socketAddress
-  memset(&socketAddress, 0, sizeof(socketAddress)) ;
-  socketAddress.sun_family = AF_UNIX;
-  strncpy(socketAddress.sun_path, socketName,
-          sizeof(socketAddress.sun_path) - 1) ;
-
-  // establish connection
-  for (int trials = 0 ; ; ++trials) {
-    error = connect(peers[0].socketFD,
-                    (struct sockaddr *)&socketAddress,
-                    sizeof(socketAddress)) ;
-    if (error == 0) break ;
-    if (vl::getTime() < start + timeoutInterval) {
-      usleep(30000) ;
-      continue ;
-    }
-    LOGERROR
-    << "cannot connect socket " << socketName
-    << " after trying " << trials
-    << " times because '" << strerror(errno) << '"' ;
-    return vl::VLE_Unknown ;
-  }
-
-  return vl::VLE_Success ;
-}
-
-void ProcessPool::deleteSockets()
-{
-  char socketName [256] ;
-  snprintf(socketName, sizeof(socketName), "/tmp/mcn-socket-%02d", lab) ;
-
-  for (int p = 0 ; p < peers.size() ; ++p) {
-    if (peers[p].socketFD != -1) {
-      close(peers[p].socketFD) ;
-      peers[p].socketFD = -1 ;
-    }
-  }
-  if (socketFD != -1) {
-    close(socketFD) ;
-    socketFD = -1 ;
-  }
-  for (int t = 1 ; t >= 0 ; --t) {
-    if (threadPipe[t] != -1) {
-      close(threadPipe[t]) ;
-      threadPipe[t] = -1 ;
-    }
-  }
-  unlink(socketName) ;
-}
-
-vl::ErrorCode ProcessPool::send(Message & msg, int to)
-{
-  // Find connection to peer.
-  peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), to) ;
-  assert(rel != peers.end()) ;
-
-  // Add complementery information to the message.
-  msg.session = session ;
-  msg.from = lab ;
-  msg.to = to ;
-
-  // Send all bytes.
-  {
-    int bytesWritten = 0 ;
-    int status ;
-    char * nextByte = (char*)&msg ;
-    while (bytesWritten < sizeof(msg)) {
-      status = write(rel->socketFD, nextByte, sizeof(msg) - bytesWritten) ;
-      if (status == -1) {
-        LOGERROR
-        << "could not send message to " << to
-        << " because '" << strerror(errno) << '\'' ;
-        return vl::VLE_Unknown ;
-      }
-      bytesWritten += status ;
-    }
-  }
-
-  LOG(3)
-  << "sent message to " << to
-  << " (type "  << msg.type
-  << ", state " << msg.tensorState
-  << " tensor " << msg.tensorId
-  << ')' ;
-
-  return vl::VLE_Success ;
-}
-
-vl::ErrorCode ProcessPool::receive(Message & msg, int from, int timeout)
-{
-  size_t waited = 0 ; // microsecond
-  size_t const pollInterval = 100 ;
-
-  if (timeout < 0) { timeout = timeoutInterval ; }
-
-  // find connection to peer
-  peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), from) ;
-  assert(rel != peers.end()) ;
-
-  // receive all bytes
-  {
-    int bytesRead = 0 ;
-    int status ;
-    char * nextByte = (char*)&msg ;
-    while (bytesRead < sizeof(msg)) {
-      status = read(rel->socketFD, nextByte, sizeof(msg) - bytesRead) ;
-      if (status == 0 || status == -1) {
-        if (status == 0 || errno == EAGAIN) {
-          if (timeout == 0 && bytesRead == 0) {
-            // non blocking operation, no message, just return no data
-            return vl::VLE_NoData ;
-          }
-          if (timeout > 0 && waited >= timeout) {
-            if (verbosity >= 1) {
-              LOGERROR
-              << "timed out while receiving a message from lab " << from
-              << " because '" << strerror(errno) << '\'' ;
-            }
-            return vl::VLE_Timeout ;
-          }
-          usleep(pollInterval) ;
-          waited += pollInterval ;
-          continue ;
-        }
-        if (verbosity >= 1) {
-          LOGERROR
-          << "error while receiving a message from lab " << from
-          << ": '" << strerror(errno) << '\'' ;
-        }
-        return vl::VLE_Unknown ;
-      }
-      bytesRead += status ;
-    }
-  }
-
-  // check message integrity
-  if ((msg.type != Message::init &&
-       msg.type != Message::initDone)
-      && (msg.session != session &&
-          msg.from != from &&
-          msg.to != lab)) {
-        LOGERROR
-        << "received an unexpected message from lab " << from
-        << "\n\tmsg: session:" << msg.session
-        << " from:" << msg.from
-        << " to:"  << msg.to
-        << " type:" << msg.type
-        << "\n\tthis session:" << session ;
-        return vl::VLE_Unknown ;
-      }
-
-  LOG(3)
-  << "received message from "<<from
-  << " (type "   << msg.type
-  << ", state "  << msg.tensorState
-  << ", tensor " << msg.tensorId
-  << ')' ;
-
-  return vl::VLE_Success ;
 }
 
 void ProcessPool::mexPrint() const
@@ -1370,17 +994,10 @@ void ProcessPool::mexPrint() const
   sharedSpace->mexPrint() ;
 }
 
-// Push this data
-
-void ProcessPool::mexPush(std::string const & name, mxArray const * x, bool inplace)
+void ProcessPool::mexPush(std::string const & name,
+                          mxArray const * x,
+                          bool inplace)
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
-
-  // Make sure that the session did not end.
-  if (threadState != threadRunning) {
-    vlmxError(VLMXE_Execution, "The connection to other MATLAB instances shut down.") ;
-  }
-
   // Search tensor by name.
   SharedTensorSpace::tensors_t::iterator T
   = std::find(sharedSpace->tensors.begin(), sharedSpace->tensors.end(), name) ;
@@ -1408,18 +1025,10 @@ void ProcessPool::mexPush(std::string const & name, mxArray const * x, bool inpl
     vlmxError(VLMXE_IllegalArgument, "Inplace operations are supported only for GPU arrays.") ;
   }
 
-  // Wait until ready to push.
-  {
-    size_t start = vl::getTime() ;
-    while (T->state != SharedTensorSpace::ready) {
-      if ((vl::getTime() - start) > timeoutInterval) {
-        vlmxError(VLMXE_TimeOut, "PUSH operation timed out on tensor '%s'.", T->name.c_str()) ;
-      }
-      if (threadState != threadRunning) {
-        vlmxError(VLMXE_Execution, "The connection to other MATLAB instances shut down.") ;
-      }
-      condition.wait(mutex) ;
-    }
+  // Wait until the tensor is in ready state
+  vl::ErrorCode error = supervisor.waitTensor(T - sharedSpace->tensors.begin()) ;
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_Execution, "Timeout or disconnected while waiting for tensor '%s' to become ready.", T->name.c_str()) ;
   }
 
   // Copy memory to SharedSpace
@@ -1466,27 +1075,11 @@ void ProcessPool::mexPush(std::string const & name, mxArray const * x, bool inpl
     }
 #endif
   }
-  T->transaction ++ ;
-  T->numChildrenToAccumulate = 0 ;
-  for (int p = (lab > 0) ; p < peers.size() ; ++p) {
-    SharedTensorSpace::SharedTensorPeerInstance & PT = sharedSpace->peerTensors[T - sharedSpace->tensors.begin()][p] ;
-    PT.accumulated = false ;
-    T->numChildrenToAccumulate += 1;
-  }
-  asm volatile("": : :"memory") ; // Memory barrier: prevents compiler from reordering
-  T->state = SharedTensorSpace::accumulateChildren ; // Must be last to close transaction
-
-  // Signal the supervisory thread
-  {
-    char dummy = 1 ;
-    write(threadPipe[1], &dummy, 1) ;
-  }
+  supervisor.beginTransaction(T - sharedSpace->tensors.begin()) ;
 }
 
 mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
-
   // Search the tensor with the specified name.
   SharedTensorSpace::tensors_t::const_iterator T
   = std::find(sharedSpace->tensors.begin(), sharedSpace->tensors.end(), name) ;
@@ -1499,23 +1092,10 @@ mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
     vlmxError(VLMXE_IllegalArgument, "Inplace operations are supported only for GPU arrays.") ;
   }
 
-  // Wait until the tensor is in a ready state, or a timeout occurs.
-  {
-    size_t start = vl::getTime() ;
-    while (T->state != SharedTensorSpace::ready) {
-      if ((vl::getTime() - start) > timeoutInterval) {
-        vlmxError(VLMXE_TimeOut, "PULL operation timed out on tensor %s.", T->name.c_str()) ;
-      }
-      if (threadState != threadRunning &&
-          threadState != threadShutdownRequested) {
-        // If the connection is down, there is no hope of recovering from this
-        // situation; in fact a deadlock can be expected as with the thread down
-        // the hearbeat stops and there is no way of timing out the mutex.
-        vlmxError(VLMXE_Execution,
-                  "The tensor is not ready and the connection to other MATLAB instances was lost.") ;
-      }
-      condition.wait(mutex) ;
-    }
+  // Wait until the tensor is in ready state
+  vl::ErrorCode error = supervisor.waitTensor(T - sharedSpace->tensors.begin()) ;
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_Execution, "Timeout or disconnected while waiting for tensor '%s' to become ready.", T->name.c_str()) ;
   }
 
   if (inplace) {
@@ -1539,13 +1119,13 @@ mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
                                            cudaMemcpyDeviceToDevice,
                                            sharedSpace->gpuHelperStream) ;
       if (cerror != cudaSuccess) {
-        vlmxError(VLMXE_Execution, "CUDA error while copying GPU data (%s).",
+        vlmxError(VLMXE_Execution, "CUDA generated an error while copying GPU data: '%s'.",
                   cudaGetErrorString(cerror)) ;
       }
 
       cerror = cudaStreamSynchronize(sharedSpace->gpuHelperStream) ;
       if (cerror != cudaSuccess) {
-        vlmxError(VLMXE_Execution, "CUDA error while synchronizing a stream (%s).",
+        vlmxError(VLMXE_Execution, "CUDA generated an error while synchronizing a stream: '%s'.",
                   cudaGetErrorString(cerror)) ;
       }
 #endif
@@ -1554,11 +1134,450 @@ mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
   }
 }
 
+/* ---------------------------------------------------------------- */
+/*                                          ProcessPool::Supervisor */
+/* ---------------------------------------------------------------- */
+
 #pragma mark -
 
-void ProcessPool::threadEntryPoint(void * thing)
+#undef LOGERROR
+#define LOGERROR \
+vl::Logger().getStream() \
+<<"[error]"<<__func__<<"::lab "<<pool.lab<<"::"
+
+#undef LOG
+#define LOG(level) \
+if (verbosity < level) { } \
+else vl::Logger().getStream() \
+<<"[info] "<<__func__<<"::lab "<<pool.lab<<"::"
+
+void ProcessPool::Supervisor::threadEntryPoint(void * thing)
 {
-  ((ProcessPool*)thing)->threadLoop() ;
+  ((ProcessPool::Supervisor*)thing)->entryPoint() ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::init()
+{
+  vl::ErrorCode error = vl::VLE_Success ;
+  finalize() ;
+
+  // Infer parent and children labs.
+  int bit = ffs(pool.lab) - 1 ;
+  if (bit == -1) { bit = 31 ; }
+
+  int parent = pool.lab & (~(1 << bit)) ;
+  if (parent != pool.lab) {
+    // peers[0] always contain the parent (except for root)
+    peers.push_back(Peer(parent)) ;
+  }
+
+  for (int k = 0 ; k < bit ; ++k) {
+    int child = pool.lab | (1 << k) ;
+    if (child < pool.numLabs) {
+      // Which peers[] gets which children is determined later
+      // during hadshake based on the random connection order.
+      // Here we assign a provisional lab index using negative indexes
+      // as these are needed to use send().
+      peers.push_back(Peer(-child)) ;
+    }
+  }
+
+  state = connecting ;
+  shutdownRequested = false ;
+  forceQuit = false ;
+  thread = new tthread::thread(threadEntryPoint, this) ;
+
+  // Wait for initialization to be complete.
+  {
+    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    while (state == connecting) {
+      waitingList.wait(mutex) ;
+    }
+    if (state == running) {
+      error = vl::VLE_Success ;
+    } else {
+      error = vl::VLE_Unknown ;
+    }
+  }
+
+  return error ;
+}
+
+void ProcessPool::Supervisor::finalize()
+{
+  if (thread) {
+    {
+      tthread::lock_guard<tthread::mutex> lock(mutex) ;
+      forceQuit = true ;
+      if (pipeFD[1] >= 0) {
+        char dummy = 1 ;
+        write(pipeFD[1], &dummy, 1) ;
+      }
+    }
+    if (thread->joinable()) {
+      thread->join() ;
+    }
+    delete thread ;
+    thread = NULL ;
+  }
+  peers.clear() ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::shutdown()
+{
+
+  // Signal the supervisory thread
+  shutdownRequested = true ;
+  char dummy = 1 ;
+  write(pipeFD[1], &dummy, 1) ;
+
+  // Wait for shutdown to complete
+  {
+    size_t start = vl::getTime() ;
+    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    while (state != down) {
+      if (vl::getTime() > start + pool.timeoutInterval) {
+        LOGERROR << "timeout while shutting down" ;
+        return vl::VLE_Timeout ;
+      }
+      waitingList.wait(mutex) ;
+    }
+  }
+  return vl::VLE_Success ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::beginTransaction(int tensorIndex)
+{
+  vl::ErrorCode error = vl::VLE_Success ;
+  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+
+  T.transaction ++ ;
+  T.numChildrenToAccumulate = 0 ;
+  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+    SharedTensorSpace::SharedTensorPeerInstance & PT = pool.sharedSpace->peerTensors[tensorIndex][p] ;
+    PT.accumulated = false ;
+    T.numChildrenToAccumulate += 1;
+  }
+  asm volatile("": : :"memory") ; // Memory barrier: prevents compiler from reordering
+  T.state = SharedTensorSpace::accumulateChildren ; // Must be last to close transaction
+
+  // Signal the supervisory thread
+  {
+    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    char dummy = 1 ;
+    write(pipeFD[1], &dummy, 1) ;
+  }
+  return error ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
+{
+  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+  size_t start = vl::getTime() ;
+  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  while (T.state != SharedTensorSpace::ready) {
+    if ((vl::getTime() - start) > pool.timeoutInterval) {
+      return vl::VLE_Unknown ;
+    }
+    if (state != running) {
+      return vl::VLE_Unknown ;
+    }
+    waitingList.wait(mutex) ;
+  }
+  return vl::VLE_Success ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::send(Message & msg, int to)
+{
+  // Find connection to peer.
+  peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), to) ;
+  assert(rel != peers.end()) ;
+
+  // Add complementery information to the message.
+  msg.session = session ;
+  msg.from = pool.lab ;
+  msg.to = to ;
+
+  // Send all bytes.
+  int bytesWritten = 0 ;
+  int status ;
+  char * nextByte = (char*)&msg ;
+  while (bytesWritten < sizeof(msg)) {
+    status = write(rel->socketFD, nextByte, sizeof(msg) - bytesWritten) ;
+    if (status == -1) {
+      LOGERROR
+      << "could not send message to " << to
+      << " because '" << strerror(errno) << '\'' ;
+      return vl::VLE_Unknown ;
+    }
+    bytesWritten += status ;
+  }
+
+  LOG(3)
+  << "sent message to " << to
+  << " (type "  << msg.type
+  << ", state " << msg.tensorState
+  << " tensor " << msg.tensorId
+  << ')' ;
+  return vl::VLE_Success ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, int from, int timeout)
+{
+  size_t waited = 0 ; // microsecond
+  size_t const pollInterval = 1000 ; // microseconds
+  if (timeout < 0) { timeout = (pool.timeoutInterval / 1000UL) ; }
+
+  // find connection to peer
+  peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), from) ;
+  assert(rel != peers.end()) ;
+
+  // receive all bytes
+  {
+    int bytesRead = 0 ;
+    int status ;
+    char * nextByte = (char*)&msg ;
+    while (bytesRead < sizeof(msg)) {
+      status = read(rel->socketFD, nextByte, sizeof(msg) - bytesRead) ;
+      if (status == 0 || status == -1) {
+        if (status == 0 || errno == EAGAIN) {
+          if (timeout == 0 && bytesRead == 0) {
+            // non blocking operation, no message, just return no data
+            return vl::VLE_NoData ;
+          }
+          if (timeout > 0 && waited >= timeout) {
+            if (verbosity >= 1) {
+              LOGERROR
+              << "timed out while receiving a message from lab " << from
+              << " because '" << strerror(errno) << '\'' ;
+            }
+            return vl::VLE_Timeout ;
+          }
+          usleep(pollInterval) ;
+          waited += pollInterval ;
+          continue ;
+        }
+        if (verbosity >= 1) {
+          LOGERROR
+          << "error while receiving a message from lab " << from
+          << ": '" << strerror(errno) << '\'' ;
+        }
+        return vl::VLE_Unknown ;
+      }
+      bytesRead += status ;
+    }
+  }
+
+  // check message integrity
+  if ((msg.type != Message::init &&
+       msg.type != Message::initDone)
+      && (msg.session != session &&
+          msg.from != from &&
+          msg.to != pool.lab)) {
+        LOGERROR
+        << "received an unexpected message from lab " << from
+        << "\n\tmsg: session:" << msg.session
+        << " from:" << msg.from
+        << " to:"  << msg.to
+        << " type:" << msg.type
+        << "\n\tthis session:" << this->session ;
+        return vl::VLE_Unknown ;
+      }
+
+  LOG(3)
+  << "received message from "<<from
+  << " (type "   << msg.type
+  << ", state "  << msg.tensorState
+  << ", tensor " << msg.tensorId
+  << ')' ;
+
+  return vl::VLE_Success ;
+}
+
+/// Establish connections with the peers.
+vl::ErrorCode ProcessPool::Supervisor::connect()
+{
+  vl::ErrorCode error = vl::VLE_Success ;
+  int result ;
+  char socketName [256] ;
+  struct sockaddr_un socketAddress ;
+  size_t start = vl::getTime() ;
+
+  // Lock for entire duration of connect()
+  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+
+  // Advertise
+  state = connecting ;
+  waitingList.notify_all() ;
+
+  // Cerate a pipe FD for notification between MATLAB's thread
+  // and the supervisory thread. This is needed to allow awaking
+  // the supervisory thread.
+  result = pipe(pipeFD) ;
+  if (result == -1) {
+    LOGERROR
+    << "cannot create inter-threads pipe because: '"
+    << strerror(errno) << '\'' ;
+    return vl::VLE_Unknown ;
+  }
+
+  // Create a socket and connect children.
+  size_t numChildren = peers.size() - (pool.lab > 0) ;
+  if (numChildren > 0) {
+
+    // Get a UNID comain socket.
+    snprintf(socketName, sizeof(socketName), "/tmp/mcn-socket-%02d", pool.lab) ;
+    socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
+    if (socketFD == -1) {
+      LOGERROR
+      << "cannot create socket " << socketName
+      << "because: " << strerror(errno) ;
+      return vl::VLE_Unknown ;
+    }
+
+    // Copy socket path into socketAddress.
+    memset(&socketAddress, 0, sizeof(socketAddress)) ;
+    socketAddress.sun_family = AF_UNIX;
+    strncpy(socketAddress.sun_path, socketName,
+            sizeof(socketAddress.sun_path) - 1) ;
+
+    // Delete socket path if it exists before binding.
+    if (access(socketAddress.sun_path, F_OK) == 0) {
+      unlink(socketAddress.sun_path) ;
+    }
+
+    // Bind socket to address.
+    result = bind(socketFD,
+                  (struct sockaddr *)&socketAddress,
+                  sizeof(socketAddress)) ;
+    if (result == -1) {
+      LOGERROR
+      << "cannot bind socket " << socketName
+      << "because: " << strerror(errno) ;
+      return vl::VLE_Unknown ;
+    }
+
+    // Start listening for children connections
+    result = listen(socketFD, numChildren) ;
+    if (result == -1) {
+      LOGERROR
+      << "cannot listen to socket " << socketName
+      << "because: " << strerror(errno) ;
+      return vl::VLE_Unknown ;
+    }
+
+    // Do not block on accept().
+    fcntl(socketFD, F_SETFL, fcntl(socketFD, F_GETFL, 0) | O_NONBLOCK);
+
+    // Accept one connection per child.
+    for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+      for (;;) {
+        peers[p].socketFD = accept(socketFD, NULL, NULL) ;
+        if (peers[p].socketFD == -1) {
+          if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (vl::getTime() < start + pool.timeoutInterval) continue ; // retry
+            LOGERROR
+            << "timed out while accepting connection from peer " << peers[p].lab ;
+            error = vl::VLE_Timeout ;
+            goto done ;
+          }
+          LOGERROR
+          << " cannot accept connection from peer " << peers[p].lab
+          << " because: " << strerror(errno) ;
+          error = vl::VLE_Unknown ;
+          goto done ;
+        }
+        break ;
+      }
+      fcntl(peers[p].socketFD, F_SETFL,
+            fcntl(peers[p].socketFD ,F_GETFL, 0) | O_NONBLOCK) ;
+    }
+  }
+
+  // Connect parent.
+  if (pool.lab > 0) {
+    snprintf(socketName, sizeof(socketName),
+             "/tmp/mcn-socket-%02d", peers[0].lab) ;
+
+    for (;;) {
+      peers[0].socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
+      if (peers[0].socketFD == -1) {
+        if (vl::getTime() < start + pool.timeoutInterval) {
+          // Wait for parent to create socket file.
+          usleep(30000) ;
+          continue ;
+        }
+        LOGERROR
+        << "cannot create socket '" << socketName
+        << "' because '" << strerror(errno) << '"' ;
+        error = vl::VLE_Unknown ;
+        goto done ;
+      }
+      break ;
+    }
+    fcntl(peers[0].socketFD, F_SETFL,
+          fcntl(peers[0].socketFD ,F_GETFL, 0) | O_NONBLOCK) ;
+
+    // Copy socket path into socketAddress.
+    memset(&socketAddress, 0, sizeof(socketAddress)) ;
+    socketAddress.sun_family = AF_UNIX;
+    strncpy(socketAddress.sun_path, socketName,
+            sizeof(socketAddress.sun_path) - 1) ;
+
+    // Establish connection with parent.
+    for (int trials = 0 ; ; ++trials) {
+      int result = ::connect(peers[0].socketFD,
+                             (struct sockaddr *)&socketAddress,
+                             sizeof(socketAddress)) ;
+      if (result == 0) break ;
+      if (vl::getTime() < start + pool.timeoutInterval) {
+        // Wait for parent to start accepting connections.
+        usleep(30000) ;
+        continue ;
+      }
+      LOGERROR
+      << "cannot connect socket " << socketName
+      << " after trying " << trials
+      << " times because '" << strerror(errno) << '"' ;
+      error = vl::VLE_Unknown ;
+      goto done ;
+    }
+  }
+
+done:
+  return error ;
+}
+
+void ProcessPool::Supervisor::disconnect()
+{
+  // Lock for entire duration of disconnect()
+  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+
+  for (int p = 0 ; p < peers.size() ; ++p) {
+    if (peers[p].socketFD != -1) {
+      close(peers[p].socketFD) ;
+      peers[p].socketFD = -1 ;
+    }
+  }
+
+  if (socketFD != -1) {
+    close(socketFD) ;
+    socketFD = -1 ;
+  }
+
+  char socketName [256] ;
+  snprintf(socketName, sizeof(socketName), "/tmp/mcn-socket-%02d", pool.lab) ;
+  unlink(socketName) ;
+
+  for (int t = 1 ; t >= 0 ; --t) {
+    if (pipeFD[t] != -1) {
+      close(pipeFD[t]) ;
+      pipeFD[t] = -1 ;
+    }
+  }
+
+  state = down ;
+  waitingList.notify_all() ;
 }
 
 // The purpose of the handshake sequence is to make sure that
@@ -1566,33 +1585,21 @@ void ProcessPool::threadEntryPoint(void * thing)
 // It is also required to synchornize the root (which creates several
 // shared resources) and the other nodes (which attach them).
 
-void ProcessPool::threadHandshake()
+vl::ErrorCode ProcessPool::Supervisor::handshake()
 {
   Message msg ;
   vl::ErrorCode error = vl::VLE_Success ;
 
+  // Lock for entire duration of handshake()
+  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+
   LOG(2) << "begin" ;
 
-  // make sure the supervisory thread operates on the same CUDA device as the main thread
-#if ENABLE_GPU
-  {
-    if (sharedSpace->gpuDevice >= 0) {
-      cudaError_t cerror = cudaSetDevice(sharedSpace->gpuDevice) ;
-      if (cerror != cudaSuccess) {
-        LOGERROR << "could not switch supervisory thread to CUDA device " << sharedSpace->gpuDevice ;
-        error = vl::VLE_Cuda ;
-        goto done ;
-      }
-      LOG(2) << "supervisory thread switched to CUDA device " << sharedSpace->gpuDevice ;
-    }
-  }
-#endif
-
   // receive message from parent (except for root)
-  if (lab == 0) {
+  if (pool.lab == 0) {
     session = (uint32_t)vl::getTime() ;
     // root atteches first
-    error = sharedSpace->attach(0, numLabs) ;
+    error = pool.sharedSpace->attach(0, pool.numLabs) ;
     if (error != vl::VLE_Success) {
       LOGERROR << "root could not attache shared space" ;
       error = vl::VLE_Unknown ;
@@ -1608,7 +1615,7 @@ void ProcessPool::threadHandshake()
     }
     session = msg.session ;
     // children attach now
-    error = sharedSpace->attach(lab, numLabs) ;
+    error = pool.sharedSpace->attach(pool.lab, pool.numLabs) ;
     if (error != vl::VLE_Success || msg.type != Message::init) {
       LOGERROR << "could not attach shared space" ;
       error = vl::VLE_Unknown ;
@@ -1618,7 +1625,7 @@ void ProcessPool::threadHandshake()
   }
 
   // send message to all children
-  for (int p = (lab > 0) ; p < peers.size() ; ++p) {
+  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
     msg.type = Message::init ;
     error = send(msg,peers[p].lab) ;
     if (error != vl::VLE_Success) {
@@ -1628,7 +1635,7 @@ void ProcessPool::threadHandshake()
   }
 
   // receive message from all children
-  for (int p = (lab > 0) ; p < peers.size() ; ++p) {
+  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
     error = receive(msg,peers[p].lab) ;
     if (error != vl::VLE_Success || msg.type != Message::initDone) {
       error = vl::VLE_Unknown ;
@@ -1640,11 +1647,11 @@ void ProcessPool::threadHandshake()
 
   // register peer tensors in the same order as peer[]
   for (int p = 0 ; p < peers.size() ; ++p) {
-    sharedSpace->attachPeer(peers[p].lab) ;
+    pool.sharedSpace->attachPeer(peers[p].lab) ;
   }
 
   // send message to parent (excep for root)
-  if (lab > 0) {
+  if (pool.lab > 0) {
     msg.type = Message::initDone ;
     error = send(msg, peers[0].lab) ;
     if (error != vl::VLE_Success) {
@@ -1656,39 +1663,375 @@ void ProcessPool::threadHandshake()
 
 done:
   if (error != vl::VLE_Success) {
-    // The handshake was unsuccesful. The supervisory thread
-    // will quit.
-    threadState = threadQuittingOnError ;
     LOGERROR << "handshake failed" ;
   } else {
-    // The handshake was successful. The supervisory thread can
-    // start running.
-    threadState = threadRunning ;
     LOG(2) << "handshake successful" ;
   }
-  condition.notify_all() ;
+  return error ;
 }
 
-// On quitting, the supervisory thread closes the communication
-// sockets, which causes the superisory threads in other processes
-// to quit as well. However, this does *not* reinitialize the process
-// pool structure so that it is still possible to read the last
-// value written in the tensors.
-
-void ProcessPool::threadQuit()
+void ProcessPool::Supervisor::entryPoint()
 {
-  // Shut down connections
-  LOG(2) << "supervisor thread quitting" ;
-  deleteSockets() ;
-  condition.notify_all() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+
+  // Make sure the supervisory thread operates on the same CUDA device
+  // as the main thread.
+#if ENABLE_GPU
+  if (pool.sharedSpace->gpuDevice >= 0) {
+    cudaError_t cerror = cudaSetDevice(pool.sharedSpace->gpuDevice) ;
+    if (cerror != cudaSuccess) {
+      LOGERROR
+      << "could not switch supervisory thread to CUDA device "
+      << pool.sharedSpace->gpuDevice ;
+      error = vl::VLE_Cuda ;
+    } else {
+      LOG(2) << "supervisory thread switched to CUDA device " << pool.sharedSpace->gpuDevice ;
+    }
+  }
+#endif
+
+  if (error == vl::VLE_Success) {
+    error = connect() ;
+  }
+
+  if (error == vl::VLE_Success) {
+    handshake() ;
+  }
+
+  if (error == vl::VLE_Success) {
+    error = loop() ;
+  }
+
+  disconnect() ;
 }
 
-void ProcessPool::threadLoop()
+vl::ErrorCode ProcessPool::Supervisor::handleAccumulateChildren(int tensorIndex)
 {
-  threadHandshake() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+
+  // Search for children ready to be be accumulated.
+  for (int p = (pool.lab > 0) ; p < peers.size() && error == vl::VLE_Success ; ++p)
+  {
+    int peerLab = peers[p].lab ;
+    SharedTensorSpace::SharedTensorPeerInstance & PT
+    = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
+
+    if (PT.transaction == T.transaction &&
+        PT.state == SharedTensorSpace::waitParent &&
+        PT.accumulated == false) {
+
+      switch (T.descriptor.deviceType) {
+
+        case vl::VLDT_CPU: {
+          switch (T.descriptor.dataType) {
+            case vl::VLDT_Float:
+              vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Float>::axpy
+              (context,
+               T.descriptor.shape.getNumElements(),
+               1.0f,
+               (float*)PT.mappedCpuMemory, 1,
+               (float*)T.cpuMemory, 1) ;
+              break ;
+
+            case vl::VLDT_Double:
+              vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Double>::axpy
+              (context,
+               T.descriptor.shape.getNumElements(),
+               1.0,
+               (double*)PT.mappedCpuMemory, 1,
+               (double*)T.cpuMemory, 1) ;
+              break ;
+
+            default:
+              assert(false) ;
+              break ;
+          }
+          break ;
+        }
+
+        case vl::VLDT_GPU: {
+#if ENABLE_GPU
+          cudaError_t cerror ;
+
+          if (T.gpuMemory == NULL) {
+            LOGERROR << "internal error: GPU memory not allocated for tensor " << T.name ;
+            error = vl::VLE_Unknown ;
+            break ;
+          }
+
+          // Copy the copy of the tensor update in the host shared memory map
+          // to a buffer in the GPU.
+
+          cerror = cudaMemcpyAsync(pool.sharedSpace->gpuDispatchMemory,
+                                   PT.mappedCpuMemory,
+                                   T.descriptor.getSizeInBytes(),
+                                   cudaMemcpyHostToDevice,
+                                   pool.sharedSpace->gpuHelperStream) ;
+          if (cerror != cudaSuccess) {
+            LOGERROR
+            << "CUDA generated an error while copying data from host to device: "
+            << cudaGetErrorString(cerror) ;
+            error = vl::VLE_Cuda ;
+            break ;
+          }
+
+          // Sum the update to the current tensor vale.
+
+          cudaStream_t previousStream = context.getCudaHelper().getStream() ;
+          error = context.getCudaHelper().setStream(pool.sharedSpace->gpuHelperStream) ;
+          if (error != vl::VLE_Success) {
+            LOGERROR
+            << "CUDA generated an error while switching to a different stream:"
+            << context.getLastErrorMessage() ;
+            break ;
+          }
+
+          switch (T.descriptor.dataType) {
+            case vl::VLDT_Float:
+              error = vl::impl::blas<vl::VLDT_GPU,vl::VLDT_Float>::axpy
+              (context,
+               T.descriptor.shape.getNumElements(),
+               1.0f,
+               (float*)pool.sharedSpace->gpuDispatchMemory, 1,
+               (float*)T.gpuMemory, 1) ;
+              break ;
+
+            case vl::VLDT_Double:
+              error = vl::impl::blas<vl::VLDT_GPU,vl::VLDT_Double>::axpy
+              (context,
+               T.descriptor.shape.getNumElements(),
+               1.0,
+               (double*)pool.sharedSpace->gpuDispatchMemory, 1,
+               (double*)T.gpuMemory, 1) ;
+              break ;
+
+            default:
+              assert(false) ;
+              break ;
+          }
+
+          context.getCudaHelper().setStream(previousStream) ;
+
+          if (error != vl::VLE_Success) {
+            LOGERROR << "summing tensors:" << context.getLastErrorMessage() ;
+          }
+#endif
+          break ;
+        }
+
+        default:
+          assert(false) ;
+          break ;
+      }
+
+      PT.accumulated = true ;
+      -- T.numChildrenToAccumulate ;
+      LOG(3)
+      << "accumulated child " << PT.lab
+      << "; " << T.numChildrenToAccumulate << " remaining" ;
+    } // next peer
+  }
+
+  if (error != vl::VLE_Success) { return error ; }
+
+  // If all children have been accumulated, then
+  // notify the parent and switch to waitParent state.
+  // Note that we change the PT state too as the peer
+  // will switch to that upon receiving the notification.
+  //
+  // The root is a special case because it
+  // does not have a parent, so it can switch
+  // directly to the waitChildren state. However, in order
+  // to reuse the generic code above, we also set it
+  // to waitParent and let the next iteration pick this up.
+
+  if (T.numChildrenToAccumulate == 0) {
+    if (T.descriptor.deviceType == vl::VLDT_GPU) {
+#if ENABLE_GPU
+      cudaError_t cerror ;
+
+      // Copy the GPU tensor to the shared host memory map for other
+      // processes to use.
+      cerror = cudaMemcpyAsync(T.cpuMemory,
+                               T.gpuMemory,
+                               T.descriptor.getSizeInBytes(),
+                               cudaMemcpyDeviceToHost,
+                               pool.sharedSpace->gpuHelperStream) ;
+      if (cerror != cudaSuccess) {
+        LOGERROR
+        << "CUDA error while copying from device to host ("
+        << cudaGetErrorString(cerror) << ")" ;
+        return vl::VLE_Cuda ;
+      }
+
+      // Make this operation synchronous in order
+      // to make sure that other processes will properly read the
+      // update only when the copy is complete
+      cerror = cudaStreamSynchronize(pool.sharedSpace->gpuHelperStream) ;
+      if (cerror != cudaSuccess) {
+        LOGERROR
+        << "CUDA error while synchronizing a stream: '"
+        << cudaGetErrorString(cerror) << '\'' ;
+        return vl::VLE_Cuda ;
+      }
+#endif
+    }
+
+    T.state = SharedTensorSpace::waitParent ;
+    if (pool.lab > 0) {
+      int parentLab = peers[0].lab ;
+      pool.sharedSpace->getPeerTensor(tensorIndex, parentLab).state = SharedTensorSpace::waitParent ;
+      Message msg ;
+      msg.type = Message::tensorStateChange ;
+      msg.tensorId = tensorIndex ;
+      msg.tensorState = T.state ;
+      msg.transaction = T.transaction ;
+      error = send(msg, parentLab) ;
+    }
+  }
+
+  return error ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
+{
+  vl::ErrorCode error = vl::VLE_Success ;
+  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+
+  // Check if parent finished updating. If so, we can copy its value here
+  // and notify the children to copy us by switching to waitParent state and
+  // notifying the children. Note that we change the children peer state too
+  // as these peers will switch to that upon being notified.
+
+  if (pool.lab > 0) {
+    int parentLab = peers[0].lab ;
+    SharedTensorSpace::SharedTensorPeerInstance & PT
+    = pool.sharedSpace->getPeerTensor(tensorIndex, parentLab) ;
+    bool parentDone = (PT.transaction == T.transaction &&
+                       PT.state == SharedTensorSpace::waitChildren) ;
+    if (!parentDone) {
+      return vl::VLE_Success ;
+    }
+
+    switch (T.descriptor.deviceType) {
+      case vl::VLDT_CPU:
+        memcpy(T.cpuMemory, PT.mappedCpuMemory, T.descriptor.getSizeInBytes()) ;
+        break ;
+
+      case vl::VLDT_GPU: {
+#if ENABLE_GPU
+        cudaError_t cerror = cudaMemcpyAsync(T.gpuMemory,
+                                             PT.mappedCpuMemory,
+                                             T.descriptor.getSizeInBytes(),
+                                             cudaMemcpyHostToDevice,
+                                             pool.sharedSpace->gpuHelperStream) ;
+        if (cerror != cudaSuccess) {
+          LOGERROR
+          << "propagating parent to children: CUDA generated an error while copying from host to device: '"
+          << cudaGetErrorString(cerror) << '\'' ;
+          error = vl::VLE_Cuda ;
+        }
+#endif
+        break ;
+      }
+    }
+    if (error != vl::VLE_Success) { return error ; }
+  }
+
+  // We have copied data from parent (or there is no parent at all)
+  // so we are ready to pass our data to the children and to release
+  // the parent from waiting on us.
+#if ENABLE_GPU
+  if (T.descriptor.deviceType == vl::VLDT_GPU
+      && peers.size() > (pool.lab > 0) // There are children
+      ) {
+
+    cudaError_t cerror
+    = cudaMemcpyAsync(T.cpuMemory,
+                      T.gpuMemory,
+                      T.descriptor.getSizeInBytes(),
+                      cudaMemcpyDeviceToHost,
+                      pool.sharedSpace->gpuHelperStream) ;
+    if (cerror != cudaSuccess) {
+      LOGERROR
+      << "CUDA generated an error while copying from device to host: '"
+      << cudaGetErrorString(cerror) << '\'' ;
+      error = vl::VLE_Cuda ;
+    }
+
+    // This is synchrnous, so we can correctly notify
+    // that the memory is ready to the peer.
+    cerror = cudaStreamSynchronize(pool.sharedSpace->gpuHelperStream) ;
+    if (cerror != cudaSuccess) {
+      LOGERROR
+      << "CUDA gnereated an error while synchronizing a stream: '"
+      << cudaGetErrorString(cerror) << '\'' ;
+      return vl::VLE_Cuda ;
+    }
+  }
+#endif
+
+  T.state = SharedTensorSpace::waitChildren ;
+  for (int p = 0 ; p < peers.size() ; ++p) {
+    int peerLab = peers[p].lab ;
+    SharedTensorSpace::SharedTensorPeerInstance & PT
+    = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
+    PT.state = (pool.lab > 0 && p == 0) ? SharedTensorSpace::ready : SharedTensorSpace::waitChildren ;
+    Message msg ;
+    msg.type = Message::tensorStateChange ;
+    msg.transaction = T.transaction ;
+    msg.tensorId = tensorIndex ;
+    msg.tensorState = (pool.lab > 0 && p == 0) ? SharedTensorSpace::ready : SharedTensorSpace::waitChildren ;
+    error = send(msg, peerLab) ;
+  }
+
+  return error ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(int tensorIndex)
+{
+  vl::ErrorCode error = vl::VLE_Success ;
+  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+
+  // Check if all children finished updating. If so, we can switch
+  // to ready state and notify the parent.
+  // Note that we change the peer children state too
+  // as these peers will switch to that upon being notified.
+
+  bool allChildrenDone = true ;
+  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+    int peerLab = peers[p].lab ;
+    SharedTensorSpace::SharedTensorPeerInstance & PT
+    = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
+    allChildrenDone &= ((PT.transaction == T.transaction &&
+                         PT.state == SharedTensorSpace::ready) ||
+                        PT.transaction > T.transaction) ;
+  }
+  if (allChildrenDone) {
+    // We already nofified a ready state to the partent before
+    asm volatile("": : :"memory") ; // probably overkill here
+    T.state = SharedTensorSpace::ready ;
+    waitingList.notify_all() ;
+  }
+
+  return error ;
+}
+
+vl::ErrorCode ProcessPool::Supervisor::loop()
+{
+  vl::ErrorCode error = vl::VLE_Success ;
+
+  // Advertise. Note that we do not lock extensively in the main
+  // loop. Syncrhonization with the main thread is kept efficient
+  // using lock-free mechanisms.
+  {
+    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    state = running ;
+    waitingList.notify_all() ;
+  }
 
   int pollStatus = 0 ;
-  bool notificationPending = false ;
   size_t const pollInterval = 499UL * 1000UL; // allow heartbeats (mus)
   size_t const heartbeatInterval = 500UL * 1000UL * 1000UL ; // (ns)
   size_t lastHeartbeat = vl::getTime() ;
@@ -1698,46 +2041,42 @@ void ProcessPool::threadLoop()
     polls[p].fd = peers[p].socketFD ;
     polls[p].events = POLLIN | POLLHUP | POLLERR | POLLNVAL ;
   }
-  polls[peers.size()].fd = threadPipe[0] ;
+  polls[peers.size()].fd = pipeFD[0] ;
   polls[peers.size()].events = POLLIN ;
 
-  for (; //tthread::lock_guard<tthread::mutex> lock(mutex) ;
-       threadState != threadQuittingOnError &&
-         threadState != threadDone ;)
+  while (error == vl::VLE_Success && forceQuit == false)
   {
+    // Generate regular heartbeats to wake up the main thread at
+    // regular interval and allow it to time out on
+    // user commands usch as pull() and push().
     size_t now = vl::getTime() ;
-
-    // Regular heartbeats are used to occassionally wake up a waiting
-    // main thread and allow it to time out on pull(), push(),
-    // and other operations.
-    notificationPending |= (now > lastHeartbeat + heartbeatInterval) ;
-    if (notificationPending) {
-      condition.notify_all() ;
+    if (now > lastHeartbeat + heartbeatInterval) {
+      waitingList.notify_all() ;
       lastHeartbeat = now ;
     }
 
     // Wait for incoming messages or a timeout.
     pollStatus = poll(polls, peers.size() + 1, pollInterval) ;
     if (pollStatus < 0) {
-      threadState = threadQuittingOnError ;
+      error = vl::VLE_Unknown ;
       continue ;
     }
 
-    // Check for threadPipe events sent from the main thread.
+    // Check for messages piped from the main thread.
     if (polls[peers.size()].revents & POLLIN) {
-      LOG(3) << "supervisory thread notified from main thread" ;
+      LOG(3) << "supervisory thread notified by the main thread" ;
       char dummy ;
-      read(threadPipe[0], &dummy, 1) ;
+      read(pipeFD[0], &dummy, 1) ;
     }
 
-    for (int p = 0 ; p < peers.size()
-         && threadState != threadQuittingOnError ;
-         ++ p)
+    // Check for messages from other processes.
+    for (int p = 0 ; p < peers.size() && error == vl::VLE_Success ; ++ p)
     {
       // Check for communication errors.
       if (polls[p].revents & (POLLHUP | POLLERR | POLLNVAL)) {
-        threadState = threadQuittingOnError ;
-        continue ;
+        LOG(3) << "one of the sockets generated an error" ;
+        error = vl::VLE_Unknown ;
+        break ;
       }
 
       // Skip this peer if there is no incoming data.
@@ -1745,47 +2084,51 @@ void ProcessPool::threadLoop()
 
       // Receive the message.
       Message msg ;
-      if (receive(msg, peers[p].lab) != vl::VLE_Success) {
-        LOGERROR << "connection with " << peers[p].lab << " was lost." ;
-        threadState = threadQuittingOnError ;
-        continue ;
+      error = receive(msg, peers[p].lab) ;
+      if (error != vl::VLE_Success) {
+        LOGERROR << "error while receiving a message from lab " << peers[p].lab ;
+        break ;
       }
 
       // Process the message.
       switch (msg.type) {
-        case Message::tensorStateChange:
-        {
+        case Message::tensorStateChange: {
+          // Record the new state for later.
           LOG(3)
           << "received tensor state change from lab " << msg.from
-          << " for tensor " << sharedSpace->tensors[msg.tensorId].name.c_str()
+          << " for tensor " << pool.sharedSpace->tensors[msg.tensorId].name.c_str()
           << " to state " << msg.tensorState
           << " for transaction " << msg.transaction ;
           SharedTensorSpace::SharedTensorPeerInstance & T
-          = sharedSpace->getPeerTensor(msg.tensorId, msg.from) ;
+          = pool.sharedSpace->getPeerTensor(msg.tensorId, msg.from) ;
           T.state = msg.tensorState ;
           T.transaction = msg.transaction ;
           break ;
         }
 
-        case Message::requestShutdown:
-        {
-          threadState = threadShutdownRequested ;
-          LOG(3) << "received shutdown request, propagating to other labs" ;
-          // Propagate to all peers minus the source of this message.
-          int sourcePeer = msg.from ;
-          for (int q = 0 ; q < peers.size() ; ++q) {
-            if (sourcePeer == peers[q].lab) continue ;
-            vl::ErrorCode error = send(msg, peers[q].lab) ;
-            if (error != vl::VLE_Success) {
-              threadState = threadQuittingOnError ;
-              break ;
+        case Message::requestShutdown: {
+          // Propagate shutdown requests to all peers
+          // except the one sending this message.
+          shutdownRequested = true ;
+          if (state != shuttingDown) {
+            LOG(3) << "received shutdown request, propagating to other labs." ;
+            int sourcePeer = msg.from ;
+            for (int q = 0 ; q < peers.size() ; ++q) {
+              if (sourcePeer == peers[q].lab) continue ;
+              error = send(msg, peers[q].lab) ;
+              if (error != vl::VLE_Success) {
+                LOGERROR
+                << "error while receiving a message from lab "
+                << peers[p].lab ;
+                break ;
+              }
             }
           }
           break ;
         }
 
-        case Message::readyToShutdown:
-        {
+        case Message::readyToShutdown: {
+          // Record the fact that the peer is ready to shutdown.
           peers_t::iterator P = std::find(peers.begin(), peers.end(), msg.from) ;
           P->canShutdown = true ;
           LOG(3) << "child " << P->lab << " is ready to shutdown" ;
@@ -1794,374 +2137,84 @@ void ProcessPool::threadLoop()
 
         default:
           // Unexpected message.
-          LOGERROR << "received an unexpected message, quitting." ;
-          threadState = threadQuittingOnError ;
+          LOGERROR << "received an unexpected message" ;
+          error = vl::VLE_Unknown ;
           break ;
       }
     }
 
-    // A flag to check whether all tensors are in a ready state.
-    bool allTensorsAreReady = true ;
-
-    // Check all tensors for actions.
-    for (int tensorIndex = 0 ; tensorIndex < sharedSpace->tensors.size()
-         && threadState != threadQuittingOnError ; ++tensorIndex)
+    // Check all tensors for actions. Keep updating each tensor until its
+    // state does not change anymore.
+    for (int tensorIndex = 0 ; tensorIndex < pool.sharedSpace->tensors.size() && error == vl::VLE_Success ; ++tensorIndex)
     {
-      vl::ErrorCode error = vl::VLE_Success ;
-      SharedTensorSpace::SharedTensorInstance & T = sharedSpace->tensors[tensorIndex] ;
-      allTensorsAreReady &= (T.state == SharedTensorSpace::ready) ;
-
       SharedTensorSpace::SharedTensorState currentState ;
+      SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
       do {
+
         currentState = T.state ;
         LOG(3) << "visiting tensor " << T.name << " in state " << T.state ;
-        switch (T.state)
-        {
+        switch (T.state) {
+
           case SharedTensorSpace::ready:
-            // Nothing to do if ready.
             break ;
 
-          case SharedTensorSpace::accumulateChildren :
-          {
-            // Search for children that can and should
-            // be accumulated for this transaction.
-            for (int p = (lab > 0) ; p < peers.size() ; ++p) {
-              int peerLab = peers[p].lab ;
-              SharedTensorSpace::SharedTensorPeerInstance & PT = sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
-              if (PT.transaction == T.transaction &&
-                  PT.state == SharedTensorSpace::waitParent &&
-                  PT.accumulated == false) {
-                switch (T.descriptor.deviceType) {
-
-                  case vl::VLDT_CPU: {
-                    switch (T.descriptor.dataType) {
-                      case vl::VLDT_Float:
-                        vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Float>::axpy
-                        (context,
-                         T.descriptor.shape.getNumElements(),
-                         1.0f,
-                         (float*)PT.mappedCpuMemory, 1,
-                         (float*)T.cpuMemory, 1) ;
-                        break ;
-
-                      case vl::VLDT_Double:
-                        vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Double>::axpy
-                        (context,
-                         T.descriptor.shape.getNumElements(),
-                         1.0,
-                         (double*)PT.mappedCpuMemory, 1,
-                         (double*)T.cpuMemory, 1) ;
-                        break ;
-
-                      default:
-                        assert(false) ;
-                        break ;
-                    }
-                    break ;
-                  }
-
-                  case vl::VLDT_GPU: {
-#if ENABLE_GPU
-                    if (T.gpuMemory == NULL) {
-                      LOGERROR << "internal error: GPU memory not allocated for tensor " << T.name ;
-                      error = vl::VLE_Unknown ;
-                      break ;
-                    }
-
-                    cudaError_t cerror
-                    = cudaMemcpyAsync(sharedSpace->gpuDispatchMemory,
-                                      PT.mappedCpuMemory,
-                                      T.descriptor.getSizeInBytes(),
-                                      cudaMemcpyHostToDevice,
-                                      sharedSpace->gpuHelperStream) ;
-                    if (cerror != cudaSuccess) {
-                      LOGERROR
-                      << "CUDA error while copying data from host to device ("
-                      << cudaGetErrorString(cerror) << ')' ;
-                      error = vl::VLE_Cuda ;
-                      break ;
-                    }
-
-                    cudaStream_t previousStream = context.getCudaHelper().getStream() ;
-                    error = context.getCudaHelper().setStream(sharedSpace->gpuHelperStream) ;
-                    if (error != vl::VLE_Success) {
-                      LOGERROR << "switching CUDA streams:" << context.getLastErrorMessage() ;
-                      break ;
-                    }
-
-                    switch (T.descriptor.dataType) {
-                      case vl::VLDT_Float:
-                        error = vl::impl::blas<vl::VLDT_GPU,vl::VLDT_Float>::axpy
-                        (context,
-                         T.descriptor.shape.getNumElements(),
-                         1.0f,
-                         (float*)sharedSpace->gpuDispatchMemory, 1,
-                         (float*)T.gpuMemory, 1) ;
-                        break ;
-
-                      case vl::VLDT_Double:
-                        error = vl::impl::blas<vl::VLDT_GPU,vl::VLDT_Double>::axpy
-                        (context,
-                         T.descriptor.shape.getNumElements(),
-                         1.0,
-                         (double*)sharedSpace->gpuDispatchMemory, 1,
-                         (double*)T.gpuMemory, 1) ;
-                        break ;
-
-                      default:
-                        assert(false) ;
-                        break ;
-                    }
-
-                    context.getCudaHelper().setStream(previousStream) ;
-
-                    if (error != vl::VLE_Success) {
-                      LOGERROR << "summing tensors:" << context.getLastErrorMessage() ;
-                      break ;
-                    }
-#endif
-                    break ;
-                  }
-
-                  default:
-                    assert(false) ;
-                    break ;
-                }
-                PT.accumulated = true ;
-                -- T.numChildrenToAccumulate ;
-                LOG(3) << "accumulated child " << PT.lab << "; " << T.numChildrenToAccumulate << " remaining" ;
-              }
-            }
-            // If all children have been accumulated, then
-            // notify parent and switch to waitParent state.
-            // Note that we change the PT state too as the peer
-            // will switch to that upon receiving the notification.
-            //
-            // The root is a special case because it
-            // does not have a parent, so it can switch
-            // directly to the waitChildren state. However, in order
-            // to reuse the generic code above, we also set it
-            // to waitParent and let the next iteration pick this up.
-            if (T.numChildrenToAccumulate == 0) {
-#if ENABLE_GPU
-              if (T.descriptor.deviceType == vl::VLDT_GPU) {
-                cudaError_t cerror ;
-                if (T.gpuMemory == NULL) {
-                  LOGERROR
-                  << "internal: GPU memory not allocated for tensor "
-                  << T.name ;
-                  error = vl::VLE_Unknown ;
-                  break ;
-                }
-
-                cerror = cudaMemcpyAsync(T.cpuMemory,
-                                         T.gpuMemory,
-                                         T.descriptor.getSizeInBytes(),
-                                         cudaMemcpyDeviceToHost,
-                                         sharedSpace->gpuHelperStream) ;
-                if (cerror != cudaSuccess) {
-                  LOGERROR
-                  << "CUDA error while copying from device to host ("
-                  << cudaGetErrorString(cerror) << ")" ;
-                  error = vl::VLE_Cuda ;
-                  break ;
-                }
-
-                // TODO: with more granularity, it would be possible for the thread
-                // to move onto something else while we wait for the copy to finish.
-                // However, this is a little difficult to do with the poll() waiting above.
-
-                cerror = cudaStreamSynchronize(sharedSpace->gpuHelperStream) ;
-                if (cerror != cudaSuccess) {
-                  LOGERROR
-                    << "CUDA error while synchronizing a stream: '"
-                    << cudaGetErrorString(cerror) << '\'' ;
-                  error = vl::VLE_Cuda ;
-                  break ;
-                }
-              }
-              if (error != vl::VLE_Success) break ;
-#endif
-              T.state = SharedTensorSpace::waitParent ;
-              if (lab > 0) {
-                int parentLab = peers[0].lab ;
-                sharedSpace->getPeerTensor(tensorIndex, parentLab).state = SharedTensorSpace::waitParent ;
-                Message msg ;
-                msg.type = Message::tensorStateChange ;
-                msg.tensorId = tensorIndex ;
-                msg.tensorState = T.state ;
-                msg.transaction = T.transaction ;
-                error = send(msg, parentLab) ;
-              }
-            }
+          case SharedTensorSpace::accumulateChildren:
+            error = handleAccumulateChildren(tensorIndex) ;
             break ;
-          }
 
           case SharedTensorSpace::waitParent :
-          {
-            if (lab > 0) {
-              // Check if parent finished updating. If so, we can copy its value here
-              // and notify the children to copy us by switching to waitParent state and
-              // notifying the children. Note that we change the children peer state too
-              // as these peers will switch to that upon being notified.
-              int parentLab = peers[0].lab ;
-              SharedTensorSpace::SharedTensorPeerInstance & PT
-              = sharedSpace->getPeerTensor(tensorIndex, parentLab) ;
-
-              bool parentDone = (PT.transaction == T.transaction &&
-                                 PT.state == SharedTensorSpace::waitChildren) ;
-              if (!parentDone) continue ;
-              switch (T.descriptor.deviceType) {
-                case vl::VLDT_CPU:
-                  memcpy(T.cpuMemory, PT.mappedCpuMemory, T.descriptor.getSizeInBytes()) ;
-                  break ;
-
-                case vl::VLDT_GPU: {
-#if ENABLE_GPU
-                  if (T.gpuMemory == NULL) {
-                    LOGERROR << "internal: GPU memory not allocated for tensor " << T.name ;
-                    error = vl::VLE_Unknown ;
-                    break ;
-                  }
-                  cudaError_t cerror = cudaMemcpyAsync(T.gpuMemory,
-                                                       PT.mappedCpuMemory,
-                                                       T.descriptor.getSizeInBytes(),
-                                                       cudaMemcpyHostToDevice,
-                                                       sharedSpace->gpuHelperStream) ;
-                  if (cerror != cudaSuccess) {
-                    LOGERROR
-                      << "propagating parent to children: CUDA error while copying from host to device: '"
-                      << cudaGetErrorString(cerror) << '\'' ;
-                    error = vl::VLE_Cuda ;
-                  }
-#endif
-                  break ;
-                }
-              }
-              if (error != vl::VLE_Success) break ;
-            }
-
-            // We have copied data from parent (or there is no parent at all)
-            // so we are ready to pass our data to the children and to release
-            // the parent from waiting on us.
-#if ENABLE_GPU
-            if (T.descriptor.deviceType == vl::VLDT_GPU
-                && peers.size() > (lab > 0) // There are children
-                ) {
-
-              cudaError_t cerror
-              = cudaMemcpyAsync(T.cpuMemory,
-                                T.gpuMemory,
-                                T.descriptor.getSizeInBytes(),
-                                cudaMemcpyDeviceToHost,
-                                sharedSpace->gpuHelperStream) ;
-              if (cerror != cudaSuccess) {
-                LOGERROR
-                << "propagating children to parent: CUDA error while copying from device to host ("
-                << cudaGetErrorString(cerror) << ')' ;
-                error = vl::VLE_Cuda ;
-              }
-
-              // This is synchrnous, so we can correctly notify
-              // that the memory is ready to the peer.
-              cerror = cudaStreamSynchronize(sharedSpace->gpuHelperStream) ;
-              if (cerror != cudaSuccess) {
-                LOGERROR
-                  << "CUDA error while synchronizing a stream ("
-                  << cudaGetErrorString(cerror) << ")" ;
-                error = vl::VLE_Cuda ;
-                break ;
-              }
-            }
-            if (error != vl::VLE_Success) break ;
-#endif
-            T.state = SharedTensorSpace::waitChildren ;
-            for (int p = 0 ; p < peers.size() ; ++p) {
-              int peerLab = peers[p].lab ;
-              SharedTensorSpace::SharedTensorPeerInstance & PT
-              = sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
-              PT.state = (lab > 0 && p == 0) ? SharedTensorSpace::ready : SharedTensorSpace::waitChildren ;
-              Message msg ;
-              msg.type = Message::tensorStateChange ;
-              msg.transaction = T.transaction ;
-              msg.tensorId = tensorIndex ;
-              msg.tensorState = (lab > 0 && p == 0) ? SharedTensorSpace::ready : SharedTensorSpace::waitChildren ;
-              error = send(msg, peerLab) ;
-              if (error != vl::VLE_Success) break ;
-            }
+            error = handleWaitParent(tensorIndex) ;
             break ;
-          }
 
           case SharedTensorSpace::waitChildren :
-          {
-            // Check if all children finished updating. If so, we can switch
-            // to ready state and notify the parent.
-            // Note that we change the peer children state too
-            // as these peers will switch to that upon being notified.
-
-            bool allChildrenDone = true ;
-            for (int p = (lab > 0) ; p < peers.size() ; ++p) {
-              int peerLab = peers[p].lab ;
-              SharedTensorSpace::SharedTensorPeerInstance & PT
-              = sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
-              allChildrenDone &= ((PT.transaction == T.transaction &&
-                                   PT.state == SharedTensorSpace::ready) ||
-                                  PT.transaction > T.transaction) ;
-            }
-            if (allChildrenDone) {
-              // We already nofified a ready state to the partent before
-              asm volatile("": : :"memory") ; // probably overkill here
-              T.state = SharedTensorSpace::ready ;
-              notificationPending = true ;
-            }
+            error = handleWaitChildren(tensorIndex) ;
             break ;
-          }
         }
-      } while (T.state != currentState) ;
+      } while (T.state != currentState && error == vl::VLE_Success) ;
+    }
 
-      if (error != vl::VLE_Success) {
-        LOGERROR << "supervisory thread caught an error and will quit." ;
-        threadState = threadQuittingOnError ;
-      }
-    } // check next tensor
-
-    if (threadShouldShutdown && threadState == threadRunning) {
-      threadState = threadShutdownRequested;
-      LOG(2) << "shutdown sequence initiated" ;
+    // Check for other actions.
+    if (shutdownRequested && (state == running) && (error == vl::VLE_Success)) {
       for (int p = 0 ; p < peers.size() ; ++p) {
         Message msg ;
         msg.type = Message::requestShutdown ;
-        send(msg, peers[p].lab) ;
+        error = send(msg, peers[p].lab) ;
+        if (error != vl::VLE_Success) { break ; }
+      }
+      // Advertise
+      {
+        tthread::lock_guard<tthread::mutex> lock(mutex) ;
+        state = shuttingDown ;
+        waitingList.notify_all() ;
       }
     }
 
-    if (allTensorsAreReady && threadState == threadShutdownRequested) {
-      // check if all children are ready
-      bool allChildrenCanShutdown = true ;
-      for (int p = (lab > 0) ; p < peers.size() ; ++p) {
-        allChildrenCanShutdown &= peers[p].canShutdown ;
+    if (shutdownRequested && (state == shuttingDown) && (error == vl::VLE_Success)) {
+      bool allDone = true ;
+      for (int t = 0 ; t < pool.sharedSpace->tensors.size() ; ++ t) {
+        allDone &= (pool.sharedSpace->tensors[t].state == SharedTensorSpace::ready) ;
       }
-      if (allChildrenCanShutdown) {
-        if (lab == 0) {
-          LOG(3) << "the complete tree is ready, shutdown" ;
-          threadState = threadDone ;
-          continue ;
-        }
-        // tell parent we are ready
-        LOG(2) << "subtree ready to shutdown, telling parent lab" ;
-        Message msg ;
-        msg.type = Message::readyToShutdown ;
-        vl::ErrorCode error = send(msg, peers[0].lab) ;
-        if (error != vl::VLE_Success) {
-          threadState = threadQuittingOnError ;
-          continue ;
+      for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+        allDone &= peers[p].canShutdown ;
+      }
+      if (allDone) {
+        if (pool.lab > 0) {
+          LOG(2) << "subtree ready to shutdown, telling parent lab" ;
+          Message msg ;
+          msg.type = Message::readyToShutdown ;
+          error = send(msg, peers[0].lab) ;
+        } else {
+          // Other processes will stop when connections are broken.
+          LOG(2) << "root lab quitting" ;
+          break ; // out of poll loop
         }
       }
     }
-  } // go to poll
+  } // back to poll
 
+  LOG(2) << "terminating supervisory thread loop (error = " << error << ')' ;
   delete [] polls ;
-  threadQuit() ;
+  return error ;
 }
 
 /* ---------------------------------------------------------------- */
@@ -2299,7 +2352,11 @@ void mexFunction(int nout, mxArray *out[],
 
     case stats :
       (verbosity >= 2) && mexPrintf("vl_tflowmex: command 'stats'\n") ;
-      processPool.mexPrint() ;
+      if (processPool.isInitialized() == false) {
+        vlmxWarning(VLMXE_Execution, "vl_tflowmex: the MATLAB process pool is not initialized.") ;
+      } else {
+        processPool.mexPrint() ;
+      }
       break ;
 
     case push :
