@@ -27,7 +27,8 @@ namespace vl { namespace impl {
                       Tensor biases,
                       int strideY, int strideX,
                       int padTop, int padBottom,
-                      int padLeft, int padRight) ;
+                      int padLeft, int padRight,
+                      int dilateY = 1, int dilateX = 1) ;
 
   template<vl::Device deviceType, vl::Type dataType> inline vl::Error
   nnconv_backward_blas(Context& context,
@@ -39,7 +40,8 @@ namespace vl { namespace impl {
                        Tensor derOutput,
                        int strideY, int strideX,
                        int padTop, int padBottom,
-                       int padLeft, int padRight) ;
+                       int padLeft, int padRight,
+                       int dilateY = 1, int dilateX = 1) ;
 
 } }
 
@@ -84,7 +86,8 @@ vl::impl::nnconv_forward_blas(Context& context,
                               Tensor biases,
                               int strideY, int strideX,
                               int padTop, int padBottom,
-                              int padLeft, int padRight)
+                              int padLeft, int padRight,
+                              int dilateY, int dilateX)
 {
   assert(output) ;
   assert(data) ;
@@ -120,7 +123,8 @@ vl::impl::nnconv_forward_blas(Context& context,
      data.getHeight(), data.getWidth(), data.getDepth(),
      filters.getHeight(), filters.getWidth(),
      strideY, strideX,
-     padTop, padBottom, padLeft, padRight) ;
+     padTop, padBottom, padLeft, padRight,
+     dilateY, dilateX) ;
     if (error != vl::vlSuccess) { goto done ; }
 
     for (int g = 0 ; g < numGroups ; ++ g) {
@@ -172,7 +176,8 @@ vl::impl::nnconv_backward_blas(Context& context,
                                Tensor derOutput,
                                int strideY, int strideX,
                                int padTop, int padBottom,
-                               int padLeft, int padRight)
+                               int padLeft, int padRight,
+                               int dilateY, int dilateX)
 {
   vl::Error error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -272,7 +277,8 @@ vl::impl::nnconv_backward_blas(Context& context,
        derData.getHeight(), derData.getWidth(), derData.getDepth(),
        filters.getHeight(), filters.getWidth(),
        strideY, strideX,
-       padTop, padBottom, padLeft, padRight) ;
+       padTop, padBottom, padLeft, padRight,
+       dilateY, dilateX) ;
       if (error != vl::vlSuccess) { return error ; }
     }
 
@@ -287,7 +293,8 @@ vl::impl::nnconv_backward_blas(Context& context,
        data.getHeight(), data.getWidth(), data.getDepth(),
        derFilters.getHeight(), derFilters.getWidth(),
        strideY, strideX,
-       padTop, padBottom, padLeft, padRight) ;
+       padTop, padBottom, padLeft, padRight,
+       dilateY, dilateX) ;
       if (error != vl::vlSuccess) { return error ; }
       for (int g = 0 ; g < numGroups ; ++ g) {
         ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;

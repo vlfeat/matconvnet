@@ -38,13 +38,15 @@ enum {
   opt_cudnn,
   opt_no_cudnn,
   opt_cudnn_workspace_limit,
-  opt_transpose
+  opt_transpose,
+  opt_dilate
 } ;
 
 /* options */
 vlmxOption  options [] = {
   {"Stride",                1,   opt_stride                },
   {"Pad",                   1,   opt_pad                   },
+  {"Dilate",                1,   opt_dilate                },
   {"Verbose",               0,   opt_verbose               },
   {"NoDerData",             0,   opt_no_der_data           },
   {"NoDerFilters",          0,   opt_no_der_filters        },
@@ -91,6 +93,8 @@ void mexFunction(int nout, mxArray *out[],
   int padRight = 0 ;
   int padTop = 0 ;
   int padBottom = 0 ;
+  int dilateX = 1;
+  int dilateY = 1;
   int numFilterGroups = 1 ;
 
   bool backMode = false ;
@@ -144,6 +148,24 @@ void mexFunction(int nout, mxArray *out[],
             break ;
           default:
             mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
+        }
+        break ;
+
+      case opt_dilate :
+        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
+          mexErrMsgTxt("DILATE is not a plain matrix.") ;
+        }
+        switch (mxGetNumberOfElements(optarg)) {
+          case 1:
+            dilateY = (int)mxGetPr(optarg)[0] ;
+            dilateX = dilateY ;
+            break ;
+          case 2:
+            dilateY = (int)mxGetPr(optarg)[0] ;
+            dilateX = (int)mxGetPr(optarg)[1] ;
+            break ;
+          default:
+            mexErrMsgTxt("DILATE has neither one nor two elements.") ;
         }
         break ;
 
@@ -266,6 +288,10 @@ void mexFunction(int nout, mxArray *out[],
     mexErrMsgTxt("An element of PAD is negative.") ;
   }
 
+  if (dilateX < 1 || dilateY < 1) {
+    mexErrMsgTxt("DILATE must be at least 1");
+  }
+
   /* Get the filter shape */
   vl::TensorShape filtersShape(filters) ;
   int equivalentNumFilters ;
@@ -294,8 +320,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the output shape */
-  vl::TensorShape outputShape((data.getHeight() + (padTop+padBottom) - filtersShape.getHeight())/strideY + 1,
-                                (data.getWidth()  + (padLeft+padRight) - filtersShape.getWidth())/strideX + 1,
+  vl::TensorShape outputShape((data.getHeight() + (padTop+padBottom) - ((filtersShape.getHeight() - 1)*dilateY + 1))/strideY + 1,
+                                (data.getWidth()  + (padLeft+padRight) - ((filtersShape.getWidth() - 1)*dilateX + 1))/strideX + 1,
                                 equivalentNumFilters,
                                 data.getSize()) ;
 
@@ -316,6 +342,7 @@ void mexFunction(int nout, mxArray *out[],
    no padding,
    one filter group,
    stride of one pixel
+   dilate of one pixel
    */
   fullyConnectedMode = (outputShape.getHeight() == 1 &&
                         outputShape.getWidth() == 1 &&
@@ -325,6 +352,8 @@ void mexFunction(int nout, mxArray *out[],
                         padBottom == 0 &&
                         padLeft == 0 &&
                         padRight == 0 &&
+                        dilateX == 1 &&
+                        dilateY == 1 &&
                         numFilterGroups == 1) ;
 
   /* create output buffers */
@@ -360,10 +389,11 @@ void mexFunction(int nout, mxArray *out[],
     } else {
       mexPrintf("; BLAS\n") ;
     }
-    mexPrintf("vl_nnconv: stride: [%d %d], pad: [%d %d %d %d]\n"
+    mexPrintf("vl_nnconv: stride: [%d %d], pad: [%d %d %d %d], dilate: [%d %d]\n"
               "vl_nnconv: num filter groups: %d, has bias: %d, has filters: %d, is fully connected: %d\n",
               strideY, strideX,
               padTop, padBottom, padLeft, padRight,
+              dilateY, dilateX,
               numFilterGroups, hasBiases, hasFilters, fullyConnectedMode) ;
     vl::print("vl_nnconv: data: ", data) ;
     if (hasFilters) { vl::print("vl_nnconv: filters: ", filters) ; }
@@ -435,7 +465,8 @@ void mexFunction(int nout, mxArray *out[],
                                filters,
                                biases,
                                strideY, strideX,
-                               padTop, padBottom, padLeft, padRight) ;
+                               padTop, padBottom, padLeft, padRight, 
+                               dilateY, dilateX) ;
   } else {
     error = vl::nnconv_backward(context,
                                 derData,
@@ -445,7 +476,8 @@ void mexFunction(int nout, mxArray *out[],
                                 filters,
                                 derOutput,
                                 strideY, strideX,
-                                padTop, padBottom, padLeft, padRight) ;
+                                padTop, padBottom, padLeft, padRight,
+                                dilateY, dilateX) ;
   }
 
 doneok:
