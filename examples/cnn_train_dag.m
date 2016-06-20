@@ -301,7 +301,7 @@ for p=1:numel(net.params)
         - (1 / batchSize) * net.params(p).der ;
       net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
 
-    case 'otherwise'
+    otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
         net.params(p).trainMethod, ...
         net.params(p).name) ;

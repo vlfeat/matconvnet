@@ -159,7 +159,9 @@ pooling_max_backward_with_pooled_data
 }
 #endif
 
-// an implementation of atomicAdd() for double (really slow)
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+// an implementation of atomicAdd() for double (really slow) for older CC
 static __device__ double atomicAdd(double* address, double val)
 {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
@@ -172,6 +174,7 @@ static __device__ double atomicAdd(double* address, double val)
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+#endif
 
 template<typename T> __global__ void
 pooling_max_backward_kernel
