@@ -63,10 +63,10 @@ if ~evaluateMode
     if isfield(net.layers{i}, 'weights')
       J = numel(net.layers{i}.weights) ;
       if ~isfield(net.layers{i}, 'learningRate')
-        net.layers{i}.learningRate = ones(1, J, 'single') ;
+        net.layers{i}.learningRate = ones(1, J) ;
       end
       if ~isfield(net.layers{i}, 'weightDecay')
-        net.layers{i}.weightDecay = ones(1, J, 'single') ;
+        net.layers{i}.weightDecay = ones(1, J) ;
       end
     end
   end
