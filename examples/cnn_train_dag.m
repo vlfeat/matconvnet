@@ -65,15 +65,7 @@ end
 state.cache=cell(1, numel(net.params));
 for p=1:numel(net.params)
     if strcmp(net.params(p).trainMethod,'rmsprop')
-            state.cache{p}=zeros(size(net.params(p)));
-    end
-end
-% move cache to GPU as needed
-numGpus = numel(opts.gpus) ;
-if numGpus >= 1
-    net.move('gpu') ;
-    if strcmp(mode,'train')
-        state.cache = cellfun(@gpuArray,state.cache,'UniformOutput',false) ;
+        state.cache{p}=zeros(size(net.params(p)));
     end
 end
 
@@ -85,7 +77,16 @@ for epoch=start+1:opts.numEpochs
     
     rng(epoch + opts.randomSeed) ;
     prepareGPUs(opts, epoch == start+1) ;
-    
+    if (epoch == start+1)
+        % move cache to GPU as needed
+        numGpus = numel(opts.gpus) ;
+        if numGpus >= 1
+            net.move('gpu') ;
+            if strcmp(mode,'train')
+                state.cache = cellfun(@gpuArray,state.cache,'UniformOutput',false) ;
+            end
+        end
+    end
     % Train for one epoch.
     
     state.epoch = epoch ;
@@ -164,7 +165,7 @@ if strcmp(mode,'train')
     state.momentum=cell(1, numel(net.params));
     for p=1:numel(net.params)
         if strcmp(net.params(p).trainMethod,'gradient')
-                state.momentum{p}=0;
+            state.momentum{p}=0;
         end
     end
 end
@@ -175,7 +176,7 @@ if numGpus >= 1
     net.move('gpu') ;
     if strcmp(mode,'train')
         state.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
-        state.cache = cellfun(@gpuArray,state.cache,'UniformOutput',false) ;
+%         state.cache = cellfun(@gpuArray,state.cache,'UniformOutput',false) ;
     end
 end
 if numGpus > 1
