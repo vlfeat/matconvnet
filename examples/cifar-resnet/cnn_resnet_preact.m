@@ -12,7 +12,7 @@ opts.depth=164;%164
 opts.resConn=1;%residual connection (identity)
 opts.Nclass=10;%number of classses (CIFAR-10 / CIFAR-100)
 opts.resType = '131';
-opts.grayInput = false;
+opts.colorSpace = 'rgb';
 opts = vl_argparse(opts, varargin) ;
 
 net= dagnn.DagNN; %network
@@ -24,18 +24,22 @@ switch opts.resType
     case '33'
         assert(~mod(opts.depth - 2,6))
         n = (opts.depth - 2) / 6; %stacks of residual units
+    case 'HVHV'
+        assert(~mod(opts.depth - 2,12))
+        n = (opts.depth - 2) / 12; %stacks of residual units
 end
 
 resConn = opts.resConn; %residual connection
 resType = opts.resType; %type of residual block
 
 %initial convolution
-if opts.grayInput
+if strcmp(opts.colorSpace,'gray')
     c = 1;
 else
     c = 3;
 end
 
+%%
 convBlock = dagnn.Conv('size', [3,3,c,16], 'pad', [1,1,1,1],'stride', [1,1], ...
     'hasBias', false);
 net.addLayer('convInit',convBlock,{'input'},{'convInit'},{'convInit_filters'});
@@ -87,6 +91,66 @@ elem=1;
 f = net.getParamIndex(net.layers(end).params(1)) ;
 net.params(f).value = net.params(f).value /10;
 
+prv_layerInput = layerInput;
+
+%%
+% net.addLayer('ds', dagnn.Pooling('poolSize', [1 1], 'stride', [2 2]), 'input', 'ds');
+% 
+% convBlock = dagnn.Conv('size', [3,3,c,16], 'pad', [1,1,1,1],'stride', [1,1], ...
+%     'hasBias', false);
+% net.addLayer('convInit2',convBlock,{'ds'},{'convInit2'},{'convInit_filters2'});
+% f = net.getParamIndex('convInit_filters2') ;
+% sc = sqrt(2/(3*3*16)) ; %improved Xavier
+% net.params(f).value = sc*randn([3,3,c,16], 'single') ;
+% net.params(f).learningRate=1;
+% net.params(f).weightDecay=1;
+% layerInput = net.layers(end).name;
+% 
+% %Residual Model
+% switch lower(opts.modelType)
+%     case {'res'}%residual units
+%         filterDepths = [16, 64, 128, 256];
+%         stride = [1,2,2];
+%         
+%         %3-iterations(16->64, 64->128, 128->256)
+%         for i=1:numel(filterDepths)-1
+%             layerName=sprintf('bottleneck2_%d_%d',filterDepths(i),filterDepths(i+1));
+%             [net,layerInput] = addStackedUnit(n, net, filterDepths(i), filterDepths(i+1), stride(i), layerName, layerInput, resConn, resType);
+%         end
+%     otherwise
+%         %code removed
+% end
+% 
+% %Final Batch Normalization
+% [net, layerInput] = addBnorm(net,layerInput,[0,0,0,filterDepths(end)],'bnormOut2',[],[]);
+% 
+% %ReLU
+% x = net.getLayerIndex(layerInput);
+% inVar = net.layers(x).outputs;
+% net.addLayer('final_relu2',  dagnn.ReLU(),{inVar{1}},{'final_relu2'}, {});
+% layerInput='final_relu2';
+% 
+% %Average Pool (input 8x8, output 1x1)
+% blockPool = dagnn.Pooling('method', 'avg', 'poolSize', [4 4], 'stride', 1, 'pad', [0,0,0,0]);
+% x = net.getLayerIndex(layerInput);
+% inVar = net.layers(x).outputs;
+% net.addLayer('avgPool2', blockPool, {inVar{1}}, {'avgPool2'}, {}) ;
+% layerInput = 'avgPool2';
+% 
+% %Prediction
+% layerName='prediction2';
+% iter=1;
+% elem=1;
+% [net, layerInput] = addConv(net, true, [1,1,filterDepths(end),opts.Nclass], [0,0,0,0], [1,1], layerName, layerInput, iter , elem);
+% 
+% %Modification from Andrea (similar to imagenet)
+% f = net.getParamIndex(net.layers(end).params(1)) ;
+% net.params(f).value = net.params(f).value /10;
+% 
+% net.addLayer('sum', dagnn.Sum(), {layerInput prv_layerInput}, []);
+% layerInput = 'sum';
+
+%%
 %Loss layer
 x = net.getLayerIndex(layerInput);
 inVar = net.layers(x).outputs;
@@ -137,6 +201,26 @@ switch resType
         dims{2}    = [3,3,outDepth,outDepth];
         pad{2}     = [1,1,1,1];
         stride_{2} = [1,1];
+    case 'HVHV'
+        %%% 3X1 %%%
+        dims{1}    = [3,1,inDepth,inDepth];
+        pad{1}     = [1,1,0,0];
+        stride_{1} = [stride,1];
+        
+        %%% 1X3 %%%
+        dims{2}    = [1,3,inDepth,outDepth];
+        pad{2}     = [0,0,1,1];
+        stride_{2} = [1,stride];
+        
+        %%% 3X1 %%%
+        dims{3}    = [3,1,outDepth,outDepth];
+        pad{3}     = [1,1,0,0];
+        stride_{3} = [1,1];
+        
+        %%% 1X3 %%%
+        dims{3}    = [1,3,outDepth,outDepth];
+        pad{3}     = [0,0,1,1];
+        stride_{3} = [1,1];
         
     otherwise
         error('Unknown residual block type ''%s''', resType)
