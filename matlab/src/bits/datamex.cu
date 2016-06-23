@@ -15,6 +15,7 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
+#include <assert.h>
 #ifndef NDEBUG
 #include<iostream>
 #endif
@@ -146,6 +147,13 @@ vl::MexTensor::relinquish()
     // extern mxArray *mxCreateSharedDataCopy(const mxArray *pr);
     return mxDuplicateArray(array) ;
   }
+}
+
+void
+vl::MexTensor::makePersistent()
+{
+  assert(isArrayOwner) ;
+  mexMakeArrayPersistent((mxArray*)array) ;
 }
 
 void

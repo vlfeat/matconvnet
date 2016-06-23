@@ -51,6 +51,7 @@ namespace vl {
     vl::ErrorCode initWithZeros(DeviceType deviceType, DataType dataType, TensorShape const & shape) ;
     vl::ErrorCode initWithValue(DeviceType deviceType, DataType dataType, TensorShape const & shape, double value) ;
 
+    void makePersistent() ;
     mxArray * relinquish() ;
     void clear() ;
     ~MexTensor() ;
