@@ -9,30 +9,41 @@ function [net, info] = cnn_cifar(varargin)
 opts.modelType = 'res' ;
 opts.depth=164;
 opts.GPU=[];
-opts.batchSize=128;
+opts.batchSize=100;
 opts.weightDecay=0.0001;
 opts.momentum=0.9;
 opts.resConn = 1;
 opts.Nclass=10;
-opts.grayInput = false;
+opts.colorSpace = 'rgb';
 opts.resType = '131';
-opts.filterDepths = [];
 opts.learningRate = [0.01*ones(1,3) 0.1*ones(1,80) 0.01*ones(1,10) 0.001*ones(1,20)] ;
+opts.k = [64 128 256 512];
+opts.usePad = true;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 datas='cifar';
-grayStr = '';
-if opts.grayInput
-    grayStr = '-gray';
+colorStr = '';
+if ~strcmp(opts.colorSpace, 'rgb')
+    colorStr = ['-' opts.colorSpace];
 end
-opts.expDir = sprintf(['data/%s_%d-%s-D%d-R%d-T%s' grayStr],datas, opts.Nclass, opts.modelType,opts.depth,opts.resConn,opts.resType);
+
+switch opts.modelType
+    case 'res'
+        opts.expDir = sprintf(['data/%s_%d-%s-D%d-R%d-T%s' colorStr],datas, opts.Nclass, opts.modelType,opts.depth,opts.resConn,opts.resType);
+    case 'fractal'
+        opts.expDir = sprintf(['data/%s_%d-%s-D%d-R%d-T%s' colorStr],datas, opts.Nclass, opts.modelType,opts.depth,opts.resConn,opts.resType);
+    case 'assaf'
+        padStr = '';
+        if ~opts.usePad
+            padStr = '_noPad';
+        end
+        opts.expDir = sprintf(['data/%s_%d_%s_%d_%d_%d_%d' colorStr padStr],datas, opts.Nclass, opts.modelType,opts.k);
+end
 
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.dataDir = fullfile(vl_rootnn, 'data', datas) ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.whitenData = false ;
-opts.contrastNormalization = false ;
 opts.networkType = 'dagnn' ;
 opts.train = struct() ;
 opts = vl_argparse(opts, varargin) ;
@@ -44,7 +55,11 @@ if ~isfield(opts.train, 'gpus'), opts.train.gpus = [opts.GPU]; end;
 
 switch opts.modelType
   case 'res'
-    net = cnn_resnet_preact('modelType', opts.modelType,'depth',opts.depth, 'resConn', opts.resConn, 'Nclass', opts.Nclass, 'resType', opts.resType, 'grayInput', opts.grayInput);  
+    net = cnn_resnet_preact('modelType', opts.modelType,'depth',opts.depth, 'resConn', opts.resConn, 'Nclass', opts.Nclass, 'resType', opts.resType, 'colorSpace', opts.colorSpace);  
+  case 'fractal'
+    net = cnn_fractalnet('depth',opts.depth, 'Nclass', opts.Nclass, 'colorSpace', opts.colorSpace);      
+  case 'assaf'
+    net = cnn_assafnet('Nclass', opts.Nclass, 'colorSpace', opts.colorSpace, 'k', opts.k, 'usePad', opts.usePad);      
   otherwise
     error('Unknown model type ''%s''.', opts.modelType) ;
 end
@@ -132,14 +147,23 @@ for fi = 1:numel(files)
 end
 
 set = cat(2, sets{:});
+
+switch opts.colorSpace
+    case 'rgb'
+        % nothing
+    case 'gray'
+        data = cellfun(@(x) cellfun(@rgb2gray, num2cell(x,[1 2 3]), 'UniformOutput', false), data, 'UniformOutput', false);
+        data = cellfun(@(x) cat(4,x{:}), data, 'UniformOutput', false);
+    case 'yuv'
+        data = cellfun(@(x) cellfun(@rgb2ycbcr, num2cell(x,[1 2 3]), 'UniformOutput', false), data, 'UniformOutput', false);
+        data = cellfun(@(x) cat(4,x{:}), data, 'UniformOutput', false);      
+end
+
 data = single(cat(4, data{:}));
 
 %pad the images to crop later
 data = padarray(data,[4,4],128,'both');
 
-if opts.grayInput
-    data = mean(data,3);
-end
 
 %remove mean
 data_tr = data(:,:,:, set == 1);
