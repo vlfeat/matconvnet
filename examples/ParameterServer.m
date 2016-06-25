@@ -81,9 +81,9 @@ classdef ParameterServer < handle
         case 'tflow'
           if obj.params(p).isGPU && obj.inplace
             obj.params(p).value = value ;
-            vl_tflowmex('push', obj.params(p).name, value, 'inplace', obj.tflowOpts{:}) ;
+            vl_tflow('push', obj.params(p).name, value, 'inplace', obj.tflowOpts{:}) ;
           else
-            vl_tflowmex('push', obj.params(p).name, value, obj.tflowOpts{:}) ;
+            vl_tflow('push', obj.params(p).name, value, obj.tflowOpts{:}) ;
           end
 
         otherwise
@@ -102,10 +102,10 @@ classdef ParameterServer < handle
 
         case 'tflow'
           if obj.params(p).isGPU && obj.inplace
-            vl_tflowmex('pull', obj.params(p).name, 'inplace', obj.tflowOpts{:}) ;
+            vl_tflow('pull', obj.params(p).name, 'inplace', obj.tflowOpts{:}) ;
             value = obj.params(p).value ;
           else
-            value = vl_tflowmex('pull', obj.params(p).name, obj.tflowOpts{:}) ;
+            value = vl_tflow('pull', obj.params(p).name, obj.tflowOpts{:}) ;
           end
       end
     end
@@ -185,12 +185,12 @@ classdef ParameterServer < handle
                          obj.params(i).name, ...
                          obj.params(i).deviceType} ;
       end
-      vl_tflowmex('reset', obj.tflowOpts{:}) ;
-      vl_tflowmex('init', format, labindex, numlabs, obj.tflowOpts{:}) ;
+      vl_tflow('reset', obj.tflowOpts{:}) ;
+      vl_tflow('init', format, labindex, numlabs, obj.tflowOpts{:}) ;
     end
 
     function stopWithTFlow(obj)
-      vl_tflowmex('reset', obj.tflowOpts{:}) ;
+      vl_tflow('reset', obj.tflowOpts{:}) ;
     end
 
   end

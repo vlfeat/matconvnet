@@ -32,7 +32,7 @@ classdef tflowmex < matlab.unittest.TestCase
     function reset(test)
       if ~isempty(gcp('nocreate'))
         spmd
-          vl_tflowmex('reset') ;
+          vl_tflow('reset') ;
         end
       end
     end
@@ -61,13 +61,13 @@ classdef tflowmex < matlab.unittest.TestCase
           x{i} = tflowmex.makeArray(format(i,:)) + labindex ;
         end
         labBarrier() ;
-        vl_tflowmex('init',format,labindex,numlabs) ;
+        vl_tflow('init',format,labindex,numlabs) ;
         for t = 1:T
           for i = 1:size(format,1),
-            vl_tflowmex('push',format{i,3},x{i}) ;
+            vl_tflow('push',format{i,3},x{i}) ;
           end
           for i = 1:size(format,1),
-            x{i} = vl_tflowmex('pull',format{i,3}) ;
+            x{i} = vl_tflow('pull',format{i,3}) ;
           end
         end
         for i = 1:size(format,1)
@@ -90,13 +90,13 @@ classdef tflowmex < matlab.unittest.TestCase
         for i = 1:size(format,1)
           x{i} = tflowmex.makeArray(format(i,:)) + labindex ;
         end
-        vl_tflowmex('init',format,labindex,numlabs) ;
+        vl_tflow('init',format,labindex,numlabs) ;
         for t = 1:T
           for i = 1:size(format,1),
-            vl_tflowmex('push',format{i,3},x{i},'inplace') ;
+            vl_tflow('push',format{i,3},x{i},'inplace') ;
           end
           for i = 1:size(format,1),
-            vl_tflowmex('pull',format{i,3},'inplace') ;
+            vl_tflow('pull',format{i,3},'inplace') ;
           end
         end
         for i = 1:size(format,1)

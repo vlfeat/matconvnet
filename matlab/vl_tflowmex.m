@@ -11,9 +11,9 @@
 %   data in a coordinated manner. This means that, at each given
 %   cycle, each MATLAB instance pushes a new value for a tensor, the
 %   values are accumulated by the system in parallel using a separated
-%   thread, and eventually each MATLAB instance retrieves the updated
-%   value. Importantly, `push` operations are non-blocking, so that
-%   MATLAB can proceed with other computations as tensors are
+%   thread, and, in a second time, each MATLAB instance retrieves the
+%   updated value. Importantly, `push` operations are non-blocking, so
+%   that MATLAB can proceed with other computations as tensors are
 %   exchanged.
 %
 %   Usually, VL_TFLOWMEX() is used in combination with a MATLAB
@@ -23,10 +23,10 @@
 %   specified upon pool creation. The typical setup is to assign a
 %   different MATLAB instance to each of a group of GPUs.
 %
-%   VL_TFLOWMEX() uses lab indexes to identify different MATLAB
-%   processes in the pool. While these are effectively independent of
-%   the MATLAB pool lab indexes, it is convenient to use the same
-%   codes for both systems.
+%   VL_TFLOWMEX() uses indexes to identify different MATLAB processes
+%   in the pool. While these are effectively independent of the MATLAB
+%   pool lab indexes, it is convenient to use the same codes for both
+%   systems.
 %
 %   The system is initialized by specifying a FORMAT (table of
 %   tensors), a lab code LABINDEX, and the total number of labs in the
@@ -75,6 +75,7 @@
 %     repeated).
 %
 %   - `'inplace'`. This applies *only* to GPU array and allows to
-%     update an array in place. N
+%     update an array in place. It must be used with both `push` and
+%     `pull` commands.
 
 
