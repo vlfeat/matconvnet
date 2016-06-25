@@ -207,6 +207,12 @@ mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbnorm.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbilinearsampler.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_taccummex.' ext]) ;
+switch arch
+  case {'glnxa64','maci64'}
+    % not yet supported in windows
+    mex_src{end+1} = fullfile(root,'matlab','src',['vl_tflow.' ext]) ;
+end
 
 % CPU-specific files
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_cpu.cpp') ;
@@ -242,6 +248,7 @@ end
 % Other files
 if opts.enableImreadJpeg
   mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg.' ext]) ;
+  mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg_old.' ext]) ;
   lib_src{end+1} = fullfile(root,'matlab','src', 'bits', 'impl', ['imread_' opts.imageLibrary '.cpp']) ;
 end
 
