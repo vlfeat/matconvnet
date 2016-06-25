@@ -154,11 +154,11 @@ net.meta.augmentation.jitterContrast = 0.4 ;
 
 net.meta.inputSize = {'input', [net.meta.normalization.imageSize 32]} ;
 
-lr = logspace(-1, -3, 60) ;
-%lr = [0.1 * ones(1,30), 0.01*ones(1,20), 0.001*ones(1,40)] ;
+%lr = logspace(-1, -3, 60) ;
+lr = [0.1 * ones(1,30), 0.01*ones(1,20), 0.001*ones(1,40)] ;
 net.meta.trainOpts.learningRate = lr ;
 net.meta.trainOpts.numEpochs = numel(lr) ;
-net.meta.trainOpts.batchSize = 256 ;
+net.meta.trainOpts.batchSize = 258 ;
 net.meta.trainOpts.numSubBatches = 3 ;
 net.meta.trainOpts.weightDecay = 0.0001 ;
 

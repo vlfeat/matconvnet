@@ -79,7 +79,7 @@ net.meta.normalization.averageImage = rgbMean ;
 
 % Set data augmentation statistics
 [v,d] = eig(rgbCovariance) ;
-net.meta.augmentation.rgbSqrtCovariance = sqrt(d)*v' ;
+net.meta.augmentation.rgbSqrtCovariance = v*sqrt(d) ;
 clear v d ;
 
 % -------------------------------------------------------------------------
@@ -136,11 +136,9 @@ isTrain = ~isempty(batch) && imdb.images.set(batch(1)) == 1 ;
 data = getImageBatch(images, ...
                      opts, ...
                      'prefetch', nargout == 0, ...
-                     'jitter', isTrain) ;
+                     'jitter', isTrain, ...
+                     'useGpu', useGpu) ;
 if nargout > 0
-  if useGpu
-    data = gpuArray(data) ;
-  end
   labels = imdb.images.label(batch) ;
   switch networkType
     case 'simplenn'
