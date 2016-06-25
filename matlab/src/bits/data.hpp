@@ -99,6 +99,9 @@ namespace vl {
     return (a + b - 1) / b ;
   }
 
+  /// Draw a Normally-distributed scalar
+  double randn() ;
+
   /// Get realtime monotnic clock in microseconds
   size_t getTime() ;
 

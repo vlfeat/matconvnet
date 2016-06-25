@@ -67,6 +67,68 @@ getTypeSize(DataType dataType)
   return 0 ;
 }
 
+namespace vl { namespace impl {
+class Randn
+{
+public:
+  Randn()
+  {
+    tx[1] = 3.655420419026953 ;
+    ty[1] = f(tx[1]) ;
+    double A = ty[1] * (tx[1] + 1./tx[1]) ;
+    for (int k = 1 ; k < K ; ++k) {
+      ty[k] = f(tx[k]) ;
+      tx[k+1] = invf(A/tx[k] + ty[k]) ;
+    }
+    tx[0] = A / ty[1] ;
+  }
+
+  double sample() {
+    while (true) {
+      int k =  rand() % K ;
+      double u = (double)rand() / RAND_MAX ;
+      double x = tx[k] * (2.*u - 1.) ;
+      double absx = fabs(x) ;
+      if (absx <= tx[k+1]) { return x ; }
+      double v = (double)rand() / RAND_MAX ;
+      if (k > 1) {
+        double y = v * (ty[k+1] - ty[k]) + ty[k] ;
+        if (y <= f(absx)) { return x ; }
+      } else {
+        double w = (double)rand() / RAND_MAX ;
+        double dx = - log(w) / tx[1] ;
+        if (- 2.0 * log(v) > dx*dx) {
+          double s = (rand() & 0x1) ? +1 : -1 ;
+          return s * (tx[1] + dx) ;
+        }
+      }
+    }
+  }
+
+private:
+  enum { K = 256, } ;
+  double tx [K+1] ;
+  double ty [K+1] ;
+
+  double f(double x) {
+    // 1/sqrt(2*pi)
+    return 0.398942280401433 * exp(-0.5 * x * x) ;
+  }
+
+  double invf(double y) {
+    // sqrt(2*pi)
+    return sqrt(-2.0 * log(2.506628274631000 * y));
+  }
+} ;
+
+} } // namespaces
+
+double vl::randn()
+{
+  static vl::impl::Randn rnd ;
+  return rnd.sample() ;
+}
+
 /* -------------------------------------------------------------------
  * Buffer
  * ---------------------------------------------------------------- */
