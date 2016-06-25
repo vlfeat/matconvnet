@@ -35,6 +35,9 @@ vl_nnspnorm.m \
 vl_rootnn.m \
 vl_setupnn.m \
 vl_imreadjpeg.m \
+vl_imreadjpeg.m \
+vl_taccum.m \
+vl_tflow.m \
 simplenn/vl_simplenn.m \
 simplenn/vl_simplenn_diagnose.m \
 simplenn/vl_simplenn_tidy.m \
