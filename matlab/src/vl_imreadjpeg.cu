@@ -26,6 +26,11 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datamex.hpp"
 #include "bits/mexutils.h"
 
+#ifdef _MSC_VER
+#undef max
+#undef min
+#endif
+
 static int verbosity = 0 ;
 
 /* option codes */
@@ -395,7 +400,7 @@ void Batch::clear()
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
 
   // Stop threads from getting more tasks
-  nextItem = items.size() ;
+  nextItem = (int)items.size() ;
 
   // Wait for all thread to return their items
   for (int i = 0 ; i < items.size() ; ++i) {
@@ -437,7 +442,7 @@ vl::ErrorCode Batch::registerItem(std::string const & name)
 {
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
   Item * item = new Item(*this) ;
-  item->index = items.size() ;
+  item->index = (int)items.size() ;
   item->name = name ;
   item->state = Item::prefetch ;
   items.push_back(item) ;
@@ -575,8 +580,8 @@ vl::ErrorCode Batch::prefetch()
 
     switch (resizeMethod) {
       case noResize:
-        outputHeight = item->shape.height ;
-        outputWidth = item->shape.width ;
+        outputHeight = (int)item->shape.height ;
+        outputWidth = (int)item->shape.width ;
         break ;
 
       case resizeShortestSide: {

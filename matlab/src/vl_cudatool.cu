@@ -62,7 +62,7 @@ void mexFunction(int nout, mxArray *out[],
 {
 
   if (nin < 1) {
-    vlmxError(VLMXE_IllegalArgument, "The are no arguments.") ;
+    vlmxError(VLMXE_IllegalArgument, "Not enough arguments.") ;
   }
 
   if (!vlmxIsString(in[0], -1)) {

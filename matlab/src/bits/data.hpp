@@ -15,8 +15,6 @@ the terms of the BSD license (see the COPYING file).
 
 #include <cstddef>
 #include <string>
-#include <time.h>
-#include <sys/time.h>
 
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 #define STRINGIZE_HELPER(x) #x

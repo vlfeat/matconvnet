@@ -28,6 +28,11 @@ the terms of the BSD license (see the COPYING file).
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
+#ifdef  _WIN64
+typedef unsigned __int64 ssize_t;
+#else
+typedef unsigned int ssize_t;
+#endif
 #if _MSC_VER < 1800
 // Add some missing functions from C99
 #define isnan(x) _isnan(x)

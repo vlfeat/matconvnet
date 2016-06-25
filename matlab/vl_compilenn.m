@@ -235,6 +235,7 @@ if opts.enableGpu
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','datacu.cu') ;
+  mex_src{end+1} = fullfile(root,'matlab','src','vl_cudatool.cu') ;
 end
 
 % cuDNN-specific files

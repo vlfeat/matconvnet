@@ -15,6 +15,13 @@ the terms of the BSD license (see the COPYING file).
 #include <cstdlib>
 #include <cmath>
 
+#include <time.h>
+#ifdef _MSC_VER
+#include "windows.h"
+#else
+#include <sys/time.h>
+#endif
+
 #ifndef NDEBUG
 #include <iostream>
 #endif
@@ -31,10 +38,16 @@ using namespace vl ;
 
 size_t vl::getTime()
 {
+#ifdef _MSC_VER
+  LARGE_INTEGER t ;
+  QueryPerformanceFrequency(&t) ;
+  return (size_t)(t.QuadPart / 1000ULL) ;
+#else
   struct timeval time ;
   int error = gettimeofday(&time, NULL) ;
   assert(error == 0) ;
   return (size_t)time.tv_sec * 1000000 + (size_t)time.tv_usec ;
+#endif
 }
 
 const char *
