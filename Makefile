@@ -169,7 +169,7 @@ mex_src+=matlab/src/vl_taccummex.$(ext)
 mex_src+=matlab/src/vl_tflow.$(ext)
 ifdef ENABLE_IMREADJPEG
 mex_src+=matlab/src/vl_imreadjpeg.$(ext)
-mex_src+=matlab/src/vl_imreadjpeg2.$(ext)
+mex_src+=matlab/src/vl_imreadjpeg_old.$(ext)
 endif
 
 # CPU-specific files
