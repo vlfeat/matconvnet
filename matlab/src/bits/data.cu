@@ -13,6 +13,7 @@ the terms of the BSD license (see the COPYING file).
 #include "data.hpp"
 #include <cassert>
 #include <cstdlib>
+#include <cmath>
 
 #ifndef NDEBUG
 #include <iostream>
