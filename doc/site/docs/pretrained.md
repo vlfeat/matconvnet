@@ -119,10 +119,10 @@ These modes are trained to perform classification in the ImageNet
 ILSVRC challenge data.
 
 -   **ResNet** models imported from the
-    [MSRC version](https://github.com/KaimingHe/deep-residual-networks).
+    [MSRA version](https://github.com/KaimingHe/deep-residual-networks).
 
     > 'Deep Residual Learning for Image Recognition', K. He, X. Zhang,
-    S. Ren and J. Sun, ICCV, 2015
+    S. Ren and J. Sun, CVPR, 2016
     ([paper](http://arxiv.org/pdf/1512.03385.pdf)).
 
     -  [imagenet-resnet-50-dag](models/imagenet-resnet-50-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-resnet-50-dag.svg)
