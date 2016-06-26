@@ -14,7 +14,6 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/mexutils.h"
 
 #include "gpu/mxGPUArray.h"
-#include <sys/mman.h>
 #include "bits/mexutils.h"
 #include "cuda_profiler_api.h"
 
