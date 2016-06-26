@@ -110,10 +110,12 @@ enum {
 enum {
   opt_inplace = 0,
   opt_verbose,
+  opt_prefix,
 } ;
 
 /* options */
 VLMXOption  options [] = {
+  {"prefix",                1,   opt_prefix                },
   {"InPlace",               0,   opt_inplace               },
   {"Verbose",               0,   opt_verbose               },
   {0,                       0,   0                         }
@@ -310,7 +312,7 @@ public:
 
   vl::ErrorCode mexInit(mxArray const *mexDescriptor) ;
   void finalize() ;
-  vl::ErrorCode attach(int lab, int numLabs) ;
+  vl::ErrorCode attach(std::string const & prefix, int lab, int numLabs) ;
   vl::ErrorCode attachPeer(int lab) ;
 
   void mexPrint() const ;
@@ -501,7 +503,7 @@ vl::ErrorCode SharedTensorSpace::mexInit(mxArray const *descriptor)
   }
 
   // Size of the memory allocated for one lab (with a copy of all tensors).
-  memoryMapName = "/mcn-shared-memory" ;
+  memoryMapName = "/mcn" ;
   size_t const pageSize = getpagesize() ;
   memoryMapLabStride = vl::divideAndRoundUp(offset, pageSize) * pageSize ;
   memoryMapSize = 0 ;
@@ -533,11 +535,14 @@ SharedTensorSpace::getPeerTensor(int tensorIndex, int lab)
 /// for inter-process data transfers containing all tensors,
 /// and the GPU dispatch memory.
 
-vl::ErrorCode SharedTensorSpace::attach(int lab, int numLabs)
+vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int numLabs)
 {
   int error ;
   this->lab = lab ;
   this->numLabs = numLabs ;
+
+  // Create the memory map name from the prefix.
+  memoryMapName = std::string("/") + prefix ;
 
   // The root lab deletes a pre-existing memory object, if any.
   if (lab == 0) {
@@ -786,7 +791,8 @@ public:
 
   /// Initialize the instance \a lab of \a numLabs pools. The function
   /// timesout.
-  vl::ErrorCode init(int lab, int numLabs, SharedTensorSpace * space) ;
+  vl::ErrorCode init(std::string const & prefix, int lab,
+                     int numLabs, SharedTensorSpace * space) ;
 
   /// Gracefully shutdown the connection with the other processes,
   /// waiting for them to finish updating as needed. After this, the
@@ -824,6 +830,7 @@ public:
 
 private:
   bool initialized ;
+  std::string prefix ;
   int lab ;
   int numLabs ;
   size_t timeoutInterval ;
@@ -869,7 +876,7 @@ private:
     Message() : transaction(0), tensorId(0) { }
   } ;
 
-  struct Supervisor {
+  class Supervisor {
   public:
     Supervisor(ProcessPool& pool)
     : pool(pool), thread(NULL), state(down) { }
@@ -934,7 +941,9 @@ private:
 
 
 ProcessPool::ProcessPool()
-: supervisor(*this), initialized(false), lab(-1), numLabs(0)
+: supervisor(*this),
+  initialized(false),
+  lab(-1), numLabs(0)
 { }
 
 ProcessPool::~ProcessPool()
@@ -942,7 +951,7 @@ ProcessPool::~ProcessPool()
   finalize() ;
 }
 
-vl::ErrorCode ProcessPool::init(int newLab, int newNumLabs, SharedTensorSpace * newSharedSpace)
+vl::ErrorCode ProcessPool::init(std::string const & newPrefix, int newLab, int newNumLabs, SharedTensorSpace * newSharedSpace)
 {
   vl::ErrorCode error ;
   int parent ;
@@ -955,6 +964,7 @@ vl::ErrorCode ProcessPool::init(int newLab, int newNumLabs, SharedTensorSpace * 
   finalize() ;
 
   // set members
+  prefix = newPrefix ;
   lab = newLab ;
   numLabs = newNumLabs ;
   sharedSpace = newSharedSpace ;
@@ -988,7 +998,11 @@ void ProcessPool::finalize()
 void ProcessPool::mexPrint() const
 {
   tthread::lock_guard<tthread::mutex> (mutex) ;
-  sharedSpace->mexPrint() ;
+  if (sharedSpace) {
+    sharedSpace->mexPrint() ;
+  } else {
+    mexPrintf("Uninitialized.") ;
+  }
 }
 
 void ProcessPool::mexPush(std::string const & name,
@@ -1423,7 +1437,8 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
   if (numChildren > 0) {
 
     // Get a UNID comain socket.
-    snprintf(socketName, sizeof(socketName), "/tmp/mcn-socket-%02d", pool.lab) ;
+    snprintf(socketName, sizeof(socketName)/sizeof(socketName[0]),
+             "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), pool.lab) ;
     socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
     if (socketFD == -1) {
       LOGERROR
@@ -1493,8 +1508,8 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
 
   // Connect parent.
   if (pool.lab > 0) {
-    snprintf(socketName, sizeof(socketName),
-             "/tmp/mcn-socket-%02d", peers[0].lab) ;
+    snprintf(socketName, sizeof(socketName)/sizeof(socketName[0]),
+             "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), peers[0].lab) ;
 
     for (;;) {
       peers[0].socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
@@ -1563,7 +1578,8 @@ void ProcessPool::Supervisor::disconnect()
   }
 
   char socketName [256] ;
-  snprintf(socketName, sizeof(socketName), "/tmp/mcn-socket-%02d", pool.lab) ;
+  snprintf(socketName, sizeof(socketName)/sizeof(socketName[0]),
+           "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), pool.lab) ;
   unlink(socketName) ;
 
   for (int t = 1 ; t >= 0 ; --t) {
@@ -1596,7 +1612,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
   if (pool.lab == 0) {
     session = (uint32_t)vl::getTime() ;
     // root atteches first
-    error = pool.sharedSpace->attach(0, pool.numLabs) ;
+    error = pool.sharedSpace->attach(pool.prefix, 0, pool.numLabs) ;
     if (error != vl::VLE_Success) {
       LOGERROR << "root could not attache shared space" ;
       error = vl::VLE_Unknown ;
@@ -1612,7 +1628,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
     }
     session = msg.session ;
     // children attach now
-    error = pool.sharedSpace->attach(pool.lab, pool.numLabs) ;
+    error = pool.sharedSpace->attach(pool.prefix, pool.lab, pool.numLabs) ;
     if (error != vl::VLE_Success || msg.type != Message::init) {
       LOGERROR << "could not attach shared space" ;
       error = vl::VLE_Unknown ;
@@ -2075,7 +2091,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
     {
       // Check for communication errors.
       if (polls[p].revents & (POLLHUP | POLLERR | POLLNVAL)) {
-        LOG(3) << "one of the sockets generated an error" ;
+        LOG(3) << "one of the sockets generated an error, quitting" ;
         error = vl::VLE_Unknown ;
         break ;
       }
@@ -2222,6 +2238,8 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 /*                                                          Context */
 /* ---------------------------------------------------------------- */
 
+#pragma mark - 
+
 ProcessPool processPool ;
 
 /*
@@ -2248,6 +2266,7 @@ void mexFunction(int nout, mxArray *out[],
   enum Commands { init, stats, reset, push, pull } command ;
   bool inplace = false ;
   std::string tensorName ;
+  std::string prefix = "mcn" ;
   mxArray const * arg ;
   vl::ErrorCode error = vl::VLE_Success ;
   size_t labIndex = 0 ;
@@ -2262,7 +2281,7 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   if (nin < 1) {
-    vlmxError(VLMXE_IllegalArgument, "There are no arguments") ;
+    vlmxError(VLMXE_IllegalArgument, "Not enough input arguments.") ;
   }
 
   if (!vlmxIsString(in[0], -1)) {
@@ -2325,6 +2344,17 @@ void mexFunction(int nout, mxArray *out[],
   // optional arguments
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
+
+      case opt_prefix : {
+        if (!vlmxIsString(optarg, -1)) {
+          vlmxError(VLMXE_IllegalArgument, "PREFIX is not a string.") ;
+        }
+        char str [512] ;
+        mxGetString (optarg, str, sizeof(str)/sizeof(str[0])) ;
+        prefix = str ;
+        break ;
+      }
+
       case opt_verbose :
         ++ verbosity ;
         break ;
@@ -2347,7 +2377,7 @@ void mexFunction(int nout, mxArray *out[],
 
       // Initialize the pool, including attaching the shared space.
       // Now the shared space is owned by the process pool.
-      error = processPool.init(labIndex - 1, numLabs, sharedSpace.release()) ;
+      error = processPool.init(prefix, labIndex - 1, numLabs, sharedSpace.release()) ;
       if (error != vl::VLE_Success) {
         mexErrMsgTxt("Could not initialize connections to other MATLAB labs.") ;
       }

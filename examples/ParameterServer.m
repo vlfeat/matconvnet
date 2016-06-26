@@ -3,8 +3,9 @@ classdef ParameterServer < handle
     params
     paramsRegister
     method
-    memoryMap
+    prefix
     memoryMapFile
+    memoryMap
     pinnedMemory
     otherLabs
     inplace
@@ -13,7 +14,7 @@ classdef ParameterServer < handle
 
   methods
     function obj = ParameterServer(varargin)
-      obj.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
+      obj.prefix = 'mcn' ;
       obj.params = struct('name', {}, 'shape', {}, ...
                           'dataType', {}, 'deviceType', {}, ...
                           'value', {}) ;
@@ -23,6 +24,10 @@ classdef ParameterServer < handle
       obj.inplace = true ;
       obj.tflowOpts = { } ;
       obj = vl_argparse(obj, varargin) ;
+
+      % Compute the memory map file from the prefix.  This is used only by
+      % the 'mmap' mode.
+      obj.memoryMapFile = fullfile(tempdir, sprintf('%s.bin',obj.prefix)) ;
     end
 
     function register(obj, name, shape, dataType, deviceType)
@@ -153,7 +158,7 @@ classdef ParameterServer < handle
                                  'Format', format, ...
                                  'Repeat', numlabs, ...
                                  'Writable', true) ;
-      if obj.pinnedMemory
+      if obj.pinnedMemory && any([obj.params.isGPU])
         for i=1:numel(obj.memoryMap.Data)
           names = fieldnames(obj.memoryMap.Data(i))' ;
           for name = names
@@ -165,7 +170,7 @@ classdef ParameterServer < handle
 
     function stopWithMMap(obj)
       if ~isempty(obj.memoryMap)
-        if obj.pinnedMemory
+        if obj.pinnedMemory && any([obj.params.isGPU])
           for i=1:numel(obj.memoryMap.Data)
             names = fieldnames(obj.memoryMap.Data(i))' ;
             for name = names
@@ -174,6 +179,9 @@ classdef ParameterServer < handle
           end
         end
         obj.memoryMap = [] ;
+        if labindex == 1
+          delete(obj.memoryMapFile) ;
+        end
       end
     end
 
@@ -186,7 +194,10 @@ classdef ParameterServer < handle
                          obj.params(i).deviceType} ;
       end
       vl_tflow('reset', obj.tflowOpts{:}) ;
-      vl_tflow('init', format, labindex, numlabs, obj.tflowOpts{:}) ;
+      vl_tflow('init', format, ...
+               labindex, numlabs, ...
+               'prefix', obj.prefix, ...
+               obj.tflowOpts{:}) ;
     end
 
     function stopWithTFlow(obj)
