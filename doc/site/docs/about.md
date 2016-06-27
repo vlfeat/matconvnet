@@ -24,19 +24,33 @@ here.
 # Changes
 
 -   1.0-beta21 (June 2016).
-    
+
     **New features**
 
     * A new function `vl_tacc.m` to accumulate tensors efficiently.
-    * A new under-the-hood infrastructure to move data efficiently
-      between multiple GPUs.
-    * Overhauled ImageNet experiments, including training ResNet
-      and Inception v3.
+    * A rewritten `vl_imreadjpeg.m` function that can load, jitter,
+      and transfer images to the GPU in parallel.
+    * A new function `vl_tflow.m` to transfer tensor data between
+      multiple (local) MATLAB processes efficiently.
+    * A wrapper `ParameterSever.m` to simplify the use of `vl_tflow.m`.
+    * Adds support for `ParameterSever` in the examples.
+    * Adds an option in the example training script to save the
+      momentum between epochs.
 
     **Changes affecting backward compatibility**
 
-    The changs to the ImageNet examples may affect users reusing some
-    of those functions in their experiments.
+    * The ImageNet example have been updated to use the new
+      `vl_imreadjpeg.m`. This mainly affects the way images are loaded
+      in `getBatch`.
+
+    * The example scripts `cnn_train.m` and `cnn_train_dag.m` have
+      been updated in various way, so that old snaphoot files may not
+      be compatible.
+
+    * The way *batch normalization* accumulates moments during
+      training has been changed slightly to work properly with complex
+      architectures such as siamese ones where the number of data
+      instances may change throughout the network.
 
 -   1.0-beta20 (May 2016).
 

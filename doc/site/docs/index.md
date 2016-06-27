@@ -32,9 +32,9 @@ pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
 > **New:** [1.0-beta21](about.md#changes) accelerates significantly
-> computations using multiple GPUs by adding a custom data-transfer
-> utility. It also simplifies and cleans-up the ImageNet experiments,
-> adding ResNet and Inception v3 training examples.
+> data transfers between multiple GPUs. It also provides a new version
+> of `vl_imreadjpeg` that allows to load, jitter, and transfer data to
+> the GPU in parallel, resulting in significant speedups.
 >
 > **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
 > layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
