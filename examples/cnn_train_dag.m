@@ -25,7 +25,7 @@ opts.saveMomentum = true ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
 opts.parameterServer.method = 'mmap' ;
-opts.parameterServer.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
+opts.parameterServer.prefix = 'mcn' ;
 
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;

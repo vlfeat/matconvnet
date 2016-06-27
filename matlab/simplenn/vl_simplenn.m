@@ -229,7 +229,8 @@ opts.mode = 'normal' ;
 opts.accumulate = false ;
 opts.cudnn = true ;
 opts.backPropDepth = +inf ;
-opts.skipForward = false;
+opts.skipForward = false ;
+opts.parameterServer = [] ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -281,7 +282,6 @@ end
 if ~opts.skipForward
   res(1).x = x ;
 end
-
 
 % -------------------------------------------------------------------------
 %                                                              Forward pass
@@ -492,6 +492,13 @@ if doder
           end
         end
         dzdw = [] ;
+        if ~isempty(opts.parameterServer)
+          % todo: this breaks with subbatches
+          for j = 1:numel(res(i).dzdw)
+            net.parameterServer.push(sprintf('l%d_%d',i,j),res(i).dzdw{j}) ;
+            res(i).dzdw{j} = [] ;
+          end
+        end
     end
     if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
       res(i+1).dzdx = [] ;
