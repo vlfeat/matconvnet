@@ -316,6 +316,7 @@ public:
   vl::ErrorCode attachPeer(int lab) ;
 
   void mexPrint() const ;
+  void dump() const ;
 
 private:
   bool initialized ;
@@ -741,6 +742,36 @@ void SharedTensorSpace::finalize()
   numLabs = -1 ;
 }
 
+// For debugging
+void SharedTensorSpace::dump() const
+{
+  for (int tensorIndex = 0 ; tensorIndex < tensors.size() ; ++tensorIndex) {
+    SharedTensorInstance const & T = tensors[tensorIndex] ;
+    LOG(1)<<"Tensor " << T.name << std::endl ;
+    LOG(1)<<"\tState: " ;
+    switch (T.state) {
+    case ready: LOG(0)<<"ready" ; break ;
+    case accumulateChildren: LOG(0)<<"accumulateChildren" ; break ;
+    case waitParent: LOG(0)<<"waitParent" ; break ;
+    case waitChildren: LOG(0)<<"waitChildren" ; break ;
+    }
+    LOG(1)<<" transaction:"<<T.transaction<<std::endl ;
+    if (peerTensors.size() > tensorIndex) {
+      for (int p = 0 ; p < peerTensors[tensorIndex].size() ; ++p) {
+        SharedTensorPeerInstance const & PT = peerTensors[tensorIndex][p] ;
+        LOG(1)<<"\tPeer on lab " << PT.lab << ": ";
+        switch (PT.state) {
+        case ready: LOG(0)<<"ready" ; break ;
+        case accumulateChildren: LOG(0)<<"accumulateChildren" ; break ;
+        case waitParent: LOG(0)<<"waitParent" ; break ;
+        case waitChildren: LOG(0)<<"waitChildren" ; break ;
+        }
+        LOG(1)<<" transaction:"<<PT.transaction<<std::endl ;
+      }
+    }
+  }
+}
+
 void SharedTensorSpace::mexPrint() const
 {
   mexPrintf("\tlab %d of %d\n", lab, numLabs) ;
@@ -954,7 +985,6 @@ ProcessPool::~ProcessPool()
 vl::ErrorCode ProcessPool::init(std::string const & newPrefix, int newLab, int newNumLabs, SharedTensorSpace * newSharedSpace)
 {
   vl::ErrorCode error ;
-  int parent ;
 
   assert(newLab >= 0) ;
   assert(newNumLabs > newLab) ;
@@ -1288,7 +1318,7 @@ vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
   while (T.state != SharedTensorSpace::ready) {
     if ((vl::getTime() - start) > pool.timeoutInterval) {
-      return vl::VLE_Unknown ;
+      return vl::VLE_Timeout ;
     }
     if (state != running) {
       return vl::VLE_Unknown ;
@@ -2024,8 +2054,7 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(int tensorIndex)
                         PT.transaction > T.transaction) ;
   }
   if (allChildrenDone) {
-    // We already nofified a ready state to the partent before
-    asm volatile("": : :"memory") ; // probably overkill here
+    tthread::lock_guard<tthread::mutex> lock(mutex) ;
     T.state = SharedTensorSpace::ready ;
     waitingList.notify_all() ;
   }
@@ -2068,7 +2097,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
     // user commands usch as pull() and push().
     size_t now = vl::getTime() ;
     if (now > lastHeartbeat + heartbeatInterval) {
-      waitingList.notify_all() ;
+      waitingList.notify_all() ; // no need to lock
       lastHeartbeat = now ;
     }
 
@@ -2077,6 +2106,12 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
     if (pollStatus < 0) {
       error = vl::VLE_Unknown ;
       continue ;
+    }
+
+    // Timeout!
+    if (pollStatus == 0) {
+      LOG(1) << "Polling timed out on lab " << pool.sharedSpace->lab << std::endl ;
+      pool.sharedSpace->dump() ;
     }
 
     // Check for messages piped from the main thread.

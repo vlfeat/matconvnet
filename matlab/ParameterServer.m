@@ -19,7 +19,12 @@ classdef ParameterServer < handle
                           'dataType', {}, 'deviceType', {}, ...
                           'value', {}) ;
       obj.paramsRegister = struct() ;
-      obj.method = 'tflow' ;
+      switch computer('arch')
+        case 'win64'
+          obj.method = 'mmap' ;
+        otherwise
+          obj.method = 'tflow' ;
+      end
       obj.pinnedMemory = true ;
       obj.inplace = true ;
       obj.tflowOpts = { } ;

@@ -61,6 +61,7 @@ classdef DagNN < matlab.mixin.Copyable
 
   properties (Transient)
     mode = 'normal'
+    holdOn = false
     accumulateParamDers = false
     conserveMemory = true
     parameterServer = []

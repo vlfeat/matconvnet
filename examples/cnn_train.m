@@ -245,8 +245,8 @@ if numGpus >= 1
   end
 end
 if numGpus > 1
-  parserv = ParameterServer(params.paramterServer{:}) ;
-  vl_simplenn_setup_parserv(net, parserv) ;
+  parserv = ParameterServer(params.parameterServer) ;
+  vl_simplenn_start_parserv(net, parserv) ;
 else
   parserv = [] ;
 end
@@ -300,7 +300,7 @@ for t=1:params.batchSize:numel(subset)
     if numGpus >= 1
       im = gpuArray(im) ;
     end
-   
+
     if strcmp(mode, 'train')
       dzdy = 1 ;
       evalMode = 'normal' ;
@@ -315,7 +315,9 @@ for t=1:params.batchSize:numel(subset)
                       'conserveMemory', params.conserveMemory, ...
                       'backPropDepth', params.backPropDepth, ...
                       'sync', params.sync, ...
-                      'cudnn', params.cudnn) ;
+                      'cudnn', params.cudnn, ...
+                      'parameterServer', parserv, ...
+                      'holdOn', s < params.numSubBatches) ;
 
     % accumulate errors
     error = sum([error, [...
@@ -510,6 +512,10 @@ function [net, state, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'state', 'stats') ;
 net = vl_simplenn_tidy(net) ;
+if isempty(whos('stats'))
+  error('Epoch ''%s'' was only partially saved. Delete this file and try again.', ...
+        fileName) ;
+end
 
 % -------------------------------------------------------------------------
 function epoch = findLastCheckpoint(modelDir)
@@ -531,6 +537,11 @@ if get(0,'CurrentFigure') ~= n
 end
 
 % -------------------------------------------------------------------------
+function clearMex()
+% -------------------------------------------------------------------------
+clear vl_tflow vl_imreadjpeg ;
+
+% -------------------------------------------------------------------------
 function prepareGPUs(params, cold)
 % -------------------------------------------------------------------------
 numGpus = numel(params.gpus) ;
@@ -549,10 +560,12 @@ if numGpus > 1
   end
 if numGpus >= 1 && cold
   fprintf('%s: resetting GPU\n', mfilename)
+    clearMex() ;
   if numGpus == 1
     gpuDevice(params.gpus)
   else
     spmd
+      clearMex() ;
       gpuDevice(params.gpus(labindex))
     end
   end

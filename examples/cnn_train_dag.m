@@ -210,7 +210,7 @@ for t=1:params.batchSize:numel(subset)
     if strcmp(mode, 'train')
       net.mode = 'normal' ;
       net.accumulateParamDers = (s ~= 1) ;
-      net.eval(inputs, params.derOutputs) ;
+      net.eval(inputs, params.derOutputs, 'holdOn', s < params.numSubBatches) ;
     else
       net.mode = 'test' ;
       net.eval(inputs) ;
@@ -361,6 +361,10 @@ function [net, state, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'state', 'stats') ;
 net = dagnn.DagNN.loadobj(net) ;
+if isempty(whos('stats'))
+  error('Epoch ''%s'' was only partially saved. Delete this file and try again.', ...
+        fileName) ;
+end
 
 % -------------------------------------------------------------------------
 function epoch = findLastCheckpoint(modelDir)
@@ -382,6 +386,11 @@ if get(0,'CurrentFigure') ~= n
 end
 
 % -------------------------------------------------------------------------
+function clearMex()
+% -------------------------------------------------------------------------
+clear vl_tflow vl_imreadjpeg ;
+
+% -------------------------------------------------------------------------
 function prepareGPUs(opts, cold)
 % -------------------------------------------------------------------------
 numGpus = numel(opts.gpus) ;
@@ -400,14 +409,13 @@ if numGpus > 1
 end
 if numGpus >= 1 && cold
   fprintf('%s: resetting GPU\n', mfilename)
+  clearMex() ;
   if numGpus == 1
     gpuDevice(opts.gpus)
   else
     spmd
-      maxNumCompThreads(4) ;
+      clearMex() ;
       gpuDevice(opts.gpus(labindex))
     end
   end
 end
-
-%end

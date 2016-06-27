@@ -144,9 +144,7 @@ classdef Layer < handle
         end
         net.numPendingParamRefs(p) = net.numPendingParamRefs(p) + 1 ;
         if net.numPendingParamRefs(p) == net.params(p).fanout
-          if ~isempty(net.parameterServer)
-            % TODO: this breask with sub-batches, we need to wait
-            % for the last one!
+          if ~isempty(net.parameterServer) && ~net.holdOn
             net.parameterServer.pushWithIndex(p, net.params(p).der) ;
             net.params(p).der = [] ;
           end
