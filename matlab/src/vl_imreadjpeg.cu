@@ -12,6 +12,7 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "bits/impl/tinythread.h"
+#include "bits/impl/blashelper.hpp"
 #include "bits/imread.hpp"
 #include "bits/impl/imread_helpers.hpp"
 
@@ -199,6 +200,7 @@ public:
   void setResizeMethod(ResizeMethod method, int height, int width) ;
 
   void setAverage(double average []) ;
+  void setAverageImage(float const * image) ;
   void setColorDeviation(double brightness [], double contrast, double saturation) ;
   void setFlipMode(bool x) ;
   void setCropAnisotropy(double minAnisotropy, double maxAnisotropy) ;
@@ -228,6 +230,8 @@ private:
   bool gpuMode ;
 
   double average [3] ;
+  float * averageImage ;
+
   double contrastDeviation ;
   double saturationDeviation ;
   double brightnessDeviation [9] ;
@@ -286,7 +290,8 @@ Batch::Batch(vl::MexContext & context)
   resizeMethod(noResize),
   packingMethod(individualArrays),
   gpuMode(false),
-  numReturnedItems(0)
+  numReturnedItems(0),
+  averageImage(NULL)
 { }
 
 Batch::~Batch()
@@ -317,6 +322,7 @@ vl::ErrorCode Batch::init()
   contrastDeviation = 0. ;
   saturationDeviation = 0. ;
   memset(average, 0, sizeof(average)) ;
+  averageImage = NULL ;
 
   cropLocation = cropCenter ;
   minCropSize = 1. ;
@@ -395,6 +401,20 @@ void Batch::returnItem(Batch::Item * item)
   waitCompletion.notify_all() ;
 }
 
+void Batch::setAverageImage(float const * image)
+{
+  if (image == NULL) {
+    if (averageImage) {
+      free(averageImage) ;
+      averageImage = NULL ;
+    }
+    return ;
+  }
+  assert (resizeMethod == fixedSize) ;
+  averageImage = (float*)malloc(sizeof(float) * resizeHeight * resizeWidth * 3) ;
+  memcpy(averageImage, image, sizeof(float) * resizeHeight * resizeWidth * 3) ;
+}
+
 void Batch::clear()
 {
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
@@ -410,6 +430,9 @@ void Batch::clear()
     delete items[i] ;
   }
   items.clear() ;
+
+  // Clear average image
+  setAverageImage(NULL) ;
 
   // At the end of the current (empty) list
   nextItem = 0 ;
@@ -606,13 +629,13 @@ vl::ErrorCode Batch::prefetch()
         // Stretch crop to have the same shape as the input.
         double inputAspect = (double)item->shape.width / item->shape.height ;
         double outputAspect = (double)outputWidth / outputHeight ;
-        anisotropyRatio = outputAspect / inputAspect ;
+        anisotropyRatio = inputAspect / outputAspect ;
       } else {
         double z = (double)rand() / RAND_MAX ;
         anisotropyRatio = z * (maxCropAnisotropy - minCropAnisotropy) + minCropAnisotropy ;
       }
-      cropWidth = outputWidth * anisotropyRatio ;
-      cropHeight = outputHeight / anisotropyRatio ;
+      cropWidth = outputWidth * sqrt(anisotropyRatio) ;
+      cropHeight = outputHeight / sqrt(anisotropyRatio) ;
     }
 
     // Determine the crop size.
@@ -827,6 +850,14 @@ void ReaderTask::entryPoint()
 
         // Postprocess colors.
         {
+          if (batch->averageImage) {
+            vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Float>::axpy
+            (batch->context,
+             item->outputHeight * item->outputWidth * item->outputNumChannels,
+             -1.0f,
+             batch->averageImage, 1,
+             outputPixels, 1) ;
+          }
           float dv [3] ;
           float * channels [3] ;
           size_t K = item->outputNumChannels ;
@@ -990,6 +1021,7 @@ void mexFunction(int nout, mxArray *out[],
   vl::ErrorCode error ;
 
   double average [3] = {0.} ;
+  vl::MexTensor averageImage(context) ;
   double brightnessDeviation [9] = {0.} ;
   double saturationDeviation = 0. ;
   double contrastDeviation = 0. ;
@@ -1025,6 +1057,9 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 
       case opt_gpu :
+#ifndef ENABLE_GPU
+        vlmxError(VLMXE_IllegalArgument, "Not compiled with GPU support.") ;
+#endif
         gpuMode = true ;
         break ;
 
@@ -1144,13 +1179,23 @@ void mexFunction(int nout, mxArray *out[],
       }
 
       case opt_subtract_average: {
-        if (!vlmxIsPlainVector(optarg, 3)) {
-          vlmxError(VLMXE_IllegalArgument, "SUBTRACTAVERAGE is not a plain vector with three elements.") ;
+        if (vlmxIsPlainScalar(optarg)) {
+          double * x = mxGetPr(optarg) ;
+          average[0] = (float)x[0] ;
+          average[1] = (float)x[0] ;
+          average[2] = (float)x[0] ;
+        } else if (vlmxIsPlainVector(optarg, 3)) {
+          double * x = mxGetPr(optarg) ;
+          average[0] = (float)x[0] ;
+          average[1] = (float)x[1] ;
+          average[2] = (float)x[2] ;
+        } else {
+          if (mxGetClassID(optarg) != mxSINGLE_CLASS ||
+              mxGetNumberOfDimensions(optarg) > 3) {
+            vlmxError(VLMXE_IllegalArgument, "SUBTRACTAVERAGE is not a plain array of a compatible shape.") ;
+          }
+          averageImage.init(optarg) ;
         }
-        double * x = mxGetPr(optarg) ;
-        average[0] = (float)x[0] ;
-        average[1] = (float)x[1] ;
-        average[2] = (float)x[2] ;
         break ;
       }
 
@@ -1158,6 +1203,18 @@ void mexFunction(int nout, mxArray *out[],
         flipMode = true ;
         break ;
       }
+    }
+  }
+
+  if (averageImage) {
+    if (resizeMethod != Batch::fixedSize) {
+      vlmxError(VLMXE_IllegalArgument, "Cannot subtract an average image unless RESIZE is used to set the size of the output.") ;
+    }
+    if (averageImage.getNumDimensions() != 3 ||
+        averageImage.getHeight() != resizeHeight ||
+        averageImage.getWidth() != resizeWidth ||
+        averageImage.getDepth() !=3) {
+      vlmxError(VLMXE_IllegalArgument, "The average image is not a RESIZEHEIGHT x RESIZEWIDTH x 3 array.") ;
     }
   }
 
@@ -1224,17 +1281,23 @@ void mexFunction(int nout, mxArray *out[],
     }
 
 
+    batch.setResizeMethod(resizeMethod, resizeHeight, resizeWidth) ;
+    batch.setPackingMethod(packingMethod) ;
     batch.setGpuMode(gpuMode) ;
+
     batch.setFlipMode(flipMode) ;
     batch.setCropLocation(cropLocation) ;
     batch.setCropAnisotropy(minCropAnisotropy, maxCropAnisotropy) ;
     batch.setCropSize(minCropSize, maxCropSize) ;
-    batch.setPackingMethod(packingMethod) ;
-    batch.setResizeMethod(resizeMethod, resizeHeight, resizeWidth) ;
-    batch.setAverage(average) ;
     batch.setColorDeviation(brightnessDeviation,
                             contrastDeviation,
                             saturationDeviation) ;
+
+    batch.setAverage(average) ;
+    if (averageImage) {
+      batch.setAverageImage((float const*)averageImage.getMemory()) ;
+    }
+
     for (int i = 0 ; i < filenames.size() ; ++ i) {
       batch.registerItem(filenames[i]) ;
     }
