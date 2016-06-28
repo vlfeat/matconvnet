@@ -347,7 +347,7 @@ vl::ErrorCode Batch::init()
 void Batch::finalize()
 {
   LOG(2)<<"finalizing batch" ;
-  
+
   // Clear current batch
   clear() ;
 
@@ -712,8 +712,11 @@ vl::ErrorCode Batch::prefetch()
     }
 
     // Ready to fetch
-    item->state = Item::fetch ;
-    waitNextItemToBorrow.notify_one() ;
+    {
+      tthread::lock_guard<tthread::mutex> lock(mutex) ;
+      item->state = Item::fetch ;
+      waitNextItemToBorrow.notify_one() ;
+    }
   }
 
   return vl::VLE_Success ;
@@ -1152,11 +1155,11 @@ void mexFunction(int nout, mxArray *out[],
       }
 
       case opt_crop_anisotropy: {
-        if (!vlmxIsPlainVector(optarg, 2)) {
-          vlmxError(VLMXE_IllegalArgument, "CROPANISOTROPY is not a plain vector with two components.") ;
+        if (!vlmxIsPlainScalar(optarg) && !vlmxIsPlainVector(optarg, 2)) {
+          vlmxError(VLMXE_IllegalArgument, "CROPANISOTROPY is not a plain scalar or vector with two components.") ;
         }
-        minCropAnisotropy = mxGetPr(optarg)[0] ;
-        maxCropAnisotropy = mxGetPr(optarg)[1] ;
+        minCropAnisotropy =  mxGetPr(optarg)[0] ;
+        maxCropAnisotropy =  mxGetPr(optarg)[std::min((mwSize)1, mxGetNumberOfElements(optarg)-1)] ;
         if (minCropAnisotropy < 0.0 || minCropAnisotropy > maxCropAnisotropy) {
           vlmxError(VLMXE_IllegalArgument, "CROPANISOTROPY values are not in the legal range.") ;
         }
@@ -1164,11 +1167,11 @@ void mexFunction(int nout, mxArray *out[],
       }
 
       case opt_crop_size: {
-        if (!vlmxIsPlainVector(optarg, 2)) {
-          vlmxError(VLMXE_IllegalArgument, "CROPSIZE is not a plain vector with two components.") ;
+        if (!vlmxIsPlainScalar(optarg) && !vlmxIsPlainVector(optarg, 2)) {
+          vlmxError(VLMXE_IllegalArgument, "CROPSIZE is not a plain scalar or vector with two components.") ;
         }
         minCropSize = mxGetPr(optarg)[0] ;
-        maxCropSize = mxGetPr(optarg)[1] ;
+        maxCropSize = mxGetPr(optarg)[std::min((mwSize)1, mxGetNumberOfElements(optarg)-1)] ;
         if (minCropSize < 0.0 || minCropSize > maxCropSize || maxCropSize > 1.0) {
           vlmxError(VLMXE_IllegalArgument, "CROPSIZE values are not in the legal range.") ;
 
@@ -1191,20 +1194,30 @@ void mexFunction(int nout, mxArray *out[],
       }
 
       case opt_subtract_average: {
-        if (vlmxIsPlainScalar(optarg)) {
-          double * x = mxGetPr(optarg) ;
-          average[0] = (float)x[0] ;
-          average[1] = (float)x[0] ;
-          average[2] = (float)x[0] ;
-        } else if (vlmxIsPlainVector(optarg, 3)) {
-          double * x = mxGetPr(optarg) ;
-          average[0] = (float)x[0] ;
-          average[1] = (float)x[1] ;
-          average[2] = (float)x[2] ;
+        if (vlmxIsVector(optarg,1) || vlmxIsVector(optarg, 3)) {
+          size_t n = mxGetNumberOfElements(optarg) ;
+          switch (mxGetClassID(optarg)) {
+          case mxSINGLE_CLASS: {
+            float * x = (float*)mxGetData(optarg) ;
+            average[0] = x[std::min((size_t)0,n-1)] ;
+            average[1] = x[std::min((size_t)1,n-1)] ;
+            average[2] = x[std::min((size_t)2,n-1)] ;
+            break ;
+          }
+          case mxDOUBLE_CLASS: {
+            double * x = mxGetPr(optarg) ;
+            average[0] = (float)x[std::min((size_t)0,n-1)] ;
+            average[1] = (float)x[std::min((size_t)1,n-1)] ;
+            average[2] = (float)x[std::min((size_t)2,n-1)] ;
+            break ;
+          }
+          default:
+            vlmxError(VLMXE_IllegalArgument, "SUBTRACTAVERAGE is not SINGLE or DOUBLE vector.") ;
+          }
         } else {
           if (mxGetClassID(optarg) != mxSINGLE_CLASS ||
               mxGetNumberOfDimensions(optarg) > 3) {
-            vlmxError(VLMXE_IllegalArgument, "SUBTRACTAVERAGE is not a plain array of a compatible shape.") ;
+            vlmxError(VLMXE_IllegalArgument, "SUBTRACTAVERAGE is not a SINGLE image of a compatible shape.") ;
           }
           averageImage.init(optarg) ;
         }
