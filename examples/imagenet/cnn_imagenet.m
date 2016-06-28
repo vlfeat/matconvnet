@@ -45,8 +45,7 @@ if exist(imageStatsPath)
 else
   train = find(imdb.images.set == 1) ;
   images = fullfile(imdb.imageDir, imdb.images.name(train(1:100:end))) ;
-  [averageImage, rgbMean, rgbCovariance] = getImageStats(...
-    images, 'imageSize', net.meta.normalization.imageSize) ;
+  [averageImage, rgbMean, rgbCovariance] = getImageStats(images, 'imageSize', [256 256]) ;
   save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 end
 [v,d] = eig(rgbCovariance) ;

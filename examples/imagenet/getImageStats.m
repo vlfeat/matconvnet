@@ -3,8 +3,7 @@ function [averageImage, rgbMean, rgbCovariance] = getImageStats(images, varargin
 
 opts.gpus = [] ;
 opts.batchSize = 256 ;
-opts.fullImageSize = 256 ;
-opts.imageSize = [224 224] ;
+opts.imageSize = [256 256] ;
 opts.numThreads = 6 ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -25,13 +24,8 @@ for t=1:opts.batchSize:numel(images)
 
   data = getImageBatch(images(batch), ...
                        'numThreads', opts.numThreads, ...
-                       'jitter', false, ...
-                       'fullImageSize', opts.fullImageSize, ...
-                       'imageSize', opts.imageSize) ;
-
-  if numGpus > 0
-    data = gpuArray(data) ;
-  end
+                       'imageSize', opts.imageSize, ...
+                       'useGpu', numGpus > 0) ;
 
   z = reshape(permute(data,[3 1 2 4]),3,[]) ;
   n = size(z,2) ;
