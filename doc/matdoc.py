@@ -127,6 +127,9 @@ class Context(object):
 def render_L(tree, context):
     print "%s%s" % (context,tree.text)
 
+def render_L_from_indent(tree, context, indent):
+    print "%s%s%s" % (context," "*max(0,tree.indent-indent),tree.text)
+
 def render_SL(tree, context):
     print "%s%s %s" % (context,
                       "#"*(context.hlevel+tree.section_level),
@@ -162,7 +165,7 @@ def render_B(tree, context):
 def render_V(tree, context):
     context.push(Frame("    "))
     for n in tree.children:
-        if n.isa(L): render_L(n, context)
+        if n.isa(L): render_L_from_indent(n, context, tree.indent)
         elif n.isa(B): render_B(n, context)
     context.pop()
 

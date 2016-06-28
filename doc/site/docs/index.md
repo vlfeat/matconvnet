@@ -31,10 +31,14 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
-> **New:** [1.0-beta21](about.md#changes) accelerates significantly
-> data transfers between multiple GPUs. It also provides a new version
-> of `vl_imreadjpeg` that allows to load, jitter, and transfer data to
-> the GPU in parallel, resulting in significant speedups.
+> **New:** [1.0-beta21](about.md#changes) provides two new tools,
+> [`vl_tflow`](mfiles/vl_tflow.md) and `ParameterServer`, to
+> accelerate significantly data transfers between multiple GPUs. It
+> also provides a new version of
+> [`vl_imreadjpeg`](mfiles/vl_imreadjpeg) that allows to load,
+> transform, and transfer data to the GPU in parallel, resulting in
+> significant speedups in training and testing (20% to 400%, depending
+> on the model).
 >
 > **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
 > layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
