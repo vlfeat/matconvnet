@@ -106,11 +106,20 @@ imdb = cnn_imagenet_sync_labels(imdb, net);
 % -------------------------------------------------------------------------
 function fn = getBatchFn(opts, meta)
 % -------------------------------------------------------------------------
+if isfield(meta.normalization, 'border')
+  meta.normalization.border = 256 - meta.normalization.imageSize(1:2) ;
+  meta.normalization.fullImageSize = meta.normalization.imageSize(1:2) + meta.normalization.border ;
+end
 useGpu = numel(opts.train.gpus) > 0 ;
 bopts.numThreads = opts.numFetchThreads ;
-bopts.imageSize = meta.normalization.imageSize ;
+bopts.imageSize = meta.normalization.imageSize(1:2) ;
 bopts.fullImageSize = meta.normalization.fullImageSize ;
-bopts.averageImage = meta.normalization.averageImage ;
+if numel(meta.normalization.averageImage) == 3
+  bopts.averageImage = double(meta.normalization.averageImage(:)) ;
+else
+  bopts.averageImage = imresize(single(meta.normalization.averageImage), bopts.imageSize) ;
+end
+
 bopts.jitter = false ;
 fn = @(x,y) getBatch(bopts,useGpu,lower(opts.networkType),x,y) ;
 
@@ -122,11 +131,9 @@ isTrain = ~isempty(batch) && imdb.images.set(batch(1)) == 1 ;
 data = getImageBatch(images, ...
                      opts, ...
                      'prefetch', nargout == 0, ...
-                     'jitter', isTrain) ;
+                     'jitter', isTrain, ...
+                     'useGpu', useGpu) ;
 if nargout > 0
-  if useGpu
-    data = gpuArray(data) ;
-  end
   labels = imdb.images.label(batch) ;
   switch networkType
     case 'simplenn'

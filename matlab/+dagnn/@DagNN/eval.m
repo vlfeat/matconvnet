@@ -65,7 +65,7 @@ function eval(obj, inputs, derOutputs, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.holdOn = false ;
-opts = vl_argparse(opts) ;
+opts = vl_argparse(opts,varargin) ;
 
 obj.computingDerivative = nargin > 2 && ~isempty(derOutputs) ;
 

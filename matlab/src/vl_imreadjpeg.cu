@@ -859,10 +859,8 @@ void ReaderTask::entryPoint()
             // Withouth an average image,
             // they are expanded later.
 
-            if (inputNumChannels < K) {
-              for (int k = 1 ; k < K ; ++k) {
-                ::memcpy(outputPixels + n*k, outputPixels, sizeof(float) * n) ;
-              }
+            for (int k = inputNumChannels ; k < K ; ++k) {
+              ::memcpy(outputPixels + n*k, outputPixels, sizeof(float) * n) ;
             }
 
             vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Float>::axpy

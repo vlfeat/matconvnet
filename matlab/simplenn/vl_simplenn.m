@@ -37,7 +37,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   VL_SIMPLENN(NET, X, DZDY, RES, 'OPT', VAL, ...) takes the following
 %   options:
 %
-%   `Mode`:: `normal`
+%   `Mode`:: `'normal'`
 %      Specifies the mode of operation. It can be either `'normal'` or
 %      `'test'`. In test mode, dropout and batch-normalization are
 %      bypassed. Note that, when a network is deployed, it may be

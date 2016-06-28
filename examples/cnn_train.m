@@ -505,7 +505,11 @@ save(fileName, 'net', 'state') ;
 % -------------------------------------------------------------------------
 function saveStats(fileName, stats)
 % -------------------------------------------------------------------------
-save(fileName, 'stats', '-append') ;
+if exist(fileName)
+  save(fileName, 'stats', '-append') ;
+else
+  save(fileName, 'stats') ;
+end
 
 % -------------------------------------------------------------------------
 function [net, state, stats] = loadState(fileName)
