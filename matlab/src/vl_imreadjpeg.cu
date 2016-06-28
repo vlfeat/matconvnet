@@ -657,8 +657,8 @@ vl::ErrorCode Batch::prefetch()
       dy = item->shape.height - cropHeight ;
       switch (cropLocation) {
         case cropCenter:
-          dx = (dx+1)/2 ;
-          dy = (dy+1)/2 ;
+          dx /= 2 ;
+          dy /= 2 ;
           break ;
         case cropRandom:
           dx = rand() % (dx + 1) ;
@@ -850,22 +850,36 @@ void ReaderTask::entryPoint()
 
         // Postprocess colors.
         {
+          size_t inputNumChannels = item->shape.depth ;
+          size_t K = item->outputNumChannels ;
+          size_t n = item->outputHeight*item->outputWidth ;
           if (batch->averageImage) {
+            // If there is an average image, then subtract it now.
+            // Grayscale images are expanded here to color if needed.
+            // Withouth an average image,
+            // they are expanded later.
+
+            if (inputNumChannels < K) {
+              for (int k = 1 ; k < K ; ++k) {
+                ::memcpy(outputPixels + n*k, outputPixels, sizeof(float) * n) ;
+              }
+            }
+
             vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Float>::axpy
-            (batch->context,
-             item->outputHeight * item->outputWidth * item->outputNumChannels,
-             -1.0f,
-             batch->averageImage, 1,
-             outputPixels, 1) ;
+              (batch->context,
+               n * item->outputNumChannels,
+               -1.0f,
+               batch->averageImage, 1,
+               outputPixels, 1) ;
+
+            inputNumChannels = K ;
           }
           float dv [3] ;
           float * channels [3] ;
-          size_t K = item->outputNumChannels ;
-          size_t n = item->outputHeight*item->outputWidth ;
           for (int k = 0 ; k < K ; ++k) {
             channels[k] = outputPixels + n * k ;
           }
-          for (int k = 0 ; k < item->shape.depth ; ++k) {
+          for (int k = 0 ; k < inputNumChannels ; ++k) {
             dv[k] = (1. - 2. * item->contrastShift) *
             (batch->average[k] + item->brightnessShift[k]);
             if (item->contrastShift != 1.) {
@@ -880,7 +894,7 @@ void ReaderTask::entryPoint()
           {
             float const * end = channels[0] + n ;
             float v [3] ;
-            if (K == 3 && item->shape.depth == 3) {
+            if (K == 3 && inputNumChannels == 3) {
               float const a = item->contrastShift * item->saturationShift ;
               float const b = item->contrastShift * (1. - item->saturationShift) / K ;
               while (channels[0] != end) {
@@ -892,7 +906,7 @@ void ReaderTask::entryPoint()
                 *channels[1]++ = a * v[1] + b * mu ;
                 *channels[2]++ = a * v[2] + b * mu ;
               }
-            } else if (K == 3 && item->shape.depth == 1) {
+            } else if (K == 3 && inputNumChannels == 1) {
               float const a = item->contrastShift * item->saturationShift ;
               float const b = item->contrastShift * (1. - item->saturationShift) / K ;
               while (channels[0] != end) {
