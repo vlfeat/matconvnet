@@ -106,33 +106,40 @@ imdb = cnn_imagenet_sync_labels(imdb, net);
 % -------------------------------------------------------------------------
 function fn = getBatchFn(opts, meta)
 % -------------------------------------------------------------------------
-if isfield(meta.normalization, 'border')
-  meta.normalization.border = 256 - meta.normalization.imageSize(1:2) ;
-  meta.normalization.fullImageSize = meta.normalization.imageSize(1:2) + meta.normalization.border ;
-end
-useGpu = numel(opts.train.gpus) > 0 ;
-bopts.numThreads = opts.numFetchThreads ;
-bopts.imageSize = meta.normalization.imageSize(1:2) ;
-bopts.fullImageSize = meta.normalization.fullImageSize ;
-if numel(meta.normalization.averageImage) == 3
-  bopts.averageImage = double(meta.normalization.averageImage(:)) ;
-else
-  bopts.averageImage = imresize(single(meta.normalization.averageImage), bopts.imageSize) ;
+
+if isfield(meta.normalization, 'keepAspect')
+  keepAspect = meta.normalization.keepAspect ;
 end
 
-bopts.jitter = false ;
+if numel(meta.normalization.averageImage) == 3
+  mu = double(meta.normalization.averageImage(:)) ;
+else
+  mu = imresize(single(meta.normalization.averageImage), ...
+                meta.normalization.imageSize(1:2)) ;
+end
+
+useGpu = numel(opts.train.gpus) > 0 ;
+
+bopts.test = struct(...
+  'useGpu', useGpu, ...
+  'numThreads', opts.numFetchThreads, ...
+  'imageSize',  meta.normalization.imageSize(1:2), ...
+  'cropSize', max(meta.normalization.imageSize(1:2)) / 256, ...
+  'subtractAverage', mu, ...
+  'keepAspect', keepAspect) ;
+
 fn = @(x,y) getBatch(bopts,useGpu,lower(opts.networkType),x,y) ;
 
 % -------------------------------------------------------------------------
 function varargout = getBatch(opts, useGpu, networkType, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-isTrain = ~isempty(batch) && imdb.images.set(batch(1)) == 1 ;
-data = getImageBatch(images, ...
-                     opts, ...
-                     'prefetch', nargout == 0, ...
-                     'jitter', isTrain, ...
-                     'useGpu', useGpu) ;
+if ~isempty(batch) && imdb.images.set(batch(1)) == 1
+  phase = 'train' ;
+else
+  phase = 'test' ;
+end
+data = getImageBatch(images, opts.(phase), 'prefetch', nargout == 0) ;
 if nargout > 0
   labels = imdb.images.label(batch) ;
   switch networkType

@@ -389,7 +389,7 @@ else
   end
 end
 
-net_cpu = vl_simplenn_move(net, 'cpu') ;
+net = vl_simplenn_move(net, 'cpu') ;
 
 % -------------------------------------------------------------------------
 function [net, res, state] = accumulateGradients(net, res, state, params, batchSize, parserv)
@@ -399,14 +399,14 @@ otherGpus = setdiff(1:numGpus, labindex) ;
 
 for l=numel(net.layers):-1:1
   for j=numel(res(l).dzdw):-1:1
-    
+
     if ~isempty(parserv)
       tag = sprintf('l%d_%d',l,j) ;
       parDer = parserv.pull(tag) ;
     else
       parDer = res(l).dzdw{j}  ;
     end
-    
+
     if j == 3 && strcmp(net.layers{l}.type, 'bnorm')
       % special case for learning bnorm moments
       thisLR = net.layers{l}.learningRate(j) ;
@@ -419,20 +419,20 @@ for l=numel(net.layers):-1:1
       % standard gradient training
       thisDecay = params.weightDecay * net.layers{l}.weightDecay(j) ;
       thisLR = params.learningRate * net.layers{l}.learningRate(j) ;
-      
+
       state.momentum{l}{j} = vl_taccum(...
         params.momentum, ...
         state.momentum{l}{j}, ...
         - (1 / batchSize), ...
         parDer) ;
-      
+
       net.layers{l}.weights{j} = vl_taccum(...
         (1 - thisLR * thisDecay / (1 - params.momentum)), ...
         net.layers{l}.weights{j}, ...
         thisLR, ...
         state.momentum{l}{j}) ;
     end
-    
+
     % if requested, collect some useful stats for debugging
     if params.plotDiagnostics
       variation = [] ;

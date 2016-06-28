@@ -1,51 +1,59 @@
 function data = getImageBatch(imagePaths, varargin)
 % GETIMAGEBATCH  Load and jitter a batch of images
 
-opts.fullImageSize = 256 ;
-opts.imageSize = [227, 227] ;
-opts.numThreads = 1 ;
-opts.averageImage = [] ;
 opts.useGpu = false ;
 opts.prefetch = false ;
-opts.jitter = false ;
-opts.jitterAspect = 4/3 ;
-opts.jitterScale = 1.2 ;
-opts.jitterLight = 0.1 ;
-opts.jitterBrightness = .4 ;
-opts.jitterSaturation = .4 ;
-opts.jitterContrast = .4 ;
-opts.rgbSqrtCovariance = zeros(3,'single') ;
+opts.numThreads = 1 ;
+
+opts.imageSize = [227, 227] ;
+opts.cropSize = 227 / 256 * [1 1] ;
+opts.keepAspect = true ;
+opts.subtractAverage = [] ;
+
+opts.jitterFlip = false ;
+opts.jitterLocation = false ;
+opts.jitterAspect = 1 ;
+opts.jitterScale = 1 ;
+opts.jitterBrightness = 0 ;
+opts.jitterContrast = 0 ;
+opts.jitterSaturation = 0 ;
+
 opts = vl_argparse(opts, varargin);
 
-args = {imagePaths, ...
-        'NumThreads', opts.numThreads, ...
-        'Resize', opts.imageSize(1:2), ...
-        'Pack'} ;
+args{1} = {imagePaths, ...
+           'NumThreads', opts.numThreads, ...
+           'Pack', ...
+           'Resize', opts.imageSize(1:2), ...
+           'CropSize', opts.cropSize, ...
+           'CropAnisotropy', opts.jitterAspect, ...
+           'Brightness', opts.jitterBrightness, ...
+           'Contrast', opts.jitterContrast, ...
+           'Saturation', opts.jitterSaturation} ;
 
-if opts.useGpu, args{end+1} = 'Gpu' ; end
-
-if ~isempty(opts.averageImage)
-  args = horzcat(args, 'SubtractAverage', opts.averageImage) ;
+if ~opts.keepAspect
+  % Squashign effect
+  args{end+1} = {'CropAnisotropy', 0} ;
 end
 
-cropSize = max(opts.imageSize(1:2)./opts.fullImageSize) ;
+if opts.jitterFlip
+  args{end+1} = {'Flip'} ;
+end
 
-if opts.jitter
-  args = horzcat(args, ...
-                 {'NumThreads', opts.numThreads, ...
-                  'Resize', opts.imageSize(1:2), ...
-                  'CropLocation', 'random', ...
-                  'CropSize', cropSize * [1 1], ...
-                  'CropAnisotropy', [1/opts.jitterAspect,opts.jitterAspect], ...
-                  'Brightness', opts.jitterLight * double(opts.rgbSqrtCovariance), ...
-                  'Saturation', opts.jitterSaturation, ...
-                  'Contrast', opts.jitterContrast, ...
-                  'Flip'}) ;
+if opts.jitterLocation
+  args{end+1} = {'CropLocation', 'random'} ;
 else
-  args = horzcat(args, ...
-                 {'CropLocation', 'center', ...
-                  'CropSize', cropSize * [1 1]}) ;
+  args{end+1} = {'CropLocation', 'center'} ;
 end
+
+if opts.useGpu
+  args{end+1} = {'Gpu'} ;
+end
+
+if ~isempty(opts.subtractAverage)
+  args{end+1} = {'SubtractAverage', opts.subtractAverage} ;
+end
+
+args = horzcat(args{:}) ;
 
 if opts.prefetch
   vl_imreadjpeg(args{:}, 'prefetch') ;

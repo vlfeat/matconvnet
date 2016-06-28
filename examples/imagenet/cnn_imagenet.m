@@ -27,26 +27,6 @@ opts = vl_argparse(opts, varargin) ;
 if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 
 % -------------------------------------------------------------------------
-%                                                             Prepare model
-% -------------------------------------------------------------------------
-
-switch opts.modelType
-  case 'resnet-50'
-    net = cnn_imagenet_init_resnet() ;
-    opts.networkType = 'dagnn' ;
-
-  case 'inception'
-    net = cnn_imagenet_init_inception() ;
-    opts.networkType = 'dagnn' ;
-
-  otherwise
-    net = cnn_imagenet_init('model', opts.modelType, ...
-                            'batchNormalization', opts.batchNormalization, ...
-                            'weightInitMethod', opts.weightInitMethod, ...
-                            'networkType', opts.networkType) ;
-end
-
-% -------------------------------------------------------------------------
 %                                                              Prepare data
 % -------------------------------------------------------------------------
 
@@ -69,18 +49,32 @@ else
     images, 'imageSize', net.meta.normalization.imageSize) ;
   save(imageStatsPath, 'averageImage', 'rgbMean', 'rgbCovariance') ;
 end
-
-% Set the class names in the network
-net.meta.classes.name = imdb.classes.name ;
-net.meta.classes.description = imdb.classes.description ;
-
-% Set average image
-net.meta.normalization.averageImage = rgbMean ;
-
-% Set data augmentation statistics
 [v,d] = eig(rgbCovariance) ;
-net.meta.augmentation.rgbSqrtCovariance = v*sqrt(d) ;
+rgbDeviation = v*sqrt(d) ;
 clear v d ;
+
+% -------------------------------------------------------------------------
+%                                                             Prepare model
+% -------------------------------------------------------------------------
+
+switch opts.modelType
+  case 'resnet-50'
+    net = cnn_imagenet_init_resnet('averageImage', rgbMean, ...
+                                   'colorDeviation', rgbDeviation, ...
+                                   'classNames', imdb.classes.name, ...
+                                   'classDescriptions', imdb.classes.description) ;
+    opts.networkType = 'dagnn' ;
+
+  otherwise
+    net = cnn_imagenet_init('model', opts.modelType, ...
+                            'batchNormalization', opts.batchNormalization, ...
+                            'weightInitMethod', opts.weightInitMethod, ...
+                            'networkType', opts.networkType, ...
+                            'averageImage', rgbMean, ...
+                            'colorDeviation', rgbDeviation, ...
+                            'classNames', imdb.classes.name, ...
+                            'classDescriptions', imdb.classes.description) ;
+end
 
 % -------------------------------------------------------------------------
 %                                                                     Learn
@@ -115,29 +109,42 @@ end
 % -------------------------------------------------------------------------
 function fn = getBatchFn(opts, meta)
 % -------------------------------------------------------------------------
+
+if numel(meta.normalization.averageImage) == 3
+  mu = double(meta.normalization.averageImage(:)) ;
+else
+  mu = imresize(single(meta.normalization.averageImage), ...
+                meta.normalization.imageSize(1:2)) ;
+end
+
 useGpu = numel(opts.train.gpus) > 0 ;
-bopts.numThreads = opts.numFetchThreads ;
-bopts.fullImageSize = meta.normalization.fullImageSize ;
-bopts.imageSize = meta.normalization.imageSize ;
-bopts.averageImage = meta.normalization.averageImage ;
-bopts.rgbSqrtCovariance = meta.augmentation.rgbSqrtCovariance ;
-bopts.jitter = meta.augmentation.jitter ;
-bopts.jitterLight = meta.augmentation.jitterLight ;
-bopts.jitterBrightness = meta.augmentation.jitterBrightness ;
-bopts.jitterSaturation = meta.augmentation.jitterSaturation ;
-bopts.jitterContrast = meta.augmentation.jitterContrast ;
+
+bopts.test = struct(...
+  'useGpu', useGpu, ...
+  'numThreads', opts.numFetchThreads, ...
+  'imageSize',  meta.normalization.imageSize(1:2), ...
+  'cropSize', meta.normalization.cropSize, ...
+  'subtractAverage', mu) ;
+
+% Copy the parameters for data augmentation
+bopts.train = bopts.test ;
+for f = fieldnames(meta.augmentation)'
+  f = char(f) ;
+  bopts.train.(f) = meta.augmentation.(f) ;
+end
+
 fn = @(x,y) getBatch(bopts,useGpu,lower(opts.networkType),x,y) ;
 
 % -------------------------------------------------------------------------
 function varargout = getBatch(opts, useGpu, networkType, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-isTrain = ~isempty(batch) && imdb.images.set(batch(1)) == 1 ;
-data = getImageBatch(images, ...
-                     opts, ...
-                     'prefetch', nargout == 0, ...
-                     'jitter', isTrain, ...
-                     'useGpu', useGpu) ;
+if ~isempty(batch) && imdb.images.set(batch(1)) == 1
+  phase = 'train' ;
+else
+  phase = 'test' ;
+end
+data = getImageBatch(images, opts.(phase), 'prefetch', nargout == 0) ;
 if nargout > 0
   labels = imdb.images.label(batch) ;
   switch networkType
@@ -147,3 +154,4 @@ if nargout > 0
       varargout{1} = {'input', data, 'label', labels} ;
   end
 end
+
