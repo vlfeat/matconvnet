@@ -334,7 +334,7 @@ if opts.enableGpu
 end
 if opts.enableCudnn
   flags.cc{end+1} = '-DENABLE_CUDNN' ;
-  flags.cc{end+1} = ['-I' opts.cudnnIncludeDir] ;
+  flags.cc{end+1} = ['-I"' opts.cudnnIncludeDir '"'] ;
 end
 if opts.enableDouble
   flags.cc{end+1} = '-DENABLE_DOUBLE' ;
@@ -353,7 +353,7 @@ if opts.enableImreadJpeg
 end
 
 if opts.enableGpu
-  flags.link = horzcat(flags.link, {['-L' opts.cudaLibDir], '-lcudart', '-lcublas'}) ;
+  flags.link = horzcat(flags.link, {['-L"' opts.cudaLibDir '"'], '-lcudart', '-lcublas'}) ;
   switch arch
     case {'maci64', 'glnxa64'}
       flags.link{end+1} = '-lmwgpu' ;
@@ -361,7 +361,7 @@ if opts.enableGpu
       flags.link{end+1} = '-lgpu' ;
   end
   if opts.enableCudnn
-    flags.link{end+1} = ['-L' opts.cudnnLibDir] ;
+    flags.link{end+1} = ['-L"' opts.cudnnLibDir '"'] ;
     flags.link{end+1} = '-lcudnn' ;
   end
 end
