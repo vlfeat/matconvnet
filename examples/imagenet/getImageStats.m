@@ -14,6 +14,7 @@ rgbm2 = {} ;
 numGpus = numel(opts.gpus) ;
 if numGpus > 0
   fprintf('%s: resetting GPU device\n', mfilename) ;
+  clear mex ;
   gpuDevice(opts.gpus(1))
 end
 
@@ -27,23 +28,23 @@ for t=1:opts.batchSize:numel(images)
                        'imageSize', opts.imageSize, ...
                        'useGpu', numGpus > 0) ;
 
-  z = reshape(permute(data,[3 1 2 4]),3,[]) ;
-  n = size(z,2) ;
+  z = reshape(shiftdim(data,2),3,[]) ;
+  rgbm1{end+1} = mean(z,2) ;
+  rgbm2{end+1} = z*z'/size(z,2) ;
   avg{end+1} = mean(data, 4) ;
-  rgbm1{end+1} = sum(z,2)/n ;
-  rgbm2{end+1} = z*z'/n ;
   time = toc(time) ;
   fprintf(' %.1f Hz\n', numel(batch) / time) ;
 end
 
 averageImage = gather(mean(cat(4,avg{:}),4)) ;
-rgbm1 = mean(cat(2,rgbm1{:}),2) ;
-rgbm2 = mean(cat(3,rgbm2{:}),3) ;
-rgbMean = gather(rgbm1) ;
-rgbCovariance = gather(rgbm2 - rgbm1*rgbm1') ;
+rgbm1 = gather(mean(cat(2,rgbm1{:}),2)) ;
+rgbm2 = gather(mean(cat(3,rgbm2{:}),3)) ;
+rgbMean = rgbm1 ;
+rgbCovariance = rgbm2 - rgbm1*rgbm1' ;
 
 if numGpus > 0
   fprintf('%s: finished with GPU device, resetting again\n', mfilename) ;
+  clear mex ;
   gpuDevice(opts.gpus(1)) ;
 end
 fprintf('%s: all done\n', mfilename) ;
