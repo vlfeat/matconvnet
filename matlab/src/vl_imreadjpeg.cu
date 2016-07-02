@@ -249,6 +249,8 @@ private:
 #if ENABLE_GPU
   bool cudaStreamInitialized ;
   cudaStream_t cudaStream ;
+  float * cpuPinnedPack ;
+  size_t cpuPinnedPackSize ;
 #endif
 } ;
 
@@ -292,6 +294,10 @@ Batch::Batch(vl::MexContext & context)
   gpuMode(false),
   numReturnedItems(0),
   averageImage(NULL)
+#if ENABLE_GPU
+, cpuPinnedPack(NULL),
+  cpuPinnedPackSize(0)
+#endif
 { }
 
 Batch::~Batch()
@@ -351,7 +357,16 @@ void Batch::finalize()
   // Clear current batch
   clear() ;
 
-  // Signal waiting threads that we will stop
+  // Release memory
+#if ENABLE_GPU
+  if (cpuPinnedPack) {
+    cudaFreeHost(cpuPinnedPack) ;
+    cpuPinnedPack = 0 ;
+    cpuPinnedPackSize = 0 ;
+  }
+#endif
+
+  // Signal waiting threads that we are quitting
   {
     tthread::lock_guard<tthread::mutex> lock(mutex) ;
     quit = true ;
@@ -385,7 +400,7 @@ void Batch::returnItem(Batch::Item * item)
     LOG(2) << "push to GPU the pack" ;
     cudaError_t cerror ;
     cerror = cudaMemcpyAsync (gpuPack.getMemory(),
-                              cpuPack.getMemory(),
+                              cpuPinnedPack,
                               gpuPack.getNumElements() * sizeof(float),
                               cudaMemcpyHostToDevice,
                               cudaStream) ;
@@ -568,11 +583,22 @@ vl::ErrorCode Batch::prefetch()
   if (packingMethod == singleArray) {
     assert(resizeMethod == fixedSize) ;
     vl::TensorShape shape(resizeHeight, resizeWidth, 3, getNumberOfItems()) ;
-    cpuPack.init(vl::VLDT_CPU, vl::VLDT_Float, shape) ;
-    cpuPack.makePersistent() ;
     if (gpuMode) {
+#if ENABLE_GPU
       gpuPack.init(vl::VLDT_GPU, vl::VLDT_Float, shape) ;
       gpuPack.makePersistent() ;
+      size_t memSize = shape.getNumElements() * sizeof(float) ;
+      if (cpuPinnedPackSize < memSize) {
+        if (cpuPinnedPack) {
+          cudaFreeHost(cpuPinnedPack) ;
+        }
+        cudaMallocHost(&cpuPinnedPack, memSize) ;
+        cpuPinnedPackSize = memSize ;
+      }
+#endif
+    } else {
+      cpuPack.init(vl::VLDT_CPU, vl::VLDT_Float, shape) ;
+      cpuPack.makePersistent() ;
     }
   }
 
@@ -814,7 +840,12 @@ void ReaderTask::entryPoint()
         if (batch->getPackingMethod() == Batch::individualArrays) {
           outputPixels = (float*)item->cpuArray.getMemory() ;
         } else {
-          outputPixels = (float*)batch->cpuPack.getMemory() + item->outputHeight*item->outputWidth*3*item->index ;
+          if (batch->gpuMode) {
+            outputPixels = batch->cpuPinnedPack ;
+          } else {
+            outputPixels = (float*)batch->cpuPack.getMemory() ;
+          }
+          outputPixels += item->outputHeight*item->outputWidth*3*item->index ;
         }
 
         // Read full image.
@@ -959,6 +990,13 @@ void ReaderTask::entryPoint()
 void ReaderTask::finalize()
 {
   LOG(2)<<"finalizing reader " << index ;
+  if (thread) {
+    if (thread->joinable()) {
+      thread->join() ;
+    }
+    delete thread ;
+    thread = NULL ;
+  }
   for (int i = 0 ; i < sizeof(buffers)/sizeof(Buffer) ; ++i) {
     if (buffers[i].memory) {
       free(buffers[i].memory) ;
@@ -966,17 +1004,9 @@ void ReaderTask::finalize()
       buffers[i].size = 0 ;
     }
   }
-
   if (reader) {
     delete reader ;
     reader = NULL ;
-  }
-  if (thread) {
-    if (thread->joinable()) {
-      thread->join() ;
-    }
-    delete thread ;
-    thread = NULL ;
   }
   index = -1 ;
   batch = NULL ;
@@ -1251,6 +1281,12 @@ void mexFunction(int nout, mxArray *out[],
     vlmxError(VLMXE_IllegalArgument, "FILENAMES is not a cell array of strings.") ;
   }
 
+  // If the requested number of threads changes, finalize everything
+  requestedNumThreads = std::max(requestedNumThreads, 1) ;
+  if (readers.size() != requestedNumThreads) {
+    atExit() ; // Delete threads and current batch
+  }
+
   // Prepare batch.
   if (!batchIsInitialized) {
     error = batch.init() ;
@@ -1261,15 +1297,11 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   // Prepare reader tasks.
-  requestedNumThreads = std::max(requestedNumThreads, 1) ;
-  if (readers.size() != requestedNumThreads) {
-    batch.clear() ; // make sure no reader still pending on current batch
-    for (int r = 0 ; r < requestedNumThreads ; ++r) {
-      readers.push_back(new ReaderTask()) ;
-      vl::ErrorCode error = readers[r]->init(&batch, r) ;
-      if (error != vl::VLE_Success) {
-        vlmxError(VLMXE_Execution, "Could not create the requested number of threads") ;
-      }
+  for (int r = readers.size() ; r < requestedNumThreads ; ++r) {
+    readers.push_back(new ReaderTask()) ;
+    vl::ErrorCode error = readers[r]->init(&batch, r) ;
+    if (error != vl::VLE_Success) {
+      vlmxError(VLMXE_Execution, "Could not create the requested number of threads") ;
     }
   }
 
