@@ -140,7 +140,7 @@ for epoch=start+1:opts.numEpochs
       [net, state] = processEpoch(net, state, params, 'val') ;
       if labindex == 1 && ~evaluateMode
         saveState(modelPath(epoch), net, state) ;
-    end
+      end
       lastStats = state.stats ;
     end
     lastStats = accumulateStats(lastStats) ;
@@ -180,6 +180,9 @@ for epoch=start+1:opts.numEpochs
     print(1, modelFigPath, '-dpdf') ;
   end
 end
+
+% With multiple GPUs, return one copy
+if isa(net, 'Composite'), net = net{1} ; end
 
 % -------------------------------------------------------------------------
 function err = error_multiclass(params, labels, res)

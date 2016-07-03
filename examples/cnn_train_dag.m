@@ -136,6 +136,9 @@ for epoch=start+1:opts.numEpochs
   end
 end
 
+% With multiple GPUs, return one copy
+if isa(net, 'Composite'), net = net{1} ; end
+
 % -------------------------------------------------------------------------
 function [net, state] = processEpoch(net, state, params, mode)
 % -------------------------------------------------------------------------

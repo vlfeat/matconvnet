@@ -1,6 +1,10 @@
 function net = cnn_imagenet_init_resnet(varargin)
 % CNN_IMAGENET_INIT_RESNET  Initialize a standard CNN for ImageNet
 
+opts.classNames = {} ;
+opts.classDescriptions = {} ;
+opts.averageImage = zeros(3,1) ;
+opts.colorDeviation = zeros(3) ;
 opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
 opts = vl_argparse(opts, varargin) ;
 
@@ -142,15 +146,18 @@ net.addLayer('top5error', ...
              'top5error') ;
 
 % Meta parameters
-net.meta.normalization.fullImageSize = 256 ;
 net.meta.normalization.imageSize = [224 224 3] ;
-net.meta.normalization.averageImage = [] ;
-net.meta.augmentation.rgbSqrtCovariance = zeros(3,'single') ;
-net.meta.augmentation.jitter = true ;
-net.meta.augmentation.jitterLight = 0.1 ;
-net.meta.augmentation.jitterBrightness = 0.4 ;
-net.meta.augmentation.jitterSaturation = 0.4 ;
-net.meta.augmentation.jitterContrast = 0.4 ;
+net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
+net.meta.normalization.cropSize = net.meta.normalization.imageSize(1) / 256 ;
+net.meta.normalization.averageImage = opts.averageImage ;
+net.meta.classes.name = opts.classNames ;
+net.meta.classes.description = opts.classDescriptions ;
+net.meta.augmentation.jitterLocation = true ;
+net.meta.augmentation.jitterFlip = true ;
+net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
+net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
+%net.meta.augmentation.jitterSaturation = 0.4 ;
+%net.meta.augmentation.jitterContrast = 0.4 ;
 
 net.meta.inputSize = {'input', [net.meta.normalization.imageSize 32]} ;
 
