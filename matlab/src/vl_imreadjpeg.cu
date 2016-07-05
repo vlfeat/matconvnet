@@ -434,7 +434,8 @@ void Batch::clear()
 {
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
 
-  // Stop threads from getting more tasks
+  // Stop threads from getting more tasks. After this any call to borrowItem() by a worker will
+  // stop in a waiting state. Thus, we simply wait for all of them to return their items.
   nextItem = (int)items.size() ;
 
   // Wait for all thread to return their items
@@ -442,6 +443,8 @@ void Batch::clear()
     while (items[i]->borrowed) {
       waitCompletion.wait(mutex) ;
     }
+  }
+  for (int i = 0 ; i < items.size() ; ++i) {
     delete items[i] ;
   }
   items.clear() ;
@@ -458,11 +461,12 @@ void Batch::sync() const
 {
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
 
-  // Wait for threads to complete work for all items
-  for (int i = 0 ; i < items.size() ; ++i) {
-    while (items[i]->state != Item::ready) {
-      waitCompletion.wait(mutex) ;
-    }
+  // Wait for threads to complete work for all items.
+  // Note that it is not enough to check that threads are all in a
+  // "done" state as this does not mean that all work has been done yet.
+  // Instead, we look at the number of items returned.
+  while (numReturnedItems < items.size()) {
+    waitCompletion.wait(mutex) ;
   }
 
   if (gpuMode) {
