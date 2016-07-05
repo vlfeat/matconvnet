@@ -341,7 +341,9 @@ if opts.enableDouble
 end
 flags.link{end+1} = '-lmwblas' ;
 switch arch
-  case {'maci64', 'glnxa64'}
+  case {'maci64'}
+  case {'glnxa64'}
+    flags.linklibs{end+1} = '-lrt' ;
   case {'win64'}
     % VisualC does not pass this even if available in the CPU architecture
     flags.cc{end+1} = '-D__SSSE3__' ;
@@ -430,8 +432,7 @@ flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
 flags.mexlink = horzcat(flags.cc, flags.link, ...
                         {'-largeArrayDims'}, ...
                         {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
-                        {['LINKLIBS=$LINKLIBS ', strjoin(flags.linklibs)]}, ...
-                        {'-lrt'}) ;
+                        {['LINKLIBS=$LINKLIBS ', strjoin(flags.linklibs)]}) ;
 
 % nvcc: compile GPU
 flags.nvcc = horzcat(flags.cc, ...
