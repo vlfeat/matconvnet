@@ -747,26 +747,28 @@ void SharedTensorSpace::dump() const
 {
   for (int tensorIndex = 0 ; tensorIndex < tensors.size() ; ++tensorIndex) {
     SharedTensorInstance const & T = tensors[tensorIndex] ;
-    LOG(1)<<"Tensor " << T.name << std::endl ;
-    LOG(1)<<"\tState: " ;
+    char const * stateString ;
+
     switch (T.state) {
-    case ready: LOG(0)<<"ready" ; break ;
-    case accumulateChildren: LOG(0)<<"accumulateChildren" ; break ;
-    case waitParent: LOG(0)<<"waitParent" ; break ;
-    case waitChildren: LOG(0)<<"waitChildren" ; break ;
+    case ready: stateString="ready" ; break ;
+    case accumulateChildren: stateString="accumulateChildren" ; break ;
+    case waitParent: stateString="waitParent" ; break ;
+    case waitChildren: stateString="waitChildren" ; break ;
     }
-    LOG(1)<<" transaction:"<<T.transaction<<std::endl ;
+    LOG(0)<<"Tensor " << T.name ;
+    LOG(0)<<"\tState: " << stateString ;
+    LOG(0)<<"\ttransaction: "<<T.transaction ;
     if (peerTensors.size() > tensorIndex) {
       for (int p = 0 ; p < peerTensors[tensorIndex].size() ; ++p) {
         SharedTensorPeerInstance const & PT = peerTensors[tensorIndex][p] ;
-        LOG(1)<<"\tPeer on lab " << PT.lab << ": ";
         switch (PT.state) {
-        case ready: LOG(0)<<"ready" ; break ;
-        case accumulateChildren: LOG(0)<<"accumulateChildren" ; break ;
-        case waitParent: LOG(0)<<"waitParent" ; break ;
-        case waitChildren: LOG(0)<<"waitChildren" ; break ;
+        case ready: stateString="ready" ; break ;
+        case accumulateChildren: stateString="accumulateChildren" ; break ;
+        case waitParent: stateString="waitParent" ; break ;
+        case waitChildren: stateString="waitChildren" ; break ;
         }
-        LOG(1)<<" transaction:"<<PT.transaction<<std::endl ;
+        LOG(0)<<"\tPeer on lab " << PT.lab << ": " << stateString;
+        LOG(0)<<"\t\ttransaction:" << PT.transaction ;
       }
     }
   }
@@ -1367,7 +1369,7 @@ vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, int from, int time
 {
   size_t waited = 0 ; // microsecond
   size_t const pollInterval = 1000 ; // microseconds
-  if (timeout < 0) { timeout = (pool.timeoutInterval / 1000UL) ; }
+  if (timeout < 0) { timeout = (pool.timeoutInterval / 1000UL) /* -> us */ ; }
 
   // find connection to peer
   peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), from) ;
