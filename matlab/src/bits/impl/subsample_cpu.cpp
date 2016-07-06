@@ -19,10 +19,10 @@ the terms of the BSD license (see the COPYING file).
 namespace vl { namespace impl {
 
   template <typename type>
-  struct subsample<vl::CPU, type>
+  struct subsample<vl::VLDT_CPU, type>
   {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(vl::Context& context,
             type* output,
             type const* data,
@@ -47,10 +47,10 @@ namespace vl { namespace impl {
         data += width*height ;
         output += outputWidth*outputHeight ;
       }
-      return vlSuccess ;
+      return VLE_Success ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(vl::Context& context,
              type* derData,
              type const* derOutput,
@@ -76,15 +76,15 @@ namespace vl { namespace impl {
         derData += width*height ;
         derOutput += outputWidth*outputHeight ;
       }
-      return vlSuccess ;
+      return VLE_Success ;
     }
   } ;
 
 } }
 
 // Instantiations
-template struct vl::impl::subsample<vl::CPU, float> ;
+template struct vl::impl::subsample<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::subsample<vl::CPU, double> ;
+template struct vl::impl::subsample<vl::VLDT_CPU, double> ;
 #endif

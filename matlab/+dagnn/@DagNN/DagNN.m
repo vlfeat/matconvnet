@@ -11,7 +11,7 @@ classdef DagNN < matlab.mixin.Copyable
 %   - `vars`: The network variables.
 %   - `params`: The network parameters.
 %   - `meta`: Additional information relative to the CNN (e.g. input
-%     image format specification).
+%      image format specification).
 %
 %   There are additional transient data members:
 %
@@ -61,8 +61,10 @@ classdef DagNN < matlab.mixin.Copyable
 
   properties (Transient)
     mode = 'normal'
+    holdOn = false
     accumulateParamDers = false
     conserveMemory = true
+    parameterServer = []
   end
 
   properties (Transient, SetAccess = private, GetAccess = public)
@@ -143,7 +145,7 @@ classdef DagNN < matlab.mixin.Copyable
 
     % Process data with the DagNN
     initParams(obj)
-    eval(obj, inputs, derOutputs)
+    eval(obj, inputs, derOutputs, varargin)
 
     % Get information about the DagNN
     varSizes = getVarSizes(obj, inputSizes)
@@ -337,6 +339,43 @@ classdef DagNN < matlab.mixin.Copyable
     %   executed. This needs not to be the trivial order 1,2,...,L
     %   as it depends on the graph topology.
       order = obj.executionOrder ;
+    end
+
+    function setParameterServer(obj, ps)
+    %SETPARAMETERSERVER  Set a parameter server for the parameter derivatives
+    %    SETPARAMETERSERVER(obj, PS) uses the specified
+    %    ParameterServer PS to store and accumulate parameter
+    %    derivatives across multiple MATLAB processes.
+    %
+    %    After setting this option, net.params.der is always empty
+    %    and the derivative value must be retrieved from the
+    %    server.
+
+      obj.parameterServer = ps ;
+      for p = 1:numel(obj.params)
+        if strcmp(class(obj.params(p).value),'gpuArray')
+          deviceType = 'gpu' ;
+          dataType = classUnderlying(obj.params(p).value) ;
+        else
+          deviceType = 'cpu' ;
+          dataType = class(obj.params(p).value) ;
+        end
+        obj.parameterServer.register(...
+          obj.params(p).name, ...
+          size(obj.params(p).value), ...
+          dataType, ...
+          deviceType) ;
+      end
+      obj.parameterServer.start() ;
+    end
+
+    function clearParameterServer(obj)
+    %CLEARPARAMETERSERVER  Remove the parameter server
+    %    CLEARPARAMETERSERVER(obj) stopts using the parameter server.
+      if ~isempty(obj.parameterServer)
+        obj.parameterServer.stop() ;
+      end
+      obj.parameterServer = [] ;
     end
   end
 

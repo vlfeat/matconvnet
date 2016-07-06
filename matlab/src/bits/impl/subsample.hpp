@@ -19,10 +19,10 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct subsample {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(vl::Context& context,
             type* output,
             type const* data,
@@ -30,7 +30,7 @@ namespace vl { namespace impl {
             size_t strideY, size_t strideX,
             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(vl::Context& context,
              type* derData,
              type const* derOutput,

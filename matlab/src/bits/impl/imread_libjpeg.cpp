@@ -40,8 +40,8 @@ public:
   char jpegLastErrorMsg [JMSG_LENGTH_MAX] ;
   char lastErrorMessage [ERR_MSG_MAX_LEN] ;
 
-  vl::Error readPixels(float * memory, char const * filename) ;
-  vl::Error readShape(vl::ImageShape & shape, char const * filename) ;
+  vl::ErrorCode readPixels(float * memory, char const * filename) ;
+  vl::ErrorCode readShape(vl::ImageShape & shape, char const * filename) ;
 
   static void reader_jpeg_error (j_common_ptr cinfo)
   {
@@ -64,10 +64,10 @@ vl::ImageReader::Impl::~Impl()
   jpeg_destroy_decompress(&decompressor) ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
   int row_stride ;
   const int blockSize = 32 ;
   char unsigned * pixels = NULL ;
@@ -80,13 +80,13 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
   /* open file */
   FILE* fp = fopen(filename, "r") ;
   if (fp == NULL) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     return error ;
   }
 
   /* handle LibJPEG errors */
   if (setjmp(onJpegError)) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
                   "libjpeg: %s", jpegLastErrorMsg) ;
     goto done ;
@@ -117,12 +117,12 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
   /* allocate scaline buffer */
   pixels = (char unsigned*)malloc(sizeof(char) * shape.width * shape.height * shape.depth) ;
   if (pixels == NULL) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     goto done ;
   }
   scanlines = (char unsigned**)malloc(sizeof(char*) * shape.height) ;
   if (scanlines == NULL) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     goto done ;
   }
   for (int y = 0 ; y < shape.height ; ++y) {
@@ -141,7 +141,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
     switch (shape.depth) {
     case 3 : vl::impl::imageFromPixels<impl::pixelFormatRGB>(image, pixels, shape.width*3) ; break ;
     case 1 : vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, shape.width*1) ; break ;
-    default : error = vl::vlErrorUnknown ; goto done ;
+    default : error = vl::VLE_Unknown ; goto done ;
     }
     jpeg_finish_decompress(&decompressor) ;
     requiresAbort = false ;
@@ -155,10 +155,10 @@ done:
   return error ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
 
   int row_stride ;
   const int blockSize = 32 ;
@@ -169,13 +169,13 @@ vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
   // open file
   FILE* fp = fopen(filename, "r") ;
   if (fp == NULL) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     return error ;
   }
 
   // handle LibJPEG errors
   if (setjmp(onJpegError)) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
                   "libjpeg: %s", jpegLastErrorMsg) ;
     goto done ;
@@ -221,13 +221,13 @@ vl::ImageReader::~ImageReader()
   delete impl ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::readPixels(float * memory, char const * filename)
 {
   return impl->readPixels(memory, filename) ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::readShape(vl::ImageShape & shape, char const * filename)
 {
   return impl->readShape(shape, filename) ;

@@ -39,12 +39,12 @@ error = vl::impl::bnorm<deviceType,type>::forward \
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, float) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, double) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnbnorm_forward(vl::Context& context,
                     vl::Tensor output,
                     vl::Tensor moments,
@@ -53,23 +53,23 @@ vl::nnbnorm_forward(vl::Context& context,
                     vl::Tensor biases,
                     double epsilon)
 {
-  vl::Error error = vlSuccess ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode error = VLE_Success ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (output.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break;
@@ -89,7 +89,7 @@ error = vl::impl::bnorm<deviceType,type>::forward_given_moments \
 (type*)biases.getMemory(), \
 data.getHeight(), data.getWidth(), data.getDepth(), data.getSize()) ;
 
-vl::Error
+vl::ErrorCode
 vl::nnbnorm_forward_given_moments(vl::Context& context,
                                   vl::Tensor output,
                                   vl::Tensor moments,
@@ -97,23 +97,23 @@ vl::nnbnorm_forward_given_moments(vl::Context& context,
                                   vl::Tensor multipliers,
                                   vl::Tensor biases)
 {
-  vl::Error error = vlSuccess ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode error = VLE_Success ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (output.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("nnbnorm_*_forward")) ;
       }
       break;
@@ -141,7 +141,7 @@ error = vl::impl::bnorm<deviceType,type>::backward \
  data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
  epsilon);
 
-vl::Error
+vl::ErrorCode
 vl::nnbnorm_backward(Context& context,
                      vl::Tensor derData,
                      vl::Tensor derMultipliers,
@@ -153,23 +153,23 @@ vl::nnbnorm_backward(Context& context,
                      vl::Tensor derOutput,
                      double epsilon)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break;
@@ -193,7 +193,7 @@ error = vl::impl::bnorm<deviceType,type>::backward_given_moments \
 data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
 epsilon);
 
-vl::Error
+vl::ErrorCode
 vl::nnbnorm_backward_given_moments(Context& context,
                                    vl::Tensor derData,
                                    vl::Tensor derMultipliers,
@@ -205,23 +205,23 @@ vl::nnbnorm_backward_given_moments(Context& context,
                                    vl::Tensor derOutput,
                                    double epsilon)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break;

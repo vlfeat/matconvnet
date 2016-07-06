@@ -17,7 +17,7 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-  vl::Error
+  vl::ErrorCode
   nnsubsample_forward(vl::Context& context,
                       vl::Tensor output,
                       vl::Tensor data,
@@ -26,7 +26,7 @@ namespace vl {
                       int padTop, int padBottom,
                       int padLeft, int padRight) ;
 
-  vl::Error
+  vl::ErrorCode
   nnsubsample_backward(vl::Context& context,
                        vl::Tensor derData,
                        vl::Tensor derBiases,

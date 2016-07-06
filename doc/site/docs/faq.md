@@ -35,3 +35,15 @@ others are implemented MEX files. In this case, M files such as
 `vl_nnconv.m` contain only the function documentation. The code of the
 function is actually found in `matlab/src/vl_nnconv.cu` (a CUDA/C++
 source file) or similar.
+
+### Why do I get compilation error `error: unrecognized command line option "-std=c++11"` on a Linux machine?
+
+This is caused by an incompatible version of GCC compiler
+([<4.6](https://gcc.gnu.org/projects/cxx-status.html#cxx11)) with your MATLAB.
+You can either install a newer version of GCC (if available), or you
+can force MATLAB not to use the offending compiler option and replace it with
+the previous name of the C++11 standard argument:
+ * In MATLAB run: `mex -setup c++`.
+ * Run `edit(fullfile(prefdir, 'mex_C++_glnxa64.xml'))` to edit your MATLAB
+ compiler options.
+ * Replace all occurrences of `-std=c++11` with `-std=c++0x` and save the file.

@@ -20,7 +20,7 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-  vl::Error
+  vl::ErrorCode
   nnconv_forward(vl::Context& context,
                  vl::Tensor output, double outputMult,
                  vl::Tensor data, double dataMult,
@@ -30,7 +30,7 @@ namespace vl {
                  int padTop, int padBottom,
                  int padLeft, int padRight) ;
 
-  vl::Error
+  vl::ErrorCode
   nnconv_backward(vl::Context& context,
                   vl::Tensor derData,
                   vl::Tensor derFilters,
@@ -42,7 +42,7 @@ namespace vl {
                   int padTop, int padBottom,
                   int padLeft, int padRight) ;
 
-  vl::Error
+  vl::ErrorCode
   nnconvt_forward(vl::Context& context,
                   vl::Tensor output,
                   vl::Tensor data,
@@ -52,7 +52,7 @@ namespace vl {
                   int cropTop, int cropBottom,
                   int cropLeft, int cropRight) ;
 
-  vl::Error
+  vl::ErrorCode
   nnconvt_backward(vl::Context& context,
                    vl::Tensor derData,
                    vl::Tensor derFilters,

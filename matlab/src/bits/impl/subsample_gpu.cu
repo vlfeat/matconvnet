@@ -107,10 +107,10 @@ __global__ void subsample_backward_kernel
 namespace vl { namespace impl {
 
   template <typename type>
-  struct subsample<vl::GPU, type>
+  struct subsample<vl::VLDT_GPU, type>
   {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(vl::Context& context,
             type* output,
             type const* data,
@@ -123,7 +123,7 @@ namespace vl { namespace impl {
       int outputVolume = outputWidth * outputHeight * depth ;
 
       subsample_forward_kernel<type>
-      <<< divideUpwards(outputVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(outputVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (output, data,
        outputHeight, outputWidth, outputVolume,
        height, width,
@@ -132,7 +132,7 @@ namespace vl { namespace impl {
       return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(vl::Context& context,
              type* derData,
              type const* derOutput,
@@ -145,7 +145,7 @@ namespace vl { namespace impl {
       int dataVolume = width * height * depth ;
 
       subsample_backward_kernel<type>
-      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData,
        derOutput,
        outputHeight, outputWidth, dataVolume,
@@ -159,8 +159,8 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::subsample<vl::GPU, float> ;
+template struct vl::impl::subsample<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::subsample<vl::GPU, double> ;
+template struct vl::impl::subsample<vl::VLDT_GPU, double> ;
 #endif

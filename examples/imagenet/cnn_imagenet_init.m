@@ -10,6 +10,10 @@ opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts.networkType = 'simplenn' ;
 opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
+opts.classNames = {} ;
+opts.classDescriptions = {} ;
+opts.averageImage = zeros(3,1) ;
+opts.colorDeviation = zeros(3) ;
 opts = vl_argparse(opts, varargin) ;
 
 % Define layers
@@ -50,13 +54,18 @@ end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 % Meta parameters
-net.meta.inputSize = net.meta.normalization.imageSize ;
-net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
-net.meta.normalization.interpolation = 'bicubic' ;
-net.meta.normalization.averageImage = [] ;
-net.meta.normalization.keepAspect = true ;
-net.meta.augmentation.rgbVariance = zeros(0,3) ;
-net.meta.augmentation.transformation = 'stretch' ;
+net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
+net.meta.normalization.cropSize = net.meta.normalization.imageSize(1) / 256 ;
+net.meta.normalization.averageImage = opts.averageImage ;
+net.meta.classes.name = opts.classNames ;
+net.meta.classes.description = opts.classDescriptions;
+net.meta.augmentation.jitterLocation = true ;
+net.meta.augmentation.jitterFlip = true ;
+net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
+net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
+%net.meta.augmentation.jitterContrast = 0.4 ;
+%net.meta.augmentation.jitterSaturation = 0.4 ;
+%net.meta.augmentation.jitterScale = [0.9, 1] ;
 
 if ~opts.batchNormalization
   lr = logspace(-2, -4, 60) ;
@@ -88,7 +97,7 @@ switch lower(opts.networkType)
 end
 
 % --------------------------------------------------------------------
-function net = add_block(net, opts, id, h, w, in, out, stride, pad, init_bias)
+function net = add_block(net, opts, id, h, w, in, out, stride, pad)
 % --------------------------------------------------------------------
 info = vl_simplenn_display(net) ;
 fc = (h == info.dataSize(1,end) && w == info.dataSize(2,end)) ;
@@ -99,7 +108,8 @@ else
 end
 convOpts = {'CudnnWorkspaceLimit', opts.cudnnWorkspaceLimit} ;
 net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ...
-                           'weights', {{init_weight(opts, h, w, in, out, 'single'), zeros(out, 1, 'single')}}, ...
+                           'weights', {{init_weight(opts, h, w, in, out, 'single'), ...
+                             ones(out, 1, 'single')*opts.initBias}}, ...
                            'stride', stride, ...
                            'pad', pad, ...
                            'learningRate', [1 2], ...
@@ -107,8 +117,9 @@ net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ..
                            'opts', {convOpts}) ;
 if opts.batchNormalization
   net.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s',id), ...
-                             'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single'), zeros(out, 2, 'single')}}, ...
-                             'learningRate', [2 1 0.05], ...
+                             'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single'), ...
+                               zeros(out, 2, 'single')}}, ...
+                             'learningRate', [2 1 0.3], ...
                              'weightDecay', [0 0]) ;
 end
 net.layers{end+1} = struct('type', 'relu', 'name', sprintf('relu%s',id)) ;

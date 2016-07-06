@@ -20,16 +20,16 @@ namespace vl { namespace impl {
 
   // todo: data type should be handled internally?
 
-  template<vl::Type dataType>
+  template<vl::DataType dataType>
   struct nnbias_cudnn
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(vl::Context& context,
             vl::Tensor output, double outputMult,
             vl::Tensor data, double dataMult,
             vl::Tensor biases, double biasesMult) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(vl::Context& context,
              vl::Tensor derData, double derDataMult,
              vl::Tensor derBiases, double derBiasesMult,
