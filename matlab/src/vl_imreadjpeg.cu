@@ -845,7 +845,12 @@ void ReaderTask::entryPoint()
           outputPixels = (float*)item->cpuArray.getMemory() ;
         } else {
           if (batch->gpuMode) {
+#if ENABLE_GPU
             outputPixels = batch->cpuPinnedPack ;
+#else
+            snprintf(item->errorMessage, sizeof(item->errorMessage), "GPU support not compiled.") ;
+            break;
+#endif
           } else {
             outputPixels = (float*)batch->cpuPack.getMemory() ;
           }
