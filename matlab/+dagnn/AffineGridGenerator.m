@@ -22,9 +22,10 @@ classdef AffineGridGenerator < dagnn.Layer
       % [ c1 c2 c5 ]
       % [ c3 c4 c6 ]
       % [  0  0  1 ]
-      % i.e., [x_out] = [c1 c2]  * [x_in] + [c5]
-      %       [y_out]   [c3 c4]    [y_in]   [c6]
-      %
+      % i.e., [d1] = [c1 c2]  * [d1] + [c5]
+      %       [d2]   [c3 c4]    [d2]   [c6]
+      % where, di is the i-th dimension.
+      % 
       % OUTPUT is a 2xHoxWoxN grid which corresponds to applying
       % the above affine transform to the [-1,1] normalized x,y
       % coordinates.
