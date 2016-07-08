@@ -61,7 +61,7 @@ function eval(net, mode, derOutput, accumulateParamDers)
       inputArgPos = layer.inputArgPos ;
       args(inputArgPos) = vars(layer.inputVars) ;
 
-      if ~isequal(layer.func, @slice)
+      if ~isequal(layer.func, @autonn_slice)
         % call function and collect outputs
         out = cell(1, layer.numInputDer) ;
         [out{:}] = layer.func(args{:}) ;

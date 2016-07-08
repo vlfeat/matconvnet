@@ -50,7 +50,6 @@ if ~evaluateMode
     error('DEROUTPUTS must be specified when training.\n') ;
   end
 end
-stats = [] ;
 
 if isequal(opts.stats, 'losses')
   % by default, compute stats for loss layers. store their indexes.
@@ -71,6 +70,7 @@ else
   end
   opts.stats = stats ;
 end
+stats = [] ;
 
 % get fan-out of each parameter; this is needed for trainMethod = 'average'
 varInfo = net.getVarsInfo() ;
@@ -211,6 +211,7 @@ end
 subset = state.(mode) ;
 start = tic ;
 num = 0 ;
+time = 0 ;
 
 for t=1:opts.batchSize:numel(subset)
   batchSize = min(opts.batchSize, numel(subset) - t + 1) ;
