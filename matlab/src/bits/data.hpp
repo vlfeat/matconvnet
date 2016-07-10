@@ -46,7 +46,8 @@ namespace vl {
     VLE_Unknown,
     VLE_Timeout,
     VLE_NoData,
-    VLE_IllegalMessage
+    VLE_IllegalMessage,
+    VLE_Interrupted
   } ;
 
   /// Get an error message for a given code

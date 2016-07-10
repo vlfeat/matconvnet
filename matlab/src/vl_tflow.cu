@@ -338,6 +338,7 @@ private:
     SharedTensorDescriptor descriptor ;
     SharedTensorState state ;
     size_t transaction ;
+    size_t finalTransaction ;
     int numChildrenToAccumulate ;
     size_t memoryMapOffset ;
     void * cpuMemory ;
@@ -349,8 +350,8 @@ private:
 #endif
     bool operator==(std::string const & theName) { return name == theName ; }
     SharedTensorInstance()
-    : state(ready), transaction(0),
-      cpuMemory(NULL), gpuMemory(NULL), gpuMemoryIsOwned(false)
+      : state(ready), transaction(0), finalTransaction((size_t)-1),
+        cpuMemory(NULL), gpuMemory(NULL), gpuMemoryIsOwned(false)
 #if ENABLE_GPU
     , gpuEvent(0), gpuEventIsInitialized(false)
 #endif
@@ -364,12 +365,15 @@ private:
     int lab ;
     SharedTensorState state ;
     size_t transaction ;
+    size_t finalTransaction ;
     void *mappedCpuMemory ;
     void *mappedGpuMemory ;
     bool accumulated ;
     bool operator==(int theLab) { return lab == theLab ; }
     SharedTensorPeerInstance()
-    : lab(-1), state(ready), transaction(0), mappedCpuMemory(NULL), mappedGpuMemory(NULL), accumulated(false) { }
+      : lab(-1), state(ready), transaction(0),
+        mappedCpuMemory(NULL), mappedGpuMemory(NULL), accumulated(false), 
+        finalTransaction((size_t)-1) { }
   } ;
   typedef std::vector<std::vector<SharedTensorPeerInstance> > peerTensors_t ;
   peerTensors_t peerTensors ;
@@ -889,12 +893,17 @@ private:
 
       /// Shutdown sequence
       requestShutdown,
-      readyToShutdown
+
+      /// Communicate the final transaction index for quitting.
+      tensorFinalTransaction
     }
     type ;
 
-    // The transaction number.
+    /// The transaction number.
     size_t transaction ;
+
+    /// The final transaction number.
+    size_t finalTransaction ;
 
     // Sender and destination process indexes.
     int16_t from ;
@@ -906,7 +915,7 @@ private:
     // Tensort ID and state for a tensor state change.
     uint32_t tensorId ;
     SharedTensorSpace::SharedTensorState tensorState ;
-    Message() : transaction(0), tensorId(0) { }
+    Message() : transaction(0), finalTransaction((size_t)-1), tensorId(0) { }
   } ;
 
   class Supervisor {
@@ -937,11 +946,11 @@ private:
       int lab ;
       int socketFD ;
       bool cudaCanAccessPeer ; //cudaDeviceCanAccessPeer
-      bool canShutdown ;
+      bool shutdownRequested ;
       Peer(int lab)
-      : lab(lab), socketFD(-1),
-      cudaCanAccessPeer(false),
-      canShutdown(false)
+        : lab(lab), socketFD(-1),
+          cudaCanAccessPeer(false),
+          shutdownRequested(false)
       { }
       bool operator== (int lab) { return this->lab == lab ; }
     } ;
@@ -954,7 +963,7 @@ private:
     int socketFD ;
     tthread::mutex mutex ;
     tthread::condition_variable waitingList ;
-    bool shutdownRequested ;
+    bool shutdownRequested ; // local
     bool forceQuit ;
 
     static void threadEntryPoint(void * thing) ;
@@ -1000,7 +1009,7 @@ vl::ErrorCode ProcessPool::init(std::string const & newPrefix, int newLab, int n
   lab = newLab ;
   numLabs = newNumLabs ;
   sharedSpace = newSharedSpace ;
-  timeoutInterval = 30UL * 1000UL * 1000UL * 1000UL ; // 30s in ns
+  timeoutInterval = 30UL * 1000UL * 1000UL ; // 30s in us
 
   error = supervisor.init() ;
   if (error == vl::VLE_Success) {
@@ -1268,7 +1277,6 @@ void ProcessPool::Supervisor::finalize()
 
 vl::ErrorCode ProcessPool::Supervisor::shutdown()
 {
-
   // Signal the supervisory thread
   shutdownRequested = true ;
   char dummy = 1 ;
@@ -1367,9 +1375,9 @@ vl::ErrorCode ProcessPool::Supervisor::send(Message & msg, int to)
 
 vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, int from, int timeout)
 {
-  size_t waited = 0 ; // microsecond
-  size_t const pollInterval = 1000 ; // microseconds
-  if (timeout < 0) { timeout = (pool.timeoutInterval / 1000UL) /* -> us */ ; }
+  size_t waited = 0 ; // us
+  size_t const pollInterval = 1000 ; // us
+  if (timeout < 0) { timeout = pool.timeoutInterval ; } // us
 
   // find connection to peer
   peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), from) ;
@@ -1576,7 +1584,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
       if (result == 0) break ;
       if (vl::getTime() < start + pool.timeoutInterval) {
         // Wait for parent to start accepting connections.
-        usleep(30000) ;
+        usleep(100UL * 1000UL) ; // 100 ms (10 times a second)
         continue ;
       }
       LOGERROR
@@ -1764,9 +1772,12 @@ vl::ErrorCode ProcessPool::Supervisor::handleAccumulateChildren(int tensorIndex)
     SharedTensorSpace::SharedTensorPeerInstance & PT
     = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
 
-    if (PT.transaction == T.transaction &&
-        PT.state == SharedTensorSpace::waitParent &&
-        PT.accumulated == false) {
+    bool thisChildReadyForAccumulation =
+      PT.transaction == T.transaction &&
+      PT.state == SharedTensorSpace::waitParent &&
+      PT.accumulated == false ;
+
+    if (thisChildReadyForAccumulation) {
 
       switch (T.descriptor.deviceType) {
 
@@ -2051,9 +2062,10 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(int tensorIndex)
     int peerLab = peers[p].lab ;
     SharedTensorSpace::SharedTensorPeerInstance & PT
     = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
-    allChildrenDone &= ((PT.transaction == T.transaction &&
-                         PT.state == SharedTensorSpace::ready) ||
-                        PT.transaction > T.transaction) ;
+    bool thisChildDone =((PT.transaction == T.transaction &&
+                          PT.state == SharedTensorSpace::ready) ||
+                          PT.transaction > T.transaction) ;
+    allChildrenDone &= thisChildDone ;
   }
   if (allChildrenDone) {
     tthread::lock_guard<tthread::mutex> lock(mutex) ;
@@ -2080,7 +2092,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
   }
 
   int pollStatus = 0 ;
-  size_t const pollInterval = 499UL * 1000UL; // allow heartbeats (mus)
+  size_t const pollInterval = 499UL ; // allow heartbeats (ms)
   size_t const heartbeatInterval = 500UL * 1000UL * 1000UL ; // (ns)
   size_t lastHeartbeat = vl::getTime() ;
 
@@ -2112,8 +2124,8 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 
     // Timeout!
     if (pollStatus == 0) {
-      LOG(1) << "Polling timed out on lab " << pool.sharedSpace->lab << std::endl ;
-      pool.sharedSpace->dump() ;
+      LOG(1) << "Polling timed out on lab " << pool.sharedSpace->lab ;
+      // pool.sharedSpace->dump() ;
     }
 
     // Check for messages piped from the main thread.
@@ -2161,31 +2173,32 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
         }
 
         case Message::requestShutdown: {
-          // Propagate shutdown requests to all peers
-          // except the one sending this message.
-          shutdownRequested = true ;
-          if (state != shuttingDown) {
-            LOG(3) << "received shutdown request, propagating to other labs." ;
-            int sourcePeer = msg.from ;
+          peers_t::iterator P = std::find(peers.begin(), peers.end(), msg.from) ;
+          P->shutdownRequested = true ;
+          break ;
+        }
+
+        case Message::tensorFinalTransaction: {
+          peers_t::iterator P = std::find(peers.begin(), peers.end(), msg.from) ;
+          SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[msg.tensorId];
+          LOG(3)
+          << "received final transaction from lab " << msg.from
+          << " for tensor " << T.name.c_str()
+          << " to transaction " << msg.finalTransaction ;
+          int sourcePeer = msg.from ;
+          if (msg.finalTransaction <  T.finalTransaction) {
+            T.finalTransaction = msg.finalTransaction ;
             for (int q = 0 ; q < peers.size() ; ++q) {
               if (sourcePeer == peers[q].lab) continue ;
               error = send(msg, peers[q].lab) ;
               if (error != vl::VLE_Success) {
                 LOGERROR
-                << "error while receiving a message from lab "
-                << peers[p].lab ;
+                  << "error while sending a message to lab "
+                  << peers[p].lab ;
                 break ;
               }
             }
           }
-          break ;
-        }
-
-        case Message::readyToShutdown: {
-          // Record the fact that the peer is ready to shutdown.
-          peers_t::iterator P = std::find(peers.begin(), peers.end(), msg.from) ;
-          P->canShutdown = true ;
-          LOG(3) << "child " << P->lab << " is ready to shutdown" ;
           break ;
         }
 
@@ -2207,6 +2220,15 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 
         currentState = T.state ;
         LOG(3) << "visiting tensor " << T.name << " in state " << T.state ;
+
+        // Detect interruptions
+        if (T.transaction > T.finalTransaction) {
+          LOG(1) << "detected interrupded transaction for tensor " << T.name <<
+            " (transaction:"<<T.transaction<<" > final_transaction:"<<T.finalTransaction<<")";
+          error = vl::VLE_Interrupted ;
+          continue ;
+        }
+
         switch (T.state) {
 
           case SharedTensorSpace::ready:
@@ -2227,43 +2249,54 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
       } while (T.state != currentState && error == vl::VLE_Success) ;
     }
 
-    // Check for other actions.
+    // Upon shutting down, propagate a message to let other nodes know that
+    // no further transaction can be processed for each tensor.
+
     if (shutdownRequested && (state == running) && (error == vl::VLE_Success)) {
-      for (int p = 0 ; p < peers.size() ; ++p) {
-        Message msg ;
-        msg.type = Message::requestShutdown ;
-        error = send(msg, peers[p].lab) ;
-        if (error != vl::VLE_Success) { break ; }
-      }
-      // Advertise
-      {
-        tthread::lock_guard<tthread::mutex> lock(mutex) ;
-        state = shuttingDown ;
-        waitingList.notify_all() ;
+      LOG(3) << "sending final transaction for all tensors" ;
+      for (int i = 0 ; i < pool.sharedSpace->tensors.size() ; ++i) {
+        SharedTensorSpace::SharedTensorInstance & tensor = pool.sharedSpace->tensors[i] ;
+        if (tensor.finalTransaction > tensor.transaction) {
+          tensor.finalTransaction = tensor.transaction ;
+          Message msg ;
+          msg.type = Message::tensorFinalTransaction ;
+          msg.tensorId = i ;
+          msg.finalTransaction = tensor.finalTransaction ;
+          for (int p = 0 ; p < peers.size() ; ++p) {
+            error = send(msg, peers[p].lab) ;
+            if (error != vl::VLE_Success) {
+              LOGERROR
+                << "error while sending a message to lab "
+                << peers[p].lab ;
+              break ;
+            }
+          }
+        }
       }
     }
 
-    if (shutdownRequested && (state == shuttingDown) && (error == vl::VLE_Success)) {
+    // Check for other actions.
+    if (shutdownRequested && (state == running) && (error == vl::VLE_Success)) {
+      // Check if the children are also in shutdown mode
       bool allDone = true ;
-      for (int t = 0 ; t < pool.sharedSpace->tensors.size() ; ++ t) {
-        allDone &= (pool.sharedSpace->tensors[t].state == SharedTensorSpace::ready) ;
-      }
       for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
-        allDone &= peers[p].canShutdown ;
+        allDone &= peers[p].shutdownRequested ;
       }
       if (allDone) {
+        state = Supervisor::shuttingDown ; // avoid sending the same message again later
         if (pool.lab > 0) {
           LOG(2) << "subtree ready to shutdown, telling parent lab" ;
           Message msg ;
-          msg.type = Message::readyToShutdown ;
+          msg.type = Message::requestShutdown ;
           error = send(msg, peers[0].lab) ;
         } else {
           // Other processes will stop when connections are broken.
-          LOG(2) << "root lab quitting" ;
+          LOG(2) << "everyone requested shutdown, root lab quitting" ;
           break ; // out of poll loop
         }
       }
     }
+
   } // back to poll
 
   LOG(2) << "terminating supervisory thread loop (error = " << error << ')' ;
@@ -2275,7 +2308,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 /*                                                          Context */
 /* ---------------------------------------------------------------- */
 
-#pragma mark - 
+#pragma mark -
 
 ProcessPool processPool ;
 
@@ -2286,6 +2319,8 @@ ProcessPool processPool ;
 
 void atExit()
 {
+  mexPrintf("vl_tlflow:atExit()\n") ;
+  processPool.finalize() ;
   context.clear() ;
 }
 

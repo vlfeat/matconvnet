@@ -61,7 +61,11 @@ vl::getErrorMessage(ErrorCode error)
     "cuBLAS error",
     "out of memory error",
     "out of GPU memory error",
-    "unknown error"
+    "unknown error",
+    "timeout",
+    "no data",
+    "illegal message",
+    "interrupted"
   } ;
   if (error < VLE_Success || error > VLE_Unknown) {
     error = VLE_Unknown ;
