@@ -20,6 +20,7 @@ the terms of the BSD license (see the COPYING file).
 #if ENABLE_CUDNN
 #include "impl/nnpooling_cudnn.hpp"
 #endif
+
 #include <assert.h>
 
 using namespace vl ;
