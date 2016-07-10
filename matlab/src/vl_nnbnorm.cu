@@ -26,13 +26,17 @@ enum {
   opt_verbose = 0,
   opt_epsilon,
   opt_moments,
+  opt_cudnn,
+  opt_no_cudnn,
 } ;
 
 /* options */
 VLMXOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
-  {"Epsilon",	       1,   opt_epsilon           },
+  {"Epsilon",	         1,   opt_epsilon           },
   {"Moments",          1,   opt_moments           },
+  {"Cudnn",            0,   opt_cudnn             },
+  {"NoCudnn",          0,   opt_no_cudnn          },
   {0,                  0,   0                     }
 } ;
 
@@ -102,19 +106,35 @@ void mexFunction(int nout, mxArray *out[],
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
+
       case opt_verbose :
         ++ verbosity ;
         break ;
+
       case opt_epsilon :
         if (!vlmxIsPlainScalar(optarg)) {
           mexErrMsgTxt("EPSILON is not a plain scalar.") ;
         }
         epsilon = mxGetPr(optarg)[0] ;
         break ;
+
       case opt_moments:
         momentsArray = optarg ;
         givenMomentsMode = true ;
         break ;
+
+      case opt_no_cudnn:
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(false) ;
+#endif
+        break ;
+
+      case opt_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(true) ;
+#endif
+        break ;
+        
       default:
         break ;
     }
@@ -224,6 +244,7 @@ void mexFunction(int nout, mxArray *out[],
       vl::print("vl_nnbnorm: output: ", output) ;
     }
     if (moments) { vl::print("vl_nnbnorm: moments: ", moments) ; }
+    mexPrintf("vl_nnbnorm: epsilon: %f\n", epsilon) ;
   }
 
   /* -------------------------------------------------------------- */

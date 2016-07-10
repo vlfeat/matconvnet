@@ -247,15 +247,7 @@ namespace vl { namespace impl {
                            T epsilon)
     {
       vl::ErrorCode error = VLE_Success ;
-      T * muz;
       int WH = width * height;
-
-      // Allocate muz
-      muz = (T*)calloc(sizeof(T),depth);
-      if (!muz) {
-        error = VLE_OutOfMemory ;
-        goto done ;
-      }
 
       // Compute derMultipliers, derBiases, muz, and moments
       compute_ders<T>(derMultipliers, derBiases,
@@ -265,12 +257,11 @@ namespace vl { namespace impl {
 
       // Compute derData
       batch_normalize_backward<T>(derData,
-                                  moments, data, muz,
-                                  multipliers, derMultipliers, derOutput,
+                                  moments, data,
+                                  multipliers,
+                                  derMultipliers, derBiases, derOutput,
                                   WH, depth, size);
-
     done:;
-      if (muz) { free(muz) ; }
       return error ;
     }
 
@@ -288,21 +279,17 @@ namespace vl { namespace impl {
              T epsilon)
     {
       vl::ErrorCode error = VLE_Success ;
-      T* muz = NULL ;
-      bool ownMoments = false ;
       int WH = width * height;
 
-      // Allocate or reuse moments
+      // Get workspace if needed
       if (moments == NULL) {
-        moments = (T*)calloc(sizeof(T),2*depth);
+        moments = (T*)context.getWorkspace(vl::VLDT_CPU, sizeof(T)*2*depth) ;
         if (!moments) {
           error = VLE_OutOfMemory ;
           goto done ;
         }
-        ownMoments = true ;
-      } else {
-        memset(moments, 0, sizeof(T) * 2*depth) ;
       }
+      memset(moments, 0, sizeof(T) * 2*depth) ;
 
       // Compute derMultipliers, derBiases, and moments
       compute_ders_and_moments<T>(derMultipliers, derBiases, moments,
@@ -317,9 +304,7 @@ namespace vl { namespace impl {
                                   derMultipliers, derBiases, derOutput,
                                   WH, depth, size);
 
-      // Delete intermediate variable
     done:;
-      if (ownMoments) { free(moments) ; }
       return error ;
     }
   } ;

@@ -18,6 +18,10 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
+#if ENABLE_CUDNN
+#include "impl/nnbnorm_cudnn.hpp"
+#endif
+
 #include <assert.h>
 
 using namespace vl ;
@@ -41,6 +45,18 @@ error = vl::impl::bnorm<deviceType,type>::forward \
 switch (dataType) { \
 case VLDT_Float : DISPATCH(deviceType, float) ; break ; \
 IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
+}
+
+#define DISPATCHCUDNN(dataType) \
+error = vl::impl::nnbnorm_cudnn<dataType>::forward \
+(context, output, moments, \
+data, multipliers, biases, epsilon) ;
+
+#define DISPATCHCUDNN2() \
+switch (dataType) { \
+case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
 default: assert(false) ; return VLE_Unknown ; \
 }
 
@@ -68,6 +84,14 @@ vl::nnbnorm_forward(vl::Context& context,
 
 #if ENABLE_GPU
     case vl::VLDT_GPU:
+#if ENABLE_CUDNN
+      if (context.getCudaHelper().getCudnnEnabled()) {
+        DISPATCHCUDNN2() ;
+        if (error == vl::VLE_Success) { return error ; }
+        if (error != vl::VLE_Unsupported) { return error ; }
+        /* this case was not supported by CUDNN -- fallback */
+      }
+#endif
       DISPATCH2(vl::VLDT_GPU) ;
       if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
@@ -88,6 +112,12 @@ error = vl::impl::bnorm<deviceType,type>::forward_given_moments \
 (type*)multipliers.getMemory(), \
 (type*)biases.getMemory(), \
 data.getHeight(), data.getWidth(), data.getDepth(), data.getSize()) ;
+
+#undef DISPATCHCUDNN
+#define DISPATCHCUDNN(dataType) \
+error = vl::impl::nnbnorm_cudnn<dataType>::forward_given_moments \
+(context, output, moments, \
+data, multipliers, biases) ;
 
 vl::ErrorCode
 vl::nnbnorm_forward_given_moments(vl::Context& context,
@@ -112,6 +142,14 @@ vl::nnbnorm_forward_given_moments(vl::Context& context,
 
 #if ENABLE_GPU
     case vl::VLDT_GPU:
+#if ENABLE_CUDNN
+      if (context.getCudaHelper().getCudnnEnabled()) {
+        DISPATCHCUDNN2() ;
+        if (error == vl::VLE_Success) { return error ; }
+        if (error != vl::VLE_Unsupported) { return error ; }
+        /* this case was not supported by CUDNN -- fallback */
+      }
+#endif
       DISPATCH2(vl::VLDT_GPU) ;
       if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("nnbnorm_*_forward")) ;
@@ -141,6 +179,13 @@ error = vl::impl::bnorm<deviceType,type>::backward \
  data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
  epsilon);
 
+#undef DISPATCHCUDNN
+#define DISPATCHCUDNN(dataType) \
+error = vl::impl::nnbnorm_cudnn<dataType>::backward \
+(context, derData, derMultipliers, derBiases, \
+moments, data, multipliers, \
+biases, derOutput, epsilon) ;
+
 vl::ErrorCode
 vl::nnbnorm_backward(Context& context,
                      vl::Tensor derData,
@@ -168,6 +213,14 @@ vl::nnbnorm_backward(Context& context,
 
 #if ENABLE_GPU
     case vl::VLDT_GPU:
+#if ENABLE_CUDNN
+      if (context.getCudaHelper().getCudnnEnabled()) {
+        DISPATCHCUDNN2() ;
+        if (error == vl::VLE_Success) { return error ; }
+        if (error != vl::VLE_Unsupported) { return error ; }
+        /* this case was not supported by CUDNN -- fallback */
+      }
+#endif
       DISPATCH2(vl::VLDT_GPU) ;
       if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
