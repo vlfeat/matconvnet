@@ -36,12 +36,6 @@ for l = 1:numel(net.layers)
   defaults = {'name', sprintf('layer%d', l), 'precious', false};
   layer = net.layers{l} ;
 
-  % Ignore custom layers
-  if strcmp(layer.type, 'custom')
-    tnet.layers{l} = layer ;
-    continue;
-  end
-
   % check weights format
   switch layer.type
     case {'conv', 'convt', 'bnorm'}
@@ -64,7 +58,7 @@ for l = 1:numel(net.layers)
         zeros(numel(layer.weights{1}),2,'single') ;
     end
   end
-
+  
   % fill in missing values
   switch layer.type
     case {'conv', 'pool'}
