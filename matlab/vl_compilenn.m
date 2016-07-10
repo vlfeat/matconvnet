@@ -102,7 +102,8 @@ function vl_compilenn(varargin)
 %     | 8.2            | 2013b   | 5.5          |
 %     | 8.3            | 2014a   | 5.5          |
 %     | 8.4            | 2014b   | 6.0          |
-%     | 8.6            | 2015b   | Latest(>7.0) |
+%     | 8.6            | 2015b   | 7.0          |
+%     | 9.0            | 2016a   | 7.5          |
 %
 %     A different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
@@ -113,9 +114,9 @@ function vl_compilenn(varargin)
 %     6.5. VS 2015 CPU version only (not supported by CUDA Toolkit yet).
 %   * Windows 8 x64, MATLAB R2014a, Visual C++ 2013 and CUDA
 %     Toolkit 6.5.
-%   * Mac OS X 10.9 and 10.10, MATLAB R2013a and R2013b, Xcode, CUDA
-%     Toolkit 5.5.
-%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
+%   * Mac OS X 10.9, 10.10, 10.11, MATLAB R2013a to R2016a, Xcode, CUDA
+%     Toolkit 5.5 to 7.5.
+%   * GNU/Linux, MATALB R2014a/R2015a/R2015b/R2016a, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
 %
 %   Compilation on Windows with MinGW compiler (the default mex compiler in
 %   Matlab) is not supported. For Windows, please reconfigure mex to use
