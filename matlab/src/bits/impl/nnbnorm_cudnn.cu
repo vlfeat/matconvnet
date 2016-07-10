@@ -3,12 +3,12 @@
 // @author Andrea Vedaldi
 
 /*
- Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
- All rights reserved.
+Copyright (C) 2016 Andrea Vedaldi.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "nnbnorm_cudnn.hpp"
 #include "cudnnhelper.hpp"
@@ -32,6 +32,15 @@ __global__ void var_to_std(T * var, unsigned int num, T scale, T epsilon)
   unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < num) {
     var[idx] = sqrt(scale * var[idx] + epsilon) ;
+  }
+}
+
+template<typename T>
+__global__ void inverse(T * ivar, unsigned int num)
+{
+  unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
+  if (idx < num) {
+    ivar[idx] = ((T)1) / ivar[idx] ;
   }
 }
 
@@ -106,21 +115,22 @@ vl::impl::nnbnorm_cudnn<dataType>::forward(vl::Context& context,
            dataDesc, data.getMemory(),
            dataDesc, output.getMemory(),
            momentDesc, multipliers.getMemory(), biases.getMemory(),
-           1.0, // cumulative factor for moments
-           meanMemory, varMemory,
+           0, NULL, NULL,
            epsilon,
-           NULL, NULL)) ;
+           meanMemory, varMemory)) ;
 
     if (varMemory) {
       // CuDNN computes the variance without epsilon, whereas MCN
       // returns the standard deviation after adding epsilon.
       // Also, CuDNN returns the unbiased variance estimate, but it is
       // debatable that this is appropriate.
+      //
+      // We pick instead the caches, which are closer to the values we compute.
+      // Also they do not need to be pre-initialized with zeros.
+
       size_t const blockSize = VL_CUDA_NUM_THREADS ;
-      size_t volume = data.getWidth() * data.getHeight() * data.getSize() ;
-      type scale = (type)((double)(volume-1)/(volume)) ;
-      var_to_std<type> <<<divideAndRoundUp(data.getDepth(),blockSize),blockSize>>>
-      (varMemory, data.getDepth(), scale, epsilon) ;
+      inverse<type> <<<divideAndRoundUp(data.getDepth(),blockSize),blockSize>>>
+        (varMemory, data.getDepth()) ;
     }
   }
 
@@ -225,16 +235,6 @@ done:
   if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
   if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
   return context.passError(error, "nnbnorm_cudnn::forward") ;
-}
-
-
-template<typename T>
-__global__ void inverse(T * ivar, unsigned int num)
-{
-  unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
-  if (idx < num) {
-    ivar[idx] = ((T)1) / ivar[idx] ;
-  }
 }
 
 template<vl::DataType dataType>
@@ -386,7 +386,6 @@ vl::impl::nnbnorm_cudnn<dataType>::backward_given_moments(Context& context,
   typedef typename DataTypeTraits<dataType>::type type ;
   size_t workspaceSize ;
   type * workspace ;
-  size_t volume ;
 
   cudnnTensorDescriptor_t derOutputDesc, dataDesc, momentDesc ;
   bool derOutputDescInitialized = false ;
@@ -434,8 +433,6 @@ vl::impl::nnbnorm_cudnn<dataType>::backward_given_moments(Context& context,
 
 
   // Compute moments using CuDNN.
-
-  volume = derData.getNumElements() ;
   workspaceSize = derData.getDepth() ;
   workspace = (type*)context.getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
