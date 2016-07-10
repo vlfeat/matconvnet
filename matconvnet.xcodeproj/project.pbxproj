@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2D0517591D19C19400B604CA /* vl_imreadjpeg2.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D0517581D19C19400B604CA /* vl_imreadjpeg2.cu */; };
 		2D14F0091B02AB5700A8F33D /* nnbias.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D14F0071B02AB5700A8F33D /* nnbias.cu */; };
 		2D14F00A1B02AB5700A8F33D /* nnbias.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D14F0081B02AB5700A8F33D /* nnbias.hpp */; };
 		2D14F00C1B02AB9800A8F33D /* nnbias.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D14F00B1B02AB9800A8F33D /* nnbias.cpp */; };
@@ -39,6 +38,8 @@
 		2DA349B51A83FC2C0073185F /* nnfullyconnected.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DA349B31A83FC2C0073185F /* nnfullyconnected.hpp */; };
 		2DA349BC1A86C5210073185F /* nnsubsample.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2DA349BA1A86C5210073185F /* nnsubsample.cu */; };
 		2DA349BD1A86C5210073185F /* nnsubsample.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DA349BB1A86C5210073185F /* nnsubsample.hpp */; };
+		2DD1770D1D31762300B0A17E /* nnbnorm_cudnn.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2DD1770B1D31762300B0A17E /* nnbnorm_cudnn.cu */; };
+		2DD1770E1D31762300B0A17E /* nnbnorm_cudnn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DD1770C1D31762300B0A17E /* nnbnorm_cudnn.hpp */; };
 		2DE27163197A5531001768CA /* vl_imreadjpeg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DE27162197A5531001768CA /* vl_imreadjpeg.cpp */; };
 		2DF07B701AAB7A5C001A3943 /* imread_quartz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */; };
 		2DF07B721AAB9160001A3943 /* imread_libjpeg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */; };
@@ -61,7 +62,6 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
-		2D0517581D19C19400B604CA /* vl_imreadjpeg2.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_imreadjpeg2.cu; path = matlab/src/vl_imreadjpeg2.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D0958DA1C3A938500553C8A /* cudnnhelper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = cudnnhelper.hpp; path = matlab/src/bits/impl/cudnnhelper.hpp; sourceTree = "<group>"; };
 		2D0FBD441D04116E0081FA19 /* vl_cudatool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_cudatool.cu; path = matlab/src/vl_cudatool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D14F0071B02AB5700A8F33D /* nnbias.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias.cu; path = matlab/src/bits/nnbias.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -260,6 +260,11 @@
 		2DA761D71CCD28BA00265BD8 /* nnbilinearsampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnbilinearsampler.m; path = matlab/xtest/suite/nnbilinearsampler.m; sourceTree = "<group>"; };
 		2DA761D81CCD297400265BD8 /* spatial-transformer.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = "spatial-transformer.md"; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
+		2DD177081D31760000B0A17E /* vl_cudatool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_cudatool.cpp; path = matlab/src/vl_cudatool.cpp; sourceTree = "<group>"; };
+		2DD177091D31760000B0A17E /* vl_imreadjpeg_old.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_imreadjpeg_old.cpp; path = matlab/src/vl_imreadjpeg_old.cpp; sourceTree = "<group>"; };
+		2DD1770A1D31760000B0A17E /* vl_imreadjpeg_old.cu */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = vl_imreadjpeg_old.cu; path = matlab/src/vl_imreadjpeg_old.cu; sourceTree = "<group>"; };
+		2DD1770B1D31762300B0A17E /* nnbnorm_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm_cudnn.cu; path = matlab/src/bits/impl/nnbnorm_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2DD1770C1D31762300B0A17E /* nnbnorm_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbnorm_cudnn.hpp; path = matlab/src/bits/impl/nnbnorm_cudnn.hpp; sourceTree = "<group>"; };
 		2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnloss.m; path = matlab/vl_nnloss.m; sourceTree = "<group>"; };
 		2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnrelu.m; path = matlab/vl_nnrelu.m; sourceTree = "<group>"; };
 		2DD3FACE18EC0E7B00053032 /* vl_nnsoftmax.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnsoftmax.m; path = matlab/vl_nnsoftmax.m; sourceTree = "<group>"; };
@@ -310,9 +315,10 @@
 				2D375DCE18A84923008A97EE /* bits */,
 				2D6D0420196A892E00022E96 /* config */,
 				2D0FBD441D04116E0081FA19 /* vl_cudatool.cu */,
+				2DD177091D31760000B0A17E /* vl_imreadjpeg_old.cpp */,
+				2DD1770A1D31760000B0A17E /* vl_imreadjpeg_old.cu */,
 				2DE27162197A5531001768CA /* vl_imreadjpeg.cpp */,
 				2DF61A991AB5925900ED9A1F /* vl_imreadjpeg.cu */,
-				2D0517581D19C19400B604CA /* vl_imreadjpeg2.cu */,
 				2DA761D61CCD17B600265BD8 /* vl_nnbilinearsampler.cpp */,
 				2DF0C6221CB54CA8005BEF89 /* vl_nnbilinearsampler.cu */,
 				2D8079301AEF94860040BC14 /* vl_nnbnorm.cpp */,
@@ -353,9 +359,12 @@
 				2D528B9D1A8284C6006EC40A /* datamex.cpp */,
 				2D528B9E1A8284C6006EC40A /* datamex.cu */,
 				2D528B9F1A8284C6006EC40A /* datamex.hpp */,
-				2DF07B6E1AAA4068001A3943 /* imread.hpp */,
 				2DF897C01C4182CE002C7EB9 /* imread.cpp */,
+				2DF07B6E1AAA4068001A3943 /* imread.hpp */,
 				2D528BA41A8284C6006EC40A /* mexutils.h */,
+				2D14F00B1B02AB9800A8F33D /* nnbias.cpp */,
+				2D14F0071B02AB5700A8F33D /* nnbias.cu */,
+				2D14F0081B02AB5700A8F33D /* nnbias.hpp */,
 				2DF0C6231CB54CBA005BEF89 /* nnbilinearsampler.cu */,
 				2DF0C6241CB54CBA005BEF89 /* nnbilinearsampler.hpp */,
 				2D80792D1AEF94650040BC14 /* nnbnorm.cpp */,
@@ -376,9 +385,7 @@
 				2D7B11351A8AC85300A3D8A0 /* nnsubsample.cpp */,
 				2DA349BA1A86C5210073185F /* nnsubsample.cu */,
 				2DA349BB1A86C5210073185F /* nnsubsample.hpp */,
-				2D14F0071B02AB5700A8F33D /* nnbias.cu */,
-				2D14F00B1B02AB9800A8F33D /* nnbias.cpp */,
-				2D14F0081B02AB5700A8F33D /* nnbias.hpp */,
+				2DD177081D31760000B0A17E /* vl_cudatool.cpp */,
 			);
 			name = bits;
 			sourceTree = "<group>";
@@ -422,6 +429,8 @@
 				2D14F00F1B03A6FA00A8F33D /* nnbias_cudnn.hpp */,
 				2D18CE2F1CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.cu */,
 				2D18CE301CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.hpp */,
+				2DD1770B1D31762300B0A17E /* nnbnorm_cudnn.cu */,
+				2DD1770C1D31762300B0A17E /* nnbnorm_cudnn.hpp */,
 				2D7B112A1A88E5CC00A3D8A0 /* nnconv_blas.hpp */,
 				2D479D0F1A88AF4300826D48 /* nnconv_cudnn.cu */,
 				2D479D101A88AF4300826D48 /* nnconv_cudnn.hpp */,
@@ -660,6 +669,7 @@
 				2D16767F1AB5AF6000CC738D /* imread_helpers.hpp in Headers */,
 				2D7B11421A8BDB4E00A3D8A0 /* normalize.hpp in Headers */,
 				2D14F00A1B02AB5700A8F33D /* nnbias.hpp in Headers */,
+				2DD1770E1D31762300B0A17E /* nnbnorm_cudnn.hpp in Headers */,
 				2D8DC38E1A8D76FD00D053E6 /* nnpooling_cudnn.hpp in Headers */,
 				2D7B113D1A8BDB3C00A3D8A0 /* nnnormalize.hpp in Headers */,
 				2D14F00E1B03A35700A8F33D /* nnbias_blas.hpp in Headers */,
@@ -774,7 +784,6 @@
 				2DA349BC1A86C5210073185F /* nnsubsample.cu in Sources */,
 				2DA349B41A83FC2C0073185F /* nnfullyconnected.cu in Sources */,
 				2D14F00C1B02AB9800A8F33D /* nnbias.cpp in Sources */,
-				2D0517591D19C19400B604CA /* vl_imreadjpeg2.cu in Sources */,
 				2D7B113C1A8BDB3C00A3D8A0 /* nnnormalize.cpp in Sources */,
 				2DF07B721AAB9160001A3943 /* imread_libjpeg.cpp in Sources */,
 				2DF0C6261CB55813005BEF89 /* bilinearsampler_cpu.cpp in Sources */,
@@ -790,6 +799,7 @@
 				2D9DC1D11A209EFD0053CB7D /* vl_nnpool.cpp in Sources */,
 				2D9DC1D01A209EFD0053CB7D /* vl_nnnormalize.cpp in Sources */,
 				2D7B11361A8AC85300A3D8A0 /* nnsubsample.cpp in Sources */,
+				2DD1770D1D31762300B0A17E /* nnbnorm_cudnn.cu in Sources */,
 				2D8DC38D1A8D76FD00D053E6 /* nnpooling_cudnn.cu in Sources */,
 				2D7B11321A88F12000A3D8A0 /* nnpooling.cpp in Sources */,
 			);
@@ -829,7 +839,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CUDAROOT = "/Developer/NVIDIA/CUDA-7.5";
-				CUDNNROOT = "$(HOME)/share/cudnn-rc4";
+				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
 				DEBUG = YES;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
@@ -876,7 +886,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				CUDAROOT = "/Developer/NVIDIA/CUDA-7.5";
-				CUDNNROOT = "$(HOME)/share/cudnn-rc4";
+				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
 				DEBUG = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_CUDNN = "";
