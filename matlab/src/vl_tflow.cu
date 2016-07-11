@@ -385,6 +385,7 @@ private:
   int memoryMapLabStride ;
   std::string memoryMapName ;
   int memoryMapFD ;
+  bool memoryMapIsCudaRegistered ;
 
   // Additional GPU memory
   void * gpuDispatchMemory ;
@@ -403,7 +404,11 @@ private:
 } ;
 
 SharedTensorSpace::SharedTensorSpace()
-  : initialized(false), memoryMapFD(-1), memoryMap(NULL),
+  : initialized(false),
+    memoryMapFD(-1),
+    memoryMap(NULL),
+    memoryMapIsCudaRegistered(false),
+    memoryMapSize(0),
     gpuDevice(-1),
     gpuDispatchMemory(NULL)
 #if ENABLE_GPU
@@ -598,10 +603,12 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
     memoryMapFD = -1 ;
     return vl::VLE_Unknown ;
   }
+  memoryMapIsCudaRegistered = false ;
 
-  // This is not needed anymore.
+  // The FD is not needed after mmap.
   close(memoryMapFD) ;
   memoryMapFD = -1 ;
+
   // Associate memory to tensors.
 #if ENABLE_GPU
   size_t maxGPUTensorSize = 0 ;
@@ -662,6 +669,7 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
         << cudaGetErrorString(cerror) << '\'' ;
     } else {
       LOG(2) << "pinned shared memory" ;
+      memoryMapIsCudaRegistered = true ;
     }
   }
 #endif
@@ -700,7 +708,7 @@ void SharedTensorSpace::finalize()
   initialized = false ;
 
 #if ENABLE_GPU
-  if (memoryMap) {
+  if (memoryMap && memoryMapIsCudaRegistered) {
     cudaHostUnregister(memoryMap) ;
   }
 
@@ -739,15 +747,13 @@ void SharedTensorSpace::finalize()
   gpuDevice = -1 ;
 #endif
 
-  tensors.clear() ;
-
   if (memoryMap) {
     munmap(memoryMap, memoryMapSize) ;
     memoryMap = NULL ;
   }
 
   if (memoryMapFD != -1) {
-    // This can really be closed right after map().
+    // This should have beeen closed right after mmap().
     close(memoryMapFD) ;
     memoryMapFD = -1 ;
   }
@@ -757,6 +763,7 @@ void SharedTensorSpace::finalize()
     LOGERROR << "Cannot clear the shared memory map due to a permission error." ;
   }
 
+  tensors.clear() ;
   numLabs = -1 ;
 }
 
