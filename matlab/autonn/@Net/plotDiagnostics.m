@@ -54,7 +54,7 @@ function plotDiagnostics(net, numPoints)
 
   % add new points and roll buffer
   for i = 1:n
-    data = net.vars{net.diagnostics(i).var}(:) ;
+    data = real(net.vars{net.diagnostics(i).var}(:)) ;
     ps = get(s.lines(i), 'YData') ;
     ps = [ps(2:end), gather(mean(data))] ;
     set(s.lines(i), 'YData', ps) ;
