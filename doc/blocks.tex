@@ -73,7 +73,7 @@ An application of grouping is implementing the Krizhevsky and Hinton network~\ci
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=0.7\textwidth]{figures/svg/convt}
-	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied in a sliding-window, in a pattern that is the transpose of \cref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represent crops with $C_-=2$ and $C_+=3$ which are discarded.  The samples of $x$ involved in the calculation of a sample of $y$ are shown with arrow. Note that, differently from \cref{f:conv}, there are no samples to the right of $\by$ which are involved in a convolution operation. This is because the width $H''$ of the output $\by$, which given $H'$ can be determined up to $U_h$ samples, is selected to be the smallest possible.}\label{f:convt}
+	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied as a sliding-window, forming a pattern which is the transpose of the one of \cref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represent crops with $C_-=2$ and $C_+=3$ which are discarded. The arrows exemplify which samples of $x$ are involved in the calculation of a particular sample of $y$. Note that, differently from the forward convolution \cref{f:conv}, there is no need to add padding to the input array; instead, the convolution transpose filters can be seen as being applied with maximum input padding (more would result in zero output values), and the latter can be reduced by cropping the output instead.}\label{f:convt}
 \end{figure}
 
 The \emph{convolution transpose} block (sometimes referred to as ``deconvolution'') is the transpose of the convolution block described in \cref{s:convolution}. In \matconvnet, convolution transpose is  implemented by the function !vl_nnconvt!.
@@ -86,7 +86,7 @@ In order to understand convolution transpose, let:
 \]
 be the input tensor, filters, and output tensors. Imagine operating in the reverse direction by using the filter bank $\bff$ to convolve the output $\by$ to obtain the input $\bx$, using the definitions given in~\cref{s:convolution} for the convolution operator; since convolution is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$. This process is illustrated for a 1D slice in \cref{f:convt}.
 
-There are two important applications of convolution transpose. The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping.
+There are two important applications of convolution transpose. The first one is the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping.
 
 Convolution transpose can be expressed in closed form in the following rather unwieldy expression (derived in \cref{s:impl-convolution-transpose}):
 \begin{multline}\label{e:convt}
@@ -129,7 +129,7 @@ We now illustrate the action of convolution transpose in an example (see also \c
 
 !vl_nnpool! implements max and sum pooling. The \emph{max pooling} operator computes the maximum response of each feature channel in a $H' \times W'$ patch
 \[
-y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i-1',j''+j'-1,d}.
+y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i'-1,j''+j'-1,d}.
 \]
 resulting in an output of size $\by\in\real^{H''\times W'' \times D}$, similar to the convolution operator of \cref{s:convolution}. Sum-pooling computes the average of the values instead:
 \[

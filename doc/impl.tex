@@ -83,7 +83,7 @@ In summary, after reshaping these terms we obtain the formulas:
 \right)
 }
 \]
-where $X\in\real^{(H'W')\times D}$ is the matrix obtained by reshaping $\bx$. Notably, these expressions are used to implement the convolutional operator; while this may seem inefficient, it is instead a fast approach when the number of filters is large and it allows leveraging fast BLAS and GPU BLAS implementations.
+where $X\in\real^{(HW)\times D}$ is the matrix obtained by reshaping $\bx$. Notably, these expressions are used to implement the convolutional operator; while this may seem inefficient, it is instead a fast approach when the number of filters is large and it allows leveraging fast BLAS and GPU BLAS implementations.
 
 % ------------------------------------------------------------------
 \section{Convolution transpose}\label{s:impl-convolution-transpose}
@@ -95,7 +95,7 @@ In order to understand the definition of convolution transpose, let $\by$ to be 
    \quad
     1 \leq i'' \leq 1 + \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S} \right\rfloor,
 \]
-where $S$ is the downsampling factor, $P_h^-$ and $P_h^+$ the padding, $H$ the length of the input signal, $\bx$ and $H'$ the length of the filter $\bff$. Due to padding, the index of the input data $\bx$ may exceed the range $[1,H]$; we implicitly assume that the signal is zero padded outside this range.
+where $S$ is the downsampling factor, $P_h^-$ and $P_h^+$ the padding, $H$ the length of the input signal $\bx$ and $H'$ the length of the filter $\bff$. Due to padding, the index of the input data $\bx$ may exceed the range $[1,H]$; we implicitly assume that the signal is zero padded outside this range.
 
 In order to derive an expression of the convolution transpose,  we make use of the identity $\vv \by^\top (M \vv \bx) = (\vv \by^\top M) \vv\bx = \vv\bx^\top (M^\top \vv\by)$. Expanding this in formulas:
 \begin{align*}
@@ -129,7 +129,7 @@ y_{\left\lfloor \frac{k-1+ P_h^-}{S} \right\rfloor + 2 - q}
 \ %
 f_{(k-1+ P_h^-)\bmod S +S(q - 1)+1}.
 \end{align*}
-Summation ranges have been extended to infinity by assuming that all signals are zero padded as needed. In order to recover such ranges, note that $k \in [1,H]$ (since this is the range of elements of $\bx$ involved in the original convolution). Furthermore, $q\geq 1$ is the minimum value of $q$ for which the filter $\bff$ is non zero; likewise, $q\leq \lfloor (H'-1)/2\rfloor +1$ is a fairly tight upper bound on the maximum value (although, depending on $k$, there could be an element less). Hence
+Summation ranges have been extended to infinity by assuming that all signals are zero padded as needed. In order to recover such ranges, note that $k \in [1,H]$ (since this is the range of elements of $\bx$ involved in the original convolution). Furthermore, $q\geq 1$ is the minimum value of $q$ for which the filter $\bff$ is non zero; likewise, $q\leq \lfloor (H'-1)/S\rfloor +1$ is a fairly tight upper bound on the maximum value (although, depending on $k$, there could be an element less). Hence
 \begin{equation}\label{e:convt-step}
  x_k = 
  \sum_{q=1}^{1 + \lfloor \frac{H'-1}{S} \rfloor}
@@ -160,7 +160,7 @@ Since max pooling simply selects for each output element an input element, the r
 $
     \vv\by = S(\bx) \vv \bx
 $
-for a suitable selector matrix $S(\bx)\in\{0,1\}^{(H''W''D) \times (HWD)}$. The derivatives can the be written as:
+for a suitable selector matrix $S(\bx)\in\{0,1\}^{(H''W''D) \times (HWD)}$. The derivatives can be written as:
 $
 \frac{d z}{d (\vv \bx)^\top}
 =
@@ -206,7 +206,7 @@ where $\bfs = [\vv \bx > 0] \in\{0,1\}^{HWD}$ is an indicator vector.
 
 The derivative of the sigmoid function is given by
 \begin{align*}
-\frac{dz}{dx_{ijk}}
+\frac{dz}{dx_{ijd}}
 &= 
 \frac{dz}{d y_{ijd}} 
 \frac{d y_{ijd}}{d x_{ijd}}
@@ -507,7 +507,7 @@ y_{ijd}
 \frac{dz}{d y_{ijd}}
 -
 \sum_{k=1}^K
-\frac{dz}{d y_{ijk}} y_{ijk}.
+\frac{dz}{d y_{ijk}} y_{ijk}
 \right).
 \]
 In matrix form:
@@ -634,8 +634,8 @@ p |x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})
 \\
 &= 
 \frac{dz}{dy_{ij}}
-\frac{|x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}};
-\frac{dz}{d\bar x_{ijd}} = -\frac{dz}{dx_{ijd}}.
+\frac{|x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}}, \\
+\frac{dz}{d\bar x_{ijd}} &= -\frac{dz}{dx_{ijd}}.
 \end{align*}
 The formulas simplify a little for $p=1,2$ which are therefore implemented as special cases.
 
