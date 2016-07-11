@@ -546,7 +546,10 @@ end
 % -------------------------------------------------------------------------
 function clearMex()
 % -------------------------------------------------------------------------
-clear vl_tflow vl_imreadjpeg ;
+%clear vl_tflow vl_imreadjpeg ;
+disp('Clearing mex files') ;
+clear mex ;
+vl_tflow('reset') ;
 
 % -------------------------------------------------------------------------
 function prepareGPUs(params, cold)
@@ -563,17 +566,16 @@ if numGpus > 1
     parpool('local', numGpus) ;
     cold = true ;
   end
-
-  end
+end
 if numGpus >= 1 && cold
-  fprintf('%s: resetting GPU\n', mfilename)
-    clearMex() ;
+  fprintf('%s: resetting GPU\n', mfilename) ;
+  clearMex() ;
   if numGpus == 1
-    gpuDevice(params.gpus)
+    disp(gpuDevice(params.gpus)) ;
   else
     spmd
       clearMex() ;
-      gpuDevice(params.gpus(labindex))
+      disp(gpuDevice(params.gpus(labindex))) ;
     end
   end
 end
