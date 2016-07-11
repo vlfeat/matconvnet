@@ -574,6 +574,8 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
                          (lab == 0 ? O_CREAT:0)| O_RDWR, S_IRUSR | S_IWUSR) ;
   if (memoryMapFD == -1) {
     LOGERROR << "shm_open() failed because " << strerror(errno) ;
+    close(memoryMapFD) ;
+    memoryMapFD = -1 ;
     return vl::VLE_Unknown ;
   }
 
@@ -592,9 +594,14 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
   if (memoryMap == MAP_FAILED) {
     LOGERROR << "mmap failed because " << strerror(errno) ;
     memoryMap = NULL ;
+    close(memoryMapFD) ;
+    memoryMapFD = -1 ;
     return vl::VLE_Unknown ;
   }
 
+  // This is not needed anymore.
+  close(memoryMapFD) ;
+  memoryMapFD = -1 ;
   // Associate memory to tensors.
 #if ENABLE_GPU
   size_t maxGPUTensorSize = 0 ;
@@ -732,17 +739,24 @@ void SharedTensorSpace::finalize()
   gpuDevice = -1 ;
 #endif
 
+  tensors.clear() ;
+
   if (memoryMap) {
     munmap(memoryMap, memoryMapSize) ;
     memoryMap = NULL ;
+  }
+
+  if (memoryMapFD != -1) {
+    // This can really be closed right after map().
+    close(memoryMapFD) ;
+    memoryMapFD = -1 ;
   }
 
   error = shm_unlink(memoryMapName.c_str()) ;
   if (error == -1 && errno == EACCES) {
     LOGERROR << "Cannot clear the shared memory map due to a permission error." ;
   }
-  memoryMapFD = -1 ;
-  tensors.clear() ;
+
   numLabs = -1 ;
 }
 
@@ -921,7 +935,8 @@ private:
   class Supervisor {
   public:
     Supervisor(ProcessPool& pool)
-    : pool(pool), thread(NULL), state(down) { }
+      : pool(pool), thread(NULL), state(down),
+        socketFD(-1) { pipeFD[0] = -1 ; pipeFD[1] = -1 ; }
     ~Supervisor() { finalize() ; }
 
     vl::ErrorCode init() ;
@@ -1453,6 +1468,9 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
   char socketName [256] ;
   struct sockaddr_un socketAddress ;
   size_t start = vl::getTime() ;
+  pipeFD[0] = -1 ;
+  pipeFD[1] = -1 ;
+  socketFD = -1 ;
 
   // Lock for entire duration of connect()
   tthread::lock_guard<tthread::mutex> lock(mutex) ;
@@ -1466,6 +1484,8 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
   // the supervisory thread.
   result = pipe(pipeFD) ;
   if (result == -1) {
+    pipeFD[0] = -1 ;
+    pipeFD[1] = -1 ;
     LOGERROR
     << "cannot create inter-threads pipe because: '"
     << strerror(errno) << '\'' ;
@@ -1523,6 +1543,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
 
     // Accept one connection per child.
     for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+      peers[p].socketFD = -1 ;
       for (;;) {
         peers[p].socketFD = accept(socketFD, NULL, NULL) ;
         if (peers[p].socketFD == -1) {
@@ -1556,7 +1577,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
       if (peers[0].socketFD == -1) {
         if (vl::getTime() < start + pool.timeoutInterval) {
           // Wait for parent to create socket file.
-          usleep(30000) ;
+          usleep(100UL * 1000UL) ; // 100 ms (10 times a second)
           continue ;
         }
         LOGERROR
@@ -1654,7 +1675,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
     // root atteches first
     error = pool.sharedSpace->attach(pool.prefix, 0, pool.numLabs) ;
     if (error != vl::VLE_Success) {
-      LOGERROR << "root could not attache shared space" ;
+      LOGERROR << "root could not attach the shared space" ;
       error = vl::VLE_Unknown ;
       goto done ;
     }
