@@ -84,3 +84,8 @@ function repmat_setup(layer)
   layer.numInputDer = 1 ;
 end
 
+function reshape_setup(layer)
+  % only first derivative defined for RESHAPE
+  layer.numInputDer = 1 ;
+end
+
