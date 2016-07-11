@@ -47,6 +47,7 @@ vl::CudaHelper::~CudaHelper()
 void
 vl::CudaHelper::clear()
 {
+  setStream(NULL) ;
   clearCublas() ;
 #ifdef ENABLE_CUDNN
   clearCudnn() ;
@@ -56,6 +57,7 @@ vl::CudaHelper::clear()
 void
 vl::CudaHelper::invalidateGpu()
 {
+  cudaStream = NULL ;
 #ifndef NDEBUG
   std::cout<<"CudaHelper::invalidateGpu()"<<std::endl ;
 #endif
