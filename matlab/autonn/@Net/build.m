@@ -19,6 +19,7 @@ function build(net, varargin)
   % parse options after the other inputs
   opts.sequentialNames = true ;
   opts.shortCircuit = true ;
+  opts.forwardOnly = false ;  % used mainly by evalOutputSize for faster build
   [opts, varargin] = vl_argparsepos(opts, varargin) ;
 
   if isscalar(varargin)
@@ -65,6 +66,11 @@ function build(net, varargin)
   net.backward = Net.initStruct(numel(idx), 'func', 'name', ...
       'source', 'args', 'inputVars', 'inputArgPos', 'numInputDer', 'accumDer') ;
 
+  if opts.forwardOnly  % empty structs in this case, but with appropriate fields
+    net.test = net.test([]);
+    net.backward = net.backward([]);
+  end
+  
   % there is one var for the output of each Layer in objs; plus another
   % to hold its derivative. note if a Layer has multiple outputs, they
   % can be stored as a nested cell array in the appropriate var.
@@ -116,99 +122,100 @@ function build(net, varargin)
     net.forward(k) = Net.parseArgs(layer, obj.inputs) ;
   end
 
-  
-  % store functions for backward pass
-  layer = [] ;
-  for k = numel(idx) : -1 : 1
-    obj = objs{idx(k)} ;
 
-    % add backward function to execution order
-    layer.func = autonn_der(obj.func) ;
-    layer.name = obj.name ;
-    layer.source = obj.source ;
-    layer.accumDer = obj.accumDer ;
-    layer = Net.parseArgs(layer, obj.inputs) ;
+  if ~opts.forwardOnly
+    % store functions for backward pass
+    layer = [] ;
+    for k = numel(idx) : -1 : 1
+      obj = objs{idx(k)} ;
 
-    % figure out position of derivative argument: it's right before
-    % the first string (property-value pair), or at the end if none.
-    args = layer.args ;
-    for lastInput = 0:numel(args)
-      if lastInput < numel(args) && ischar(args{lastInput + 1})
-        break
+      % add backward function to execution order
+      layer.func = autonn_der(obj.func) ;
+      layer.name = obj.name ;
+      layer.source = obj.source ;
+      layer.accumDer = obj.accumDer ;
+      layer = Net.parseArgs(layer, obj.inputs) ;
+
+      % figure out position of derivative argument: it's right before
+      % the first string (property-value pair), or at the end if none.
+      args = layer.args ;
+      for lastInput = 0:numel(args)
+        if lastInput < numel(args) && ischar(args{lastInput + 1})
+          break
+        end
       end
+
+      % figure out the number of returned values in bwd mode.
+      % assume that the function in bwd mode returns derivatives for
+      % all inputs until the last Layer input (e.g. if the 3rd input
+      % has class Layer, and others are constants, assume there will be
+      % at least 3 output derivatives).
+      if isempty(obj.numInputDer)
+        layer.numInputDer = max([0, layer.inputArgPos]) ;
+      else  % manual override
+        layer.numInputDer = obj.numInputDer ;
+      end
+
+      if layer.numInputDer == 0
+        % there are no output derivatives, so this layer can be skipped
+        layer.func = @deal ;
+        [layer.args, layer.inputArgPos, layer.inputVars] = deal({}, [], []) ;
+
+      else
+        % store args for backward mode, with an empty slot for der arg
+        layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
+
+        % modify argument positions according to the new empty slot
+        next = layer.inputArgPos > lastInput ;
+        layer.inputArgPos(next) = layer.inputArgPos(next) + 1 ;
+
+        % position of der arg
+        layer.inputArgPos(end+1) = lastInput + 1 ;
+
+        % its var index: it's the output derivative for the current layer
+        layer.inputVars(end+1) = obj.outputVar + 1 ;
+      end
+
+      net.backward(numel(idx) - k + 1) = layer ;
     end
 
-    % figure out the number of returned values in bwd mode.
-    % assume that the function in bwd mode returns derivatives for
-    % all inputs until the last Layer input (e.g. if the 3rd input
-    % has class Layer, and others are constants, assume there will be
-    % at least 3 output derivatives).
-    if isempty(obj.numInputDer)
-      layer.numInputDer = max([0, layer.inputArgPos]) ;
-    else  % manual override
-      layer.numInputDer = obj.numInputDer ;
+
+    % store functions for test mode
+    layer = [] ;
+    for k = 1:numel(idx)
+      obj = objs{idx(k)} ;
+
+      % add to execution order
+      layer.name = obj.name ;
+      layer.source = obj.source ;
+      layer.outputVar = obj.outputVar ;
+
+      % default is to use the same arguments
+      if isequal(obj.testInputs, 'same')
+        args = obj.inputs ;
+      else
+        args = obj.testInputs ;
+      end
+
+      if isempty(obj.testFunc)
+        % default is to call the same function as in normal mode
+        layer.func = obj.func ;
+
+      elseif isequal(obj.testFunc, 'none')
+        % layer is pass-through in test mode (e.g. dropout).
+        % we don't fully eliminate the layer in test mode because that
+        % would require special handling of in/out var indexes.
+        layer.func = @deal ;
+        args = args(1) ;  % only deal first input
+
+      else
+        % some other function
+        layer.func = obj.testFunc ;
+      end
+
+      net.test(k) = Net.parseArgs(layer, args) ;
     end
-    
-    if layer.numInputDer == 0
-      % there are no output derivatives, so this layer can be skipped
-      layer.func = @deal ;
-      [layer.args, layer.inputArgPos, layer.inputVars] = deal({}, [], []) ;
-      
-    else
-      % store args for backward mode, with an empty slot for der arg
-      layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
-
-      % modify argument positions according to the new empty slot
-      next = layer.inputArgPos > lastInput ;
-      layer.inputArgPos(next) = layer.inputArgPos(next) + 1 ;
-
-      % position of der arg
-      layer.inputArgPos(end+1) = lastInput + 1 ;
-
-      % its var index: it's the output derivative for the current layer
-      layer.inputVars(end+1) = obj.outputVar + 1 ;
-    end
-
-    net.backward(numel(idx) - k + 1) = layer ;
   end
-
-  
-  % store functions for test mode
-  layer = [] ;
-  for k = 1:numel(idx)
-    obj = objs{idx(k)} ;
-
-    % add to execution order
-    layer.name = obj.name ;
-    layer.source = obj.source ;
-    layer.outputVar = obj.outputVar ;
-
-    % default is to use the same arguments
-    if isequal(obj.testInputs, 'same')
-      args = obj.inputs ;
-    else
-      args = obj.testInputs ;
-    end
-
-    if isempty(obj.testFunc)
-      % default is to call the same function as in normal mode
-      layer.func = obj.func ;
-
-    elseif isequal(obj.testFunc, 'none')
-      % layer is pass-through in test mode (e.g. dropout).
-      % we don't fully eliminate the layer in test mode because that
-      % would require special handling of in/out var indexes.
-      layer.func = @deal ;
-      args = args(1) ;  % only deal first input
-
-    else
-      % some other function
-      layer.func = obj.testFunc ;
-    end
-
-    net.test(k) = Net.parseArgs(layer, args) ;
-  end
-
   
   % network outputs, activate diagnostics automatically if empty
   for k = 1:numel(varargin)

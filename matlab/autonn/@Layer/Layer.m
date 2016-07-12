@@ -53,6 +53,7 @@ classdef Layer < matlab.mixin.Copyable
   
   methods  % methods defined in their own files
     objs = find(obj, varargin)
+    sz = evalOutputSize(obj, varargin)
     sequentialNames(varargin)
     display(obj, name)
     print(obj)
