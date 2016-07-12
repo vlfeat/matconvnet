@@ -25,7 +25,7 @@ function sz = evalOutputSize(obj, varargin)
   for i = 1:numel(inputNames)
     % find the user-supplied name that matches this network input
     match = find(strcmp(inputNames{i}, varargin(1:2:end))) ;
-    assert(~isempty(match), ['Input not found: ''' varargin{i} '''.']) ;
+    assert(~isempty(match), ['Missing size for input ''' inputNames{i} '''.']) ;
     
     % add it to the list, along with its initial value
     inputSz = varargin{2 * match} ;
@@ -34,8 +34,8 @@ function sz = evalOutputSize(obj, varargin)
   end
   
   % note any user-supplied names that do not exist in the network yet are
-  % ignored (i.e., when building a network, and that part hasn't been
-  % defined, or hasn't been connected to this Layer yet).
+  % silently ignored (i.e., when building a network, and that part hasn't
+  % been defined, or hasn't been connected to this Layer yet).
   
   % compile and evaluate network
   net = Net(obj, 'sequentialNames',false, 'shortCircuit',false, 'forwardOnly',true) ;
