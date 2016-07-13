@@ -33,7 +33,7 @@ run matlab/vl_compilenn
 urlwrite(...
  'http://www.vlfeat.org/matconvnet/models/imagenet-vgg-f.mat', ...
  'imagenet-vgg-f.mat') ;
-  
+
 % setup MatConvNet
 run matlab/vl_setupnn
 
@@ -67,11 +67,11 @@ net.classes.description{best}, best, bestScore)) ;
 
 \matconvnet is simple to install and use. \cref{f:demo} provides a complete example that classifies an image using a latest-generation deep convolutional neural network. The example includes downloading MatConvNet, compiling the package, downloading a pre-trained CNN model, and evaluating the latter on one of \matlab's stock images.
 
-The key command in this example is !vl_simplenn!, a wrapper that takes as input the CNN !net! and the pre-processed image !im_! and produces as output a structure !res! of results. This particular wrapper can be used to model networks that have a simple structure, namely a \emph{chain} of operations. Examining the code of !vl_simplenn! (!edit vl_simplenn! in \matconvnet) we note that the wrapper transforms the data sequentially, applying a number of \matlab functions as specified by the network configuration. These function, discussed in detail in \cref{s:blocks}, are called ``building blocks'' and constitute the backbone of \matconvnet. 
+The key command in this example is !vl_simplenn!, a wrapper that takes as input the CNN !net! and the pre-processed image !im_! and produces as output a structure !res! of results. This particular wrapper can be used to model networks that have a simple structure, namely a \emph{chain} of operations. Examining the code of !vl_simplenn! (!edit vl_simplenn! in \matconvnet) we note that the wrapper transforms the data sequentially, applying a number of \matlab functions as specified by the network configuration. These function, discussed in detail in \cref{s:blocks}, are called ``building blocks'' and constitute the backbone of \matconvnet.
 
 %Since blocks are made available as \matlab functions, it is easy for a user to write different wrappers that implement more complex network structures, such as recurrent neural networks. Likewise, it is easy to extend !vl_simplenn! with new building blocks.
 
-While most blocks implement simple operations, what makes them non trivial is their efficiency (\cref{s:speed}) as well as support for backpropagation (\cref{s:back}) to allow learning CNNs. Next, we demonstrate how to use one of such building blocks directly. For the sake of the example, consider convolving an image with a bank of linear filters. Start by reading an image in \matlab, say using !im = single(imread('peppers.png'))!, obtaining a $H \times W \times D$ array !im!, where $D=3$ is the number of colour channels in the image. Then create a bank of $K=16$ random filters of size $3 \times 3$ using !f = randn(3,3,3,16,'single')!. Finally, convolve the image with the filters by using the command !y = vl_nnconv(x,f,[])!. This results in an array !y! with $K$ channels, one for each of the $K$ filters in the bank. 
+While most blocks implement simple operations, what makes them non trivial is their efficiency (\cref{s:speed}) as well as support for backpropagation (\cref{s:back}) to allow learning CNNs. Next, we demonstrate how to use one of such building blocks directly. For the sake of the example, consider convolving an image with a bank of linear filters. Start by reading an image in \matlab, say using !im = single(imread('peppers.png'))!, obtaining a $H \times W \times D$ array !im!, where $D=3$ is the number of colour channels in the image. Then create a bank of $K=16$ random filters of size $3 \times 3$ using !f = randn(3,3,3,16,'single')!. Finally, convolve the image with the filters by using the command !y = vl_nnconv(x,f,[])!. This results in an array !y! with $K$ channels, one for each of the $K$ filters in the bank.
 
 While users are encouraged to make use of the blocks directly to create new architectures, \matlab provides wrappers such as !vl_simplenn! for standard CNN architectures such as AlexNet~\cite{krizhevsky12imagenet} or Network-in-Network~\cite{lin13network}. Furthermore, the library provides numerous examples (in the !examples/! subdirectory), including code to learn a variety of models on the MNIST, CIFAR, and ImageNet datasets. All these examples use the !examples/cnn_train! training code, which is an implementation of stochastic gradient descent (\cref{s:wrappers-learning}). While this training code is perfectly serviceable and quite flexible, it remains in the !examples/! subdirectory as it is somewhat problem-specific. Users are welcome to implement their optimisers.
 
@@ -105,20 +105,20 @@ There are three main sources of information about \matconvnet. First, the websit
 
 Most examples are fully self-contained. For example, in order to run the MNIST example, it suffices to point MATLAB to the \matconvnet root directory and type !addpath examples! followed by !cnn_mnist!. Due to the problem size, the ImageNet ILSVRC example requires some more preparation, including downloading and preprocessing the images (using the bundled script !utils/preprocess-imagenet.sh!). Several advanced examples are included as well. For example, \cref{f:imnet} illustrates the top-1 and top-5 validation errors as a model similar to AlexNet~\cite{krizhevsky12imagenet} is trained using either standard dropout regularisation or the recent \emph{batch normalisation} technique of~\cite{ioffe15batch}. The latter is shown to converge in about one third of the epochs (passes through the training data) required by the former.
 
-The \matconvnet website contains also numerous \emph{pre-trained} models, i.e. large CNNs trained on ImageNet ILSVRC that can be downloaded and used as a starting point for many other problems~\cite{chatfield14return}. These include: AlexNet~\cite{krizhevsky12imagenet}, VGG-S, VGG-M,  VGG-S~\cite{chatfield14return}, and  VGG-VD-16, and VGG-VD-19~\cite{simonyan14very}.  The example code of \cref{f:demo} shows how one such model can be used in a few lines of MATLAB code.
+The \matconvnet website contains also numerous \emph{pre-trained} models, i.e. large CNNs trained on ImageNet ILSVRC that can be downloaded and used as a starting point for many other problems~\cite{chatfield14return}. These include: AlexNet~\cite{krizhevsky12imagenet}, VGG-S, VGG-M,  VGG-S~\cite{chatfield14return}, and  VGG-VD-16, and VGG-VD-19~\cite{simonyan15very}.  The example code of \cref{f:demo} shows how one such model can be used in a few lines of MATLAB code.
 
 % ------------------------------------------------------------------
 \section{Speed}\label{s:speed}
 % ------------------------------------------------------------------
 
-Efficiency is very important for working with CNNs. \matconvnet supports  using NVIDIA GPUs as it includes CUDA implementations of all algorithms (or relies on MATLAB CUDA support). 
+Efficiency is very important for working with CNNs. \matconvnet supports  using NVIDIA GPUs as it includes CUDA implementations of all algorithms (or relies on MATLAB CUDA support).
 
  To use the GPU (provided that suitable hardware is available and the toolbox has been compiled with GPU support), one simply converts the arguments to !gpuArrays! in MATLAB, as in !y = vl_nnconv(gpuArray(x), gpuArray(w), [])!. In this manner, switching between CPU and GPU is fully transparent. Note that \matconvnet can also make use of the NVIDIA CuDNN library with significant speed and space benefits.
- 
+
 Next we evaluate the performance of \matconvnet when training large architectures on the ImageNet ILSVRC 2012 challenge data~\cite{deng09imagenet}. The test machine is a Dell server with two Intel Xeon CPU E5-2667 v2 clocked at 3.30 GHz (each CPU has eight cores), 256 GB of RAM, and four NVIDIA Titan Black GPUs (only one of which is used unless otherwise noted). Experiments use \matconvnet beta12, CuDNN v2, and MATLAB R2015a. The data is preprocessed to avoid rescaling images on the fly in MATLAB and stored in a RAM disk for faster access. The code uses the !vl_imreadjpeg! command to read large batches of JPEG images from disk in a number of separate threads. The driver !examples/cnn_imagenet.m! is used in all experiments.
 
  We train the models discussed in \cref{s:examples} on ImageNet ILSVRC. \cref{f:speed} reports the training speed as number of images per second processed by stochastic gradient descent. AlexNet trains at about 264 images/s with CuDNN, which is about 40\% faster than the vanilla GPU implementation (using CuBLAS) and more than 10 times faster than using the CPUs. Furthermore, we note that, despite MATLAB overhead, the implementation speed is comparable to Caffe (they report 253 images/s with CuDNN and a Titan -- a slightly slower GPU than the Titan Black used here).  Note also that, as the model grows in size, the size of a SGD batch must be decreased (to fit in the GPU memory), increasing the overhead impact somewhat.
- 
+
  \cref{f:mgpu} reports the speed on VGG-VD-16, a very large model, using multiple GPUs. In this case, the batch size is set to 264 images. These are further divided in sub-batches of 22 images each to fit in the GPU memory; the latter are then distributed among one to four GPUs on the same machine. While there is a substantial communication overhead, training speed increases from 20 images/s to 45. Addressing this overhead is one of the medium term goals of the library.
 
 \begin{table}
@@ -152,19 +152,10 @@ Next we evaluate the performance of \matconvnet when training large architecture
 \label{f:mgpu}
 \end{table}
 
-
-% --------------------------------------------------------------------
-\section{Future}\label{s:future}
-% --------------------------------------------------------------------
-
-\matconvnet is a novel framework for experimenting with deep convolutional networks that is deeply integrated in MATLAB and allows easy experimentation with novel ideas.  \matconvnet is already sufficient for advanced research in deep learning; despite being introduced less than a year ago, it is already citied 24 times in arXiv papers, and has been used in several papers published at the recent CVPR 2015 conference. 
-
-As CNNs are a rapidly moving target, \matconvnet is developing fast. So far there have been  12 ad-interim releases incrementally adding new features to the toolbox. Several new features, including support for DAGs, will be included in the upcoming releases starting in August 2015.  The goal is to ensure that \matconvnet will stay current for the next several years of research in deep learning.
-
 % ------------------------------------------------------------------
 \section{Acknowledgments}\label{s:ack}
 % ------------------------------------------------------------------
 
-\matconvnet is a community project, and as such acknowledgements go to all contributors. We kindly thank NVIDIA supporting this project by providing us with top-of-the-line GPUs and MathWorks for ongoing discussion on how to improve the library. 
+\matconvnet is a community project, and as such acknowledgements go to all contributors. We kindly thank NVIDIA supporting this project by providing us with top-of-the-line GPUs and MathWorks for ongoing discussion on how to improve the library.
 
 The implementation of several CNN computations in this library are inspired by the Caffe library~\cite{jia13caffe} (however, Caffe is \emph{not} a dependency). Several of the example networks have been trained by Karen Simonyan as part of~\cite{chatfield14return} and~\cite{simonyan15very}.

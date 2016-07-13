@@ -33,8 +33,8 @@ namespace vl {
 
   protected:
 #if ENABLE_GPU
-    vl::Error initGpu() ;
-    vl::Error validateGpu() ;
+    vl::ErrorCode initGpu() ;
+    vl::ErrorCode validateGpu() ;
     mxArray * canary ; // if it breathes, the GPU state is valid
     bool gpuIsInitialized ;
 #endif
@@ -46,11 +46,12 @@ namespace vl {
   {
   public:
     MexTensor(MexContext & context) ;
-    vl::Error init(mxArray const * array) ;
-    vl::Error init(Device deviceType, Type dataType, TensorShape const & shape) ;
-    vl::Error initWithZeros(Device deviceType, Type dataType, TensorShape const & shape) ;
-    vl::Error initWithValue(Device deviceType, Type dataType, TensorShape const & shape, double value) ;
+    vl::ErrorCode init(mxArray const * array) ;
+    vl::ErrorCode init(DeviceType deviceType, DataType dataType, TensorShape const & shape) ;
+    vl::ErrorCode initWithZeros(DeviceType deviceType, DataType dataType, TensorShape const & shape) ;
+    vl::ErrorCode initWithValue(DeviceType deviceType, DataType dataType, TensorShape const & shape, double value) ;
 
+    void makePersistent() ;
     mxArray * relinquish() ;
     void clear() ;
     ~MexTensor() ;
@@ -68,12 +69,12 @@ namespace vl {
   private: // prevention
     MexTensor(MexTensor const &) ;
     MexTensor & operator= (MexTensor & tensor) ;
-    vl::Error initHelper(Device deviceType, Type dataType, TensorShape const & shape, bool fillWithZeros = false) ;
+    vl::ErrorCode initHelper(DeviceType deviceType, DataType dataType, TensorShape const & shape, bool fillWithZeros = false) ;
   } ;
 
   void print(char const * str, MexTensor const & tensor) ;
 
-  void mexThrowError(Context const& context, vl::Error error) ;
+  void mexThrowError(Context const& context, vl::ErrorCode error) ;
 }
 
 

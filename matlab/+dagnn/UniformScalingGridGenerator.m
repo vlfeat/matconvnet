@@ -36,7 +36,6 @@ classdef UniformScalingGridGenerator < dagnn.Layer
       S = reshape(T(1,1,1,:), 1,1,nbatch); % x,y scaling
       t = reshape(T(1,1,2:3,:), 2,1,nbatch); % translation
       % generate the grid coordinates:
-      % use gpu?:
       useGPU = isa(T, 'gpuArray');
       if isempty(obj.xxyy)
         obj.initGrid(useGPU);
@@ -49,7 +48,6 @@ classdef UniformScalingGridGenerator < dagnn.Layer
     end
 
     function [derInputs, derParams] = backward(obj, inputs, ~, derOutputs)
-      %fprintf('restricted-affineGridGenerator backward\n');
       dY = derOutputs{1};
       useGPU = isa(dY, 'gpuArray');
       nbatch = size(dY,4);

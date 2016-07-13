@@ -18,14 +18,14 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-  vl::Error
+  vl::ErrorCode
   nnfullyconnected_forward(vl::Context& context,
                            vl::Tensor output,
                            vl::Tensor data,
                            vl::Tensor filters,
                            vl::Tensor biases) ;
 
-  vl::Error
+  vl::ErrorCode
   nnfullyconnected_backward(vl::Context& context,
                             vl::Tensor derData,
                             vl::Tensor derFilters,

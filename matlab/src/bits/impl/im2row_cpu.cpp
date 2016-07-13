@@ -42,14 +42,14 @@ namespace vl { namespace impl {
 
 
   template<typename type>
-  struct im2row<vl::CPU, type>
+  struct im2row<vl::VLDT_CPU, type>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context & context,
             type* stacked,
             type const* data,
@@ -148,14 +148,14 @@ namespace vl { namespace impl {
           }
         }
       }
-      return vl::vlSuccess ;
+      return vl::VLE_Success ;
     }
 
     /* ------------------------------------------------------------ */
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context & context,
              type* data,
              type const* stacked,
@@ -211,15 +211,15 @@ namespace vl { namespace impl {
         }
         stacked += numPatchesX * (numPatchesY - y) ;
       }
-      return vl::vlSuccess ;
+      return vl::VLE_Success ;
     }
   } ;
 
 } }
 
 // Instantiations
-template struct vl::impl::im2row<vl::CPU, float> ;
+template struct vl::impl::im2row<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::im2row<vl::CPU, double> ;
+template struct vl::impl::im2row<vl::VLDT_CPU, double> ;
 #endif

@@ -20,7 +20,7 @@ namespace vl {
 
   enum PoolingMethod { vlPoolingMax, vlPoolingAverage } ;
 
-  vl::Error
+  vl::ErrorCode
   nnpooling_forward(vl::Context& context,
                     vl::Tensor output,
                     vl::Tensor data,
@@ -30,7 +30,7 @@ namespace vl {
                     int padTop, int padBottom,
                     int padLeft, int padRight) ;
 
-  vl::Error
+  vl::ErrorCode
   nnpooling_backward(vl::Context& context,
                      vl::Tensor derData,
                      vl::Tensor data,

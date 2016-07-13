@@ -43,7 +43,7 @@ Hence
 \]
 A similar relation holds for the horizontal direction.
 
-Note that many blocks (e.g. max pooling, LNR, ReLU, most loss functions etc.) have a filter-like receptive field geometry. For example, ReLU can be considered a $1 \times 1$ filter, such that $H = S_h=1$ and $P_h^-=P_h^+ =0$. Note that in this case $\alpha_h=1$, $\beta_h=1$ and $\Delta_h=1$.
+Note that many blocks (e.g. max pooling, LNR, ReLU, most loss functions etc.) have a filter-like receptive field geometry. For example, ReLU can be considered a $1 \times 1$ filter, such that $H'=S_h=1$ and $P_h^-=P_h^+ =0$. Note that in this case $\alpha_h=1$, $\beta_h=1$ and $\Delta_h=1$.
 
 In addition to computing the receptive field geometry, we are often interested in determining the sizes of the arrays $\bx$ and $\by$ throughout the architecture. In the case of filters, and once more reasoning for a 1D slice, we notice that $y_i''$ can be obtained for $i''=1,2,\dots,H''$ where $H''$ is the largest value of $i''$ before the receptive fields falls outside $\bx$ (including padding). If $H$ is the height of the input array $\bx$, we get the condition
 \[
@@ -82,7 +82,7 @@ This is the same formula as for above filters, but with the ceil instead of floo
 
 Unfortunately, it gets more complicated. Using the formula above, it can happen that the last padding application is completely outside the input image and Caffe tries to avoid it. This requires
 \begin{equation}\label{e:pooling-caffe-constr}
-  S(i'' - 1) - P_h^- + 1 \big|_{i''= H''} \leq H
+  S_h(i'' - 1) - P_h^- + 1 \big|_{i''= H''} \leq H
   \qquad
   \Leftrightarrow
   \qquad
@@ -171,11 +171,11 @@ If we look at the convolution transpose backward, from the output to the input (
 \end{equation}
 where cropping becomes padding and upsampling becomes downsampling. Turning this relation around, we find that
 \[
- \left\lceil \frac{i'' + C_h^- -H'}{S_h} \right\rceil + 1
+ \left\lceil \frac{i'' + C_h^- -H'}{U_h} \right\rceil + 1
  \leq
  i
  \leq
- \left\lfloor \frac{i'' + C_h^- - 1}{S_h} \right\rfloor + 1 .
+ \left\lfloor \frac{i'' + C_h^- - 1}{U_h} \right\rfloor + 1 .
 \]
 Note that, due to rounding, it is not possible to express this set tightly in the form outlined above. We can however relax these two relations (hence obtaining a slightly larger receptive field) and conclude that
 \[
@@ -192,7 +192,7 @@ H = 1+ \left\lfloor \frac{H'' - H' + C_h^- + C_h^+}{U_h} \right\rfloor.
 \]
 If $H$ is now given as input, it is not possible to recover $H''$ uniquely from this expression; instead, all the following values are possible
 \[
-   S_h (H-1) +H' -  C_h^- - C_h^+ \leq H'' < S_h H +H' -  C_h^- - C_h^+.
+   U_h (H-1) +H' -  C_h^- - C_h^+ \leq H'' < U_h H +H' -  C_h^- - C_h^+.
 \]
 This is due to the fact that $U_h$ acts as a downsampling factor in the standard convolution direction and some of the samples to the right of the convolution input $\by$ may be ignored by the filter (see also \cref{f:conv} and \cref{f:convt}).
 
@@ -266,7 +266,7 @@ Substituting one relation into the other, we see that the first and last sample 
  i_f &= \alpha_f \left(\alpha_g (i_h- 1) + \beta_g \pm \frac{\Delta_g - 1}{2} - 1\right) + \beta_f \pm \frac{\Delta_f - 1}{2}	
  \\
 &= \alpha_f\alpha_g (i_h-1)
- + \alpha_f \beta_g - 1 + \beta_f
+ + \alpha_f (\beta_g - 1) + \beta_f
  \pm \frac{\alpha_f (\Delta_g - 1) + \Delta_f -1}{2}.
 \end{align*}
 We conclude that
@@ -288,11 +288,11 @@ This is only possible if, and only if, $\alpha = \alpha_{hg} = \alpha_{hf}$. Onl
 \begin{align*}
 	  i_\text{max}&=
   \alpha (i_h- 1) + a, & a = \min
-  \left\{\beta_{hf}- \frac{\Delta_{hf} - 1}{2}, \beta_g - \frac{\Delta_{hg} - 1}{2}\right\},
+  \left\{\beta_{hf}- \frac{\Delta_{hf} - 1}{2}, \beta_{hg} - \frac{\Delta_{hg} - 1}{2}\right\},
   \\
   	  i_\text{min} &=
   \alpha (i_h- 1) + b, & b = \max
-  \left\{\beta_{hf}+ \frac{\Delta_{hf} - 1}{2}, \beta_g + \frac{\Delta_{hg} - 1}{2}\right\}.
+  \left\{\beta_{hf}+ \frac{\Delta_{hf} - 1}{2}, \beta_{hg} + \frac{\Delta_{hg} - 1}{2}\right\}.
 \end{align*}
 We conclude that the combined receptive field is
 \[
@@ -300,7 +300,7 @@ We conclude that the combined receptive field is
 \qquad
 \beta = \frac{a+b}{2},
 \qquad
-\delta = b - a + 1.
+\Delta = b - a + 1.
 \]
 
 

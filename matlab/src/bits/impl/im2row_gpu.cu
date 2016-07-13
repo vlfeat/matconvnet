@@ -199,14 +199,14 @@ im2row_backward_kernel(T* data,
 namespace vl { namespace impl {
 
   template<typename type>
-  struct im2row<vl::GPU, type>
+  struct im2row<vl::VLDT_GPU, type>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context & context,
             type* stacked,
             type const* data,
@@ -229,7 +229,7 @@ namespace vl { namespace impl {
       int numPatchSlices = numPatchesX * numPatchesY * depth ;
 
       im2row_forward_kernel<type>
-      <<< divideUpwards(numPatchSlices, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(numPatchSlices, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (stacked,
        data,
        numPatchesX,
@@ -247,7 +247,7 @@ namespace vl { namespace impl {
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context & context,
              type* data,
              type const* stacked,
@@ -273,7 +273,7 @@ namespace vl { namespace impl {
       int dataVolume = width * height * depth ;
 
       im2row_backward_kernel<type>
-      <<< divideUpwards(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (data,
        stacked,
        numPatchesX,
@@ -292,8 +292,8 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::im2row<vl::GPU, float> ;
+template struct vl::impl::im2row<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::im2row<vl::GPU, double> ;
+template struct vl::impl::im2row<vl::VLDT_GPU, double> ;
 #endif

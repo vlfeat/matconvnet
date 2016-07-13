@@ -206,9 +206,9 @@ pooling_backward_cpu(type* derData,
 namespace vl { namespace impl {
 
   template <typename type>
-  struct pooling_max<vl::CPU, type>
+  struct pooling_max<vl::VLDT_CPU, type>
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(type* pooled,
             type const* data,
             size_t height, size_t width, size_t depth,
@@ -222,10 +222,10 @@ namespace vl { namespace impl {
                                                  poolHeight, poolWidth,
                                                  strideY, strideX,
                                                  padTop, padBottom, padLeft, padRight) ;
-      return vlSuccess ;
+      return VLE_Success ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type* derData,
              type const* data,
              type const* derOutput,
@@ -241,15 +241,15 @@ namespace vl { namespace impl {
                                                   poolHeight, poolWidth,
                                                   strideY, strideX,
                                                   padTop, padBottom, padLeft, padRight) ;
-      return vlSuccess ;
+      return VLE_Success ;
     }
   } ; // pooling_max
 
   template <typename type>
-  struct pooling_average<vl::CPU, type>
+  struct pooling_average<vl::VLDT_CPU, type>
   {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(type* pooled,
             type const* data,
             size_t height, size_t width, size_t depth,
@@ -263,10 +263,10 @@ namespace vl { namespace impl {
                                                  poolHeight, poolWidth,
                                                  strideY, strideX,
                                                  padTop, padBottom, padLeft, padRight) ;
-      return vlSuccess ;
+      return VLE_Success ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type* derData,
              type const* derPooled,
              size_t height, size_t width, size_t depth,
@@ -281,18 +281,18 @@ namespace vl { namespace impl {
                                                   poolHeight, poolWidth,
                                                   strideY, strideX,
                                                   padTop, padBottom, padLeft, padRight) ;
-      return vlSuccess ;
+      return VLE_Success ;
     }
   } ; // pooling_average
 
 } } ; // namespace vl::impl
 
 // Instantiations
-template struct vl::impl::pooling_max<vl::CPU, float> ;
-template struct vl::impl::pooling_average<vl::CPU, float> ;
+template struct vl::impl::pooling_max<vl::VLDT_CPU, float> ;
+template struct vl::impl::pooling_average<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::pooling_max<vl::CPU, double> ;
-template struct vl::impl::pooling_average<vl::CPU, double> ;
+template struct vl::impl::pooling_max<vl::VLDT_CPU, double> ;
+template struct vl::impl::pooling_average<vl::VLDT_CPU, double> ;
 #endif
 
