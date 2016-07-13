@@ -70,7 +70,7 @@ for epoch=start+1:opts.numEpochs
 
   rng(epoch + opts.randomSeed) ;
   prepareGPUs(opts, epoch == start+1) ;
-
+  
   % Train for one epoch.
 
   state.epoch = epoch ;
@@ -144,9 +144,20 @@ end
 function [stats, prof] = process_epoch(net, state, opts, mode)
 % -------------------------------------------------------------------------
 
-% initialize empty momentum
+% initialize empty momentum and cache
 if strcmp(mode,'train')
-  state.momentum = num2cell(zeros(1, numel(net.params))) ;
+    state.momentum=cell(1, numel(net.params));
+    for p=1:numel(net.params)
+        if strcmp(net.params(p).trainMethod,'gradient')
+            state.momentum{p}=0;
+        end
+    end
+    state.cache=cell(1, numel(net.params));
+    for p=1:numel(net.params)
+        if strcmp(net.params(p).trainMethod,'rmsprop')
+            state.cache{p}=zeros(size(net.params(p)));
+        end
+    end
 end
 
 % move CNN  to GPU as needed
@@ -155,6 +166,7 @@ if numGpus >= 1
   net.move('gpu') ;
   if strcmp(mode,'train')
     state.momentum = cellfun(@gpuArray,state.momentum,'UniformOutput',false) ;
+    state.cache = cellfun(@gpuArray,state.cache,'UniformOutput',false) ;
   end
 end
 if numGpus > 1
@@ -301,6 +313,12 @@ for p=1:numel(net.params)
         - (1 / batchSize) * net.params(p).der ;
       net.params(p).value = net.params(p).value + thisLR * state.momentum{p} ;
 
+       case 'rmsprop'
+            thisDecay = opts.weightDecay * net.params(p).weightDecay ;
+            thisLR = state.learningRate * net.params(p).learningRate ;
+            state.cache{p} = thisDecay * state.cache{p} + (1 - thisDecay) * net.params(p).der.^2;
+            net.params(p).value = net.params(p).value - thisLR * net.params(p).der./ (sqrt(state.cache{p}) + 1e-8);
+            
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
         net.params(p).trainMethod, ...
