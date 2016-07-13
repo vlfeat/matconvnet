@@ -1,10 +1,13 @@
-function [weights, momentum] = solver_sgd(weights, momentum, grad, opts, lr)
-%SOLVER_SGD
+function [w, momentum] = sgd(w, momentum, grad, opts, lr)
+%SGD
 %   Example SGD solver, with momentum, for use with CNN_TRAIN and
 %   CNN_TRAIN_DAG.
 %
 %   The convergence of SGD depends heavily on the learning rate (set in the
 %   options for CNN_TRAIN and CNN_TRAIN_DAG).
+%
+%   If called without any input argument, returns the default options
+%   structure.
 %
 %   Solver options: (opts.train.solverOpts)
 %
@@ -20,9 +23,13 @@ function [weights, momentum] = solver_sgd(weights, momentum, grad, opts, lr)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+if nargin == 0 % Return the default solver options
+  w = struct('momentum', 0.9);
+  return;
+end
 if isempty(momentum)
   momentum = 0 ;
 end
 
 momentum = opts.momentum * momentum - grad ;
-weights = weights + lr * momentum ;
+w = w + lr * momentum ;

@@ -1,9 +1,12 @@
-function [weights, state] = solver_adadelta(weights, state, grad, opts, ~)
-%SOLVER_ADADELTA
+function [w, state] = adadelta(w, state, grad, opts, ~)
+%ADADELTA
 %   Example AdaDelta solver, for use with CNN_TRAIN and CNN_TRAIN_DAG.
 %
 %   AdaDelta sets its own learning rate, so any learning rate set in the
 %   options of CNN_TRAIN and CNN_TRAIN_DAG will be ignored.
+%
+%   If called without any input argument, returns the default options
+%   structure.
 %
 %   Solver options: (opts.train.solverOpts)
 %
@@ -20,6 +23,11 @@ function [weights, state] = solver_adadelta(weights, state, grad, opts, ~)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+if nargin == 0 % Return the default solver options
+  w = struct('epsilon', 1e-6, 'rho', 0.9);
+  return;
+end
+
 if isempty(state)
   state.g_sqr = 0 ;
   state.delta_sqr = 0 ;
@@ -32,4 +40,4 @@ new_delta = -sqrt((state.delta_sqr + opts.epsilon) ./ ...
                   (state.g_sqr + opts.epsilon)) .* grad ;
 state.delta_sqr = state.delta_sqr * rho + new_delta.^2 * (1 - rho) ;
 
-weights = weights + new_delta ;
+w = w + new_delta ;

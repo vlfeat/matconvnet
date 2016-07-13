@@ -1,7 +1,7 @@
 classdef nnsolvers < nntest
   properties (TestParameter)
     networkType = {'simplenn', 'dagnn'}
-    solver = {'sgd', 'adagrad', 'adadelta', 'rmsprop'}
+    solver = {@solver.sgd, @solver.adagrad, @solver.adadelta, @solver.rmsprop}
   end
   properties
     imdb
@@ -66,7 +66,7 @@ classdef nnsolvers < nntest
       % train 1 epoch with small batches and check convergence
       [~, info] = trainfn(net, test.imdb, getBatch, ...
         'train', 1:numel(test.imdb.y), 'val', 1, ...
-        'solver',solver, 'batchSize', 10, 'numEpochs',1, ...
+        'solver', solver, 'batchSize', 10, 'numEpochs',1, ...
         'continue', false, 'gpus', gpus, 'plotStatistics', false) ;
       
       test.verifyLessThan(info.train.top1err, 0.35);

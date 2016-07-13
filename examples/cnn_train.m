@@ -16,6 +16,7 @@ function [net, stats] = cnn_train(net, imdb, getBatch, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+addpath(fullfile(vl_rootnn, 'examples'));
 
 opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
@@ -28,8 +29,19 @@ opts.prefetch = false ;
 opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
-opts.momentum = 0.9 ;
-opts.saveMomentum = true ;
+
+opts.solver = @solver.sgd; % Empty array - optimised SGD solver
+[opts, varargin] = vl_argparse(opts, varargin);
+if isempty(opts.solver)
+  opts.solverOpts.momentum = 0.9;
+else
+  assert(isa(opts.solver, 'function_handle') && nargout(opts.solver) == 2,...
+    'Invalid solver - a function handle with two outputs expected.');
+  % A call without any input arg - def opts
+  opts.solverOpts = opts.solver();
+end
+
+opts.saveSolverState = true ;
 opts.randomSeed = 0 ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
@@ -229,10 +241,10 @@ function [net, state] = processEpoch(net, state, params, mode)
 % spmd caller.
 
 % initialize with momentum 0
-if isempty(state) || isempty(state.momentum)
+if isempty(state) || isempty(state.solverState)
   for i = 1:numel(net.layers)
     for j = 1:numel(net.layers{i}.weights)
-      state.momentum{i}{j} = 0 ;
+      state.solverState{i}{j} = [] ;
     end
   end
 end
@@ -241,11 +253,6 @@ end
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net = vl_simplenn_move(net, 'gpu') ;
-  for i = 1:numel(state.momentum)
-    for j = 1:numel(state.momentum{i})
-      state.momentum{i}{j} = gpuArray(state.momentum{i}{j}) ;
-    end
-  end
 end
 if numGpus > 1
   parserv = ParameterServer(params.parameterServer) ;
@@ -382,12 +389,12 @@ if params.profile
     mpiprofile off ;
   end
 end
-if ~params.saveMomentum
-  state.momentum = [] ;
+if ~params.saveSolverState
+  state.solverState = [] ;
 else
-  for i = 1:numel(state.momentum)
-    for j = 1:numel(state.momentum{i})
-      state.momentum{i}{j} = gather(state.momentum{i}{j}) ;
+  for i = 1:numel(state.solverState)
+    for j = 1:numel(state.solverState{i})
+      state.solverState{i}{j} = gather(state.solverState{i}{j}) ;
     end
   end
 end
@@ -422,18 +429,30 @@ for l=numel(net.layers):-1:1
       % standard gradient training
       thisDecay = params.weightDecay * net.layers{l}.weightDecay(j) ;
       thisLR = params.learningRate * net.layers{l}.learningRate(j) ;
-
-      state.momentum{l}{j} = vl_taccum(...
-        params.momentum, ...
-        state.momentum{l}{j}, ...
-        - (1 / batchSize), ...
-        parDer) ;
-
-      net.layers{l}.weights{j} = vl_taccum(...
-        (1 - thisLR * thisDecay / (1 - params.momentum)), ...
-        net.layers{l}.weights{j}, ...
-        thisLR, ...
-        state.momentum{l}{j}) ;
+      
+      if isempty(params.solver)
+        % Default solver is the optimised SGD
+        if isempty(state.solverState{l}{j})
+          state.solverState{l}{j} = zeros(size(parDer), 'like', parDer);
+        end
+        state.solverState{l}{j} = vl_taccum(...
+          params.solverOpts.momentum, ...
+          state.solverState{l}{j}, ...
+          - (1 / batchSize), ...
+          parDer) ;
+        
+        net.layers{l}.weights{j} = vl_taccum(...
+          (1 - thisLR * thisDecay / (1 - params.solverOpts.momentum)), ...
+          net.layers{l}.weights{j}, ...
+          thisLR, ...
+          state.solverState{l}{j}) ;
+      else
+        grad = (1 / batchSize) * parDer + thisDecay * net.layers{l}.weights{j};
+        % call solver function to update weights
+        [net.layers{l}.weights{j}, state.solverState{l}{j}] = ...
+          params.solver(net.layers{l}.weights{j}, state.solverState{l}{j}, ...
+          grad, params.solverOpts, thisLR) ;
+      end
     end
 
     % if requested, collect some useful stats for debugging
