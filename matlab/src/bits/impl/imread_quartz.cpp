@@ -23,7 +23,7 @@ the terms of the BSD license (see the COPYING file).
 /* ---------------------------------------------------------------- */
 
 #define check(x) \
-if (!(x)) { error = vl::vlErrorUnknown ; goto done ; }
+if (!(x)) { error = vl::VLE_Unknown ; goto done ; }
 
 #define ERR_MSG_MAX_LEN 1024
 
@@ -47,10 +47,10 @@ const char * vl::ImageReader::getLastErrorMessage() const
   return impl->lastErrorMessage ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::readPixels(float * memory, const char * fileName)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
 
   // intermediate buffer
   char unsigned * pixels = NULL ;
@@ -150,10 +150,10 @@ done:
   return error ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::readShape(vl::ImageShape & shape, const char * fileName)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
 
   // intermediate buffer
   char unsigned * rgba = NULL ;

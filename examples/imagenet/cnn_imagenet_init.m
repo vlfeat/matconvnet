@@ -10,6 +10,10 @@ opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts.networkType = 'simplenn' ;
 opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
+opts.classNames = {} ;
+opts.classDescriptions = {} ;
+opts.averageImage = zeros(3,1) ;
+opts.colorDeviation = zeros(3) ;
 opts = vl_argparse(opts, varargin) ;
 
 % Define layers
@@ -50,13 +54,18 @@ end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 % Meta parameters
-net.meta.inputSize = net.meta.normalization.imageSize ;
-net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
-net.meta.normalization.interpolation = 'bicubic' ;
-net.meta.normalization.averageImage = [] ;
-net.meta.normalization.keepAspect = true ;
-net.meta.augmentation.rgbVariance = zeros(0,3) ;
-net.meta.augmentation.transformation = 'stretch' ;
+net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
+net.meta.normalization.cropSize = net.meta.normalization.imageSize(1) / 256 ;
+net.meta.normalization.averageImage = opts.averageImage ;
+net.meta.classes.name = opts.classNames ;
+net.meta.classes.description = opts.classDescriptions;
+net.meta.augmentation.jitterLocation = true ;
+net.meta.augmentation.jitterFlip = true ;
+net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
+net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
+%net.meta.augmentation.jitterContrast = 0.4 ;
+%net.meta.augmentation.jitterSaturation = 0.4 ;
+%net.meta.augmentation.jitterScale = [0.9, 1] ;
 
 if ~opts.batchNormalization
   lr = logspace(-2, -4, 60) ;

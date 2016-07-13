@@ -24,40 +24,40 @@ fill_kernel (type * data, type value, size_t size)
 namespace vl { namespace impl {
 
   template <typename type>
-  struct operations<vl::GPU, type>
+  struct operations<vl::VLDT_GPU, type>
   {
     typedef type data_type ;
 
-    static vl::Error
+    static vl::ErrorCode
     copy(data_type * dest,
          data_type const * src,
          size_t numElements)
     {
       cudaMemcpy(dest, src, numElements * sizeof(data_type), cudaMemcpyDeviceToDevice) ;
-      return vlSuccess ;
+      return VLE_Success ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     fill(data_type * dest,
          size_t numElements,
          data_type value)
     {
       fill_kernel <data_type>
-      <<<divideUpwards(numElements, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+      <<<divideAndRoundUp(numElements, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
       (dest, numElements, value) ;
 
       cudaError_t error = cudaGetLastError() ;
       if (error != cudaSuccess) {
-        return vlErrorCuda ;
+        return VLE_Cuda ;
       }
-      return vlSuccess ;
+      return VLE_Success ;
     }
   } ;
 
 } }
 
-template struct vl::impl::operations<vl::GPU, float> ;
+template struct vl::impl::operations<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::operations<vl::GPU, double> ;
+template struct vl::impl::operations<vl::VLDT_GPU, double> ;
 #endif

@@ -37,7 +37,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   VL_SIMPLENN(NET, X, DZDY, RES, 'OPT', VAL, ...) takes the following
 %   options:
 %
-%   `Mode`:: `normal`
+%   `Mode`:: `'normal'`
 %      Specifies the mode of operation. It can be either `'normal'` or
 %      `'test'`. In test mode, dropout and batch-normalization are
 %      bypassed. Note that, when a network is deployed, it may be
@@ -229,7 +229,9 @@ opts.mode = 'normal' ;
 opts.accumulate = false ;
 opts.cudnn = true ;
 opts.backPropDepth = +inf ;
-opts.skipForward = false;
+opts.skipForward = false ;
+opts.parameterServer = [] ;
+opts.holdOn = false ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -281,7 +283,6 @@ end
 if ~opts.skipForward
   res(1).x = x ;
 end
-
 
 % -------------------------------------------------------------------------
 %                                                              Forward pass
@@ -492,6 +493,12 @@ if doder
           end
         end
         dzdw = [] ;
+        if ~isempty(opts.parameterServer) && ~opts.holdOn
+          for j = 1:numel(res(i).dzdw)
+            opts.parameterServer.push(sprintf('l%d_%d',i,j),res(i).dzdw{j}) ;
+            res(i).dzdw{j} = [] ;
+          end
+        end
     end
     if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
       res(i+1).dzdx = [] ;

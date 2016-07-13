@@ -18,10 +18,10 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct bnorm
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             type* output,
             type* moments, // can be null and it will be allocated size_ternally
@@ -31,7 +31,7 @@ namespace vl { namespace impl {
             size_t height, size_t width, size_t depth, size_t size,
             type epsilon) ;
 
-    static vl::Error
+    static vl::ErrorCode
     forward_given_moments(Context& context,
                           type* output,
                           type const* moments,
@@ -40,7 +40,7 @@ namespace vl { namespace impl {
                           type const* biases,
                           size_t height, size_t width, size_t depth, size_t size) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              type* derData,
              type* derMultipliers,
@@ -53,7 +53,7 @@ namespace vl { namespace impl {
              size_t height, size_t width, size_t depth, size_t size,
              type epsilon) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward_given_moments(Context& context,
                            type* derData,
                            type* derMultipliers,

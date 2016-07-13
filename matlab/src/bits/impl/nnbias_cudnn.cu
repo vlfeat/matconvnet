@@ -37,8 +37,8 @@ namespace vl { namespace impl {
   /*                                           nnbias_forward_cudnn */
   /* -------------------------------------------------------------- */
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnbias_cudnn<dataType>::forward(vl::Context& context,
                                             vl::Tensor output, double outputMult,
                                             vl::Tensor data, double dataMult,
@@ -52,7 +52,7 @@ namespace vl { namespace impl {
     bool dataDescInitialized = false ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // Get CuDNN
@@ -141,8 +141,8 @@ namespace vl { namespace impl {
   /*                                            nnbias_backward_cudnn */
   /* ---------------------------------------------------------------- */
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnbias_cudnn<dataType>::backward(vl::Context& context,
                                              vl::Tensor derData, double derDataMult,
                                              vl::Tensor derBiases, double derBiasesMult,
@@ -157,7 +157,7 @@ namespace vl { namespace impl {
     bool derOutputDescInitialized = false ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // Get CuDNN
@@ -221,8 +221,8 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::nnbias_cudnn<vl::vlTypeFloat> ;
+template struct vl::impl::nnbias_cudnn<vl::VLDT_Float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::nnbias_cudnn<vl::vlTypeDouble> ;
+template struct vl::impl::nnbias_cudnn<vl::VLDT_Double> ;
 #endif
