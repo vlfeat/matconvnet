@@ -18,17 +18,17 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct lrn
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(type* output,
             type const* data,
             size_t height, size_t width, size_t depth, size_t size,
             size_t normDetph,
             type  kappa, type  alpha, type  beta) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type* derData,
              type const* data,
              type const* derOutput,

@@ -39,7 +39,7 @@ enum {
 } ;
 
 /* options */
-vlmxOption  options [] = {
+VLMXOption  options [] = {
   {"Upsample",              1,   opt_upsample              },
   {"Crop",                  1,   opt_crop                  },
   {"Verbose",               0,   opt_verbose               },
@@ -174,15 +174,15 @@ void mexFunction(int nout, mxArray *out[],
         break;
 
       case opt_no_der_data :
-        computeDerData = VL_FALSE ;
+        computeDerData = false ;
         break ;
 
       case opt_no_der_filters :
-        computeDerFilters = VL_FALSE ;
+        computeDerFilters = false ;
         break ;
 
       case opt_no_der_biases :
-        computederBiases = VL_FALSE ;
+        computederBiases = false ;
         break ;
 
       case opt_no_cudnn :
@@ -309,8 +309,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* create output buffers */
-  vl::Device deviceType = data.getDeviceType() ;
-  vl::Type dataType = data.getDataType() ;
+  vl::DeviceType deviceType = data.getDeviceType() ;
+  vl::DataType dataType = data.getDataType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
   vl::MexTensor derFilters(context) ;
@@ -331,8 +331,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnconvt: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::GPU) ? "GPU" : "CPU") ;
-    if (data.getDeviceType() == vl::GPU) {
+    mexPrintf("vl_nnconvt: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::VLDT_GPU) ? "GPU" : "CPU") ;
+    if (data.getDeviceType() == vl::VLDT_GPU) {
 #if ENABLE_CUDNN
       mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "cuBLAS") ;
 #else
@@ -363,7 +363,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
-  vl::Error error ;
+  vl::ErrorCode error ;
 
   /* regular case */
   if (!backMode) {
@@ -404,14 +404,14 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                        Cleanup */
   /* -------------------------------------------------------------- */
 
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
   if (backMode) {
     mxClassID classID ;
     switch (derOutput.getDataType()) {
-      case vl::vlTypeFloat: classID = mxSINGLE_CLASS ; break ;
-      case vl::vlTypeDouble: classID = mxDOUBLE_CLASS ; break ;
+      case vl::VLDT_Float: classID = mxSINGLE_CLASS ; break ;
+      case vl::VLDT_Double: classID = mxDOUBLE_CLASS ; break ;
       default: abort() ;
     }
     out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;

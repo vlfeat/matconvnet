@@ -21,7 +21,7 @@ the terms of the BSD license (see the COPYING file).
 
 // use a template to define both directions as they are nearly identical code-wise
 template<typename type, bool backwardData, bool backwardGrid>
-static vl::Error
+static vl::ErrorCode
 forward_backward
 (vl::Context& context,
  type* output,
@@ -33,7 +33,7 @@ forward_backward
  size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
  size_t inHeight, size_t inWidth, size_t inCardinality)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
 
   bool backward = backwardData | backwardGrid ;
 
@@ -142,14 +142,14 @@ forward_backward
 namespace vl { namespace impl {
 
   template<typename type>
-  struct bilinearsampler<vl::CPU, type>
+  struct bilinearsampler<vl::VLDT_CPU, type>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             type* output,
             type const* data,
@@ -173,7 +173,7 @@ error = forward_backward<type, bwData, bwGrid> \
      outHeight, outWidth, outDepth, outCardinality, \
      inHeight, inWidth,inCardinality) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              type* derData,
              type* derGrid,
@@ -183,7 +183,7 @@ error = forward_backward<type, bwData, bwGrid> \
              size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
              size_t inHeight, size_t inWidth, size_t inCardinality)
     {
-      vl::Error error = vlSuccess ;
+      vl::ErrorCode error = VLE_Success ;
 
       // optimized codepaths depending on what needs to be comptued
       if (derData && derGrid == NULL) {
@@ -199,8 +199,8 @@ error = forward_backward<type, bwData, bwGrid> \
 
 } } // namespace vl::impl
 
-template struct vl::impl::bilinearsampler<vl::CPU, float> ;
+template struct vl::impl::bilinearsampler<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::bilinearsampler<vl::CPU, double> ;
+template struct vl::impl::bilinearsampler<vl::VLDT_CPU, double> ;
 #endif

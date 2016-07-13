@@ -102,7 +102,8 @@ function vl_compilenn(varargin)
 %     | 8.2            | 2013b   | 5.5          |
 %     | 8.3            | 2014a   | 5.5          |
 %     | 8.4            | 2014b   | 6.0          |
-%     | 8.6            | 2015b   | Latest(>7.0) |
+%     | 8.6            | 2015b   | 7.0          |
+%     | 9.0            | 2016a   | 7.5          |
 %
 %     A different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
@@ -113,9 +114,9 @@ function vl_compilenn(varargin)
 %     6.5. VS 2015 CPU version only (not supported by CUDA Toolkit yet).
 %   * Windows 8 x64, MATLAB R2014a, Visual C++ 2013 and CUDA
 %     Toolkit 6.5.
-%   * Mac OS X 10.9 and 10.10, MATLAB R2013a and R2013b, Xcode, CUDA
-%     Toolkit 5.5.
-%   * GNU/Linux, MATALB R2014a/R2015a/R2015b, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
+%   * Mac OS X 10.9, 10.10, 10.11, MATLAB R2013a to R2016a, Xcode, CUDA
+%     Toolkit 5.5 to 7.5.
+%   * GNU/Linux, MATALB R2014a/R2015a/R2015b/R2016a, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
 %
 %   Compilation on Windows with MinGW compiler (the default mex compiler in
 %   Matlab) is not supported. For Windows, please reconfigure mex to use
@@ -207,6 +208,12 @@ mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbnorm.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbilinearsampler.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_taccummex.' ext]) ;
+switch arch
+  case {'glnxa64','maci64'}
+    % not yet supported in windows
+    mex_src{end+1} = fullfile(root,'matlab','src',['vl_tflow.' ext]) ;
+end
 
 % CPU-specific files
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_cpu.cpp') ;
@@ -229,6 +236,7 @@ if opts.enableGpu
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','datacu.cu') ;
+  mex_src{end+1} = fullfile(root,'matlab','src','vl_cudatool.cu') ;
 end
 
 % cuDNN-specific files
@@ -237,11 +245,13 @@ if opts.enableCudnn
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbias_cudnn.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnpooling_cudnn.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbilinearsampler_cudnn.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbnorm_cudnn.cu') ;
 end
 
 % Other files
 if opts.enableImreadJpeg
   mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg.' ext]) ;
+  mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg_old.' ext]) ;
   lib_src{end+1} = fullfile(root,'matlab','src', 'bits', 'impl', ['imread_' opts.imageLibrary '.cpp']) ;
 end
 
@@ -319,6 +329,7 @@ if opts.debug
   flags.nvccpass{end+1} = '-O0' ;
 else
   flags.cc{end+1} = '-DNDEBUG' ;
+  flags.nvccpass{end+1} = '-O3' ;
 end
 if opts.enableGpu
   flags.cc{end+1} = '-DENABLE_GPU' ;
@@ -332,7 +343,9 @@ if opts.enableDouble
 end
 flags.link{end+1} = '-lmwblas' ;
 switch arch
-  case {'maci64', 'glnxa64'}
+  case {'maci64'}
+  case {'glnxa64'}
+    flags.linklibs{end+1} = '-lrt' ;
   case {'win64'}
     % VisualC does not pass this even if available in the CPU architecture
     flags.cc{end+1} = '-D__SSSE3__' ;
@@ -428,7 +441,8 @@ flags.nvcc = horzcat(flags.cc, ...
                      {opts.cudaArch}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'extern', 'include'))}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include'))}, ...
-                     { quote_nvcc(flags.ccpass)}, ...
+                     {quote_nvcc(flags.ccpass)}, ...
+                     {quote_nvcc(flags.ccoptim)}, ...
                      flags.nvccpass) ;
 
 if opts.verbose
@@ -605,7 +619,7 @@ opts.verbose && fprintf(['%s:\tCUDA: searching for the CUDA Devkit' ...
 % Propose a number of candidate paths for NVCC
 paths = {getenv('MW_NVCC_PATH')} ;
 paths = [paths, which_nvcc()] ;
-for v = {'5.5', '6.0', '6.5', '7.0', '7.5'}
+for v = {'5.5', '6.0', '6.5', '7.0', '7.5', '8.0', '8.5', '9.0'}
   switch computer('arch')
     case 'glnxa64'
       paths{end+1} = sprintf('/usr/local/cuda-%s/bin/nvcc', char(v)) ;

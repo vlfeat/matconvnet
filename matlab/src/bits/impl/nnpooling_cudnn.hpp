@@ -22,10 +22,10 @@ namespace vl { namespace impl {
 
   // todo: data type should be handled internally?
 
-  template<vl::Type dataType>
+  template<vl::DataType dataType>
   struct nnpooling_cudnn
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             Tensor output,
             Tensor data,
@@ -35,7 +35,7 @@ namespace vl { namespace impl {
             int padTop, int padBottom,
             int padLeft, int padRight) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              Tensor derData,
              Tensor data,

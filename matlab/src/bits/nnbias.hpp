@@ -17,13 +17,13 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-  vl::Error
+  vl::ErrorCode
   nnbias_forward(vl::Context& context,
                  vl::Tensor output, double outputMult,
                  vl::Tensor data, double dataMult,
                  vl::Tensor biases, double biasesMult) ;
 
-  vl::Error
+  vl::ErrorCode
   nnbias_backward(vl::Context& context,
                   vl::Tensor derData, double derDataMult,
                   vl::Tensor derBiases, double derBiasesMult,

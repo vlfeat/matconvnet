@@ -30,7 +30,7 @@ enum {
 };
 
 /* options */
-vlmxOption  options [] = {
+VLMXOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
   {"Cudnn",            0,   opt_cudnn             },
   {"NoCudnn",          0,   opt_no_cudnn          },
@@ -167,8 +167,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Create output buffers */
-  vl::Device deviceType = data.getDeviceType() ;
-  vl::Type dataType = data.getDataType() ;
+  vl::DeviceType deviceType = data.getDeviceType() ;
+  vl::DataType dataType = data.getDataType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
   vl::MexTensor derGrid(context) ;
@@ -182,7 +182,7 @@ void mexFunction(int nout, mxArray *out[],
 
   // log:
   if (verbosity > 0) {
-    mexPrintf("vl_nnbilinearsampler: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::GPU) ? "GPU" : "CPU") ;
+    mexPrintf("vl_nnbilinearsampler: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::VLDT_GPU) ? "GPU" : "CPU") ;
     mexPrintf("; MatConvNet\n") ;
     vl::print("vl_nnbilinearsampler: data: ", data) ;
     vl::print("vl_nnbilinearsampler: grid: ", grid) ;
@@ -199,7 +199,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
-  vl::Error error ;
+  vl::ErrorCode error ;
   if (!backMode) {
     error = vl::nnbilinearsampler_forward(context,
                                   output,
@@ -214,7 +214,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
   if (backMode) {

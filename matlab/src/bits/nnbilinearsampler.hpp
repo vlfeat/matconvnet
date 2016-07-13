@@ -17,13 +17,13 @@ the terms of the BSD license (see the COPYING file).
 #include <stdio.h>
 
 namespace vl {
-  vl::Error
+  vl::ErrorCode
   nnbilinearsampler_forward(vl::Context& context,
                             vl::Tensor output,
                             vl::Tensor data,
                             vl::Tensor grid) ;
 
-  vl::Error
+  vl::ErrorCode
   nnbilinearsampler_backward(vl::Context& context,
                              vl::Tensor derData,
                              vl::Tensor derGrid,

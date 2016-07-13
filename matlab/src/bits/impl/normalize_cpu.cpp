@@ -132,13 +132,13 @@ inline float fast_pow(float a, float b)
 namespace vl { namespace impl {
 
   template<typename type>
-  struct lrn<vl::CPU, type>
+  struct lrn<vl::VLDT_CPU, type>
   {
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(type* output,
             type const* data,
             size_t width,
@@ -214,14 +214,14 @@ namespace vl { namespace impl {
       }
       free(acc) ;
 #endif
-      return vl::vlSuccess ;
+      return vl::VLE_Success ;
     }
 
     /* ------------------------------------------------------------ */
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type * output,
              type const* data,
              type const* derOutput,
@@ -374,7 +374,7 @@ namespace vl { namespace impl {
       free(acc) ;
       free(acc2) ;
 #endif
-      return vl::vlSuccess ;
+      return vl::VLE_Success ;
     }
 
   } ;
@@ -382,8 +382,8 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::lrn<vl::CPU, float> ;
+template struct vl::impl::lrn<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::lrn<vl::CPU, double> ;
+template struct vl::impl::lrn<vl::VLDT_CPU, double> ;
 #endif

@@ -18,15 +18,15 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device deviceType, vl::Type dataType>
-  inline vl::Error
+  template<vl::DeviceType deviceType, vl::DataType dataType>
+  inline vl::ErrorCode
   nnbias_forward_blas(vl::Context& context,
                       vl::Tensor output, double outputMult,
                       vl::Tensor data, double dataMult,
                       vl::Tensor biases, double biasesMult) ;
 
-  template<vl::Device deviceType, vl::Type dataType>
-  inline vl::Error
+  template<vl::DeviceType deviceType, vl::DataType dataType>
+  inline vl::ErrorCode
   nnbias_backward_blas(vl::Context& context,
                        vl::Tensor derData, double derDataMult,
                        vl::Tensor derBiases, double derBiasesMult,
@@ -34,14 +34,14 @@ namespace vl { namespace impl {
 
 } }
 
-template<vl::Device deviceType, vl::Type dataType>
-inline vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType>
+inline vl::ErrorCode
 vl::impl::nnbias_forward_blas(vl::Context& context,
                               vl::Tensor output, double outputMult,
                               vl::Tensor data, double dataMult,
                               vl::Tensor biases, double biasesMult)
 {
-  vl::Error error ;
+  vl::ErrorCode error ;
   ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
 
@@ -67,26 +67,26 @@ vl::impl::nnbias_forward_blas(vl::Context& context,
        (type*)biases.getMemory(), 1,
        alpha,
        (type*)output.getMemory() + outputOffset, numOutputPixels) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
       alpha = 1 ;
     }
 
     if (data) {
       assert(false) ; // todo: not implemented
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
   }
 done:
   return context.passError(error, __func__) ;
 }
 
-template<vl::Device deviceType, vl::Type dataType> inline vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType> inline vl::ErrorCode
 vl::impl::nnbias_backward_blas(vl::Context& context,
                                vl::Tensor derData, double derDataMult,
                                vl::Tensor derBiases, double derBiasesMult,
                                vl::Tensor derOutput, double derOutputMult)
 {
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
   type const* allOnesMemory = NULL ;
 
@@ -126,13 +126,13 @@ vl::impl::nnbias_backward_blas(vl::Context& context,
        allOnesMemory, 1,
        (image == 0) ? derBiasesMult : 1.0, /* beta */
        (type*)derBiases.getMemory(), 1) ;
-      if (error != vl::vlSuccess) { return error ; }
+      if (error != vl::VLE_Success) { return error ; }
     }
 
     /* compute derData dz/dx */
     if (derData) {
       assert(false) ; // todo: not implemented
-      if (error != vl::vlSuccess) { return error ; }
+      if (error != vl::VLE_Success) { return error ; }
     }
   }
 
