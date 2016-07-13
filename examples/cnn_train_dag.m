@@ -21,7 +21,7 @@ opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
-opts.saveMomentum = true ;
+opts.saveSolverState = true ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
 opts.parameterServer.method = 'mmap' ;
@@ -147,15 +147,15 @@ function [net, state] = processEpoch(net, state, params, mode)
 % spmd caller.
 
 % initialize with momentum 0
-if isempty(state) || isempty(state.momentum)
-  state.momentum = num2cell(zeros(1, numel(net.params))) ;
+if isempty(state) || isempty(state.solver)
+  state.solver = num2cell(zeros(1, numel(net.params))) ;
 end
 
 % move CNN  to GPU as needed
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
-  state.momentum = cellfun(@gpuArray, state.momentum, 'uniformoutput', false) ;
+  state.solver = cellfun(@gpuArray, state.solver, 'uniformoutput', false) ;
 end
 if numGpus > 1
   parserv = ParameterServer(params.parameterServer) ;
@@ -259,10 +259,10 @@ if params.profile
     mpiprofile off ;
   end
 end
-if ~params.saveMomentum
-  state.momentum = [] ;
+if ~params.saveSolverState
+  state.solver = [] ;
 else
-  state.momentum = cellfun(@gather, state.momentum, 'uniformoutput', false) ;
+  state.solver = cellfun(@gather, state.solver, 'uniformoutput', false) ;
 end
 
 net.reset() ;
@@ -293,12 +293,20 @@ for p=1:numel(net.params)
     case 'gradient'
       thisDecay = params.weightDecay * net.params(p).weightDecay ;
       thisLR = params.learningRate * net.params(p).learningRate ;
-      state.momentum{p} = vl_taccum(...
-        params.momentum,  state.momentum{p}, ...
+      state.solver{p} = vl_taccum(...
+        params.momentum,  state.solver{p}, ...
         - (1 / batchSize), parDer) ;
       net.params(p).value = vl_taccum(...
-        (1 - thisLR * thisDecay / (1 - params.momentum)),  net.params(p).value, ...
-        thisLR, state.momentum{p}) ;
+        (1 - thisLR * thisDecay / (1 - params.momentum)), net.params(p).value, ...
+        thisLR, state.solver{p}) ;
+
+    case 'rmsprop'
+      thisDecay = params.weightDecay * net.params(p).weightDecay ;
+      thisLR = params.learningRate * net.params(p).learningRate ;
+      state.solver{p} = thisDecay * state.solver{p} + ...
+        (1 - thisDecay) * net.params(p).der.^2;
+      net.params(p).value = net.params(p).value - ...
+        thisLR * net.params(p).der./ (sqrt(state.solver{p}) + 1e-8);
 
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...

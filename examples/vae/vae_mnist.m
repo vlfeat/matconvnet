@@ -5,12 +5,10 @@ function [net, info] = vae_mnist(varargin)
 %   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.networkType = 'dagnn' ;
-opts.expDir = fullfile(pwd, 'data', 'mnist-vae') ;
+opts.expDir = fullfile(vl_rootnn, 'data', 'mnist-vae') ;
+[opts, varargin] = vl_argparse(opts, varargin);
 opts.dataDir = fullfile(vl_rootnn, 'data', 'mnist') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
-opts.learningRate = 0.001 ;
-opts.weightDecay = 0.99 ;
-opts.trainMethod='rmsprop';
 opts.train = struct() ;
 opts = vl_argparse(opts, varargin) ;
 if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
