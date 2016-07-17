@@ -78,7 +78,10 @@ classdef Layer < matlab.mixin.Copyable
       
       % convert from DagNN to Layer
       if isa(func, 'dagnn.DagNN')
-         obj = dagnn2layer(func) ;
+         obj = dagnn2autonn(func) ;
+         assert(~iscell(obj), 'Cannot convert DagNN with multiple output layers into a single layer.');
+         % Note: this is due to Matlab's type restrictions; obj cannot be
+         % a cell array. Alternative: Wrap outputs using a dummy layer?
          return
       else
         assert(isa(func, 'function_handle'), ...

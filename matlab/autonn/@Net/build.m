@@ -11,7 +11,7 @@ function build(net, varargin)
 
 
   % load from struct
-  if isscalar(varargin) && isstruct(varargin{1})
+  if isscalar(varargin) && isstruct(varargin{1}) && ~isfield(varargin{1}, 'layers')  % distinguish from SimpleNN
     net.loadobj(varargin{1}) ;
     return
   end
@@ -21,17 +21,28 @@ function build(net, varargin)
   opts.shortCircuit = true ;
   opts.forwardOnly = false ;  % used mainly by evalOutputSize for faster build
   [opts, varargin] = vl_argparsepos(opts, varargin) ;
-
-  if isscalar(varargin)
-    % a single output layer
-    rootLayer = varargin{1} ;
-
-    if ~isa(rootLayer, 'Layer')  % convert SimpleNN or DagNN to Layer
-      rootLayer = Layer(rootLayer) ;
+  
+  if isscalar(varargin) && ~isa(varargin{1}, 'Layer')
+    % convert SimpleNN or DagNN to Layer
+    s = varargin{1} ;
+    if isstruct(s) && isfield(s, 'layers')
+      s = dagnn.DagNN.fromSimpleNN(s, 'CanonicalNames', true) ;
     end
-  else
+    if isa(s, 'dagnn.DagNN')
+      s = dagnn2autonn(s) ;
+    end
+    if iscell(s)
+      varargin = s ;  % varargin should contain a list of Layer objects
+    else
+      varargin = {s} ;
+    end
+  end
+
+  if ~isscalar(varargin)
     % several output layers; create a dummy layer to hold them together
     rootLayer = Layer(@root, varargin{:}) ;
+  else
+    rootLayer = varargin{1} ;
   end
 
   % make sure all layers have names
