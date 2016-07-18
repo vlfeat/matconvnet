@@ -27,7 +27,7 @@ classdef Layer < matlab.mixin.Copyable
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-  properties (SetAccess = private, GetAccess = public)  % not setable after construction, to ensure a proper call graph (no cycles)
+  properties (Access = public)
     inputs = {}  % list of inputs, either constants or other Layers
     testInputs = 'same'  % list of inputs used in test mode, may be different
   end
@@ -49,6 +49,7 @@ classdef Layer < matlab.mixin.Copyable
   
   properties (Access = protected)
     copied = []  % reference of deep copied object, used internally for deepCopy()
+    enableCycleChecks = true  % to avoid redundant cycle checks when implicitly calling set.inputs()
   end
   
   methods  % methods defined in their own files
@@ -90,13 +91,29 @@ classdef Layer < matlab.mixin.Copyable
       
       assert(isa(func, 'function_handle'), 'Must specify a function handle as the first argument.') ;
       
+      obj.enableCycleChecks = false ;
       obj.func = func ;
       obj.inputs = varargin(:)' ;
       
       % call setup function if defined. it can change the inputs list (not
       % allowed for outside functions, to preserve call graph structure).
       [obj.inputs, obj.testInputs] = autonn_setup(obj) ;
+      obj.enableCycleChecks = true ;
+    end
+    
+    function set.inputs(obj, newInputs)
+      if obj.enableCycleChecks
+        % must check for cycles, to ensure DAG structure.
+        % to do: should also do the same for testInputs; that property will
+        % be removed in the new test-mode implementation though.
+        for i = 1:numel(newInputs)
+          if isa(newInputs{i}, 'Layer')
+            newInputs{i}.cycleCheckRecursive(obj) ;
+          end
+        end
+      end
       
+      obj.inputs = newInputs;
     end
     
     function other = deepCopy(obj, varargin)
@@ -354,6 +371,15 @@ classdef Layer < matlab.mixin.Copyable
       for i = 1:numel(obj.inputs)  % recurse on inputs
         if isa(obj.inputs{i}, 'Layer')
           obj.inputs{i}.deepCopyReset() ;
+        end
+      end
+    end
+    
+    function cycleCheckRecursive(obj, root)
+      assert(obj ~= root, 'Input assignment creates a cycle in the network.') ;
+      for i = 1:numel(obj.inputs)  % recurse on inputs
+        if isa(obj.inputs{i}, 'Layer')
+          obj.inputs{i}.cycleCheckRecursive(root) ;
         end
       end
     end
