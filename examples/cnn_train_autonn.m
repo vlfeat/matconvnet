@@ -137,7 +137,7 @@ for epoch=start+1:opts.numEpochs
   end
 
   if opts.plotStatistics
-    figure(1) ; clf ;
+    switchFigure(1) ; clf ;
     plots = setdiff(...
       cat(2,...
       fieldnames(stats.train)', ...
@@ -404,6 +404,17 @@ function [net, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'stats') ;
 net = Net(net) ;
+
+% -------------------------------------------------------------------------
+function switchFigure(n)
+% -------------------------------------------------------------------------
+if get(0,'CurrentFigure') ~= n
+  try
+    set(0,'CurrentFigure',n) ;
+  catch
+    figure(n) ;
+  end
+end
 
 % -------------------------------------------------------------------------
 function epoch = findLastCheckpoint(modelDir)
