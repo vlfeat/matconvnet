@@ -80,9 +80,10 @@ classdef Layer < matlab.mixin.Copyable
       % convert from DagNN to Layer
       if isa(func, 'dagnn.DagNN')
          obj = dagnn2autonn(func) ;
-         assert(~iscell(obj), 'Cannot convert DagNN with multiple output layers into a single layer.');
-         % Note: this is due to Matlab's type restrictions; obj cannot be
-         % a cell array. Alternative: Wrap outputs using a dummy layer?
+         if iscell(obj)
+           % wrap multiple outputs in a weighted sum
+           obj = Layer(@vl_nnwsum, obj{:}, 'weights', ones(1, numel(obj))) ;
+         end
          return
       else
         assert(isa(func, 'function_handle'), ...
