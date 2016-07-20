@@ -80,8 +80,9 @@ classdef Layer < matlab.mixin.Copyable
       % convert from DagNN to Layer
       if isa(func, 'dagnn.DagNN')
          obj = dagnn2autonn(func) ;
-         if iscell(obj)
-           % wrap multiple outputs in a weighted sum
+         if isscalar(obj)
+           obj = obj{1} ;
+         else  % wrap multiple outputs in a weighted sum
            obj = Layer(@vl_nnwsum, obj{:}, 'weights', ones(1, numel(obj))) ;
          end
          return
