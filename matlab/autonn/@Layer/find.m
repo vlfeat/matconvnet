@@ -53,6 +53,10 @@ function objs = find(obj, varargin)
   % choose the Nth object
   if n ~= 0
     assert(numel(objs) >= abs(n), 'Cannot find a layer fitting the specified criteria.')
-    objs = objs{mod(n - 1, numel(objs)) + 1} ;
+    if n > 0
+      objs = objs{n} ;
+    else
+      objs = objs{numel(objs) + n + 1} ;
+    end
   end
 end
