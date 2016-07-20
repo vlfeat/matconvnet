@@ -36,6 +36,7 @@ here.
     * Adds support for `ParameterSever` in the examples.
     * Adds an option in the example training script to save the
       momentum between epochs.
+    * Batch normalization falls back to CuDNN when available.
 
     **Changes affecting backward compatibility**
 
