@@ -39,7 +39,7 @@ classdef Conv < dagnn.Filter
       sc = sqrt(2 / prod(obj.size([1 2 4]))) ;
       params{1} = randn(obj.size,'single') * sc ;
       if obj.hasBias
-        params{2} = zeros(obj.size(4),1,'single') * sc ;
+        params{2} = zeros(obj.size(4),1,'single') ;
       end
     end
 
