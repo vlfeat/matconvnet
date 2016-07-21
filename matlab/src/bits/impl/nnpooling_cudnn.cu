@@ -38,8 +38,8 @@ goto done ; \
 namespace vl { namespace impl {
 
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   nnpooling_cudnn<dataType>::forward(Context& context,
                                      Tensor output,
                                      Tensor data,
@@ -60,20 +60,20 @@ namespace vl { namespace impl {
     bool dataDescInitialized = false ;
     bool poolingDescInitialized = false ;
 
-    if (padLeft != padRight) return vl::vlErrorUnsupported ;
-    if (padTop != padBottom) return vl::vlErrorUnsupported ;
+    if (padLeft != padRight) return vl::VLE_Unsupported ;
+    if (padTop != padBottom) return vl::VLE_Unsupported ;
 
     if (method == vlPoolingAverage && (padLeft > 0 | padRight > 0)) {
       /* This seems like a bug in CUDNN? */
-      return vl::vlErrorUnsupported ;
+      return vl::VLE_Unsupported ;
     }
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
-    vl::Type dynDataType = output.getDataType() ;
+    vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // Get CuDNN
@@ -104,6 +104,7 @@ namespace vl { namespace impl {
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
                                       (method == vl::vlPoolingAverage) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
                                       poolWidth, poolHeight,
                                       padLeft, padTop,
                                       strideX, strideY)) ;
@@ -132,8 +133,8 @@ namespace vl { namespace impl {
   /*                                        nnpooling_cudnn::backward */
   /* ---------------------------------------------------------------- */
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   nnpooling_cudnn<dataType>::backward(Context& context,
                                       Tensor derData,
                                       Tensor data,
@@ -158,20 +159,20 @@ namespace vl { namespace impl {
     bool dataDescInitialized = false ;
     bool poolingDescInitialized = false ;
 
-    if (padLeft != padRight) return vl::vlErrorUnsupported ;
-    if (padTop != padBottom) return vl::vlErrorUnsupported ;
+    if (padLeft != padRight) return vl::VLE_Unsupported ;
+    if (padTop != padBottom) return vl::VLE_Unsupported ;
 
     if (method == vlPoolingAverage && (padLeft > 0 | padRight > 0)) {
       /* This seems like a bug in CuDNN? */
-      return vl::vlErrorUnsupported ;
+      return vl::VLE_Unsupported ;
     }
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
-    vl::Type dynDataType = output.getDataType() ;
+    vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // Get CuDNN
@@ -202,6 +203,7 @@ namespace vl { namespace impl {
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
                                       (method == vl::vlPoolingAverage) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
                                       poolWidth, poolHeight,
                                       padLeft, padTop,
                                       strideX, strideY)) ;
@@ -231,10 +233,10 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::nnpooling_cudnn<vl::vlTypeFloat> ;
+template struct vl::impl::nnpooling_cudnn<vl::VLDT_Float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::nnpooling_cudnn<vl::vlTypeDouble> ;
+template struct vl::impl::nnpooling_cudnn<vl::VLDT_Double> ;
 #endif
 
 

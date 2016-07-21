@@ -37,8 +37,8 @@ goto done ; \
 
 namespace vl { namespace impl {
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnconv_cudnn<dataType>::forward(Context& context,
                                             Tensor output, double outputMult,
                                             Tensor data, double dataMult,
@@ -68,13 +68,13 @@ namespace vl { namespace impl {
     int numGroups = data.getDepth() / filters.getDepth() ;
     int numFiltersPerGroup = filters.getSize() / numGroups ;
 
-    if (padLeft != padRight) return vl::vlErrorUnsupported ;
-    if (padTop != padBottom) return vl::vlErrorUnsupported ;
-    if (filters.getHeight() > data.getHeight()) return vl::vlErrorUnsupported ;
-    if (filters.getWidth() > data.getWidth()) return vl::vlErrorUnsupported ;
+    if (padLeft != padRight) return vl::VLE_Unsupported ;
+    if (padTop != padBottom) return vl::VLE_Unsupported ;
+    if (filters.getHeight() > data.getHeight()) return vl::VLE_Unsupported ;
+    if (filters.getWidth() > data.getWidth()) return vl::VLE_Unsupported ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // Get CuDNN
@@ -111,6 +111,7 @@ namespace vl { namespace impl {
     filtersDescInitialized = true ;
     CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                                      DataTypeToCudnn<dataType>::id,
+                                     IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                      numFiltersPerGroup,
                                      filters.getDepth(),
                                      filters.getWidth(),
@@ -180,7 +181,7 @@ namespace vl { namespace impl {
 
     // Get workspace
     if (context.getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed > 0) {
-      workSpace = context.getWorkspace(vl::GPU, context.getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed) ;
+      workSpace = context.getWorkspace(vl::VLDT_GPU, context.getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed) ;
       if (workSpace == NULL) {
         error = context.getLastError() ;
         goto done ;
@@ -240,8 +241,8 @@ namespace vl { namespace impl {
   /*                                            nnconv_backward_cudnn */
   /* ---------------------------------------------------------------- */
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnconv_cudnn<dataType>::backward(Context& context,
                                              Tensor derData,
                                              Tensor derFilters,
@@ -274,11 +275,11 @@ namespace vl { namespace impl {
     ptrdiff_t numFiltersPerGroup = 0 ;
     ptrdiff_t filtersVolume = 0 ;
 
-    if (padLeft != padRight) return vl::vlErrorUnsupported ;
-    if (padTop != padBottom) return vl::vlErrorUnsupported ;
+    if (padLeft != padRight) return vl::VLE_Unsupported ;
+    if (padTop != padBottom) return vl::VLE_Unsupported ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // Get CuDNN
@@ -311,6 +312,7 @@ namespace vl { namespace impl {
       filtersDescInitialized = true ;
       CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                                        DataTypeToCudnn<dataType>::id ,
+                                       IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                        numFiltersPerGroup,
                                        filters.getDepth(),
                                        filters.getWidth(),
@@ -338,6 +340,7 @@ namespace vl { namespace impl {
       filtersDescInitialized = true ;
       CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
                                        DataTypeToCudnn<dataType>::id ,
+                                       IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                        numFiltersPerGroup,
                                        derFilters.getDepth(),
                                        derFilters.getWidth(),
@@ -437,7 +440,7 @@ namespace vl { namespace impl {
 
     // Get workspace
     if (workSpaceSize > 0) {
-      workSpace = context.getWorkspace(vl::GPU, workSpaceSize) ;
+      workSpace = context.getWorkspace(vl::VLDT_GPU, workSpaceSize) ;
       if (workSpace == NULL) {
         error = context.getLastError() ;
         goto done ;
@@ -534,10 +537,10 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::nnconv_cudnn<vl::vlTypeFloat> ;
+template struct vl::impl::nnconv_cudnn<vl::VLDT_Float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::nnconv_cudnn<vl::vlTypeDouble> ;
+template struct vl::impl::nnconv_cudnn<vl::VLDT_Double> ;
 #endif
 
 

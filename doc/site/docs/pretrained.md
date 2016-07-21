@@ -115,14 +115,14 @@ PASCAL VOC category definitions.
 
 ## ImageNet ILSVRC classification
 
-These modesl are trained to perform classification in the ImageNet
+These modes are trained to perform classification in the ImageNet
 ILSVRC challenge data.
 
 -   **ResNet** models imported from the
-    [MSRC version](https://github.com/KaimingHe/deep-residual-networks).
+    [MSRA version](https://github.com/KaimingHe/deep-residual-networks).
 
     > 'Deep Residual Learning for Image Recognition', K. He, X. Zhang,
-    S. Ren and J. Sun, ICCV, 2015
+    S. Ren and J. Sun, CVPR, 2016
     ([paper](http://arxiv.org/pdf/1512.03385.pdf)).
 
     -  [imagenet-resnet-50-dag](models/imagenet-resnet-50-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-resnet-50-dag.svg)
@@ -176,6 +176,11 @@ ILSVRC challenge data.
     - [imagenet-matconvnet-vgg-s](models/imagenet-matconvnet-vgg-s.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-s.svg)
     - [imagenet-matconvnet-vgg-verydeep-16](models/imagenet-matconvnet-vgg-verydeep-16.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-matconvnet-vgg-verydeep-16.svg)
 
+    > **Remark.** The `imagenet-matconvnet-*.mat` are *deployed*
+    > models. This means, in particular, that batch normalization
+    > layers have been removed for speed at test time. This, however,
+    > may affect fine-tuning.
+
 -   **Caffe reference model** [obtained
     here](http://caffe.berkeleyvision.org/getting_pretrained_models.html)
     (version downloaded on September 2014).
@@ -204,47 +209,27 @@ ILSVRC challenge data.
 This is a summary of the performance of these models on the ILSVRC
 2012 validation data:
 
-* 2016 models:
-
-    |                         model|top-1 err.|top-5 err.|  images/s|
-    |------------------------------|----------|----------|----------|
-    |                 resnet-50-dag|      26.6|       8.6|     141.3|
-    |                resnet-101-dag|      25.0|       7.9|     100.8|
-    |                resnet-152-dag|      24.5|       7.6|      74.6|
-
-* 2015 models:
-
-    |                         model|top-1 err.|top-5 err.|  images/s|
-    |------------------------------|----------|----------|----------|
-    |    matconvnet-vgg-verydeep-16|      28.3|       9.5|     161.8|
-    |               vgg-verydeep-19|      28.7|       9.9|     135.6|
-    |               vgg-verydeep-16|      28.5|       9.9|     161.2|
-    |                 googlenet-dag|      32.2|      11.6|     291.3|
-
-    Please note that GoogLeNet is the Princeton's version.
-
-* 2014 models:
-
-    |                         model|top-1 err.|top-5 err.|  images/s|
-    |------------------------------|----------|----------|----------|
-    |              matconvnet-vgg-s|      37.0|      15.8|     470.5|
-    |              matconvnet-vgg-m|      36.9|      15.5|     663.5|
-    |              matconvnet-vgg-f|      41.4|      19.1|     768.1|
-    |                         vgg-s|      36.7|      15.3|     476.7|
-    |                         vgg-m|      37.3|      15.9|     599.1|
-    |                         vgg-f|      41.1|      18.8|     745.9|
-    |                     vgg-m-128|      40.8|      18.4|     600.7|
-    |                    vgg-m-1024|      37.8|      16.1|     604.5|
-    |                    vgg-m-2048|      37.1|      15.8|     610.1|
-
-* 2013 models
-
-    |                         model|top-1 err.|top-5 err.|  images/s|
-    |------------------------------|----------|----------|----------|
-    |               matconvnet-alex|      41.8|      19.2|     702.6|
-    |                     caffe-ref|      42.4|      19.6|     392.2|
-    |                    caffe-alex|      42.6|      19.6|     387.4|
-
+|                         model|introduced|top-1 err.|top-5 err.|  images/s|
+|------------------------------|----------|----------|----------|----------|
+|                 resnet-50-dag|      2015|      24.6|       7.7|     396.3|
+|                resnet-101-dag|      2015|      23.4|       7.0|     247.3|
+|                resnet-152-dag|      2015|      23.0|       6.7|     172.5|
+|    matconvnet-vgg-verydeep-16|      2014|      28.3|       9.5|     200.9|
+|               vgg-verydeep-19|      2014|      28.7|       9.9|     166.2|
+|               vgg-verydeep-16|      2014|      28.5|       9.9|     200.2|
+|                 googlenet-dag|      2014|      34.2|      12.9|     770.6|
+|              matconvnet-vgg-s|      2013|      37.0|      15.8|     586.2|
+|              matconvnet-vgg-m|      2013|      36.9|      15.5|    1212.5|
+|              matconvnet-vgg-f|      2013|      41.4|      19.1|    2482.7|
+|                         vgg-s|      2013|      36.7|      15.3|     560.1|
+|                         vgg-m|      2013|      37.3|      15.9|    1025.1|
+|                         vgg-f|      2013|      41.1|      18.8|    1118.9|
+|                     vgg-m-128|      2013|      40.8|      18.4|    1031.3|
+|                    vgg-m-1024|      2013|      37.8|      16.1|     958.5|
+|                    vgg-m-2048|      2013|      37.1|      15.8|     984.2|
+|               matconvnet-alex|      2012|      41.8|      19.2|    2133.3|
+|                     caffe-ref|      2012|      42.6|      19.7|    1071.7|
+|                    caffe-alex|      2012|      42.6|      19.6|    1379.8|
 
 Important notes:
 
@@ -278,31 +263,34 @@ The following table summarizes the MD5 checksums for the model files.
 
 | MD5                              | File name                               |
 |----------------------------------|-----------------------------------------|
-| 77ba5337725eb77362e9f318898af494 | imagenet-caffe-alex.mat                 |
-| 7001959cb66a3d62a86d52efff42f168 | imagenet-caffe-ref.mat                  |
-| 051332469fbba9a002722f8a4302f031 | imagenet-googlenet-dag.mat              |
-| d79a53b79b62aee8a6c48755c29448fa | imagenet-matconvnet-alex.mat            |
-| 5c00773832303a2a9656afec097fb1c1 | imagenet-matconvnet-vgg-f.mat           |
-| 2ccbc5c4d77a56fbfc288ca810d12206 | imagenet-matconvnet-vgg-m.mat           |
-| 79c64eedb1fa49668997342b02dea863 | imagenet-matconvnet-vgg-s.mat           |
-| 7502ff082bf53ce9cc67110399bbdf53 | imagenet-matconvnet-vgg-verydeep-16.mat |
-| 4775484a70e8bac3e9521aed59f31dfc | imagenet-vgg-f.mat                      |
-| 0545aea6fc5173b2806784f2a8bd3333 | imagenet-vgg-m-1024.mat                 |
-| 80ec27ef99e2faefb9c837216c9ea0e4 | imagenet-vgg-m-128.mat                  |
-| 620aca6468345e4a791a0396c6a51ce1 | imagenet-vgg-m-2048.mat                 |
-| b4e8616c0ab66b1fda72854226f82d02 | imagenet-vgg-m.mat                      |
-| 2f83043a38e71e9dd9b1c5c0cb3ef6f9 | imagenet-vgg-s.mat                      |
-| 5a68244cf55c66fea59e23ee63cf56ef | imagenet-vgg-verydeep-16.mat            |
-| b9b4a9eb1c2fb3b50e1ec1aca6f22342 | imagenet-vgg-verydeep-19.mat            |
-| fb58bc62a17e21dfed8c2b8648dda33b | pascal-fcn16s-dag.mat                   |
-| 98158e126af7e9100fd4f2a10e312c15 | pascal-fcn32s-dag.mat                   |
-| 64d7b41efddefc93bfeded599e2448cc | pascal-fcn8s-dag.mat                    |
-| 32d4f9ad465fa9d952c64069f8dae705 | pascal-fcn8s-tvg-dag.mat                |
-| 5069daad93d2937554325e30388463ca | vgg-face.mat                            |
+| ed49ef44caf18496291ce0c3257b0596 | imagenet-caffe-alex.mat                 |
+| 6d69dfa6e549012c94546658737c5885 | imagenet-caffe-ref.mat                  |
+| 04cd60e8ea6a0d47742206749f624ec8 | imagenet-googlenet-dag.mat              |
+| 55743accfaf47f5c34fa50fa047143fd | imagenet-matconvnet-alex.mat            |
+| b359b6ad071155eafa35c84a78f397c7 | imagenet-matconvnet-vgg-f.mat           |
+| 1bcad2e93b0cc6da3b7d1bf610582279 | imagenet-matconvnet-vgg-m.mat           |
+| 314c982669e202e0d419803c54d1fb8f | imagenet-matconvnet-vgg-s.mat           |
+| 14ece491f7311f6dc33bc3186729de5b | imagenet-matconvnet-vgg-verydeep-16.mat |
+| be19a35a2b4f4c46ed61df684d08b900 | imagenet-resnet-101-dag.mat             |
+| 4461d3640d55aa2f58d990f7c92ff28c | imagenet-resnet-152-dag.mat             |
+| 73a3e51b75230d431c88bb795e14e91d | imagenet-resnet-50-dag.mat              |
+| f666c61dc968c413ef664a7e17b01144 | imagenet-vgg-f.mat                      |
+| d15f53a30bba3abde4377eced695adab | imagenet-vgg-m-1024.mat                 |
+| 779b86f55d0534d9fd322256372007a5 | imagenet-vgg-m-128.mat                  |
+| 9d20b7ab01ca47617e808008da6b18cc | imagenet-vgg-m-2048.mat                 |
+| 1c164950e882b4ea11623e669a86b1c4 | imagenet-vgg-m.mat                      |
+| 93b683d5420c2eeaf07a6eef492f182b | imagenet-vgg-s.mat                      |
+| 7f0f9f01dfd99c7b7088d1c5a26eb483 | imagenet-vgg-verydeep-16.mat            |
+| 49e623de543b207d57fab0f6eaf79a7e | imagenet-vgg-verydeep-19.mat            |
+| 48ccac8fb5c4961815705f1f84581ec3 | pascal-fcn16s-dag.mat                   |
+| bf3ca0a59d1525f63e7c28d526ee0656 | pascal-fcn32s-dag.mat                   |
+| 54b7ce1265a6cdd114d39d05515c73c4 | pascal-fcn8s-dag.mat                    |
+| 2a42dd1d2987983dacffc436cca5dabf | pascal-fcn8s-tvg-dag.mat                |
+| 27e94d9979dad2385f901f0c360cf3bc | vgg-face.mat                            |
 
 ## Older file versions
 
 Older models for MatConvNet beta16 are available
-[here](models/beta16). They should be numerically equivalent, but in
+[here](models/). They should be numerically equivalent, but in
 beta17 the format has changed slightly for SimpleNN models. Older
 models can also be updated using the `vl_simplenn_tidy` function.

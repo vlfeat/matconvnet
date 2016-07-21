@@ -21,7 +21,7 @@ using namespace vl ;
 /* Implementations                                                  */
 /* ---------------------------------------------------------------- */
 
-template<vl::Device deviceType, vl::Type dataType> vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType> vl::ErrorCode
 nnsubsample_forward_impl(Context& context,
                          Tensor output,
                          Tensor data,
@@ -33,7 +33,7 @@ nnsubsample_forward_impl(Context& context,
   assert(output) ;
   assert(data) ;
 
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
 
   ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
@@ -54,7 +54,7 @@ nnsubsample_forward_impl(Context& context,
      data.getHeight(), data.getWidth(), data.getDepth(),
      strideY, strideX,
      padTop, padBottom, padLeft, padRight) ;
-    if (error != vl::vlSuccess) { goto done ; }
+    if (error != vl::VLE_Success) { goto done ; }
     if (biases) {
       type alpha = 1 ;
       type beta = 1 ;
@@ -67,14 +67,14 @@ nnsubsample_forward_impl(Context& context,
        (type*)biases.getMemory(), 1,
        beta,
        (type*)output.getMemory() + outputOffset, numOutputPixels) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
   }
 done:
   return context.passError(error, __func__) ;
 }
 
-template<vl::Device deviceType, vl::Type dataType> vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType> vl::ErrorCode
 nnsubsample_backward_impl(Context& context,
                           Tensor derData,
                           Tensor derBiases,
@@ -85,7 +85,7 @@ nnsubsample_backward_impl(Context& context,
 {
   assert(derOutput) ;
 
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
 
   ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
@@ -112,7 +112,7 @@ nnsubsample_backward_impl(Context& context,
        allOnesMemory, 1,
        beta,
        (type*)derBiases.getMemory(), 1) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
 
     /* compute derData = dz/dx */
@@ -125,7 +125,7 @@ nnsubsample_backward_impl(Context& context,
        derData.getHeight(), derData.getWidth(), derData.getDepth(),
        strideY, strideX,
        padTop, padBottom, padLeft, padRight) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
   }
 done:
@@ -145,12 +145,12 @@ error = nnsubsample_forward_impl<deviceType, dataType> \
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnsubsample_forward(Context& context,
                         Tensor output,
                         Tensor data,
@@ -159,24 +159,24 @@ vl::nnsubsample_forward(Context& context,
                         int padTop, int padBottom,
                         int padLeft, int padRight)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Device deviceType = output.getDeviceType() ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DeviceType deviceType = output.getDeviceType() ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (deviceType) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break ;
@@ -193,7 +193,7 @@ strideY, strideX, \
 padTop, padBottom, \
 padLeft, padRight) ;
 
-vl::Error
+vl::ErrorCode
 vl::nnsubsample_backward(vl::Context& context,
                          vl::Tensor derData,
                          vl::Tensor derBiases,
@@ -202,24 +202,24 @@ vl::nnsubsample_backward(vl::Context& context,
                          int padTop, int padBottom,
                          int padLeft, int padRight)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Device deviceType = derOutput.getDeviceType() ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DeviceType deviceType = derOutput.getDeviceType() ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (deviceType) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
-    case vl::GPU:
-      DISPATCH2(vl::GPU) ;
-      if (error == vlErrorCuda) {
+    case vl::VLDT_GPU:
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
       }
       break ;

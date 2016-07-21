@@ -38,8 +38,8 @@ public:
   ~Impl() ;
   GdiplusStartupInput gdiplusStartupInput;
   ULONG_PTR           gdiplusToken;
-  vl::Error readPixels(float * memory, char const * filename) ;
-  vl::Error readShape(vl::ImageShape & shape, char const * filename) ;
+  vl::ErrorCode readPixels(float * memory, char const * filename) ;
+  vl::ErrorCode readShape(vl::ImageShape & shape, char const * filename) ;
   char lastErrorMessage[ERR_MAX_LEN];
 } ;
 
@@ -62,10 +62,10 @@ static void getImagePropertiesHelper(vl::ImageShape & shape, Gdiplus::Bitmap & b
   shape.depth = grayscale ? 1 : 3 ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
   vl::ImageShape shape ;
   Status status ;
   Rect rect ;
@@ -79,7 +79,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
   BitmapData data ;
   Bitmap bitmap(filenamew);
   if (bitmap.GetLastStatus() != Ok) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     goto done ;
   }
 
@@ -118,7 +118,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
                            targetPixelFormat,
                            &data) ;
   if (status != Ok) {
-    error = vl::vlErrorUnknown;
+    error = vl::VLE_Unknown;
     goto done ;
   }
 
@@ -145,10 +145,10 @@ done:
   return error ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
   Status status ;
 
   wchar_t filenamew [1024*4] ;
@@ -158,7 +158,7 @@ vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
 
   Bitmap bitmap(filenamew);
   if (bitmap.GetLastStatus() != Ok) {
-    error = vl::vlErrorUnknown ;
+    error = vl::VLE_Unknown ;
     goto done ;
   }
 
@@ -183,13 +183,13 @@ vl::ImageReader::~ImageReader()
   delete impl ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::readPixels(float * memory, char const * filename)
 {
   return impl->readPixels(memory, filename) ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::ImageReader::readShape(vl::ImageShape & shape, char const * filename)
 {
   return impl->readShape(shape, filename) ;

@@ -20,6 +20,7 @@ the terms of the BSD license (see the COPYING file).
 #if ENABLE_CUDNN
 #include "impl/nnpooling_cudnn.hpp"
 #endif
+
 #include <assert.h>
 
 using namespace vl ;
@@ -39,16 +40,16 @@ padLeft, padRight) ;
 
 #define DISPATCH2(deviceType, op) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, op, float) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, op, double) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, op, float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, op, double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
 #define DISPATCH3(deviceType) \
 switch (method) { \
 case vlPoolingAverage : DISPATCH2(deviceType, pooling_average) ; break ; \
 case vlPoolingMax : DISPATCH2(deviceType, pooling_max) ; break ; \
-default: assert(false) ; return vlErrorUnknown ; \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
 #define DISPATCHCUDNN(dataType) \
@@ -62,12 +63,12 @@ padLeft, padRight) ;
 
 #define DISPATCHCUDNN2() \
 switch (dataType) { \
-case vlTypeFloat : DISPATCHCUDNN(vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCHCUDNN(vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnpooling_forward(vl::Context& context,
                       vl::Tensor output,
                       vl::Tensor data,
@@ -77,31 +78,31 @@ vl::nnpooling_forward(vl::Context& context,
                       int padTop, int padBottom,
                       int padLeft, int padRight)
 {
-  vl::Error status = vlSuccess ;
-  vl::Device deviceType = output.getDeviceType() ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode status = VLE_Success ;
+  vl::DeviceType deviceType = output.getDeviceType() ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (deviceType) {
     default:
       assert(false) ;
-      return vl::vlErrorUnknown ;
+      return vl::VLE_Unknown ;
 
-    case vl::CPU:
-      DISPATCH3(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH3(vl::VLDT_CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
-        if (status == vl::vlSuccess) { return status ; }
-        if (status != vl::vlErrorUnsupported) { return status ; }
+        if (status == vl::VLE_Success) { return status ; }
+        if (status != vl::VLE_Unsupported) { return status ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH3(GPU) ;
-      if (status == vlErrorCuda) {
+      DISPATCH3(vl::VLDT_GPU) ;
+      if (status == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
       }
       break ;
@@ -139,12 +140,12 @@ padLeft, padRight) ;
 
 #define DISPATCH2(deviceType, op) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH_ ## op (deviceType, float) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH_ ## op (deviceType, double) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH_ ## op (deviceType, float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH_ ## op (deviceType, double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnpooling_backward(Context& context,
                        Tensor derData,
                        Tensor data,
@@ -155,21 +156,21 @@ vl::nnpooling_backward(Context& context,
                        int padTop, int padBottom,
                        int padLeft, int padRight)
 {
-  vl::Error status = vlSuccess ;
-  vl::Device deviceType = derOutput.getDeviceType() ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode status = VLE_Success ;
+  vl::DeviceType deviceType = derOutput.getDeviceType() ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (deviceType) {
     default:
       assert(false) ;
-      return vl::vlErrorUnknown ;
+      return vl::VLE_Unknown ;
 
-    case vl::CPU:
-      DISPATCH3(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH3(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         /*
@@ -178,8 +179,8 @@ vl::nnpooling_backward(Context& context,
          */
       }
 #endif
-      DISPATCH3(vl::GPU) ;
-      if (status == vlErrorCuda) {
+      DISPATCH3(vl::VLDT_GPU) ;
+      if (status == VLE_Cuda) {
         context.setError(context.getCudaHelper().catchCudaError("pooling_*::backward")) ;
       }
       break ;

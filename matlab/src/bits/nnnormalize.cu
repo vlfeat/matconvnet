@@ -36,32 +36,32 @@ normDetph, kappa, alpha, beta) ;
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, float) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, double) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnlrn_forward(vl::Context& context,
                   vl::Tensor output,
                   vl::Tensor data,
                   size_t normDetph,
                   double kappa, double alpha, double beta)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (output.getDeviceType()) {
     default:
       assert(false) ;
-      return vl::vlErrorUnknown ;
+      return vl::VLE_Unknown ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #ifdef ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         /*
@@ -69,18 +69,18 @@ vl::nnlrn_forward(vl::Context& context,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (error == vl::vlSuccess) { return error ; }
+         if (error == vl::VLE_Success) { return error ; }
          if (error != vl::UNSUPPORTED) { return error ; }
          */
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH2(vl::GPU) ;
-      if (error != vl::vlSuccess) { context.getCudaHelper().catchCudaError(__func__) ; }
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error != vl::VLE_Success) { context.getCudaHelper().catchCudaError(__func__) ; }
       break ;
 #endif
   }
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     context.setError(error, __func__) ;
   }
   return error ;
@@ -98,7 +98,7 @@ error = vl::impl::lrn<deviceType,type>::backward \
 data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
 normDetph, kappa, alpha, beta) ;
 
-vl::Error
+vl::ErrorCode
 vl::nnlrn_backward(vl::Context& context,
                    vl::Tensor derData,
                    vl::Tensor data,
@@ -106,20 +106,20 @@ vl::nnlrn_backward(vl::Context& context,
                    size_t normDetph,
                    double kappa, double alpha, double beta)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
-      return vl::vlErrorUnknown ;
+      return vl::VLE_Unknown ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         /*
@@ -127,18 +127,18 @@ vl::nnlrn_backward(vl::Context& context,
          strideY, strideX,
          padTop, padBottom,
          padLeft, padRight) ;
-         if (error == vl::vlSuccess) { return error ; }
+         if (error == vl::VLE_Success) { return error ; }
          if (error != vl::UNSUPPORTED) { return error ; }
          */
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH2(vl::GPU) ;
-      if (error != vl::vlSuccess) { context.getCudaHelper().catchCudaError(__func__) ; }
+      DISPATCH2(vl::VLDT_GPU) ;
+      if (error != vl::VLE_Success) { context.getCudaHelper().catchCudaError(__func__) ; }
       break ;
 #endif
   }
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     context.setError(error, __func__) ;
   }
   return error ;

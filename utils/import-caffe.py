@@ -17,7 +17,7 @@ from numpy import array
 import scipy
 import scipy.io
 import scipy.misc
-import google.protobuf
+import google.protobuf.text_format
 from ast import literal_eval as make_tuple
 from layers import *
 
@@ -642,13 +642,17 @@ if args.simplify:
       if len(parentNames) != 1: continue
       parent = cmodel.layers[parentNames[0]]
       if type(parent) is not CaffeBatchNorm: continue
-      print "Simplifying scale layer \'{}\'".format(name)
       smult = cmodel.params[layer.params[0]]
       sbias = cmodel.params[layer.params[1]]
       mult = cmodel.params[parent.params[0]]
       bias = cmodel.params[parent.params[1]]
-      mult.value = mult.value * smult.value
-      bias.value = smult.value * bias.value + sbias.value
+      # simplification can only occur if scale layer is 1x1xC
+      if smult.shape[0] != 1 or smult.shape[1] != 1: continue
+      C = smult.shape[2]
+      mult.value = np.reshape(smult.value, (C,)) * mult.value
+      bias.value = np.reshape(smult.value, (C,)) * bias.value + \
+                   np.reshape(sbias.value, (C,))
+      print "Simplifying scale layer \'{}\'".format(name)
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 

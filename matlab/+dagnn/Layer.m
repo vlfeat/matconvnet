@@ -83,7 +83,9 @@ classdef Layer < handle
 
       % call the simplified interface
       outputs = obj.forward(inputs, {net.params(par).value}) ;
-      [net.vars(out).value] = deal(outputs{:}) ;
+      for oi = 1:numel(out)
+        net.vars(out(oi)).value = outputs{oi};
+      end
     end
 
     function backwardAdvanced(obj, layer)
@@ -117,6 +119,9 @@ classdef Layer < handle
       % compute derivatives of inputs and paramerters
       [derInputs, derParams] = obj.backward ...
         (inputs, {net.params(par).value}, derOutputs) ;
+      if ~iscell(derInputs) || numel(derInputs) ~= numel(in)
+        error('Invalid derivatives returned by layer "%s".', layer.name);
+      end
 
       % accumuate derivatives
       for i = 1:numel(in)
@@ -138,6 +143,12 @@ classdef Layer < handle
           net.params(p).der = net.params(p).der + derParams{i} ;
         end
         net.numPendingParamRefs(p) = net.numPendingParamRefs(p) + 1 ;
+        if net.numPendingParamRefs(p) == net.params(p).fanout
+          if ~isempty(net.parameterServer) && ~net.holdOn
+            net.parameterServer.pushWithIndex(p, net.params(p).der) ;
+            net.params(p).der = [] ;
+          end
+        end
       end
     end
 
@@ -181,8 +192,12 @@ classdef Layer < handle
     %  to the previous call.
       s = dagnn.Layer.argsToStruct(varargin{:}) ;
       for f = fieldnames(s)'
-        f = char(f) ;
-        obj.(f) = s.(f) ;
+        fc = char(f) ;
+        if ~isprop(obj, fc)
+          error('No property `%s` for a layer of type `%s`.', ...
+            fc, class(obj));
+        end;
+        obj.(fc) = s.(fc) ;
       end
     end
 

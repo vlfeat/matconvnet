@@ -1,4 +1,4 @@
-classdef DagNN < handle
+classdef DagNN < matlab.mixin.Copyable
 %DagNN Directed acyclic graph neural network
 %   DagNN is a CNN wrapper alternative to SimpleNN. It is object
 %   oriented and allows constructing networks with a directed acyclic
@@ -11,7 +11,7 @@ classdef DagNN < handle
 %   - `vars`: The network variables.
 %   - `params`: The network parameters.
 %   - `meta`: Additional information relative to the CNN (e.g. input
-%     image format specification).
+%      image format specification).
 %
 %   There are additional transient data members:
 %
@@ -36,8 +36,17 @@ classdef DagNN < handle
 %      This flag tells whether the DagNN resides in CPU or GPU
 %      memory. Use the `DagNN.move()` function to move the DagNN
 %      between devices.
+%
+%   The DagNN is copyable handle, i.e. allows to create a deep copy using
+%   `copy` operator `deep_copy = copy(dagnet);`. In all cases the deep copy
+%   is located in CPU memory (i.e. is transfered from GPU before copy).
+%   Remark: As a side effect the original network is being reset (all
+%   variables are cleared) and only the network structure and parameters
+%   are copied.
+%
+%   See Also: matlab.mixin.Copyable
 
-% Copyright (C) 2015 Karel Lenc and Andrea Vedaldi.
+% Copyright (C) 2015-2016 Karel Lenc and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -52,8 +61,10 @@ classdef DagNN < handle
 
   properties (Transient)
     mode = 'normal'
+    holdOn = false
     accumulateParamDers = false
     conserveMemory = true
+    parameterServer = []
   end
 
   properties (Transient, SetAccess = private, GetAccess = public)
@@ -124,7 +135,7 @@ classdef DagNN < handle
     s = saveobj(obj)
 
     % Manipualte the DagNN
-    addLayer(obj, name, block, inputs, outputs, params)
+    addLayer(obj, name, block, inputs, outputs, params, varargin)
     removeLayer(obj, name)
     setLayerInputs(obj, leyer, inputs)
     setLayerOutput(obj, layer, outputs)
@@ -134,7 +145,7 @@ classdef DagNN < handle
 
     % Process data with the DagNN
     initParams(obj)
-    eval(obj, inputs, derOutputs)
+    eval(obj, inputs, derOutputs, varargin)
 
     % Get information about the DagNN
     varSizes = getVarSizes(obj, inputSizes)
@@ -263,10 +274,10 @@ classdef DagNN < handle
           error('Invalid layer indexes.');
         end
       else
-        assert(ischar(layerName), 'Layer name must be string or number.');
+        if ischar(layerName), layerName = {layerName}; end;
         idxs = obj.getLayerIndex(layerName);
         if any(isnan(idxs))
-          error('Invalid layer name `[%s]`', ...
+          error('Invalid layer name `%s`', ...
             strjoin(layerName(isnan(idxs)), ', '));
         end
       end
@@ -287,10 +298,10 @@ classdef DagNN < handle
           error('Invalid var indexes.');
         end
       else
-        assert(ischar(varName), 'Variable name must be string or number.');
+        if ischar(varName), varName = {varName}; end;
         idxs = obj.getVarIndex(varName);
         if any(isnan(idxs))
-          error('Invalid variable name `[%s]`', ...
+          error('Invalid variable name `%s`', ...
             strjoin(varName(isnan(idxs)), ', '));
         end
       end
@@ -311,10 +322,10 @@ classdef DagNN < handle
           error('Invalid param indexes.');
         end
       else
-        assert(ischar(paramName), 'Param name must be string or number.');
+        if ischar(paramName), paramName = {paramName}; end;
         idxs = obj.getParamIndex(paramName);
         if any(isnan(idxs))
-          error('Invalid param name `[%s]`', ...
+          error('Invalid param name `%s`', ...
             strjoin(paramName(isnan(idxs)), ', '));
         end
       end
@@ -328,6 +339,43 @@ classdef DagNN < handle
     %   executed. This needs not to be the trivial order 1,2,...,L
     %   as it depends on the graph topology.
       order = obj.executionOrder ;
+    end
+
+    function setParameterServer(obj, ps)
+    %SETPARAMETERSERVER  Set a parameter server for the parameter derivatives
+    %    SETPARAMETERSERVER(obj, PS) uses the specified
+    %    ParameterServer PS to store and accumulate parameter
+    %    derivatives across multiple MATLAB processes.
+    %
+    %    After setting this option, net.params.der is always empty
+    %    and the derivative value must be retrieved from the
+    %    server.
+
+      obj.parameterServer = ps ;
+      for p = 1:numel(obj.params)
+        if strcmp(class(obj.params(p).value),'gpuArray')
+          deviceType = 'gpu' ;
+          dataType = classUnderlying(obj.params(p).value) ;
+        else
+          deviceType = 'cpu' ;
+          dataType = class(obj.params(p).value) ;
+        end
+        obj.parameterServer.register(...
+          obj.params(p).name, ...
+          size(obj.params(p).value), ...
+          dataType, ...
+          deviceType) ;
+      end
+      obj.parameterServer.start() ;
+    end
+
+    function clearParameterServer(obj)
+    %CLEARPARAMETERSERVER  Remove the parameter server
+    %    CLEARPARAMETERSERVER(obj) stopts using the parameter server.
+      if ~isempty(obj.parameterServer)
+        obj.parameterServer.stop() ;
+      end
+      obj.parameterServer = [] ;
     end
   end
 
@@ -372,6 +420,13 @@ classdef DagNN < handle
         'learningRate', {1}, ...
         'weightDecay', {1}) ;
       obj.paramNames.(name) = p ;
+    end
+  end
+
+  methods (Access = protected)
+    function cp = copyElement(obj)
+      % Create a deep copy of the network
+      cp = dagnn.DagNN.loadobj(obj.saveobj());
     end
   end
 end

@@ -67,5 +67,15 @@ classdef nnloss < nntest
       test.der(@(x) vl_nnloss(x,c,[],opts{:}), x, dzdy, dzdx, 0.001, -5e-1) ;
     end
 
+    function instanceWeights(test, loss)
+      % Make sure that the instance weights are being applied
+      [x,c,dzdy,instanceWeights] = test.getx(loss) ;
+      % make a number of categories null
+      c = c .* (test.randn(size(c)) > 0) ;
+      instanceWeights(:) = 0;
+      opts = {'loss', loss, 'instanceWeights', instanceWeights} ;
+      y = gather(vl_nnloss(x,c,[],opts{:})) ;
+      test.verifyEqual(y, cast(0, 'like', y), 'AbsTol', 1e-3) ;
+    end
   end
 end

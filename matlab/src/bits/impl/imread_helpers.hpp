@@ -405,7 +405,7 @@ namespace vl { namespace impl {
       free(starts) ;
     }
 
-    ImageResizeFilter(size_t outputWidth, size_t inputWidth, FilterType filterType = kBilinear)
+    ImageResizeFilter(size_t outputWidth, size_t inputWidth, size_t cropWidth, size_t cropOffset, FilterType filterType = kBilinear)
     {
       filterSize = 0 ;
       switch (filterType) {
@@ -424,8 +424,8 @@ namespace vl { namespace impl {
        Find reverse mapping u = alpha v + beta where v is in the target
        domain and u in the source domain.
        */
-      float alpha = (float)inputWidth / outputWidth ;
-      float beta = 0.5f * (alpha - 1) ;
+      float alpha = (float)cropWidth / outputWidth ;
+      float beta = 0.5f * (alpha - 1) + cropOffset ;
       float filterSupport = (float)filterSize ;
 
       /* 
@@ -484,9 +484,14 @@ namespace vl { namespace impl {
     }
   } ;
 
-  inline void imageResizeVertical(float * output, float const * input, size_t outputHeight, size_t height, size_t width, size_t depth)
+  inline void imageResizeVertical(float * output, float const * input,
+                                  size_t outputHeight,
+                                  size_t height, size_t width, size_t depth,
+                                  size_t cropHeight,
+                                  size_t cropOffset,
+                                  bool flip = false)
   {
-    ImageResizeFilter filters(outputHeight, height) ;
+    ImageResizeFilter filters(outputHeight, height, cropHeight, cropOffset) ;
     int filterSize = filters.filterSize ;
     for (int d = 0 ; d < (int)depth ; ++d) {
       for (int x = 0 ; x < (int)width ; ++x) {
@@ -500,7 +505,11 @@ namespace vl { namespace impl {
               z += input[k] * w ;
             }
           }
-          output[x + y * width] = z ; // transpose
+          if (!flip) {
+            output[x + y * width] = z ; // transpose
+          } else {
+            output[x + ((int)outputHeight - 1 - y) * width] = z ; // flip and transpose
+          }
         }
         input += height ;
       }
@@ -514,9 +523,15 @@ namespace vl { namespace impl {
     vl::ImageShape const & outputShape = output.getShape() ;
     assert(outputShape.depth == inputShape.depth) ;
     float * temp = (float*)malloc(sizeof(float) * outputShape.height * inputShape.width * inputShape.depth) ;
-    imageResizeVertical(temp, input.getMemory(), outputShape.height, inputShape.height, inputShape.width, inputShape.depth) ;
-    imageResizeVertical(output.getMemory(), temp, outputShape.width, inputShape.width, outputShape.height, inputShape.depth) ;
+    imageResizeVertical(temp, input.getMemory(),
+                        outputShape.height,
+                        inputShape.height, inputShape.width, inputShape.depth,
+                        inputShape.height, 0) ;
+    imageResizeVertical(output.getMemory(), temp,
+                        outputShape.width,
+                        inputShape.width, outputShape.height, inputShape.depth,
+                        inputShape.width, 0) ;
     free(temp) ;
   }
-
+  
 } }

@@ -1,4 +1,4 @@
-function eval(obj, inputs, derOutputs)
+function eval(obj, inputs, derOutputs, varargin)
 %EVAL Evaluate the DAGNN
 %   EVAL(obj, inputs) evaluates the DaG for the specified input
 %   values. `inputs` is a cell array of the type `{'inputName',
@@ -64,6 +64,9 @@ function eval(obj, inputs, derOutputs)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+opts.holdOn = false ;
+opts = vl_argparse(opts,varargin) ;
+
 obj.computingDerivative = nargin > 2 && ~isempty(derOutputs) ;
 
 if ~iscell(inputs), error('INPUTS is not a cell array.') ; end
@@ -95,8 +98,15 @@ end
 
 if ~obj.computingDerivative, return ; end
 
+net.holdOn = opts.holdOn ;
+
 % set output derivatives
-v = obj.getVarIndex(derOutputs(1:2:end)) ;
+derOutputsNames = derOutputs(1:2:end);
+v = obj.getVarIndex(derOutputsNames) ;
+if isnan(v)
+  error('Invalid `derOutputs`, variables {%s} do not exist in the network.', ...
+    strjoin(derOutputsNames(isnan(v)), ', '));
+end
 [obj.vars(v).der] = deal(derOutputs{2:2:end}) ;
 derOutputs = [] ;
 

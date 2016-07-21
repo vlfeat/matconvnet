@@ -15,7 +15,7 @@ function y = vl_nnconcat(inputs, dim, dzdy, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.inputSizes = [] ;
-opts = vl_argparse(opts, varargin) ;
+opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
 if nargin < 2, dim = 3; end;
 if nargin < 3, dzdy = []; end;

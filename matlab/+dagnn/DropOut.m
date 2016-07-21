@@ -15,7 +15,7 @@ classdef DropOut < dagnn.ElementWise
         return ;
       end
       if obj.frozen & ~isempty(obj.mask)
-        outputs{1} = vl_nndropout(inputs{1}, 'maks', obj.mask) ;
+        outputs{1} = vl_nndropout(inputs{1}, 'mask', obj.mask) ;
       else
         [outputs{1}, obj.mask] = vl_nndropout(inputs{1}, 'rate', obj.rate) ;
       end

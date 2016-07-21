@@ -49,7 +49,7 @@ do
     else
         $converter \
             --caffe-variant=caffe_b590f1d \
-            --preproc=caffe \
+            --preproc=vgg-caffe \
 	    --remove-dropout \
             --remove-loss \
             --average-image="$base/ResNet_mean.binaryproto" \

@@ -20,7 +20,7 @@ the terms of the BSD license (see the COPYING file).
 namespace vl {
 
   // This version computes mean and sigma
-  vl::Error
+  vl::ErrorCode
   nnbnorm_forward(vl::Context& context,
                   vl::Tensor output,
                   vl::Tensor moments, // [output: can pass null]
@@ -30,7 +30,7 @@ namespace vl {
                   double epsilon) ;
 
   // This version uses the mean and sigma specified
-  vl::Error
+  vl::ErrorCode
   nnbnorm_forward_given_moments(vl::Context& context,
                                 vl::Tensor output,
                                 vl::Tensor moments, // input
@@ -38,7 +38,7 @@ namespace vl {
                                 vl::Tensor filters,
                                 vl::Tensor biases) ;
 
-  vl::Error
+  vl::ErrorCode
   nnbnorm_backward(vl::Context& context,
                    vl::Tensor derData,
                    vl::Tensor derFilters,
@@ -50,7 +50,7 @@ namespace vl {
                    vl::Tensor derOutput,
                    double epsilon) ;
 
-  vl::Error
+  vl::ErrorCode
   nnbnorm_backward_given_moments(vl::Context& context,
                                  vl::Tensor derData,
                                  vl::Tensor derFilters,

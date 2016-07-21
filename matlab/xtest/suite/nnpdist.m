@@ -36,8 +36,12 @@ classdef nnpdist < nntest
       x(s) = x(s) + 5*test.range ;
 
       dzdy = test.rand(size(y)) ;
-      dzdx = vl_nnpdist(x,x0,p,dzdy,opts{:}) ;
+      [dzdx, dzdx0] = vl_nnpdist(x,x0,p,dzdy,opts{:}) ;
       test.der(@(x) vl_nnpdist(x,x0,p,opts{:}), x, dzdy, dzdx, test.range * 1e-3) ;
+      if oneToOne
+        % Pdist does not implement backprop of the bsxfun
+        test.der(@(x0) vl_nnpdist(x,x0,p,opts{:}), x0, dzdy, dzdx0, test.range * 1e-3) ;
+      end
     end
   end
 end
