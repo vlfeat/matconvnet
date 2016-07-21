@@ -2029,35 +2029,39 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
   // so we are ready to pass our data to the children and to release
   // the parent from waiting on us.
 #if ENABLE_GPU
-  if (T.descriptor.deviceType == vl::VLDT_GPU
-      && peers.size() > (pool.lab > 0) // There are children
-      ) {
-
-    cudaError_t cerror
-    = cudaMemcpyAsync(T.cpuMemory,
-                      T.gpuMemory,
-                      T.descriptor.getSizeInBytes(),
-                      cudaMemcpyDeviceToHost,
-                      pool.sharedSpace->gpuHelperStream) ;
-    if (cerror != cudaSuccess) {
-      LOGERROR
-      << "CUDA generated an error while copying from device to host: '"
-      << cudaGetErrorString(cerror) << '\'' ;
-      error = vl::VLE_Cuda ;
+  if (T.descriptor.deviceType == vl::VLDT_GPU) {
+    cudaError_t cerror ;
+    if (peers.size() > (pool.lab > 0)) {
+      // There are children (i.e. peers other than parent), so copy data to host
+      // to deliver it to them.
+      cerror = cudaMemcpyAsync(T.cpuMemory,
+                               T.gpuMemory,
+                               T.descriptor.getSizeInBytes(),
+                               cudaMemcpyDeviceToHost,
+                               pool.sharedSpace->gpuHelperStream) ;
+      if (cerror != cudaSuccess) {
+        LOGERROR
+          << "CUDA generated an error while copying from device to host: '"
+          << cudaGetErrorString(cerror) << '\'' ;
+        error = vl::VLE_Cuda ;
+      }
     }
 
-    // This is synchrnous, so we can correctly notify
-    // that the memory is ready to the peer.
+    // Synchronize, so it is safe for children on other processes to read
+    // the memory. Synchronize even if there are no children, so that inplace
+    // reads from this process are safe.
     cerror = cudaStreamSynchronize(pool.sharedSpace->gpuHelperStream) ;
     if (cerror != cudaSuccess) {
       LOGERROR
-      << "CUDA gnereated an error while synchronizing a stream: '"
-      << cudaGetErrorString(cerror) << '\'' ;
+        << "CUDA gnereated an error while synchronizing a stream: '"
+        << cudaGetErrorString(cerror) << '\'' ;
       return vl::VLE_Cuda ;
     }
   }
 #endif
 
+  // Notify the parent that we are done copying its data and the children than we are waiting
+  // on them to copy our data.
   T.state = SharedTensorSpace::waitChildren ;
   for (int p = 0 ; p < peers.size() ; ++p) {
     int peerLab = peers[p].lab ;
@@ -2347,7 +2351,6 @@ ProcessPool processPool ;
 
 void atExit()
 {
-  mexPrintf("vl_tlflow:atExit()\n") ;
   processPool.finalize() ;
   context.clear() ;
 }
