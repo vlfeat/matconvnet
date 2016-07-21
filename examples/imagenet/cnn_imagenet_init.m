@@ -26,7 +26,7 @@ switch opts.model
     net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_f(net, opts) ;
     bs = 256 ;
-  case 'vgg-m'
+  case {'vgg-m', 'vgg-m-1024'}
     net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_m(net, opts) ;
     bs = 196 ;
@@ -280,10 +280,16 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
 net = add_block(net, opts, '6', 6, 6, 512, 4096, 1, 0) ;
 net = add_dropout(net, opts, '6') ;
 
-net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
+switch opts.model
+  case 'vgg-m'
+    bottleneck = 4096 ;
+  case 'vgg-m-1024'
+    bottleneck = 1024 ;
+end
+net = add_block(net, opts, '7', 1, 1, 4096, bottleneck, 1, 0) ;
 net = add_dropout(net, opts, '7') ;
 
-net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
+net = add_block(net, opts, '8', 1, 1, bottleneck, 1000, 1, 0) ;
 net.layers(end) = [] ;
 if opts.batchNormalization, net.layers(end) = [] ; end
 
