@@ -250,8 +250,10 @@ end
 
 if opts.cudnn
   cudnn = {'CuDNN'} ;
+  bnormCudnn = {'NoCuDNN'} ; % ours seems slighty faster
 else
   cudnn = {'NoCuDNN'} ;
+  bnormCudnn = {'NoCuDNN'} ;
 end
 
 switch lower(opts.mode)
@@ -349,9 +351,14 @@ for i=1:n
 
     case 'bnorm'
       if testMode
-        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, 'moments', l.weights{3}) ;
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                                'moments', l.weights{3}, ...
+                                'epsilon', l.epsilon, ...
+                                bnormCudnn{:}) ;
       else
-        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}) ;
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                                'epsilon', l.epsilon, ...
+                                bnormCudnn{:}) ;
       end
 
     case 'pdist'
@@ -464,7 +471,9 @@ if doder
 
       case 'bnorm'
         [res(i).dzdx, dzdw{1}, dzdw{2}, dzdw{3}] = ...
-          vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx) ;
+          vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
+                     'epsilon', l.epsilon, ...
+                     bnormCudnn{:}) ;
         % multiply the moments update by the number of images in the batch
         % this is required to make the update additive for subbatches
         % and will eventually be normalized away

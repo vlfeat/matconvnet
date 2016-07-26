@@ -1,8 +1,8 @@
 classdef BatchNorm < dagnn.ElementWise
   properties
     numChannels
-    epsilon = 1e-4
-    opts = {'CuDNN'} ;
+    epsilon = 1e-5
+    opts = {'NoCuDNN'} % ours seems slightly faster
   end
 
   properties (Transient)
