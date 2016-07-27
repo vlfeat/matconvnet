@@ -14,17 +14,26 @@ function y = vl_nnnormalizelp(x,dzdy,varargin)
 %      The exponent of the Lp norm. Warning: currently only even
 %      exponents are supported.
 %
-%   `epsilon`: 0.01
+%   `epsilon`:: 0.01
 %      The constant added to the sum of p-powers before taking the
 %      1/p square root (see the formula above).
+%
+%   `spatial`:: `false`
+%      If `true`, sum along the two spatial dimensions instead of
+%      along the feature channels.
 %
 %   See also: VL_NNNORMALIZE().
 
 opts.epsilon = 1e-2 ;
 opts.p = 2 ;
+opts.spatial = false ;
 opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
-massp = (sum(x.^opts.p,3) + opts.epsilon) ;
+if ~opts.spatial
+  massp = sum(x.^opts.p,3) + opts.epsilon ;
+else
+  massp = sum(sum(x.^opts.p,1),2) + opts.epsilon ;
+end
 mass = massp.^(1/opts.p) ;
 y = bsxfun(@rdivide, x, mass) ;
 
@@ -32,5 +41,10 @@ if nargin < 2 || isempty(dzdy)
   return ;
 else
   dzdy = bsxfun(@rdivide, dzdy, mass) ;
-  y = dzdy - bsxfun(@times, sum(dzdy .* x, 3), bsxfun(@rdivide, x.^(opts.p-1), massp)) ;
+  if ~opts.spatial
+    tmp = sum(dzdy .* x, 3) ;
+  else
+    tmp = sum(sum(dzdy .* x, 1),2);
+  end
+  y = dzdy - bsxfun(@times, tmp, bsxfun(@rdivide, x.^(opts.p-1), massp)) ;
 end
