@@ -427,9 +427,11 @@ __global__ void normalize_moments(T * moments,
 {
   int unsigned i = blockIdx.x*blockDim.x+threadIdx.x;
   if (i < numChannels){
+    // max(0, __) is for numerical issues
     T mean = moments[i] / mass ;
+    T sigma2 = max((T).0, moments[i + numChannels]/mass - mean*mean) ;
     moments[i] = mean ;
-    moments[i + numChannels] = sqrt(moments[i + numChannels]/mass - mean*mean + epsilon);
+    moments[i + numChannels] = sqrt(sigma2 + epsilon);
   }
 }
 
@@ -689,8 +691,9 @@ __global__ void normalize_ders_and_moments(T * derMultipliers,
 {
   unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < numChannels){
-    T mean = moments[idx]/mass;
-    T sigma = sqrt(moments[idx + numChannels]/mass - mean*mean + epsilon);
+    T mean = moments[idx] / mass;
+    T sigma2 = max((T).0, moments[idx + numChannels]/mass - mean*mean) ;
+    T sigma = sqrt(sigma2 + epsilon);
     moments[idx] = mean ;
     moments[idx + numChannels] = sigma ;
     derMultipliers[idx] = (derMultipliers[idx]-mean*derBiases[idx]) / sigma ;
