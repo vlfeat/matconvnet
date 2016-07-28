@@ -21,7 +21,9 @@ the terms of the BSD license (see the COPYING file).
 // maximum size of each grid dimension:
 #define MAX_GRID_DIM 65535 // this is probably a bad idea..
 
-// an implementation of atomicAdd() for double (really slow)
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+// an implementation of atomicAdd() for double (really slow) for older CC
 static __device__ double atomicAdd(double* address, double val)
 {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
@@ -34,6 +36,7 @@ static __device__ double atomicAdd(double* address, double val)
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+#endif
 
 /* 2D grid of 1D blocks. */
 __device__ int getGlobalIdx_2D_1D()
