@@ -38,7 +38,8 @@ recognition, and text detection are available.
 > [`vl_imreadjpeg`](mfiles/vl_imreadjpeg) that allows to load,
 > transform, and transfer data to the GPU in parallel, resulting in
 > significant speedups in training and testing (20% to 400%, depending
-> on the model).
+> on the model). [`vl_nnconv`](mfiles/vl_nnconv) now has a `dilate`
+> option for dilated convolution.
 >
 > **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
 > layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a

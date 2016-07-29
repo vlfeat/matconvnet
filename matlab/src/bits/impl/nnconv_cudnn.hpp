@@ -29,7 +29,8 @@ namespace vl { namespace impl {
             Tensor biases,
             int strideX, int strideY,
             int padLeft, int padRight,
-            int padTop, int padBottom) ;
+            int padTop, int padBottom,
+            int dilateX, int dilateY) ;
 
     static vl::ErrorCode
     backward(Context& context,
@@ -41,7 +42,8 @@ namespace vl { namespace impl {
              Tensor derOutput,
              int strideX, int strideY,
              int padLeft, int padRight,
-             int padTop, int padBottom) ;
+             int padTop, int padBottom,
+             int dilateX, int dilateY) ;
   } ;
 
 } }

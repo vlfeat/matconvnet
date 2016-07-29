@@ -46,7 +46,8 @@ namespace vl { namespace impl {
                                             Tensor biases,
                                             int strideY, int strideX,
                                             int padTop, int padBottom,
-                                            int padLeft, int padRight)
+                                            int padLeft, int padRight,
+                                            int dialteY, int dilateX)
   {
     assert(output) ;
     assert(data) ;
@@ -68,6 +69,7 @@ namespace vl { namespace impl {
     int numGroups = data.getDepth() / filters.getDepth() ;
     int numFiltersPerGroup = filters.getSize() / numGroups ;
 
+    if (dilateX != 1 || dilateY != 1) return vl::VLE_Unsupported ;
     if (padLeft != padRight) return vl::VLE_Unsupported ;
     if (padTop != padBottom) return vl::VLE_Unsupported ;
     if (filters.getHeight() > data.getHeight()) return vl::VLE_Unsupported ;

@@ -31,19 +31,26 @@
 %   options:
 %
 %   `Stride`:: 1
-%     The output stride or downsampling factor. If the value is a
+%     Set the output stride or downsampling factor. If the value is a
 %     scalar, then the same stride is applied to both vertical and
 %     horizontal directions; otherwise, passing [STRIDEY STRIDEX]
 %     allows specifying different downsampling factors for each
 %     direction.
 %
 %   `Pad`:: 0
-%     The amount of input padding. Input images are padded with zeros
+%     Set the amount of input padding. Input images are padded with zeros
 %     by this number of pixels before the convolution is
 %     computed. Passing [TOP BOTTOM LEFT RIGHT] allows specifying
 %     different padding amounts for the top, bottom, left, and right
 %     sides respectively. Passing a single scalar applies the same
 %     padding to all borders.
+%
+%  `Dilation`:: 1
+%    Set the kernel dilation factor. Passing [DILATEY DILATEX] allows
+%    specifying different dilation factors for Y and X. Filters are
+%    dilated by inserting DILATE-1 zeros between elements. For
+%    example, the 1D filter [1 1] becomes [1 0 0 1] by setting DILATE
+%    equal to 2.
 %
 %   The filter size must be not larger than the padded image, i.e.
 %

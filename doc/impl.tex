@@ -12,14 +12,14 @@ It is often convenient to express the convolution operation in matrix form. To t
 \[
    [\phi(\bx)]_{pq} \underset{(i,j,d)=t(p,q)}{=} x_{ijd}
 \]
-where the index mapping $(i,j,d) = t(p,q)$ is
+where the correspondence between indexes $(i,j,d)$ and $(p,q)$ is given by the map $(i,j,d) = t(p,q)$ where:
 \[
  i = i''+i'-1, \quad
  j = j''+j'-1, \quad
  p = i'' + H'' (j''-1), \quad
  q = i' + H'(j'-1) + H'W' (d-1).
 \]
-It is also useful to define the ``transposed'' operator \verb!row2im!:
+In practice, this map is slightly modified to account for the padding, stride, and dilation factors. It is also useful to define the ``transposed'' operator \verb!row2im!:
 \[
    [\phi^*(M)]_{ijd}
    =

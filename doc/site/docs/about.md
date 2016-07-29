@@ -36,7 +36,9 @@ here.
     * Adds support for `ParameterSever` in the examples.
     * Adds an option in the example training script to save the
       momentum between epochs.
-    * Batch normalization falls back to CuDNN when available.
+    * Batch normalization can use CuDNN implementation.
+    * `vl_nnconv.m` now supports the `dilate` option for dilated
+      convolution.
 
     **Changes affecting backward compatibility**
 
