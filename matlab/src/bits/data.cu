@@ -36,6 +36,33 @@ using namespace vl ;
  * Helpers
  * ---------------------------------------------------------------- */
 
+int vl::gcd(int a, int b, int& u, int& v)
+{
+  assert(a >= 0) ;
+  assert(b >= 0) ;
+  int u_ = 0 ;
+  int v_ = 1 ;
+  u = 1 ;
+  v = 0 ;
+  while (b > 0) {
+    int tmp ;
+    int q = a / b ;
+
+    tmp = b ;
+    b = a - q*b ;
+    a = tmp ;
+
+    tmp = u_ ;
+    u_ = u - q*u_ ;
+    u = tmp ;
+
+    tmp = v_ ;
+    v_ = v - q*v_ ;
+    v = tmp ;
+  }
+  return a ;
+}
+
 size_t vl::getTime()
 {
 #ifdef _MSC_VER

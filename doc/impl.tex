@@ -683,3 +683,56 @@ Next, we complete the procedure for $k=0$, when $R_0$ is not just a rectangle bu
 ((1/x_1) \ln u)^2.
 \]
 
+% ------------------------------------------------------------------
+\subsection{Euclid's algorithm}\label{s:impl-euclid}
+% ------------------------------------------------------------------
+
+Euclid's algorithm finds the \emph{greatest common divisor} (GCD) of two non-negative integers $a$ and $b$. Recall that the GCD is the largest integer that divides both $a$ and $b$:
+\[
+    \gcd(a,b) = \max\{ d \in \mathbb{N} : d|a \ \wedge\ d|b \}.
+\]
+
+\begin{lemma}[Euclid's algorithm]
+Let $a,b\in\mathbb{N}$ and let $q\in\mathbb{Z}$ such that $a - qb \geq 0$. Then
+$$
+\gcd(a,b) = \gcd(a-qb,b).
+$$
+\end{lemma}
+\begin{proof}
+Let $d$ be a divisor of both $a$ and $b$. Then $d$ divides $a - qb$ as well because:
+$$
+\frac{a - qb}{d} = 
+\underbrace{\frac{a}{d}}_{\in\mathcal{Z}} - q 
+\underbrace{\frac{b}{d}}_{\in\mathbb{Z}}
+\quad\Rightarrow\quad
+\frac{a - qb}{d} \in \mathbb{Z}.
+$$
+Hence  $\gcd(a,b) \leq \gcd(q-qb,b)$. In the same way, we can show that, if $d$ divides $a - qb$ as well as $b$, then it must divide $a$ too, hence $\gcd(a-qb, b) \leq\gcd(a,b)$.
+\end{proof}
+
+Euclid's algorithm starts with $a > b \geq 1$ and sets $q$ to the quotient of the integer division $a/b$. Due to the lemma above, the GCD of $a$ and $b$ is the same as the GCD of the remainder $r = a - qb = (a \mod b)$ and $b$:
+\[
+   \gcd(a,b) = \gcd(a, a\mod b).
+\]
+Since the remainder $(a\mod b) < b$ is strictly smaller than $b$, now GCD is called with smaller arguments. The recursion terminates when a zero reminder is generated, because
+\[
+   \gcd(a,0) = a.
+\]
+
+We can modify the algorithms to also find two integers  $u,v$, the B\'ezout's coefficients, such that:
+$$
+   a u + bv = \gcd(a,b).
+$$
+To do so, we replace $a = b (a/b) + r$ as above:
+$$
+  ru  +  b v'= \gcd(a,b) = \gcd(r,b), \qquad v' = \frac{a}{b} u + v.
+$$
+The recursion terminates when $r=0$, in which case
+$$
+  b v'= \gcd(0,b) = b \quad\Rightarrow\quad v'=b.
+$$
+
+
+
+
+

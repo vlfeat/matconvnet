@@ -98,6 +98,11 @@ namespace vl {
     return (a + b - 1) / b ;
   }
 
+  /// Compute the greatest common divisor g of non-negative integers
+  /// @a a and @a b as well as two integers @a u and @a v such that
+  /// $au + bv = g$ (Bezout's coefficients).
+  int gcd(int a, int b, int &u, int& v) ;
+
   /// Draw a Normally-distributed scalar
   double randn() ;
 
