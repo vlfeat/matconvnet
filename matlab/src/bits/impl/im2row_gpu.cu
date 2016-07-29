@@ -68,8 +68,8 @@ im2row_forward_kernel(T* stacked,
      */
     int windowExtentX = (windowWidth - 1) * dilateX + 1;
     int windowExtentY = (windowHeight - 1) * dilateY + 1;
-    for (int v = 0 ; v < windowExtentX ; v += dilateY) {
-      for (int u = 0 ; u < windowExtentY ; u += dilateX) {
+    for (int v = 0 ; v < windowExtentY ; v += dilateY) {
+      for (int u = 0 ; u < windowExtentX ; u += dilateX) {
         if (y_data + v >= 0 &&
             y_data + v < height &&
             x_data + u >= 0 &&
