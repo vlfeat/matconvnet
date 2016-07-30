@@ -270,9 +270,20 @@ vl::nnconvt_backward(Context& context,
 
   if (derData) {
     error = vl::nnconv_forward(context,
-                                derData, 0,
-                                derOutput, 1,
-                                filters, Tensor(),
+                               derData, 0,
+                               derOutput, 1,
+                               filters, Tensor(),
+                               upsampleY, upsampleX,
+                               cropTop, cropBottom,
+                               cropLeft, cropRight,
+                               1, 1) ;
+    if (error != VLE_Success) { goto done ; }
+  }
+
+  if (derFilters) {
+    error = vl::nnconv_backward(context,
+                                Tensor(), derFilters, Tensor(),
+                                derOutput, Tensor(), data,
                                 upsampleY, upsampleX,
                                 cropTop, cropBottom,
                                 cropLeft, cropRight,
@@ -280,22 +291,11 @@ vl::nnconvt_backward(Context& context,
     if (error != VLE_Success) { goto done ; }
   }
 
-  if (derFilters) {
-    error = vl::nnconv_backward(context,
-                                 Tensor(), derFilters, Tensor(),
-                                 derOutput, Tensor(), data,
-                                 upsampleY, upsampleX,
-                                 cropTop, cropBottom,
-                                 cropLeft, cropRight,
-                                 1, 1) ;
-    if (error != VLE_Success) { goto done ; }
-  }
-
   if (derBiases) {
     error = vl::nnbias_backward(context,
-                                 Tensor(), 0,
-                                 derBiases, 0,
-                                 derOutput, 1) ;
+                                Tensor(), 0,
+                                derBiases, 0,
+                                derOutput, 1) ;
   }
 
 done:

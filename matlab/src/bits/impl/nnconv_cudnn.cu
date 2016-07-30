@@ -47,7 +47,7 @@ namespace vl { namespace impl {
                                             int strideY, int strideX,
                                             int padTop, int padBottom,
                                             int padLeft, int padRight,
-                                            int dialteY, int dilateX)
+                                            int dilateY, int dilateX)
   {
     assert(output) ;
     assert(data) ;
@@ -254,7 +254,8 @@ namespace vl { namespace impl {
                                              Tensor derOutput,
                                              int strideY, int strideX,
                                              int padTop, int padBottom,
-                                             int padLeft, int padRight)
+                                             int padLeft, int padRight,
+                                             int dilateY, int dilateX)
   {
     typedef typename DataTypeTraits<dataType>::type type ;
 

@@ -60,7 +60,7 @@ classdef nnconv < nntest
       fw = 2 ;
       fh = 3 ;
       depth = 10 ;
-      opts = {'stride', [stridex,stridey], 'dilate', [dilatey dilatex]} ;
+      opts = {'stride', [stridey,stridex], 'dilate', [dilatey dilatex]} ;
       x = test.randn(9,16,depth,n) ;
       if fh == 0 | fw == 0
         w = test.toDataType([]) ;
