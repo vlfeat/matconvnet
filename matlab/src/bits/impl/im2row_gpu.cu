@@ -34,8 +34,8 @@ im2row_forward_kernel(T* stacked,
                       const int strideY,
                       const int padLeft,
                       const int padTop,
-                      const int dilateY,
-                      const int dilateX)
+                      const int dilateX,
+                      const int dilateY)
 {
   /* each kernel copies the pixels in an image patch for one channel */
   int index = threadIdx.x + blockIdx.x * blockDim.x ;
