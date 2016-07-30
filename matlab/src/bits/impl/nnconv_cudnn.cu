@@ -278,6 +278,7 @@ namespace vl { namespace impl {
     ptrdiff_t numFiltersPerGroup = 0 ;
     ptrdiff_t filtersVolume = 0 ;
 
+    if (dilateX != 1 || dilateY != 1) return vl::VLE_Unsupported ;
     if (padLeft != padRight) return vl::VLE_Unsupported ;
     if (padTop != padBottom) return vl::VLE_Unsupported ;
 
