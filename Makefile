@@ -38,7 +38,7 @@ CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta20
+VER = 1.0-beta21
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync
