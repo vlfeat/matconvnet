@@ -45,12 +45,22 @@
 %     sides respectively. Passing a single scalar applies the same
 %     padding to all borders.
 %
-%  `Dilation`:: 1
-%    Set the kernel dilation factor. Passing [DILATEY DILATEX] allows
-%    specifying different dilation factors for Y and X. Filters are
-%    dilated by inserting DILATE-1 zeros between elements. For
-%    example, the 1D filter [1 1] becomes [1 0 0 1] by setting DILATE
-%    equal to 2.
+%   `Dilate`:: 1
+%     Set the kernel dilation factor. Passing [DILATEY DILATEX] allows
+%     specifying different dilation factors for Y and X. Filters are
+%     dilated by inserting DILATE-1 zeros between filter elements. For
+%     example, the filter
+%
+%       [1 3]
+%       [2 4]
+%
+%     is implicitly treated as
+
+%       [1 0 3]
+%       [0 0 0]
+%       [2 0 4]
+%
+%     by setting DILATE equal to 2.
 %
 %   The filter size must be not larger than the padded image, i.e.
 %
@@ -62,6 +72,11 @@
 %
 %     YH = floor((H + (PADTOP+PADBOTTOM) - FH)/STRIDEY) + 1,
 %     YW = floor((W + (PADLEFT+PADRIGHT) - FW)/STRIDEX) + 1.
+%
+%   Accounting for dilation, the formulas become:
+%
+%     YH = floor((H + (PADTOP+PADBOTTOM) - FH*(DILATEY-1) -1)/STRIDEY) + 1,
+%     YW = floor((W + (PADLEFT+PADRIGHT) - FW*(DILATEX-1) -1)/STRIDEX) + 1.
 %
 %   Arguments can be SINGLE or DOUBLE and CPU or GPU arrays; however,
 %   they must all be of the same type (unless empty).
