@@ -160,6 +160,7 @@ opts.debug            = false;
 opts.cudaMethod       = [] ;
 opts.cudaRoot         = [] ;
 opts.cudaArch         = [] ;
+opts.cudaCompilerBinDir = [] ;
 opts.defCudaArch      = [...
   '-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
   '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
@@ -528,9 +529,15 @@ mex(mopts{:}) ;
 function nvcc_compile(opts, src, tgt, nvcc_opts)
 % --------------------------------------------------------------------
 nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
-nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', ...
-                   nvcc_path, src, ...
-                   strjoin(nvcc_opts), tgt);
+if isempty(opts.cudaCompilerBinDir)
+    nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s"', ...
+        nvcc_path, src, ...
+        strjoin(nvcc_opts), tgt);
+else
+    nvcc_cmd = sprintf('"%s" -c "%s" %s -o "%s" --compiler-bindir "%s"', ...
+        nvcc_path, src, ...
+        strjoin(nvcc_opts), tgt, opts.cudaCompilerBinDir);
+end
 opts.verbose && fprintf('%s: NVCC CC: %s\n', mfilename, nvcc_cmd) ;
 status = system(nvcc_cmd);
 if status, error('Command %s failed.', nvcc_cmd); end;
