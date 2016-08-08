@@ -32,7 +32,7 @@ else
   s.subs = {':', ':', ':', ':'} ;
   for i = 1:numel(opts.inputSizes)
     stop = start + opts.inputSizes{i}(dim) ;
-    s.subs{dim} = start:stop-1 ; ;
+    s.subs{dim} = start:stop-1 ;
     y{i} = subsref(dzdy,s) ;
     start = stop ;
   end
