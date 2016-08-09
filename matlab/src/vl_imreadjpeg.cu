@@ -664,7 +664,7 @@ vl::ErrorCode Batch::prefetch()
         double z = (double)rand() / RAND_MAX ;
         double a = log(maxCropAnisotropy) ;
         double b = log(minCropAnisotropy) ;
-        anisotropyRatio = exp(z * (b-a) + b) ;
+        anisotropyRatio = exp(z * (b - a) + a) ;
       }
       cropWidth = outputWidth * sqrt(anisotropyRatio) ;
       cropHeight = outputHeight / sqrt(anisotropyRatio) ;
@@ -675,9 +675,15 @@ vl::ErrorCode Batch::prefetch()
       double scale = std::min(item->shape.width / cropWidth,
                               item->shape.height / cropHeight) ;
       double z = (double)rand() / RAND_MAX ;
+#if 1
       double a = maxCropSize * maxCropSize ;
       double b = minCropSize * minCropSize ;
-      double size = sqrt(z * (b - a) * b) ;
+      double size = sqrt(z * (b - a) + a) ;
+#else
+      double a = maxCropSize ;
+      double b = minCropSize ;
+      double size = z * (b - a) + a ;
+#endif
       cropWidth *= scale * size ;
       cropHeight *= scale * size ;
     }
