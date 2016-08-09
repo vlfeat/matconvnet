@@ -655,14 +655,16 @@ vl::ErrorCode Batch::prefetch()
     // Determine the aspect ratio of the crop in the input image.
     {
       double anisotropyRatio = 1.0 ;
-      if (minCropAnisotropy == 0 && maxCropAnisotropy == 0) {
+      if (minCropAnisotropy == 0 || maxCropAnisotropy == 0) {
         // Stretch crop to have the same shape as the input.
         double inputAspect = (double)item->shape.width / item->shape.height ;
         double outputAspect = (double)outputWidth / outputHeight ;
         anisotropyRatio = inputAspect / outputAspect ;
       } else {
         double z = (double)rand() / RAND_MAX ;
-        anisotropyRatio = z * (maxCropAnisotropy - minCropAnisotropy) + minCropAnisotropy ;
+        double a = log(maxCropAnisotropy) ;
+        double b = log(minCropAnisotropy) ;
+        anisotropyRatio = exp(z * (b-a) + b) ;
       }
       cropWidth = outputWidth * sqrt(anisotropyRatio) ;
       cropHeight = outputHeight / sqrt(anisotropyRatio) ;
@@ -673,7 +675,9 @@ vl::ErrorCode Batch::prefetch()
       double scale = std::min(item->shape.width / cropWidth,
                               item->shape.height / cropHeight) ;
       double z = (double)rand() / RAND_MAX ;
-      double size = z * (maxCropSize - minCropSize) + minCropSize ;
+      double a = maxCropSize * maxCropSize ;
+      double b = minCropSize * minCropSize ;
+      double size = sqrt(z * (b - a) * b) ;
       cropWidth *= scale * size ;
       cropHeight *= scale * size ;
     }
