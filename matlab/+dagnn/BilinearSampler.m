@@ -17,7 +17,7 @@ classdef BilinearSampler < dagnn.Layer
     function outputSizes = getOutputSizes(obj, inputSizes)
       xSize = inputSizes{1};
       gSize = inputSizes{2};
-      outputSizes = {[gSize(1), gSize(2), xSize(3), xSize(4)]};
+      outputSizes = {[gSize(2), gSize(3), xSize(3), xSize(4)]};
     end
 
     function obj = BilinearSampler(varargin)
