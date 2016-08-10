@@ -301,8 +301,8 @@ void mexFunction(int nout, mxArray *out[],
     if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getDepth() == 0) {
       vlmxError(VLMXE_IllegalArgument, "A dimension of FILTERS is void.") ;
     }
-    if (data.getHeight() + (padTop+padBottom) < filters.getHeight() * dilateY||
-        data.getWidth() + (padLeft+padRight) < filters.getWidth() * dilateX) {
+    if (data.getHeight() + (padTop+padBottom) < (filters.getHeight() - 1)*dilateY + 1 ||
+        data.getWidth() + (padLeft+padRight) < (filters.getWidth() - 1)*dilateX + 1) {
       vlmxError(VLMXE_IllegalArgument, "FILTERS are larger than the DATA (including padding).") ;
     }
     /* grouped filters */
