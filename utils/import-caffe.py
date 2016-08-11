@@ -660,13 +660,13 @@ if args.simplify:
             sbias = cmodel.params[layer.params[1]]
             mult = cmodel.params[parent.params[0]]
             bias = cmodel.params[parent.params[1]]
-      # simplification can only occur if scale layer is 1x1xC
-      if smult.shape[0] != 1 or smult.shape[1] != 1: continue
-      C = smult.shape[2]
-      mult.value = np.reshape(smult.value, (C,)) * mult.value
-      bias.value = np.reshape(smult.value, (C,)) * bias.value + \
-                   np.reshape(sbias.value, (C,))
-      print "Simplifying scale layer \'{}\'".format(name)
+            # simplification can only occur if scale layer is 1x1xC
+            if smult.shape[0] != 1 or smult.shape[1] != 1: continue
+            C = smult.shape[2]
+            mult.value = np.reshape(smult.value, (C,)) * mult.value
+            bias.value = np.reshape(smult.value, (C,)) * bias.value + \
+                         np.reshape(sbias.value, (C,))
+            print "Simplifying scale layer \'{}\'".format(name)
             cmodel.renameVar(layer.outputs[0], layer.inputs[0])
             cmodel.removeLayer(name)
 
