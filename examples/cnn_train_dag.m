@@ -140,6 +140,10 @@ for epoch=start+1:opts.numEpochs
             l=legend(leg{:}) ;
             set(l,'Interpreter','none');
             grid on ;
+            w = linspace(0.3,1,size(values,2));
+            valm = sum(bsxfun(@times,values,w),2) ./ sum(w);
+            vals = std(values,[],2);
+            ylim([min(valm) - max(vals), max(valm) + max(vals)])
         end
         drawnow ;
         print(1, modelPdfPath, '-dpdf');
