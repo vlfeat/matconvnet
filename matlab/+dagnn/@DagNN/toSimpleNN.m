@@ -10,7 +10,9 @@ function net = toSimpleNN(dag, inputVar)
 net = [];
 net.layers = {};
 net.meta = dag.meta;
-
+if nargin < 2
+    inputVar = 'input';
+end
 % Init state
 currentVars = inputVar;
 if ~iscell(currentVars), currentVars = { currentVars }; end;

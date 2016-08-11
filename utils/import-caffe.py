@@ -15,7 +15,9 @@ from ast import literal_eval as make_tuple
 import google.protobuf
 import numpy
 import scipy.io
-
+import scipy.misc
+import google.protobuf.text_format
+from ast import literal_eval as make_tuple
 from layers import *
 
 

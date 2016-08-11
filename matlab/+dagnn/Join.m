@@ -1,25 +1,44 @@
-classdef Sum < dagnn.ElementWise
+classdef Join < dagnn.ElementWise
     %SUM DagNN sum layer
     %   The SUM layer takes the sum of all its inputs and store the result
     %   as its only output.
     
     properties (Transient)
         numInputs
+        activeInputs
     end
     
     methods
         function outputs = forward(obj, inputs, params)
             obj.numInputs = numel(inputs) ;
-            outputs{1} = inputs{1} ;
-            for k = 2:obj.numInputs
-                outputs{1} = outputs{1} + inputs{k} ;
+            
+            if strcmp(obj.net.mode, 'test')
+                obj.activeInputs = 1 : obj.numInputs;
+            else
+                obj.activeInputs = [];
+                while isempty(obj.activeInputs)
+                    obj.activeInputs = find(rand(obj.numInputs,1) > .15);
+                end
             end
+            %obj.activeInputs = obj.numInputs;%
+            
+            outputs{1} = inputs{obj.activeInputs(1)} ;
+            for k = 2:numel(obj.activeInputs)
+                outputs{1} = outputs{1} + inputs{obj.activeInputs(k)} ;
+            end
+            outputs{1} = outputs{1} / numel(obj.activeInputs);
+            
         end
         
         function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
             for k = 1:obj.numInputs
-                derInputs{k} = derOutputs{1} ;
+                if any(obj.activeInputs == k)
+                    derInputs{k} = derOutputs{1} / numel(obj.activeInputs);
+                else
+                    derInputs{k} = derOutputs{1}*0 ;
+                end
             end
+            
             derParams = {} ;
         end
         
