@@ -975,7 +975,8 @@ void ReaderTask::entryPoint()
             } else {
               float const a = item->contrastShift ;
               while (channels[0] != end) {
-                *channels[0]++ = a * (*channels[0] + dv[0]) ;
+                float v = *channels[0] + dv[0] ;
+                *channels[0]++ = a * v ;
               }
             }
           }
