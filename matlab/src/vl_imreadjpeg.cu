@@ -380,9 +380,12 @@ Batch::Item * Batch::borrowNextItem()
   while (true) {
     if (quit) { return NULL ; }
     if (nextItem < items.size()) {
-      Item * item = items[nextItem++] ;
-      item->borrowed = true ;
-      return item ;
+      Item * item = items[nextItem] ;
+      if (item->state != Item::ready) {
+        item->borrowed = true ;
+        nextItem ++  ;
+        return item ;
+      }
     }
     waitNextItemToBorrow.wait(mutex) ;
   }
