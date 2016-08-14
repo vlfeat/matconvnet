@@ -491,7 +491,6 @@ vl::ErrorCode Batch::registerItem(std::string const & name)
   item->name = name ;
   item->state = Item::prefetch ;
   items.push_back(item) ;
-  waitNextItemToBorrow.notify_one() ;
   return vl::VLE_Success ;
 }
 
@@ -582,8 +581,9 @@ void Batch::setCropLocation(CropLocation location)
 
 vl::ErrorCode Batch::prefetch()
 {
-  // Wait for reader threads to initialize the shape of the images
+  // Prod and then wait for reader threads to initialize the shape of the images
   // and then perform the requried allocations.
+  waitNextItemToBorrow.notify_all() ;
   sync() ;
 
   // In packing mode, preallocate all memory here.
@@ -755,11 +755,13 @@ vl::ErrorCode Batch::prefetch()
     }
 
     // Ready to fetch
-    {
-      tthread::lock_guard<tthread::mutex> lock(mutex) ;
-      item->state = Item::fetch ;
-      waitNextItemToBorrow.notify_one() ;
-    }
+    item->state = Item::fetch ;
+  }
+
+  // Notify that we are ready to fetch
+  {
+    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    waitNextItemToBorrow.notify_all() ;
   }
 
   return vl::VLE_Success ;
