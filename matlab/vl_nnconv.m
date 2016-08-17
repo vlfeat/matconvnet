@@ -64,8 +64,8 @@
 %
 %   The filter size must be not larger than the padded image, i.e.
 %
-%     1 <= FH <= H + 2*(PADTOP+PADBOTTOM),
-%     1 <= FW <= W + 2*(PADLEFT+PADRIGHT).
+%     1 <= FH <= H + PADTOP + PADBOTTOM,
+%     1 <= FW <= W + PADLEFT + PADRIGHT.
 %
 %   The output a is an array of dimension YH x YW x K x N of N images
 %   with K feature challens and size:
