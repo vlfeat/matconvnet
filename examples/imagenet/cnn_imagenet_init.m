@@ -2,7 +2,7 @@ function net = cnn_imagenet_init(varargin)
 % CNN_IMAGENET_INIT  Initialize a standard CNN for ImageNet
 
 opts.scale = 1 ;
-opts.initBias = 0.1 ;
+opts.initBias = 0 ;
 opts.weightDecay = 1 ;
 %opts.weightInitMethod = 'xavierimproved' ;
 opts.weightInitMethod = 'gaussian' ;
@@ -63,9 +63,6 @@ net.meta.augmentation.jitterLocation = true ;
 net.meta.augmentation.jitterFlip = true ;
 net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
 net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
-%net.meta.augmentation.jitterContrast = 0.4 ;
-%net.meta.augmentation.jitterSaturation = 0.4 ;
-%net.meta.augmentation.jitterScale = [0.9, 1] ;
 
 if ~opts.batchNormalization
   lr = logspace(-2, -4, 60) ;
@@ -112,6 +109,7 @@ net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ..
                              ones(out, 1, 'single')*opts.initBias}}, ...
                            'stride', stride, ...
                            'pad', pad, ...
+                           'dilate', 1, ...
                            'learningRate', [1 2], ...
                            'weightDecay', [opts.weightDecay 0], ...
                            'opts', {convOpts}) ;
