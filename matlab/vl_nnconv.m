@@ -55,7 +55,7 @@
 %       [2 4]
 %
 %     is implicitly treated as
-
+%
 %       [1 0 3]
 %       [0 0 0]
 %       [2 0 4]
@@ -97,7 +97,7 @@
 %   check how much memory is being used.
 
 % Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
-% Copyright (C) 2015 Andrea Vedaldi.
+% Copyright (C) 2015, 2016 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
