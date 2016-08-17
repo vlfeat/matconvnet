@@ -37,9 +37,10 @@ function str = print(obj, inputSizes, varargin)
 %      In the latter case, all variables and layers are included in the
 %      graph, regardless of the other parameters.
 %
-%   `pdfPath`:: tempname
-%      sets the path where any generated pdf will be saved. By default, 
-%      a unique temporary filename is used.
+%   `PdfPath`:: temporary file
+%      Sets the path where any generated PDF will be saved. Currently, 
+%      this is useful only in combination with the format `dot`. 
+%      By default, a unique temporary filename is used.
 %
 %   `MaxNumColumns`:: 18
 %      Maximum number of columns in each table.
@@ -393,7 +394,17 @@ end
 function displayDot(str, pdfPath)
 % -------------------------------------------------------------------------
 %mwdot = fullfile(matlabroot, 'bin', computer('arch'), 'mwdot') ;
-dotexe = 'dot' ;
+dotPaths = {'dot', '/opt/local/bin/dot'} ;
+dotExe = '' ;
+for i = 1:numel(dotPaths)
+  if exist(dotPaths{i},'file')
+    dotExe = dotPaths{i} ;
+  end
+end
+if isempty(dotExe)
+  warning('Could not genereate a PDF figure because the `dot` utility could not be found.') ;
+  return ;
+end
 
 in = [tempname '.dot'] ;
 
@@ -407,7 +418,7 @@ end
 
 f = fopen(in,'w') ; fwrite(f, str) ; fclose(f) ;
 
-cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotexe, out, in) ;
+cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotExe, out, in) ;
 [status, result] = system(cmd) ;
 if status ~= 0
   error('Unable to run %s\n%s', cmd, result) ;
