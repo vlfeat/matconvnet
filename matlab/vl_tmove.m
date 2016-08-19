@@ -1,5 +1,5 @@
-%VL_TFLOW  Utility to move tensors across GPUs
-%   VL_TFLOW() is the point of entry to MatConvNet's subsystem for
+%VL_TMOVE  Utility to move tensors across GPUs
+%   VL_TMOVE() is the point of entry to MatConvNet's subsystem for
 %   moving efficiently tensors across GPUs and MATLAB
 %   processes. Currently it is only supported in Linux and macOS.
 %
@@ -17,14 +17,14 @@
 %   that MATLAB can proceed with other computations as tensors are
 %   exchanged.
 %
-%   Usually, VL_TFLOW() is used in combination with a MATLAB
+%   Usually, VL_TMOVE() is used in combination with a MATLAB
 %   parallel pool. In this case, each MATLAB process is known as a
 %   "lab" and receives an index `labindex`, from 1 to the number of
 %   labs. In a pool there are `numlabs` MATLAB instances in total, as
 %   specified upon pool creation. The typical setup is to assign a
 %   different MATLAB instance to each of a group of GPUs.
 %
-%   VL_TFLOW() uses indexes to identify different MATLAB processes
+%   VL_TMOVE() uses indexes to identify different MATLAB processes
 %   in the pool. While these are effectively independent of the MATLAB
 %   pool lab indexes, it is convenient to use the same codes for both
 %   systems.
@@ -50,22 +50,22 @@
 %
 %   Push and pull operations are required to use arrays that match the
 %   specifications exactly, including being a CPU or GPU array
-%   (i.e. VL_TFLOW() never attempts any implicit conversion).
+%   (i.e. VL_TMOVE() never attempts any implicit conversion).
 %
-%   VL_TFLOW(COMMAND,...) accepts the following commands:
+%   VL_TMOVE(COMMAND,...) accepts the following commands:
 %
-%   - `vl_tflow('init',format,labindex,numlabs)`. This call prepares
+%   - `vl_tmove('init',format,labindex,numlabs)`. This call prepares
 %     the system for exchanging data for the specified tensor list
 %     `format`, the given lab `labindex` and the total number of labs
 %     `numlabs`.
 %
-%   - `vl_tflow('push', name, value)` pushes the new `value` of the
+%   - `vl_tmove('push', name, value)` pushes the new `value` of the
 %     tensor `name`.
 %
-%   - `x = vl_tflow('pull', name)` does the opposite and retrieves the
+%   - `x = vl_tmove('pull', name)` does the opposite and retrieves the
 %     (updated) value of the tensor `name`.
 %
-%   - `vl_tflow('reset')` resets the system, including closing down
+%   - `vl_tmove('reset')` resets the system, including closing down
 %     any existing connection between MATLAB instances and freeing all
 %     memory.
 %

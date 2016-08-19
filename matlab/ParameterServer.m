@@ -9,7 +9,7 @@ classdef ParameterServer < handle
     pinnedMemory
     otherLabs
     inplace
-    tflowOpts
+    tmoveOpts
   end
 
   methods
@@ -23,11 +23,11 @@ classdef ParameterServer < handle
         case 'win64'
           obj.method = 'mmap' ;
         otherwise
-          obj.method = 'tflow' ;
+          obj.method = 'tmove' ;
       end
       obj.pinnedMemory = true ;
       obj.inplace = true ;
-      obj.tflowOpts = { } ;
+      obj.tmoveOpts = { } ;
       obj = vl_argparse(obj, varargin) ;
 
       % Compute the memory map file from the prefix.  This is used only by
@@ -61,15 +61,15 @@ classdef ParameterServer < handle
           end
           labBarrier() ;
           obj = startWithMMap(obj) ;
-        case 'tflow'
-          obj = startWithTFlow(obj) ;
+        case 'tmove'
+          obj = startWithTMove(obj) ;
       end
     end
 
     function stop(obj)
       switch obj.method
         case 'mmap', stopWithMMap(obj) ;
-        case 'tflow', stopWithTFlow(obj) ;
+        case 'tmove', stopWithTMove(obj) ;
       end
     end
 
@@ -88,12 +88,12 @@ classdef ParameterServer < handle
         case 'mmap'
           obj.params(p).value = value ;
 
-        case 'tflow'
+        case 'tmove'
           if obj.params(p).isGPU && obj.inplace
             obj.params(p).value = value ;
-            vl_tflow('push', obj.params(p).name, value, 'inplace', obj.tflowOpts{:}) ;
+            vl_tmove('push', obj.params(p).name, value, 'inplace', obj.tmoveOpts{:}) ;
           else
-            vl_tflow('push', obj.params(p).name, value, obj.tflowOpts{:}) ;
+            vl_tmove('push', obj.params(p).name, value, obj.tmoveOpts{:}) ;
           end
 
         otherwise
@@ -110,12 +110,12 @@ classdef ParameterServer < handle
           end
           value = obj.params(p).value ;
 
-        case 'tflow'
+        case 'tmove'
           if obj.params(p).isGPU && obj.inplace
-            vl_tflow('pull', obj.params(p).name, 'inplace', obj.tflowOpts{:}) ;
+            vl_tmove('pull', obj.params(p).name, 'inplace', obj.tmoveOpts{:}) ;
             value = obj.params(p).value ;
           else
-            value = vl_tflow('pull', obj.params(p).name, obj.tflowOpts{:}) ;
+            value = vl_tmove('pull', obj.params(p).name, obj.tmoveOpts{:}) ;
           end
       end
     end
@@ -134,7 +134,7 @@ classdef ParameterServer < handle
             end
           end
           labBarrier() ;
-        case 'tflow'
+        case 'tmove'
           % nothing to do
       end
     end
@@ -190,7 +190,7 @@ classdef ParameterServer < handle
       end
     end
 
-    function obj = startWithTFlow(obj)
+    function obj = startWithTMove(obj)
       format = {} ;
       for i=1:numel(obj.params)
         format(i,1:4) = {obj.params(i).dataType, ...
@@ -198,15 +198,15 @@ classdef ParameterServer < handle
                          obj.params(i).name, ...
                          obj.params(i).deviceType} ;
       end
-      vl_tflow('reset', obj.tflowOpts{:}) ;
-      vl_tflow('init', format, ...
+      vl_tmove('reset', obj.tmoveOpts{:}) ;
+      vl_tmove('init', format, ...
                labindex, numlabs, ...
                'prefix', obj.prefix, ...
-               obj.tflowOpts{:}) ;
+               obj.tmoveOpts{:}) ;
     end
 
-    function stopWithTFlow(obj)
-      vl_tflow('reset', obj.tflowOpts{:}) ;
+    function stopWithTMove(obj)
+      vl_tmove('reset', obj.tmoveOpts{:}) ;
     end
 
   end
