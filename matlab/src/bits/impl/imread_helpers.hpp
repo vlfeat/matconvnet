@@ -409,11 +409,11 @@ namespace vl { namespace impl {
     {
       filterSize = 0 ;
       switch (filterType) {
-        case kBox      : filterSize = 2 ; break ;
-        case kBilinear : filterSize = 4 ; break ;
-        case kBicubic  : filterSize = 6 ; break ;
-        case kLanczos2 : filterSize = 6 ; break ;
-        case kLanczos3 : filterSize = 8 ; break ;
+        case kBox      : filterSize = 1 ; break ;
+        case kBilinear : filterSize = 2 ; break ;
+        case kBicubic  : filterSize = 4 ; break ;
+        case kLanczos2 : filterSize = 4 ; break ;
+        case kLanczos3 : filterSize = 6 ; break ;
       }
 
       /* 
@@ -432,7 +432,7 @@ namespace vl { namespace impl {
        */
       if (alpha > 1) {
         filterSupport *= alpha ;
-        filterSize = (int)floorf(filterSupport) ;
+        filterSize = (int)ceilf(filterSupport) ;
       }
 
       weights = (float*)malloc(sizeof(float) * filterSize * outputWidth) ;
