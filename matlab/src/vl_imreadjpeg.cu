@@ -49,7 +49,8 @@ enum {
   opt_flip,
   opt_contrast,
   opt_saturation,
-  opt_brightness
+  opt_brightness,
+  opt_interpolation,
 } ;
 
 /* options */
@@ -68,6 +69,7 @@ VLMXOption  options [] = {
   {"Brightness",       1,   opt_brightness         },
   {"Contrast",         1,   opt_contrast           },
   {"Saturation",       1,   opt_saturation         },
+  {"Interpolation",    1,   opt_interpolation      },
   {0,                  0,   0                      }
 } ;
 
@@ -157,6 +159,7 @@ public:
     size_t cropOffsetX ;
     size_t cropOffsetY ;
     bool flip ;
+    vl::impl::ImageResizeFilter::FilterType filterType ;
 
     float brightnessShift [3] ;
     float contrastShift ;
@@ -206,6 +209,7 @@ public:
   void setCropAnisotropy(double minAnisotropy, double maxAnisotropy) ;
   void setCropSize(double minSize, double maxSize) ;
   void setCropLocation(CropLocation location) ;
+  void setFilterType(vl::impl::ImageResizeFilter::FilterType type) ;
   PackingMethod getPackingMethod() const  ;
 
   Item * borrowNextItem() ;
@@ -241,6 +245,8 @@ private:
   double maxCropSize ;
   CropLocation cropLocation ;
   bool flipMode ;
+
+  vl::impl::ImageResizeFilter::FilterType filterType ;
 
   vl::MexTensor cpuPack ;
   vl::MexTensor gpuPack ;
@@ -336,6 +342,8 @@ vl::ErrorCode Batch::init()
   minCropAnisotropy = 1. ;
   maxCropAnisotropy = 1. ;
   flipMode = false ;
+
+  filterType = vl::impl::ImageResizeFilter::kBilinear ;
 
   packingMethod = individualArrays ;
   resizeMethod = noResize ;
@@ -546,6 +554,11 @@ void Batch::setColorDeviation(double brightness [], double contrast, double satu
   saturationDeviation = saturation ;
 }
 
+void Batch::setFilterType(vl::impl::ImageResizeFilter::FilterType type)
+{
+  filterType = type ;
+}
+
 void Batch::setFlipMode(bool x)
 {
   flipMode = x ;
@@ -722,6 +735,7 @@ vl::ErrorCode Batch::prefetch()
     item->cropOffsetX = dx ;
     item->cropOffsetY = dy ;
     item->flip = flipMode && (rand() > RAND_MAX/2) ;
+    item->filterType = filterType ;
 
     // Color processing.
     item->saturationShift = 1. + saturationDeviation * (2.*(double)rand()/RAND_MAX - 1) ;
@@ -895,7 +909,9 @@ void ReaderTask::entryPoint()
                                       item->shape.width,
                                       item->shape.depth,
                                       item->cropHeight,
-                                      item->cropOffsetY) ;
+                                      item->cropOffsetY,
+                                      false, // flip
+                                      item->filterType) ;
 
         vl::impl::imageResizeVertical(outputPixels, temp,
                                       item->outputWidth,
@@ -904,7 +920,8 @@ void ReaderTask::entryPoint()
                                       item->shape.depth,
                                       item->cropWidth,
                                       item->cropOffsetX,
-                                      item->flip) ;
+                                      item->flip,
+                                      item->filterType) ;
 
         // Postprocess colors.
         {
@@ -1100,6 +1117,8 @@ void mexFunction(int nout, mxArray *out[],
   double minCropSize = 1.0, maxCropSize = 1.0 ;
   double minCropAnisotropy = 1.0, maxCropAnisotropy = 1.0 ;
 
+  vl::impl::ImageResizeFilter::FilterType filterType = vl::impl::ImageResizeFilter::kBilinear ;
+
   verbosity = 0 ;
 
   /* -------------------------------------------------------------- */
@@ -1283,6 +1302,27 @@ void mexFunction(int nout, mxArray *out[],
         flipMode = true ;
         break ;
       }
+
+      case opt_interpolation: {
+        if (!vlmxIsString(optarg,-1)) {
+          vlmxError(VLMXE_IllegalArgument, "INTERPOLATION is not a string.") ;
+        }
+        if (vlmxIsEqualToStringI(optarg, "box")) {
+          filterType = vl::impl::ImageResizeFilter::kBox ;
+        } else if (vlmxIsEqualToStringI(optarg, "bilinear")) {
+          filterType = vl::impl::ImageResizeFilter::kBilinear ;
+        } else if (vlmxIsEqualToStringI(optarg, "bicubic")) {
+          filterType = vl::impl::ImageResizeFilter::kBicubic ;
+        } else if (vlmxIsEqualToStringI(optarg, "lanczos2")) {
+          filterType = vl::impl::ImageResizeFilter::kLanczos2 ;
+        } else if (vlmxIsEqualToStringI(optarg, "lanczos3")) {
+          filterType = vl::impl::ImageResizeFilter::kLanczos3 ;
+        } else {
+          vlmxError(VLMXE_IllegalArgument, "INTERPOLATION is not a supported method.") ;
+        }
+        break;
+        break ;
+      }
     }
   }
 
@@ -1379,6 +1419,8 @@ void mexFunction(int nout, mxArray *out[],
     if (averageImage) {
       batch.setAverageImage((float const*)averageImage.getMemory()) ;
     }
+
+    batch.setFilterType(filterType) ;
 
     for (int i = 0 ; i < filenames.size() ; ++ i) {
       batch.registerItem(filenames[i]) ;
