@@ -100,6 +100,7 @@ for l = 1:numel(net.layers)
           block.size = sz ;
           block.pad = net.layers{l}.pad ;
           block.stride = net.layers{l}.stride ;
+          block.dilate = net.layers{l}.dilate ;
         case 'convt'
           block = ConvTranspose() ;
           block.size = sz ;
