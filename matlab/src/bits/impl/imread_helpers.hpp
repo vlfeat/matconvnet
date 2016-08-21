@@ -13,6 +13,7 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <iostream>
 
 #ifdef __SSSE3__
 #include <tmmintrin.h>
@@ -449,6 +450,8 @@ namespace vl { namespace impl {
          so that there are always filerWidth elements to sum on */
         float u = alpha * v + beta ;
         float mass = 0 ;
+        int skip = filterSize ;
+
         starts[v] = (int)std::ceil(u - filterSupport / 2) ;
 
         for (int r = 0 ; r < filterSize ; ++r) {
@@ -509,12 +512,22 @@ namespace vl { namespace impl {
             // difficult to obtain with our data structure.
             filter[r] = h ;
             mass += h ;
+            if (h) {
+              skip = std::min(skip, r) ;
+            }
           } else {
             filter[r] = 0.0f ;
           }
         }
-        for (int r = 0 ; r < filterSize ; ++r) {
-          filter[r] /= mass ;
+        {
+          int r = 0 ;
+          starts[v] += skip ;
+          for (r = 0 ; r < filterSize - skip ; ++r) {
+            filter[r] = filter[r + skip] / mass ;
+          }
+          for ( ;  r < filterSize ; ++r) {
+            filter[r] = 0.f ;
+          }
         }
       }
     }
@@ -538,6 +551,7 @@ namespace vl { namespace impl {
           float const * weights = filters.weights + filterSize * y ;
           for (int k = begin ; k < begin + filterSize ; ++k) {
             float w = *weights++ ;
+            if (w == 0.f) break ;
             if ((0 <= k) & (k < (signed)height)) {
               z += input[k] * w ;
             }
