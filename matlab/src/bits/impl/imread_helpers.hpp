@@ -436,7 +436,7 @@ namespace vl { namespace impl {
         filterSize = (int)ceilf(filterSupport) ;
       }
 
-      weights = (float*)malloc(sizeof(float) * filterSize * outputWidth) ;
+      weights = (float*)calloc(filterSize * outputWidth, sizeof(float)) ;
       starts = (int*)malloc(sizeof(int) * outputWidth) ;
       float * filter = weights ;
 
@@ -488,7 +488,7 @@ namespace vl { namespace impl {
                      sin(VL_M_PI * delta / 2.f) + eps) /
                 ((VL_M_PI*VL_M_PI * delta*delta / 2.f) + eps);
               } else {
-                h = 0 ;
+                h = 0.f ;
               }
               break ;
             }
@@ -499,24 +499,29 @@ namespace vl { namespace impl {
                      sin(VL_M_PI * delta / 3.f) + eps) /
                 ((VL_M_PI*VL_M_PI * delta*delta / 3.f) + eps);
               } else {
-                h = 0 ;
+                h = 0.f ;
               }
               break ;
             default:
               assert(false) ;
               break ;
           }
-          if (k >= 0 && k < (signed)inputWidth) {
+          {
             // MATLAB uses a slightly different method for resizing
             // the borders: it mirrors-pad them. This is a bit more
-            // difficult to obtain with our data structure.
-            filter[r] = h ;
+            // difficult to obtain with our data structure. Instead,
+            // we repeat the first/last pixel.
+            int q = r ;
+            if (k < 0) {
+              q = r - k ;
+            } else if (k >= (signed)inputWidth) {
+              q = r - (k - (signed)inputWidth + 1) ;
+            }
+            filter[q] += h ;
             mass += h ;
             if (h) {
-              skip = std::min(skip, r) ;
+              skip = std::min(skip, q) ;
             }
-          } else {
-            filter[r] = 0.0f ;
           }
         }
         {
@@ -552,9 +557,9 @@ namespace vl { namespace impl {
           for (int k = begin ; k < begin + filterSize ; ++k) {
             float w = *weights++ ;
             if (w == 0.f) break ;
-            if ((0 <= k) & (k < (signed)height)) {
+            //if ((0 <= k) & (k < (signed)height)) {
               z += input[k] * w ;
-            }
+            //}
           }
           if (!flip) {
             output[x + y * width] = z ; // transpose
