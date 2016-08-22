@@ -44,6 +44,8 @@ while ~isempty(currentVars)
     currentVars = [layer.outputs];
     
     if numel(layer) > 0
+        numOutChnsPerLayer = 0;
+        layerNames = {layer.name};
         if numel(layer) > 1
             if mod(numel(layer),splitSize)
                 error('Split not allowed');
@@ -74,7 +76,10 @@ while ~isempty(currentVars)
                     % Create new block
                     block = dagnn.Conv();
                     block.load(blocks{1}.save);
-                    block.size(4) = sum(cellfun(@(b) double(b.size(4)),blocks));
+                    numOutChnsPerLayer = cellfun(@(b) double(b.size(4)),blocks);
+                    block.size(4) = sum(numOutChnsPerLayer);
+                    
+                    
                     
                     % Verify params
                     assert(all(arrayfun(@(l) dag.params(l.paramIndexes(1)).learningRate==dag.params(layer(1).paramIndexes(1)).learningRate,layer)));
@@ -150,6 +155,9 @@ end
 if ~all(layerVisited)
     error('Couldn''t convert to simpleNN');
 end
+
+net.meta.outputs.names = layerNames;
+net.meta.outputs.numChns = numOutChnsPerLayer;
 
 net = vl_simplenn_tidy(net);
 end
