@@ -25,6 +25,9 @@ opts.randomSeed = 0 ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
 
+opts.hardNegMining = [];
+
+
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts.plotStatistics = true;
@@ -112,6 +115,7 @@ for epoch=start+1:opts.numEpochs
     end
     
     if opts.plotStatistics
+        %%
         switchFigure(1) ; clf ;
         maximize(1);
         plots = setdiff(...
@@ -144,6 +148,18 @@ for epoch=start+1:opts.numEpochs
         drawnow ;
         print(1, modelPdfPath, '-dpdf');
         saveas(1, modelFigPath);
+    end
+    
+    if ~isempty(opts.hardNegMining) && opts.hardNegMining.rate > 0 && mod(epoch,opts.hardNegMining.rate) == 0
+        pause(0.5);
+        imdb = opts.hardNegMining.hFunc(net,imdb,opts.hardNegMining);
+        if isfield(opts.hardNegMining,'saveImdbPath') && ~isempty(opts.hardNegMining.saveImdbPath)
+            disp('Saving IMDB...');
+            save(opts.hardNegMining.saveImdbPath, '-struct', 'imdb','-v7.3') ;
+        else
+            pause(0.5);
+        end
+
     end
 end
 
@@ -409,6 +425,7 @@ function epoch = findLastCheckpoint(modelDir)
 % -------------------------------------------------------------------------
 list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
 tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
+tokens( cellfun(@isempty,tokens) ) = [];
 epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
 epoch = max([epoch 0]) ;
 
