@@ -25,6 +25,7 @@ opts.saveMomentum = true ;
 opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
+opts.hardNegMining = [];
 opts.parameterServer.method = 'mmap' ;
 opts.parameterServer.prefix = 'mcn' ;
 
@@ -135,6 +136,18 @@ for epoch=start+1:opts.numEpochs
       valm = sum(bsxfun(@times,values,w),2) ./ sum(w);
       vals = std(values,[],2);
       ylim([min(valm) - max(vals), max(valm) + max(vals)])
+    
+      if ~isempty(opts.hardNegMining) && opts.hardNegMining.rate > 0 && mod(epoch,opts.hardNegMining.rate) == 0
+        pause(0.5);
+        imdb = opts.hardNegMining.hFunc(net,imdb,opts.hardNegMining);
+        if isfield(opts.hardNegMining,'saveImdbPath') && ~isempty(opts.hardNegMining.saveImdbPath)
+            disp('Saving IMDB...');
+            save(opts.hardNegMining.saveImdbPath, '-struct', 'imdb','-v7.3') ;
+        else
+            pause(0.5);
+        end
+
+      end
     end
     drawnow ;
     print(1, modelFigPath, '-dpdf') ;
@@ -399,6 +412,7 @@ function epoch = findLastCheckpoint(modelDir)
 % -------------------------------------------------------------------------
 list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
 tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
+tokens( cellfun(@isempty,tokens) ) = [];
 epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
 epoch = max([epoch 0]) ;
 
