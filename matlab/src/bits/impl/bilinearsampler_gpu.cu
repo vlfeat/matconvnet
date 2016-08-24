@@ -250,11 +250,11 @@ forward_backward
   assert(divides(inCardinality, outCardinality)) ;
 
   // forward conditions
-  assert(backward || data) ;
-  assert(backward || output) ;
+  //assert(backward || data) ;
+  //assert(backward || output) ;
 
   // backward conditions
-  assert(!backward || derOutput) ;
+  //assert(!backward || derOutput) ;
   assert(!backwardData || derData) ;
   assert(!backwardGrid || derGrid) ;
   assert(!backwardGrid || data) ;
