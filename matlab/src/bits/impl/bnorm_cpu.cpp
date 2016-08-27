@@ -47,9 +47,10 @@ compute_moments(T * moments,
     }
   }
   for(int i = 0; i < depth; ++i) {
-    moments[i] /= mass;
-    moments[i + depth] = sqrt(moments[i + depth]/mass
-                              - moments[i]*moments[i] + epsilon);
+    T mean = moments[i] / mass ;
+    T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
+    moments[i] = mean ;
+    moments[i + depth] = sqrt(sigma2 + epsilon);
   }
 }
 
@@ -108,8 +109,9 @@ compute_ders_and_moments(T * derMultipliers,
 
   T mass = WH*num;
   for(int i = 0; i < depth; ++i) {
-    T mean = moments[i] /= mass ;
-    T sigma = sqrt(moments[i + depth]/mass - mean*mean + epsilon);
+    T mean = moments[i] / mass ;
+    T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
+    T sigma = sqrt(sigma2 + epsilon);
     moments[i] = mean ;
     moments[i + depth] = sigma ;
     derMultipliers[i] = (derMultipliers[i] - mean*derBiases[i]) / sigma;

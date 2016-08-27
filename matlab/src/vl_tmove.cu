@@ -1,5 +1,5 @@
-/** @file vl_tflow.cu
- ** @brief MEX internals of vl_tflow.m.
+/** @file vl_tmove.cu
+ ** @brief MEX internals of vl_tmove.m.
  ** @author Andrea Vedaldi
  **/
 
@@ -42,9 +42,9 @@ the terms of the BSD license (see the COPYING file).
 #include <sstream>
 
 /**
- \file vl_tflow.cu
+ \file vl_tmove.cu
  
- The `vl_tflow` utility implements an efficient mechanism to exchange
+ The `vl_tmove` utility implements an efficient mechanism to exchange
  tensor data between different MATLAB processes. Presently, it is
  limited to processes running on the same host, but future extensions
  can integrate networked environments. Even limited to a single
@@ -74,10 +74,10 @@ the terms of the BSD license (see the COPYING file).
  * Data passing on local machines uses a shared memory map between
    processes. The shared memory contains a copy of each tensor for each
    process. GPU tensors may either be allocated internally
-   by `vl_tflow` (in which case MATLAB may forget them)
+   by `vl_tmove` (in which case MATLAB may forget them)
    or may remember pointers to MATLAB's memory (inplace). 
    The latter is slightly unsafe, but much faster as it saves several copies.
-   In any case, `vl_tflow` allocates a GPU buffer as large as
+   In any case, `vl_tmove` allocates a GPU buffer as large as
    the largest tensor as scratch space (and for direct GPU communication).
 
  * The supervisory and main threads collaborate through lock-less
@@ -2029,35 +2029,39 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
   // so we are ready to pass our data to the children and to release
   // the parent from waiting on us.
 #if ENABLE_GPU
-  if (T.descriptor.deviceType == vl::VLDT_GPU
-      && peers.size() > (pool.lab > 0) // There are children
-      ) {
-
-    cudaError_t cerror
-    = cudaMemcpyAsync(T.cpuMemory,
-                      T.gpuMemory,
-                      T.descriptor.getSizeInBytes(),
-                      cudaMemcpyDeviceToHost,
-                      pool.sharedSpace->gpuHelperStream) ;
-    if (cerror != cudaSuccess) {
-      LOGERROR
-      << "CUDA generated an error while copying from device to host: '"
-      << cudaGetErrorString(cerror) << '\'' ;
-      error = vl::VLE_Cuda ;
+  if (T.descriptor.deviceType == vl::VLDT_GPU) {
+    cudaError_t cerror ;
+    if (peers.size() > (pool.lab > 0)) {
+      // There are children (i.e. peers other than parent), so copy data to host
+      // to deliver it to them.
+      cerror = cudaMemcpyAsync(T.cpuMemory,
+                               T.gpuMemory,
+                               T.descriptor.getSizeInBytes(),
+                               cudaMemcpyDeviceToHost,
+                               pool.sharedSpace->gpuHelperStream) ;
+      if (cerror != cudaSuccess) {
+        LOGERROR
+          << "CUDA generated an error while copying from device to host: '"
+          << cudaGetErrorString(cerror) << '\'' ;
+        error = vl::VLE_Cuda ;
+      }
     }
 
-    // This is synchrnous, so we can correctly notify
-    // that the memory is ready to the peer.
+    // Synchronize, so it is safe for children on other processes to read
+    // the memory. Synchronize even if there are no children, so that inplace
+    // reads from this process are safe.
     cerror = cudaStreamSynchronize(pool.sharedSpace->gpuHelperStream) ;
     if (cerror != cudaSuccess) {
       LOGERROR
-      << "CUDA gnereated an error while synchronizing a stream: '"
-      << cudaGetErrorString(cerror) << '\'' ;
+        << "CUDA gnereated an error while synchronizing a stream: '"
+        << cudaGetErrorString(cerror) << '\'' ;
       return vl::VLE_Cuda ;
     }
   }
 #endif
 
+  // Notify the parent that we are done copying its data and the children than we are waiting
+  // on them to copy our data.
   T.state = SharedTensorSpace::waitChildren ;
   for (int p = 0 ; p < peers.size() ; ++p) {
     int peerLab = peers[p].lab ;
@@ -2347,7 +2351,6 @@ ProcessPool processPool ;
 
 void atExit()
 {
-  mexPrintf("vl_tlflow:atExit()\n") ;
   processPool.finalize() ;
   context.clear() ;
 }
@@ -2468,7 +2471,7 @@ void mexFunction(int nout, mxArray *out[],
   switch (command) {
     case init:
     {
-      (verbosity >= 2) && mexPrintf("vl_tflow: command 'init'\n") ;
+      (verbosity >= 2) && mexPrintf("vl_tmove: command 'init'\n") ;
 
       // Initialize shared space. mexInit() may thorow a MEX error;
       // the auto_ptr should avoid a leak in this case.
@@ -2488,23 +2491,23 @@ void mexFunction(int nout, mxArray *out[],
     }
 
     case stats :
-      (verbosity >= 2) && mexPrintf("vl_tflow: command 'stats'\n") ;
+      (verbosity >= 2) && mexPrintf("vl_tmove: command 'stats'\n") ;
       processPool.mexPrint() ;
       break ;
 
     case push :
-      (verbosity >= 2) && mexPrintf("vl_tflow: command 'push' on tensor '%s'%s\n", tensorName.c_str(), inplace?" (inplace)":"") ;
+      (verbosity >= 2) && mexPrintf("vl_tmove: command 'push' on tensor '%s'%s\n", tensorName.c_str(), inplace?" (inplace)":"") ;
       processPool.mexPush(tensorName, arg, inplace) ;
       break ;
 
     case pull :
-      (verbosity >= 2) && mexPrintf("vl_tflow: command 'pull' on tensor '%s'%s\n", tensorName.c_str(),
+      (verbosity >= 2) && mexPrintf("vl_tmove: command 'pull' on tensor '%s'%s\n", tensorName.c_str(),
                                     inplace?" (inplace)":"") ;
       out[0] = processPool.mexPull(tensorName, inplace) ;
       break ;
 
     case reset :
-      (verbosity >= 2) && mexPrintf("vl_tflow: command 'reset'\n") ;
+      (verbosity >= 2) && mexPrintf("vl_tmove: command 'reset'\n") ;
       processPool.shutdown() ; // gracefully (wait for others to finish)
       processPool.finalize() ; // no matter what
       break ;

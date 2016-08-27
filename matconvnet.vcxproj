@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -94,7 +94,7 @@
     <None Include="matlab\src\vl_nnnormalize.cu" />
     <None Include="matlab\src\vl_nnpool.cu" />
     <None Include="matlab\src\vl_taccummex.cu" />
-    <None Include="matlab\src\vl_tflowmex.cu" />
+    <None Include="matlab\src\vl_tmovemex.cu" />
     <None Include="matlab\vl_argparse.m" />
     <None Include="matlab\vl_compilenn.m" />
     <None Include="matlab\vl_imreadjpeg.m" />
@@ -146,7 +146,7 @@
     <ClCompile Include="matlab\src\vl_nnnormalize.cpp" />
     <ClCompile Include="matlab\src\vl_nnpool.cpp" />
     <ClCompile Include="matlab\src\vl_taccummex.cpp" />
-    <ClCompile Include="matlab\src\vl_tflowmex.cpp" />
+    <ClCompile Include="matlab\src\vl_tmovemex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matlab\src\bits\data.hpp" />

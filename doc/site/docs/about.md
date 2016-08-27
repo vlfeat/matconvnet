@@ -30,12 +30,15 @@ here.
     * A new function `vl_tacc.m` to accumulate tensors efficiently.
     * A rewritten `vl_imreadjpeg.m` function that can load, jitter,
       and transfer images to the GPU in parallel.
-    * A new function `vl_tflow.m` to transfer tensor data between
+    * A new function `vl_tmove.m` to transfer tensor data between
       multiple (local) MATLAB processes efficiently.
-    * A wrapper `ParameterSever.m` to simplify the use of `vl_tflow.m`.
+    * A wrapper `ParameterSever.m` to simplify the use of `vl_tmove.m`.
     * Adds support for `ParameterSever` in the examples.
     * Adds an option in the example training script to save the
       momentum between epochs.
+    * Batch normalization can use CuDNN implementation.
+    * `vl_nnconv.m` now supports the `dilate` option for dilated
+      convolution.
 
     **Changes affecting backward compatibility**
 

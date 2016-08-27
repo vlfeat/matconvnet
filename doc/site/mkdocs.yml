@@ -52,7 +52,7 @@ pages:
   - vl_setupnn: 'mfiles/vl_setupnn.md'
   - vl_imreadjpeg: 'mfiles/vl_imreadjpeg.md'
   - vl_taccum: 'mfiles/vl_taccum.md'
-  - vl_tflow: 'mfiles/vl_tflow.md'
+  - vl_tmove: 'mfiles/vl_tmove.md'
 
 - Contributing:
   - Developers notes: 'developers.md'

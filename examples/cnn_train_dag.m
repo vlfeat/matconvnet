@@ -22,6 +22,7 @@ opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
 opts.saveMomentum = true ;
+opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
 opts.parameterServer.method = 'mmap' ;
@@ -293,12 +294,28 @@ for p=1:numel(net.params)
     case 'gradient'
       thisDecay = params.weightDecay * net.params(p).weightDecay ;
       thisLR = params.learningRate * net.params(p).learningRate ;
+
+      % Normalize gradient and incorporate weight decay.
+      parDer = vl_taccum(1/batchSize, parDer, ...
+                         thisDecay, net.params(p).value) ;
+
+      % Update momentum.
       state.momentum{p} = vl_taccum(...
-        params.momentum,  state.momentum{p}, ...
-        - (1 / batchSize), parDer) ;
+        params.momentum, state.momentum{p}, ...
+        -1, parDer) ;
+
+      % Nesterov update (aka one step ahead).
+      if params.nesterovUpdate
+        delta = vl_taccum(...
+          params.momentum, state.momentum{p}, ...
+          -1, parDer) ;
+      else
+        delta = state.momentum{p} ;
+      end
+
+      % Update parameters.
       net.params(p).value = vl_taccum(...
-        (1 - thisLR * thisDecay / (1 - params.momentum)),  net.params(p).value, ...
-        thisLR, state.momentum{p}) ;
+        1,  net.params(p).value, thisLR, delta) ;
 
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
@@ -395,7 +412,7 @@ end
 % -------------------------------------------------------------------------
 function clearMex()
 % -------------------------------------------------------------------------
-clear vl_tflow vl_imreadjpeg ;
+clear vl_tmove vl_imreadjpeg ;
 
 % -------------------------------------------------------------------------
 function prepareGPUs(opts, cold)

@@ -212,7 +212,7 @@ mex_src{end+1} = fullfile(root,'matlab','src',['vl_taccummex.' ext]) ;
 switch arch
   case {'glnxa64','maci64'}
     % not yet supported in windows
-    mex_src{end+1} = fullfile(root,'matlab','src',['vl_tflow.' ext]) ;
+    mex_src{end+1} = fullfile(root,'matlab','src',['vl_tmove.' ext]) ;
 end
 
 % CPU-specific files

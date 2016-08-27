@@ -95,6 +95,11 @@
 %   `Saturation`:: `0`
 %     The same as `Contrast`, but for saturation.
 %
+%   `Interpolation`:: `'bilinear'`
+%     The interpolation method; one of `box`, `bilinear`, `bicubic`,
+%     `lanczos2`, and `lanczos3`. The function uses interpolators
+%     equivalent to MATLAB's `imresize`.
+%
 %   Further details on the processing performed by the function can be
 %   found in the PDF manual.
 

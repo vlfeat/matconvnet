@@ -37,6 +37,11 @@ function str = print(obj, inputSizes, varargin)
 %      In the latter case, all variables and layers are included in the
 %      graph, regardless of the other parameters.
 %
+%   `PdfPath`:: temporary file
+%      Sets the path where any generated PDF will be saved. Currently, 
+%      this is useful only in combination with the format `dot`. 
+%      By default, a unique temporary filename is used.
+%
 %   `MaxNumColumns`:: 18
 %      Maximum number of columns in each table.
 %
@@ -50,6 +55,7 @@ end
 
 opts.all = false ;
 opts.format = 'ascii' ;
+opts.pdfPath = 'tempname' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.layers = '*' ;
@@ -71,10 +77,10 @@ varSizes = obj.getVarSizes(inputSizes) ;
 paramSizes = cellfun(@size, {obj.params.value}, 'UniformOutput', false) ;
 str = {''} ;
 
-if strcmpi(opts.format,'dot')
+if strcmpi(opts.format, 'dot')
   str = printDot(obj, varSizes, paramSizes, opts) ;
   if nargout == 0
-    displayDot(str) ;
+    displayDot(str, opts.pdfPath) ;
   end
   return ;
 end
@@ -385,22 +391,39 @@ str = cat(2,str{:}) ;
 end
 
 % -------------------------------------------------------------------------
-function displayDot(str)
+function displayDot(str, pdfPath)
 % -------------------------------------------------------------------------
 %mwdot = fullfile(matlabroot, 'bin', computer('arch'), 'mwdot') ;
-dotexe = 'dot' ;
+dotPaths = {'dot', '/opt/local/bin/dot'} ;
+dotExe = '' ;
+for i = 1:numel(dotPaths)
+  if exist(dotPaths{i},'file')
+    dotExe = dotPaths{i} ;
+  end
+end
+if isempty(dotExe)
+  warning('Could not genereate a PDF figure because the `dot` utility could not be found.') ;
+  return ;
+end
 
-in=[tempname '.dot'];
-out=[tempname '.pdf'];
+in = [tempname '.dot'] ;
+
+if strcmp(pdfPath, 'tempname')
+    out = [tempname '.pdf'] ;
+else
+    % ensure .pdf suffix for output
+    [path, name, ext] = fileparts(pdfPath) ;
+    out = fullfile(path, [ name '.pdf' ]) ;
+end
 
 f = fopen(in,'w') ; fwrite(f, str) ; fclose(f) ;
 
-cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotexe, out, in) ;
+cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotExe, out, in) ;
 [status, result] = system(cmd) ;
 if status ~= 0
-  error('Unable to run %s\n%s', cmd, result);
+  error('Unable to run %s\n%s', cmd, result) ;
 end
-fprintf('Dot output:\n%s\n', result);
+fprintf('Dot output:\n%s\n', result) ;
 
 %f = fopen(out,'r') ; file=fread(f, 'char=>char')' ; fclose(f) ;
 switch computer

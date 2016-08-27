@@ -1,4 +1,4 @@
-classdef tflowmex < matlab.unittest.TestCase
+classdef tmovemex < matlab.unittest.TestCase
 
   properties
     numLabs
@@ -32,7 +32,7 @@ classdef tflowmex < matlab.unittest.TestCase
     function reset(test)
       if ~isempty(gcp('nocreate'))
         spmd
-          vl_tflow('reset') ;
+          vl_tmove('reset') ;
         end
       end
     end
@@ -58,16 +58,16 @@ classdef tflowmex < matlab.unittest.TestCase
           gpuDevice(1) ;
         end
         for i = 1:size(format,1)
-          x{i} = tflowmex.makeArray(format(i,:)) + labindex ;
+          x{i} = tmovemex.makeArray(format(i,:)) + labindex ;
         end
         labBarrier() ;
-        vl_tflow('init',format,labindex,numlabs) ;
+        vl_tmove('init',format,labindex,numlabs) ;
         for t = 1:T
           for i = 1:size(format,1),
-            vl_tflow('push',format{i,3},x{i}) ;
+            vl_tmove('push',format{i,3},x{i}) ;
           end
           for i = 1:size(format,1),
-            x{i} = vl_tflow('pull',format{i,3}) ;
+            x{i} = vl_tmove('pull',format{i,3}) ;
           end
         end
         for i = 1:size(format,1)
@@ -88,15 +88,15 @@ classdef tflowmex < matlab.unittest.TestCase
       gpuDevice(1) ;
       spmd
         for i = 1:size(format,1)
-          x{i} = tflowmex.makeArray(format(i,:)) + labindex ;
+          x{i} = tmovemex.makeArray(format(i,:)) + labindex ;
         end
-        vl_tflow('init',format,labindex,numlabs) ;
+        vl_tmove('init',format,labindex,numlabs) ;
         for t = 1:T
           for i = 1:size(format,1),
-            vl_tflow('push',format{i,3},x{i},'inplace') ;
+            vl_tmove('push',format{i,3},x{i},'inplace') ;
           end
           for i = 1:size(format,1),
-            vl_tflow('pull',format{i,3},'inplace') ;
+            vl_tmove('pull',format{i,3},'inplace') ;
           end
         end
         for i = 1:size(format,1)

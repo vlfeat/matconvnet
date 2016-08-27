@@ -110,6 +110,8 @@ function fn = getBatchFn(opts, meta)
 
 if isfield(meta.normalization, 'keepAspect')
   keepAspect = meta.normalization.keepAspect ;
+else
+  keepAspect = true ;
 end
 
 if numel(meta.normalization.averageImage) == 3

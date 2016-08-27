@@ -51,17 +51,24 @@ for l = 1:numel(net.layers)
     layer.weights = {} ;
   end
 
-  % check that weights inlcude moments in batch normalization
+  % Check that weights include moments in batch normalization.
   if strcmp(layer.type, 'bnorm')
     if numel(layer.weights) < 3
       layer.weights{3} = ....
         zeros(numel(layer.weights{1}),2,'single') ;
     end
   end
-  
-  % fill in missing values
+
+  % Fill in missing values.
   switch layer.type
-    case {'conv', 'pool'}
+    case 'conv'
+      defaults = [ defaults {...
+        'pad', 0, ...
+        'stride', 1, ...
+        'dilate', 1, ...
+        'opts', {}}] ;
+
+    case 'pool'
       defaults = [ defaults {...
         'pad', 0, ...
         'stride', 1, ...
@@ -100,6 +107,10 @@ for l = 1:numel(net.layers)
         'p', 2, ...
         'epsilon', 1e-3, ...
         'instanceWeights', []} ];
+
+    case {'bnorm'}
+      defaults = [ defaults {...
+        'epsilon', 1e-5 } ] ;
   end
 
   for i = 1:2:numel(defaults)

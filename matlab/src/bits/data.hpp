@@ -31,6 +31,8 @@ the terms of the BSD license (see the COPYING file).
 #define IF_DOUBLE(x)
 #endif
 
+#define VL_M_PI 3.14159265358979323846
+
 namespace vl {
 
   /// Error codes
@@ -97,6 +99,11 @@ namespace vl {
   {
     return (a + b - 1) / b ;
   }
+
+  /// Compute the greatest common divisor g of non-negative integers
+  /// @a a and @a b as well as two integers @a u and @a v such that
+  /// $au + bv = g$ (Bezout's coefficients).
+  int gcd(int a, int b, int &u, int& v) ;
 
   /// Draw a Normally-distributed scalar
   double randn() ;

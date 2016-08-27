@@ -30,6 +30,7 @@ opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 opts.momentum = 0.9 ;
 opts.saveMomentum = true ;
+opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
@@ -419,21 +420,32 @@ for l=numel(net.layers):-1:1
         thisLR / batchSize, ...
         parDer) ;
     else
-      % standard gradient training
+      % Standard gradient training.
       thisDecay = params.weightDecay * net.layers{l}.weightDecay(j) ;
       thisLR = params.learningRate * net.layers{l}.learningRate(j) ;
 
-      state.momentum{l}{j} = vl_taccum(...
-        params.momentum, ...
-        state.momentum{l}{j}, ...
-        - (1 / batchSize), ...
-        parDer) ;
+      % Normalize gradient and incorporate weight decay.
+      parDer = vl_taccum(1/batchSize, parDer, ...
+                         thisDecay, net.layers{l}.weights{j}) ;
 
+      % Update momentum.
+      state.momentum{l}{j} = vl_taccum(...
+        params.momentum, state.momentum{l}{j}, ...
+        -1, parDer) ;
+
+      % Nesterov update (aka one step ahead).
+      if params.nesterovUpdate
+        delta = vl_taccum(...
+          params.momentum, state.momentum{l}{j}, ...
+          -1, parDer) ;
+      else
+        delta = state.momentum{l}{j} ;
+      end
+
+      % Update parameters.
       net.layers{l}.weights{j} = vl_taccum(...
-        (1 - thisLR * thisDecay / (1 - params.momentum)), ...
-        net.layers{l}.weights{j}, ...
-        thisLR, ...
-        state.momentum{l}{j}) ;
+        1, net.layers{l}.weights{j}, ...
+        thisLR, delta) ;
     end
 
     % if requested, collect some useful stats for debugging
@@ -546,10 +558,10 @@ end
 % -------------------------------------------------------------------------
 function clearMex()
 % -------------------------------------------------------------------------
-%clear vl_tflow vl_imreadjpeg ;
+%clear vl_tmove vl_imreadjpeg ;
 disp('Clearing mex files') ;
 clear mex ;
-vl_tflow('reset') ;
+vl_tmove('reset') ;
 
 % -------------------------------------------------------------------------
 function prepareGPUs(params, cold)

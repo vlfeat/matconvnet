@@ -14,7 +14,7 @@ run matlab/vl_setupnn ;
 model = 'imagenet-googlenet-dag' ;
 %model = 'imagenet-vgg-m' ;
 %model = 'imagenet-vgg-f' ;
-net = load(sprintf('data/models/%s.mat', model)) ;
+net = load(fullfile(vl_rootnn, 'data', 'models', sprintf('%s.mat', model))) ;
 
 if strcmp(model, 'imagenet-googlenet-dag')
   net = dagnn.DagNN.loadobj(net) ;
@@ -46,7 +46,7 @@ while true
     res = vl_simplenn(net, im_) ;
     scores = squeeze(gather(res(end).x)) ;
   end
-  
+
   % smooth scores and pick the best
   scoress = momentum*scoress + (1-momentum)*scores ;
   [bestScore, best] = max(scoress) ;

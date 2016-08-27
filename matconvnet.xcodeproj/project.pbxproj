@@ -91,8 +91,8 @@
 		2D38B0071BBDD2D900FC734E /* Crop.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Crop.m; path = "matlab/+dagnn/Crop.m"; sourceTree = "<group>"; };
 		2D38B0081BBDD2D900FC734E /* Sum.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Sum.m; path = "matlab/+dagnn/Sum.m"; sourceTree = "<group>"; };
 		2D38B0091BBDD30300FC734E /* vl_nncrop.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nncrop.m; path = matlab/vl_nncrop.m; sourceTree = "<group>"; };
-		2D4080301CFD7A8C00B85345 /* vl_tflow.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_tflow.cpp; path = matlab/src/vl_tflow.cpp; sourceTree = "<group>"; };
-		2D4080311CFD7A8C00B85345 /* vl_tflow.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_tflow.cu; path = matlab/src/vl_tflow.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D4080301CFD7A8C00B85345 /* vl_tmove.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_tmove.cpp; path = matlab/src/vl_tmove.cpp; sourceTree = "<group>"; };
+		2D4080311CFD7A8C00B85345 /* vl_tmove.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_tmove.cu; path = matlab/src/vl_tmove.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D416C731B39E1C60092638E /* vl_nnbnorm.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnbnorm.m; path = matlab/vl_nnbnorm.m; sourceTree = "<group>"; };
 		2D416C741B39E1C60092638E /* vl_nnconvt.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnconvt.m; path = matlab/vl_nnconvt.m; sourceTree = "<group>"; };
 		2D416C751B39E1C60092638E /* vl_nnpdist.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnpdist.m; path = matlab/vl_nnpdist.m; sourceTree = "<group>"; };
@@ -150,7 +150,7 @@
 		2D67FEB21D1F397B00345CFD /* nnnormalizelp.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnnormalizelp.m; path = matlab/xtest/suite/nnnormalizelp.m; sourceTree = "<group>"; };
 		2D67FEB31D1F397B00345CFD /* nnsimplenn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnsimplenn.m; path = matlab/xtest/suite/nnsimplenn.m; sourceTree = "<group>"; };
 		2D67FEB41D1F397B00345CFD /* Scale.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Scale.m; path = matlab/xtest/suite/Scale.m; sourceTree = "<group>"; };
-		2D67FEB51D1F397B00345CFD /* tflowmex.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = tflowmex.m; path = matlab/xtest/suite/tflowmex.m; sourceTree = "<group>"; };
+		2D67FEB51D1F397B00345CFD /* tmovemex.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = tmovemex.m; path = matlab/xtest/suite/tmovemex.m; sourceTree = "<group>"; };
 		2D6833011B66615F00FA6D98 /* BatchNorm.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = BatchNorm.m; path = "matlab/+dagnn/BatchNorm.m"; sourceTree = "<group>"; };
 		2D6833021B66615F00FA6D98 /* Concat.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = Concat.m; path = "matlab/+dagnn/Concat.m"; sourceTree = "<group>"; };
 		2D6833031B66615F00FA6D98 /* Conv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = Conv.m; path = "matlab/+dagnn/Conv.m"; sourceTree = "<group>"; };
@@ -333,8 +333,8 @@
 				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
 				2D9BC77C1D0ECDE400EC9F94 /* vl_taccummex.cpp */,
 				2D9BC77D1D0ECDE400EC9F94 /* vl_taccummex.cu */,
-				2D4080301CFD7A8C00B85345 /* vl_tflow.cpp */,
-				2D4080311CFD7A8C00B85345 /* vl_tflow.cu */,
+				2D4080301CFD7A8C00B85345 /* vl_tmove.cpp */,
+				2D4080311CFD7A8C00B85345 /* vl_tmove.cu */,
 			);
 			name = src;
 			sourceTree = "<group>";
@@ -527,7 +527,7 @@
 				2D68332E1B66624E00FA6D98 /* nnspnorm.m */,
 				2D68332F1B66624E00FA6D98 /* nntest.m */,
 				2D67FEB41D1F397B00345CFD /* Scale.m */,
-				2D67FEB51D1F397B00345CFD /* tflowmex.m */,
+				2D67FEB51D1F397B00345CFD /* tmovemex.m */,
 			);
 			name = suite;
 			sourceTree = "<group>";

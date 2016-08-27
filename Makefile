@@ -38,7 +38,7 @@ CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta20
+VER = 1.0-beta21
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync
@@ -166,7 +166,7 @@ mex_src+=matlab/src/vl_nnnormalize.$(ext)
 mex_src+=matlab/src/vl_nnbnorm.$(ext)
 mex_src+=matlab/src/vl_nnbilinearsampler.$(ext)
 mex_src+=matlab/src/vl_taccummex.$(ext)
-mex_src+=matlab/src/vl_tflow.$(ext)
+mex_src+=matlab/src/vl_tmove.$(ext)
 ifdef ENABLE_IMREADJPEG
 mex_src+=matlab/src/vl_imreadjpeg.$(ext)
 mex_src+=matlab/src/vl_imreadjpeg_old.$(ext)
