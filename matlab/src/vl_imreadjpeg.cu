@@ -1,5 +1,5 @@
-/** @file vl_imreadjpeg2.cu
- ** @brief Load images asynchronously
+/** @file vl_imreadjpeg.cu
+ ** @brief Load and transform images asynchronously
  ** @author Andrea Vedaldi
  **/
 
@@ -729,7 +729,7 @@ vl::ErrorCode Batch::prefetch()
     item->outputWidth = outputWidth ;
     item->outputHeight = outputHeight ;
     item->outputNumChannels = (packingMethod == individualArrays) ? item->shape.depth : 3 ;
- ;
+
     item->cropWidth = cropWidth ;
     item->cropHeight = cropHeight ;
     item->cropOffsetX = dx ;
@@ -738,7 +738,7 @@ vl::ErrorCode Batch::prefetch()
     item->filterType = filterType ;
 
     // Color processing.
-    item->saturationShift = 1. + saturationDeviation * (2.*(double)rand()/RAND_MAX - 1) ;
+    item->saturationShift = 1. + saturationDeviation * (2.*(double)rand()/RAND_MAX - 1.) ;
     item->contrastShift = 1. + contrastDeviation * (2.*(double)rand()/RAND_MAX - 1.) ;
     {
       int numChannels = item->outputNumChannels ;
