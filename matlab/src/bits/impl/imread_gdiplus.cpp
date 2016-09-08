@@ -31,6 +31,31 @@ if (!x) { image.error = 1 ; goto done ; }
 
 #define ERR_MAX_LEN 1024
 
+static const char * GdiErrMsg[] = {
+  "Ok",
+  "GenericError",
+  "InvalidParameter (or image file does not exist)",
+  "OutOfMemory",
+  "ObjectBusy",
+  "InsufficientBuffer",
+  "NotImplemented",
+  "Win32Error",
+  "WrongState",
+  "Aborted",
+  "FileNotFound",
+  "ValueOverflow",
+  "AccessDenied",
+  "UnknownImageFormat",
+  "FontFamilyNotFound",
+  "FontStyleNotFound",
+  "NotTrueTypeFont",
+  "UnsupportedGdiplusVersion",
+  "GdiplusNotInitialized",
+  "PropertyNotFound",
+  "PropertyNotSupported",
+  "ProfileNotFound"
+};
+
 class vl::ImageReader::Impl
 {
 public:
@@ -56,7 +81,7 @@ vl::ImageReader::Impl::~Impl()
 
 static void getImagePropertiesHelper(vl::ImageShape & shape, Gdiplus::Bitmap & bitmap)
 {
-  bool grayscale = (bitmap.GetFlags() & ImageFlagsColorSpaceGRAY) ;
+  bool grayscale = (bool)(bitmap.GetFlags() & ImageFlagsColorSpaceGRAY) ;
   shape.width = bitmap.GetWidth() ;
   shape.height = bitmap.GetHeight() ;
   shape.depth = grayscale ? 1 : 3 ;
@@ -69,18 +94,20 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
   vl::ImageShape shape ;
   Status status ;
   Rect rect ;
-  bool grayscale = false ;
 
   wchar_t filenamew [1024*4] ;
   size_t n = 0 ;
-  size_t convertedChars = 0 ;
   mbstowcs_s(&n, filenamew, sizeof(filenamew)/sizeof(wchar_t), filename, _TRUNCATE);
 
   BitmapData data ;
   Bitmap bitmap(filenamew);
-  if (bitmap.GetLastStatus() != Ok) {
+  status = bitmap.GetLastStatus();
+  if (status != Ok) {
+    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+                  "gdi+: %s", GdiErrMsg[(int)status]) ;
     error = vl::VLE_Unknown ;
-    goto done ;
+    mexPrintf(lastErrorMessage) ;
+    return error;
   }
 
   getImagePropertiesHelper(shape, bitmap) ;
@@ -112,14 +139,16 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
     }
   }
 
-  rect = Rect(0,0,shape.width,shape.height);
+  rect = Rect(0, 0, (int)shape.width, (int)shape.height);
   status = bitmap.LockBits(&rect,
                            ImageLockModeRead,
                            targetPixelFormat,
                            &data) ;
   if (status != Ok) {
+    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+                  "gdi+: %s", GdiErrMsg[(int)status]) ;
     error = vl::VLE_Unknown;
-    goto done ;
+    return error;
   }
 
   // copy RGB to MATLAB format
@@ -141,8 +170,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
 
   bitmap.UnlockBits(&data) ;
 
-done:
-  return error ;
+  return error;
 }
 
 vl::ErrorCode
@@ -150,22 +178,20 @@ vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
 {
   vl::ErrorCode error = vl::VLE_Success ;
   Status status ;
-
   wchar_t filenamew [1024*4] ;
   size_t n = 0 ;
-  size_t convertedChars = 0 ;
   mbstowcs_s(&n, filenamew, sizeof(filenamew)/sizeof(wchar_t), filename, _TRUNCATE);
 
   Bitmap bitmap(filenamew);
-  if (bitmap.GetLastStatus() != Ok) {
+  status = bitmap.GetLastStatus();
+  if (status != Ok) {
+    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+                  "gdi+: %s", GdiErrMsg[(int)status]) ;
     error = vl::VLE_Unknown ;
-    goto done ;
+    return error;
   }
 
   getImagePropertiesHelper(shape, bitmap) ;
-
-done:
-  return error ;
 }
 
 /* ---------------------------------------------------------------- */
