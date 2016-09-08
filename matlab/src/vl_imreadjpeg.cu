@@ -11,11 +11,6 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "bits/impl/tinythread.h"
-#include "bits/impl/blashelper.hpp"
-#include "bits/imread.hpp"
-#include "bits/impl/imread_helpers.hpp"
-
 #include <assert.h>
 #include <vector>
 #include <string>
@@ -23,6 +18,11 @@ the terms of the BSD license (see the COPYING file).
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
+
+#include "bits/impl/tinythread.h"
+#include "bits/impl/blashelper.hpp"
+#include "bits/imread.hpp"
+#include "bits/impl/imread_helpers.hpp"
 
 #include "bits/datamex.hpp"
 #include "bits/mexutils.h"
@@ -657,8 +657,8 @@ vl::ErrorCode Batch::prefetch()
         double scale1 = (double)resizeHeight / item->shape.width ;
         double scale2 = (double)resizeHeight / item->shape.height ;
         double scale = std::max(scale1, scale2) ;
-        outputHeight = std::max(1.0, round(scale * item->shape.height)) ;
-        outputWidth = std::max(1.0, round(scale * item->shape.width)) ;
+        outputHeight = (int)std::max(1.0, round(scale * item->shape.height)) ;
+        outputWidth = (int)std::max(1.0, round(scale * item->shape.width)) ;
         break ;
       }
 
@@ -704,13 +704,13 @@ vl::ErrorCode Batch::prefetch()
       cropHeight *= scale * size ;
     }
 
-    cropWidth = std::min(round(cropWidth), (double)item->shape.width) ;
-    cropHeight = std::min(round(cropHeight), (double)item->shape.height) ;
+    int cropWidth_i = (int)std::min(round(cropWidth), (double)item->shape.width) ;
+    int cropHeight_i = (int)std::min(round(cropHeight), (double)item->shape.height) ;
 
     // Determine the crop location.
     {
-      dx = item->shape.width - cropWidth ;
-      dy = item->shape.height - cropHeight ;
+      dx = (int)item->shape.width - cropWidth_i ;
+      dy = (int)item->shape.height - cropHeight_i ;
       switch (cropLocation) {
         case cropCenter:
           dx /= 2 ;
@@ -730,24 +730,24 @@ vl::ErrorCode Batch::prefetch()
     item->outputHeight = outputHeight ;
     item->outputNumChannels = (packingMethod == individualArrays) ? item->shape.depth : 3 ;
 
-    item->cropWidth = cropWidth ;
-    item->cropHeight = cropHeight ;
+    item->cropWidth = cropWidth_i ;
+    item->cropHeight = cropHeight_i ;
     item->cropOffsetX = dx ;
     item->cropOffsetY = dy ;
     item->flip = flipMode && (rand() > RAND_MAX/2) ;
     item->filterType = filterType ;
 
     // Color processing.
-    item->saturationShift = 1. + saturationDeviation * (2.*(double)rand()/RAND_MAX - 1.) ;
-    item->contrastShift = 1. + contrastDeviation * (2.*(double)rand()/RAND_MAX - 1.) ;
+    item->saturationShift = (float)(1. + saturationDeviation * (2.*(double)rand()/RAND_MAX - 1.)) ;
+    item->contrastShift = (float)(1. + contrastDeviation * (2.*(double)rand()/RAND_MAX - 1.)) ;
     {
-      int numChannels = item->outputNumChannels ;
+      int numChannels = (int)item->outputNumChannels ;
       double w [3] ;
       for (int i = 0 ; i < numChannels ; ++i) { w[i] = vl::randn() ; }
       for (int i = 0 ; i < numChannels ; ++i) {
-        item->brightnessShift[i] = 0. ;
+        item->brightnessShift[i] = 0.f ;
         for (int j = 0 ; j < numChannels ; ++j) {
-          item->brightnessShift[i] += brightnessDeviation[i + 3*j] * w[i] ;
+          item->brightnessShift[i] += (float)(brightnessDeviation[i + 3*j] * w[i]) ;
         }
       }
     }
@@ -934,7 +934,7 @@ void ReaderTask::entryPoint()
             // Withouth an average image,
             // they are expanded later.
 
-            for (int k = inputNumChannels ; k < K ; ++k) {
+            for (size_t k = inputNumChannels ; k < K ; ++k) {
               ::memcpy(outputPixels + n*k, outputPixels, sizeof(float) * n) ;
             }
 
@@ -953,15 +953,15 @@ void ReaderTask::entryPoint()
             channels[k] = outputPixels + n * k ;
           }
           for (int k = 0 ; k < inputNumChannels ; ++k) {
-            dv[k] = (1. - 2. * item->contrastShift) *
-            (batch->average[k] + item->brightnessShift[k]);
+            dv[k] = (float)((1. - 2. * (double)item->contrastShift) *
+            (batch->average[k] + (double)item->brightnessShift[k]));
             if (item->contrastShift != 1.) {
-              float mu = 0.f ;
+              double mu = 0. ;
               float const * pixel = channels[k] ;
               float const * end = channels[k] + n ;
-              while (pixel != end) { mu += *pixel++ ; }
-              mu /= n ;
-              dv[k] -= (1.0 - item->contrastShift) * mu ;
+              while (pixel != end) { mu += (double)(*pixel++) ; }
+              mu /= (double)n ;
+              dv[k] -= (float)((1.0 - (double)item->contrastShift) * mu) ;
             }
           }
           {
@@ -969,7 +969,7 @@ void ReaderTask::entryPoint()
             float v [3] ;
             if (K == 3 && inputNumChannels == 3) {
               float const a = item->contrastShift * item->saturationShift ;
-              float const b = item->contrastShift * (1. - item->saturationShift) / K ;
+              float const b = item->contrastShift * (1.f - item->saturationShift) / K ;
               while (channels[0] != end) {
                 float mu = 0.f ;
                 v[0] = *channels[0] + dv[0] ; mu += v[0] ;
@@ -981,7 +981,7 @@ void ReaderTask::entryPoint()
               }
             } else if (K == 3 && inputNumChannels == 1) {
               float const a = item->contrastShift * item->saturationShift ;
-              float const b = item->contrastShift * (1. - item->saturationShift) / K ;
+              float const b = item->contrastShift * (1.f - item->saturationShift) / K ;
               while (channels[0] != end) {
                 float mu = 0.f ;
                 v[0] = *channels[0] + dv[0] ; mu += v[0] ;
@@ -1096,7 +1096,7 @@ void mexFunction(int nout, mxArray *out[],
 {
   bool prefetch = false ;
   bool gpuMode = false ;
-  int requestedNumThreads = readers.size() ;
+  int requestedNumThreads = (int)readers.size() ;
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
@@ -1347,7 +1347,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   // If the requested number of threads changes, finalize everything
-  requestedNumThreads = std::max(requestedNumThreads, 1) ;
+  requestedNumThreads = (std::max)(requestedNumThreads, 1) ;
   if (readers.size() != requestedNumThreads) {
     atExit() ; // Delete threads and current batch
   }
@@ -1362,7 +1362,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   // Prepare reader tasks.
-  for (int r = readers.size() ; r < requestedNumThreads ; ++r) {
+  for (size_t r = readers.size() ; r < requestedNumThreads ; ++r) {
     readers.push_back(new ReaderTask()) ;
     vl::ErrorCode error = readers[r]->init(&batch, r) ;
     if (error != vl::VLE_Success) {
