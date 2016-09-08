@@ -19,6 +19,8 @@ the terms of the BSD license (see the COPYING file).
 #include <tmmintrin.h>
 #endif
 
+#include "../data.hpp"
+
 namespace vl { namespace impl {
 
   enum pixelFormatId {
@@ -463,7 +465,7 @@ namespace vl { namespace impl {
           }
           switch (filterType) {
             case kBox:
-              h = (float)(-0.5f <= delta & delta < 0.5f) ;
+              h = (float)((-0.5f <= delta) & (delta < 0.5f)) ;
               break ;
             case kBilinear:
               h = (std::max)(0.0f, 1.0f - fabsf(delta)) ;
@@ -483,10 +485,10 @@ namespace vl { namespace impl {
             }
             case kLanczos2: {
               if (fabsf(delta) < 2) {
-                const float eps = 1e-5 ;
-                h = (sin(VL_M_PI * delta) *
-                     sin(VL_M_PI * delta / 2.f) + eps) /
-                ((VL_M_PI*VL_M_PI * delta*delta / 2.f) + eps);
+                const float eps = 1e-5f ;
+                h = (sin(VL_M_PI_F * delta) *
+                     sin(VL_M_PI_F * delta / 2.f) + eps) /
+                ((VL_M_PI_F*VL_M_PI_F * delta*delta / 2.f) + eps);
               } else {
                 h = 0.f ;
               }
@@ -494,10 +496,10 @@ namespace vl { namespace impl {
             }
             case kLanczos3:
               if (fabsf(delta) < 3) {
-                const float eps = 1e-5 ;
-                h = (sin(VL_M_PI * delta) *
-                     sin(VL_M_PI * delta / 3.f) + eps) /
-                ((VL_M_PI*VL_M_PI * delta*delta / 3.f) + eps);
+                const float eps = 1e-5f ;
+                h = (sin(VL_M_PI_F * delta) *
+                     sin(VL_M_PI_F * delta / 3.f) + eps) /
+                ((VL_M_PI_F*VL_M_PI_F * delta*delta / 3.f) + eps);
               } else {
                 h = 0.f ;
               }
@@ -520,7 +522,7 @@ namespace vl { namespace impl {
             filter[q] += h ;
             mass += h ;
             if (h) {
-              skip = std::min(skip, q) ;
+              skip = (std::min)(skip, q) ;
             }
           }
         }
