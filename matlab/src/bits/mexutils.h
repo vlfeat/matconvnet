@@ -14,16 +14,22 @@ the terms of the BSD license (see the COPYING file).
 #ifndef MEXUTILS_H
 #define MEXUTILS_H
 
-#include"mex.h"
+#include "mex.h"
 
-#include<stdbool.h>
-#include<stdint.h>
-#include<stdio.h>
-#include<stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
 
-#include<ctype.h>
-#include<string.h>
-#include<assert.h>
+#include <ctype.h>
+#include <string.h>
+#include <assert.h>
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#define false 0
+#define true 1
+#else
+#include <stdbool.h>
+#endif
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -37,7 +43,8 @@ typedef signed int ssize_t;
 // Add some missing functions from C99
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
-#define roundf(x) (float)(int)(x+0.5f)
+#define round(x) x >= 0.0 ? (double)(int)(x + 0.5f) : (double)(int)(x - 0.5f)
+#define roundf(x) x >= 0.0f ? (float)(int)(x + 0.5f) : (float)(int)(x - 0.5f)
 #endif
 #endif
 
