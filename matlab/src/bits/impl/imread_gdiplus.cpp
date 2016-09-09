@@ -19,6 +19,8 @@ the terms of the BSD license (see the COPYING file).
 
 #include <mex.h>
 
+#include "../mexutils.h"
+
 using namespace Gdiplus;
 #pragma comment (lib,"Gdiplus.lib")
 
@@ -103,7 +105,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
   Bitmap bitmap(filenamew);
   status = bitmap.GetLastStatus();
   if (status != Ok) {
-    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+    snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
                   "gdi+: %s", GdiErrMsg[(int)status]) ;
     error = vl::VLE_Unknown ;
     mexPrintf(lastErrorMessage) ;
@@ -145,7 +147,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
                            targetPixelFormat,
                            &data) ;
   if (status != Ok) {
-    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+    snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
                   "gdi+: %s", GdiErrMsg[(int)status]) ;
     error = vl::VLE_Unknown;
     return error;
@@ -185,7 +187,7 @@ vl::ImageReader::Impl::readShape(vl::ImageShape & shape, char const * filename)
   Bitmap bitmap(filenamew);
   status = bitmap.GetLastStatus();
   if (status != Ok) {
-    std::snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
+    snprintf(lastErrorMessage,  sizeof(lastErrorMessage),
                   "gdi+: %s", GdiErrMsg[(int)status]) ;
     error = vl::VLE_Unknown ;
     return error;
