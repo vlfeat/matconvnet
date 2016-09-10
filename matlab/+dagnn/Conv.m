@@ -36,9 +36,9 @@ classdef Conv < dagnn.Filter
     end
 
     function params = initParams(obj)
-      %sc = sqrt(2 / prod(obj.size(1:3))) ;
       % Xavier improved
-      sc = sqrt(2 / prod(obj.size([1 2 4]))) ;
+      sc = sqrt(2 / prod(obj.size(1:3))) ;
+      %sc = sqrt(2 / prod(obj.size([1 2 4]))) ;
       params{1} = randn(obj.size,'single') * sc ;
       if obj.hasBias
         params{2} = zeros(obj.size(4),1,'single') ;
