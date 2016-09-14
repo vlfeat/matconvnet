@@ -577,7 +577,7 @@ function clearMex()
 %clear vl_tmove vl_imreadjpeg ;
 disp('Clearing mex files') ;
 clear mex ;
-vl_tmove('reset') ;
+clear vl_tmove vl_imreadjpeg ;
 
 % -------------------------------------------------------------------------
 function prepareGPUs(params, cold)
