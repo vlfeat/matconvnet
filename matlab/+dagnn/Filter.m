@@ -47,7 +47,7 @@ classdef Filter < dagnn.Layer
 
     function rfs = getReceptiveFields(obj)
       ks = obj.getKernelSize() ;
-      ke = (ks - 1) * obj.dilate + 1 ;
+      ke = (ks - 1) .* obj.dilate + 1 ;
       y1 = 1 - obj.pad(1) ;
       y2 = 1 - obj.pad(1) + ke(1) - 1 ;
       x1 = 1 - obj.pad(3) ;
