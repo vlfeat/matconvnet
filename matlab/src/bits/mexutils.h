@@ -27,7 +27,7 @@ the terms of the BSD license (see the COPYING file).
 #if defined(_MSC_VER) && _MSC_VER < 1700
 #define false 0
 #define true 1
-#else
+#elif _MSC_VER > 1700
 #include <stdbool.h>
 #endif
 
