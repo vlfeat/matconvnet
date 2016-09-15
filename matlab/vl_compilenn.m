@@ -44,7 +44,7 @@ function vl_compilenn(varargin)
 %      Set this option to `true` to compile `vl_imreadjpeg`.
 %
 %   `EnableDouble`:: `true`
-%      Set this optino to `true` to compile the support for DOUBLE
+%      Set this option to `true` to compile the support for DOUBLE
 %      data types.
 %
 %   `ImageLibrary`:: `libjpeg` (Linux), `gdiplus` (Windows), `quartz` (Mac)
@@ -84,7 +84,7 @@ function vl_compilenn(varargin)
 %   In order to compile the GPU code, set the `EnableGpu` option to
 %   `true`. For this to work you will need:
 %
-%   * To satisfy all the requirement to compile the CPU code (see
+%   * To satisfy all the requirements to compile the CPU code (see
 %     above).
 %
 %   * A NVIDIA GPU with at least *compute capability 2.0*.
@@ -105,7 +105,7 @@ function vl_compilenn(varargin)
 %     | 8.6            | 2015b   | 7.0          |
 %     | 9.0            | 2016a   | 7.5          |
 %
-%     A different versions of CUDA may work using the hack described
+%     Different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
 %
 %   The following configurations have been tested successfully:

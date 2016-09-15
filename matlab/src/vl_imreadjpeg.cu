@@ -953,15 +953,25 @@ void ReaderTask::entryPoint()
             channels[k] = outputPixels + n * k ;
           }
           for (int k = 0 ; k < inputNumChannels ; ++k) {
-            dv[k] = (float)((1. - 2. * (double)item->contrastShift) *
-            (batch->average[k] + (double)item->brightnessShift[k]));
+            dv[k] = item->brightnessShift[k] - batch->average[k] ;
             if (item->contrastShift != 1.) {
               double mu = 0. ;
               float const * pixel = channels[k] ;
               float const * end = channels[k] + n ;
               while (pixel != end) { mu += (double)(*pixel++) ; }
               mu /= (double)n ;
-              dv[k] -= (float)((1.0 - (double)item->contrastShift) * mu) ;
+              dv[k] += (float)((1.0 - (double)item->contrastShift) * mu) ;
+            }
+          }
+          {
+            float mu = 0.f ;
+            for (int k = 0 ; k < inputNumChannels ; ++k) {
+              mu += dv[k] ;
+            }
+            float a = item->saturationShift ;
+            float b = (1. - item->saturationShift) / inputNumChannels ;
+            for (int k = 0 ; k < inputNumChannels ; ++k) {
+              dv[k] = a * dv[k] + b * mu ;
             }
           }
           {
@@ -972,30 +982,30 @@ void ReaderTask::entryPoint()
               float const b = item->contrastShift * (1.f - item->saturationShift) / K ;
               while (channels[0] != end) {
                 float mu = 0.f ;
-                v[0] = *channels[0] + dv[0] ; mu += v[0] ;
-                v[1] = *channels[1] + dv[1] ; mu += v[1] ;
-                v[2] = *channels[2] + dv[2] ; mu += v[2] ;
-                *channels[0]++ = a * v[0] + b * mu ;
-                *channels[1]++ = a * v[1] + b * mu ;
-                *channels[2]++ = a * v[2] + b * mu ;
+                v[0] = *channels[0] ; mu += v[0] ;
+                v[1] = *channels[1] ; mu += v[1] ;
+                v[2] = *channels[2] ; mu += v[2] ;
+                *channels[0]++ = a * v[0] + b * mu + dv[0] ;
+                *channels[1]++ = a * v[1] + b * mu + dv[1] ;
+                *channels[2]++ = a * v[2] + b * mu + dv[2] ;
               }
             } else if (K == 3 && inputNumChannels == 1) {
               float const a = item->contrastShift * item->saturationShift ;
               float const b = item->contrastShift * (1.f - item->saturationShift) / K ;
               while (channels[0] != end) {
                 float mu = 0.f ;
-                v[0] = *channels[0] + dv[0] ; mu += v[0] ;
-                v[1] = *channels[0] + dv[1] ; mu += v[1] ;
-                v[2] = *channels[0] + dv[2] ; mu += v[2] ;
-                *channels[0]++ = a * v[0] + b * mu ;
-                *channels[1]++ = a * v[1] + b * mu ;
-                *channels[2]++ = a * v[2] + b * mu ;
+                v[0] = *channels[0] ; mu += v[0] ;
+                v[1] = *channels[0] ; mu += v[1] ;
+                v[2] = *channels[0] ; mu += v[2] ;
+                *channels[0]++ = a * v[0] + b * mu + dv[0] ;
+                *channels[1]++ = a * v[1] + b * mu + dv[0] ;
+                *channels[2]++ = a * v[2] + b * mu + dv[0] ;
               }
             } else {
               float const a = item->contrastShift ;
               while (channels[0] != end) {
-                float v = *channels[0] + dv[0] ;
-                *channels[0]++ = a * v ;
+                float v = *channels[0] ;
+                *channels[0]++ = a * v + dv[0] ;
               }
             }
           }
