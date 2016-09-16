@@ -39,6 +39,10 @@ function dx = sqrt_der(x, dy)
   dx = dy ./ sqrt(x) ;
 end
 
+function dx = exp_der(x, dy)
+  dx = dy .* exp(x) ;
+end
+
 function dx = sum_der(x, dim, dy)
   if nargin < 3
     % one-argument syntax of sum, plus derivative
