@@ -341,6 +341,15 @@ classdef Layer < matlab.mixin.Copyable
         [varargout{1:nargout}] = builtin('subsref', a, s) ;
       end
     end
+    
+    % overload END keyword, e.g. X(1:end-1). see DOC OBJECT-END-INDEXING.
+    % a difficult choice: returning a constant size requires knowing all
+    % input sizes in advance (i.e. to call evalOutputSize). returning a
+    % Layer (on-the-fly size calculation) has overhead and also requires
+    % overloading the colon (:) operator.
+    function idx = end(obj, dim, ndim)
+      error('Not supported, use SIZE(X,DIM) or a constant size instead.') ;
+    end
   end
   
   methods (Access = {?Net, ?Layer})
