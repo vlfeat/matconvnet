@@ -1,5 +1,5 @@
 function net = cnn_imagenet_init_resnet(varargin)
-% CNN_IMAGENET_INIT_RESNET  Initialize a standard CNN for ImageNet
+%CNN_IMAGENET_INIT_RESNET  Initialize the ResNet-50 model for ImageNet classification
 
 opts.classNames = {} ;
 opts.classDescriptions = {} ;
@@ -75,7 +75,7 @@ for s = 2:5
   switch s
     case 2, sectionLen = 3 ;
     case 3, sectionLen = 4 ; % 8 ;
-    case 4, sectionLen = 6; % 23 ; % 36 ;
+    case 4, sectionLen = 6 ; % 23 ; % 36 ;
     case 5, sectionLen = 3 ;
   end
 
@@ -138,7 +138,10 @@ net.addLayer('top5error', ...
              {'prediction', 'label'}, ...
              'top5error') ;
 
-% Meta parameters
+% -------------------------------------------------------------------------
+%                                                           Meta parameters
+% -------------------------------------------------------------------------
+
 net.meta.normalization.imageSize = [224 224 3] ;
 net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
 net.meta.normalization.cropSize = net.meta.normalization.imageSize(1) / 256 ;
@@ -150,8 +153,8 @@ net.meta.classes.description = opts.classDescriptions ;
 net.meta.augmentation.jitterLocation = true ;
 net.meta.augmentation.jitterFlip = true ;
 net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
-%net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
-%net.meta.augmentation.jitterScale  = [0.6, 1] ;
+net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
+net.meta.augmentation.jitterScale  = [0.5, 1.1] ;
 %net.meta.augmentation.jitterSaturation = 0.4 ;
 %net.meta.augmentation.jitterContrast = 0.4 ;
 
@@ -168,6 +171,17 @@ net.meta.trainOpts.weightDecay = 0.0001 ;
 
 % Init parameters randomly
 net.initParams() ;
+
+% For uniformity with the other ImageNet networks, t
+% the input data is *not* normalized to have unit standard deviation,
+% whereas this is enforced by batch normalization deeper down.
+% The ImageNet standard deviation (for each of R, G, and B) is about 60, so
+% we adjust the weights and learing rate accordingly in the first layer.
+%
+% This simple change improves performance almost +1% top 1 error.
+p = net.getParamIndex('conv1_f') ;
+net.params(p).value = net.params(p).value / 60 ;
+net.params(p).learningRate = net.params(p).learningRate / 60^2 ;
 
 for l = 1:numel(net.layers)
   if isa(net.layers(l).block, 'dagnn.BatchNorm')

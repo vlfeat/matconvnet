@@ -18,7 +18,13 @@ function rfs = getVarReceptiveFields(obj, var)
 % This file is part of the VLFeat library and is made available under the
 % terms of the BSD license (see the COPYING file).
 
-if ~isnumeric(var), var = obj.getVarIndex(var) ; end
+if ~isnumeric(var)
+  var_n = obj.getVarIndex(var) ;
+  if isnan(var_n)
+    error('Variable %s not found.', var_n);
+  end
+  var = var_n;
+end
 nv = numel(obj.vars) ;
 nw = numel(var) ;
 rfs = struct('size', cell(nw, nv), 'stride', cell(nw, nv), 'offset', cell(nw,nv)) ;

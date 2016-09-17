@@ -31,6 +31,8 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta22](about.md#changes) released with a few bugfixes.
+>
 > **New:** [1.0-beta21](about.md#changes) provides two new tools,
 > [`vl_tmove`](mfiles/vl_tmove.md) and `ParameterServer`, to
 > accelerate significantly data transfers between multiple GPUs. It
@@ -48,13 +50,9 @@ recognition, and text detection are available.
 > **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
 > models (demo training code coming next), CuDNN V5 support, and
 > numerous other improvements and bugfixes.
->
-> **New:** [1.0-beta18](about.md#changes) adds support fod DOUBLE data
-> type. [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) can now resize
-> images. This version also contains numerous bugfixes.
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta21](download/matconvnet-1.0-beta21.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta22](download/matconvnet-1.0-beta22.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>

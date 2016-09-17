@@ -243,12 +243,9 @@ Important notes:
   ensembles are evaluated.
 
 * The **evaluation speed** was measured on a 12-cores machine using a
-  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v4; performance
-  varies hugely depending on the network but also on how the data was
-  preprocessed; for example, `caffe-ref` and `caffe-alex` should be as
-  fast as `matconvnet-alex`, but they are not since images were
-  pre-processed in such a way that MATLAB had to call `imresize` for
-  each input image for the Caffe models.
+  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v5.1. A
+  significant bottleneck for many networks is the data reading speed
+  of `vl_imreadjpeg`.
 
 * The GoogLeNet model performance is a little lower than expected (the
   model should be on par or a little better than VGG-VD). This network

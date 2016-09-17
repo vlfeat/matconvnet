@@ -44,7 +44,7 @@ function vl_compilenn(varargin)
 %      Set this option to `true` to compile `vl_imreadjpeg`.
 %
 %   `EnableDouble`:: `true`
-%      Set this optino to `true` to compile the support for DOUBLE
+%      Set this option to `true` to compile the support for DOUBLE
 %      data types.
 %
 %   `ImageLibrary`:: `libjpeg` (Linux), `gdiplus` (Windows), `quartz` (Mac)
@@ -84,7 +84,7 @@ function vl_compilenn(varargin)
 %   In order to compile the GPU code, set the `EnableGpu` option to
 %   `true`. For this to work you will need:
 %
-%   * To satisfy all the requirement to compile the CPU code (see
+%   * To satisfy all the requirements to compile the CPU code (see
 %     above).
 %
 %   * A NVIDIA GPU with at least *compute capability 2.0*.
@@ -105,7 +105,7 @@ function vl_compilenn(varargin)
 %     | 8.6            | 2015b   | 7.0          |
 %     | 9.0            | 2016a   | 7.5          |
 %
-%     A different versions of CUDA may work using the hack described
+%     Different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
 %
 %   The following configurations have been tested successfully:
@@ -410,7 +410,8 @@ switch arch
 
   case {'win64'}
     flags.nvccpass{end+1} = '-Xcompiler /MD' ;
-    check_clpath(); % check whether cl.exe in path
+    cl_path = fileparts(check_clpath()); % check whether cl.exe in path
+    flags.nvccpass{end+1} = sprintf('--compiler-bindir "%s"', cl_path) ;
 end
 
 % --------------------------------------------------------------------
@@ -571,19 +572,22 @@ conf_file = fullfile(config_dir, ['mex_CUDA_' arch '.' ext]);
 fprintf('%s:\tCUDA: MEX config file: ''%s''\n', mfilename, conf_file);
 
 % --------------------------------------------------------------------
-function check_clpath()
+function cl_path = check_clpath()
 % --------------------------------------------------------------------
 % Checks whether the cl.exe is in the path (needed for the nvcc). If
 % not, tries to guess the location out of mex configuration.
+cc = mex.getCompilerConfigurations('c++');
+if isempty(cc)
+  error(['Mex is not configured.'...
+    'Run "mex -setup" to configure your compiler. See ',...
+    'http://www.mathworks.com/support/compilers ', ...
+    'for supported compilers for your platform.']);
+end
+cl_path = fullfile(cc.Location, 'VC', 'bin', 'amd64');
 [status, ~] = system('cl.exe -help');
 if status == 1
   warning('CL.EXE not found in PATH. Trying to guess out of mex setup.');
-  cc = mex.getCompilerConfigurations('c++');
-  if isempty(cc)
-    error('Mex is not configured. Run "mex -setup".');
-  end
   prev_path = getenv('PATH');
-  cl_path = fullfile(cc.Location, 'VC','bin','amd64');
   setenv('PATH', [prev_path ';' cl_path]);
   status = system('cl.exe');
   if status == 1
@@ -728,7 +732,7 @@ try
       sprintf('-gencode=arch=compute_%s,code=\\\"sm_%s,compute_%s\\\" ', ...
               arch_code, arch_code, arch_code) ;
 catch
-  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU;' ...
+  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU; ' ...
                       'falling back to default\n'], mfilename);
   cudaArch = opts.defCudaArch;
 end
