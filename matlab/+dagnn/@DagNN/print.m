@@ -33,7 +33,7 @@ function str = print(obj, inputSizes, varargin)
 %      for a `digraph` (supported in MATLAB>=R2015b) and the last one
 %      prints a graph  in `dot` format. In case of zero outputs, it
 %      attmepts to compile and visualise the dot graph using `dot` command
-%      and `display` (Linux) or `open` (Mac OSX) on your system.
+%      and `start` (Windows), `display` (Linux) or `open` (Mac OSX) on your system.
 %      In the latter case, all variables and layers are included in the
 %      graph, regardless of the other parameters.
 %
