@@ -37,10 +37,14 @@ function str = print(obj, inputSizes, varargin)
 %      In the latter case, all variables and layers are included in the
 %      graph, regardless of the other parameters.
 %
-%   `PdfPath`:: temporary file
-%      Sets the path where any generated PDF will be saved. Currently, 
+%   `FigurePath`:: temporary file, PDF
+%      Sets the path where any generated `dot` figure will be saved. Currently, 
 %      this is useful only in combination with the format `dot`. 
 %      By default, a unique temporary filename is used.
+%      Note the output format for the figure can be specified by providing
+%      a proper extenstion. A PDF file is created by default.
+%      Possible formats are the ones supported by the `dot` command,
+%      e.g. `svg`.
 %
 %   `MaxNumColumns`:: 18
 %      Maximum number of columns in each table.
@@ -55,7 +59,7 @@ end
 
 opts.all = false ;
 opts.format = 'ascii' ;
-opts.pdfPath = 'tempname' ;
+opts.figurePath = 'tempname' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.layers = '*' ;
@@ -80,7 +84,7 @@ str = {''} ;
 if strcmpi(opts.format, 'dot')
   str = printDot(obj, varSizes, paramSizes, opts) ;
   if nargout == 0
-    displayDot(str, opts.pdfPath) ;
+    displayDot(str, opts.figurePath) ;
   end
   return ;
 end
@@ -391,7 +395,7 @@ str = cat(2,str{:}) ;
 end
 
 % -------------------------------------------------------------------------
-function displayDot(str, pdfPath)
+function displayDot(str, figurePath)
 % -------------------------------------------------------------------------
 %mwdot = fullfile(matlabroot, 'bin', computer('arch'), 'mwdot') ;
 dotPaths = {'dot', '/opt/local/bin/dot'} ;
@@ -402,23 +406,26 @@ for i = 1:numel(dotPaths)
   end
 end
 if isempty(dotExe)
-  warning('Could not genereate a PDF figure because the `dot` utility could not be found.') ;
+  warning('Could not genereate a figure because the `dot` utility could not be found.') ;
   return ;
 end
 
 in = [tempname '.dot'] ;
 
-if strcmp(pdfPath, 'tempname')
-    out = [tempname '.pdf'] ;
+if strcmp(figurePath, 'tempname')
+    ext = '.pdf';
+    out = [tempname ext] ;
 else
-    % ensure .pdf suffix for output
-    [path, name, ext] = fileparts(pdfPath) ;
-    out = fullfile(path, [ name '.pdf' ]) ;
+    [path, name, ext] = fileparts(figurePath) ;
+    if isempty(ext)
+      ext = '.pdf' ;
+    end
+    out = fullfile(path, [ name ext ]) ;
 end
 
 f = fopen(in,'w') ; fwrite(f, str) ; fclose(f) ;
 
-cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotExe, out, in) ;
+cmd = sprintf('"%s" -T%s -o "%s" "%s"', dotExe, ext(2:end), out, in) ;
 [status, result] = system(cmd) ;
 if status ~= 0
   error('Unable to run %s\n%s', cmd, result) ;
@@ -434,6 +441,6 @@ switch computer
   case 'GLNXA64'
     system(sprintf('display "%s"', out)) ;
   otherwise
-    fprintf('PDF figure saved at "%s"\n', out) ;
+    fprintf('The figure saved at "%s"\n', out) ;
 end
 end
