@@ -53,7 +53,7 @@ end
 
 Conv('conv1', 7, 64, ...
      'relu', true, ...
-     'bias', true, ...
+     'bias', false, ...
      'downsample', true) ;
 
 net.addLayer(...
@@ -180,8 +180,8 @@ net.initParams() ;
 %
 % This simple change improves performance almost +1% top 1 error.
 p = net.getParamIndex('conv1_f') ;
-net.params(p).value = net.params(p).value / 60 ;
-net.params(p).learningRate = net.params(p).learningRate / 60^2 ;
+net.params(p).value = net.params(p).value / 100 ;
+net.params(p).learningRate = net.params(p).learningRate / 100^2 ;
 
 for l = 1:numel(net.layers)
   if isa(net.layers(l).block, 'dagnn.BatchNorm')
