@@ -427,6 +427,8 @@ fprintf('Dot output:\n%s\n', result) ;
 
 %f = fopen(out,'r') ; file=fread(f, 'char=>char')' ; fclose(f) ;
 switch computer
+  case {'PCWIN64', 'PCWIN'}
+    system(sprintf('start "" "%s"', out)) ;
   case 'MACI64'
     system(sprintf('open "%s"', out)) ;
   case 'GLNXA64'
