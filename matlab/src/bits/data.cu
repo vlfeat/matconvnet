@@ -450,11 +450,11 @@ vl::Context::getAllOnes(DeviceType deviceType, DataType dataType, size_t size)
 #if ENABLE_GPU
         if (dataType == VLDT_Float) {
           setToOnes<float>
-          <<<divideAndRoundUp(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+            <<<divideAndRoundUp(size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
           ((float*)data, size) ;
         } else {
           setToOnes<double>
-          <<<divideAndRoundUp(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+            <<<divideAndRoundUp(size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
           ((double*)data, size) ;
         }
         error = getCudaHelper().catchCudaError() ;
