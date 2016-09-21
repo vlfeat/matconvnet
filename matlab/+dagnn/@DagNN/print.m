@@ -404,11 +404,20 @@ end
 function displayDot(str, opts)
 % -------------------------------------------------------------------------
 %mwdot = fullfile(matlabroot, 'bin', computer('arch'), 'mwdot') ;
-dotPaths = {'dot', '/opt/local/bin/dot'} ;
+dotPaths = {'/opt/local/bin/dot', 'dot'} ;
+if ismember(computer, {'PCWIN64', 'PCWIN'})
+  winPath = 'c:\Program Files (x86)';
+  dpath = dir(fullfile(winPath, 'Graphviz*'));
+  if ~isempty(dpath)
+    dotPaths = [{fullfile(winPath, dpath.name, 'bin', 'dot.exe')}, dotPaths];
+  end
+end
 dotExe = '' ;
 for i = 1:numel(dotPaths)
-  if exist(dotPaths{i},'file')
+  [~,~,ext] = fileparts(dotPaths{i});
+  if exist(dotPaths{i},'file') && ~strcmp(ext, '.m')
     dotExe = dotPaths{i} ;
+    break;
   end
 end
 if isempty(dotExe)
@@ -419,10 +428,8 @@ end
 [path, figName, ext] = fileparts(opts.figurePath) ;
 
 if isempty(ext), ext = '.pdf' ; end
-istemp = false;
 if strcmp(figName, 'tempname')
   figName = tempname();
-  istemp = true;
 end
 in = fullfile(path, [ figName, '.dot' ]) ;
 out = fullfile(path, [ figName, ext ]) ;
@@ -448,11 +455,6 @@ switch computer
   case 'GLNXA64'
     system(sprintf('display "%s"', out)) ;
   otherwise
-    istemp = false;
     fprintf('The figure saved at "%s"\n', out) ;
 end
-if istemp
-  delete(in);
-  delete(out);
-end;
 end
