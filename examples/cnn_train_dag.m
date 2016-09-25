@@ -56,7 +56,8 @@ end
 % -------------------------------------------------------------------------
 
 modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
-modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
+modelFigPath = fullfile(opts.expDir, 'net-train.fig') ;
+modelPdfPath = fullfile(opts.expDir, 'net-train.pdf') ;
 
 start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
@@ -125,7 +126,6 @@ for epoch=start+1:opts.numEpochs
           values(end+1,:) = tmp(1,:)' ;
           leg{end+1} = f ;
         end
-        print(1, modelPdfPath, '-dpdf', '-bestfit');
       end
       subplot(1,numel(plots),find(strcmp(p,plots))) ;
       plot(1:epoch, values','o-') ;
@@ -151,7 +151,8 @@ for epoch=start+1:opts.numEpochs
       end
     end
     drawnow ;
-    print(1, modelFigPath, '-dpdf') ;
+    print(1, modelPdfPath, '-dpdf', '-bestfit') ;
+    savefig(1, modelFigPath);
   end
 end
 
@@ -454,7 +455,7 @@ if numGpus >= 1 && cold
   fprintf('%s: resetting GPU\n', mfilename)
   clearMex() ;
   if numGpus == 1
-    gpuDevice(opts.gpus)
+%     gpuDevice(opts.gpus)
   else
     spmd
       clearMex() ;
