@@ -55,7 +55,7 @@ recognition, and text detection are available.
 > numerous other improvements and bugfixes.
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta22](download/matconvnet-1.0-beta22.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta23](download/matconvnet-1.0-beta23.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>
