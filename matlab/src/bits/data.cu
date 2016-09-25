@@ -13,6 +13,14 @@ the terms of the BSD license (see the COPYING file).
 #include "data.hpp"
 #include <cassert>
 #include <cstdlib>
+#include <cmath>
+
+#include <time.h>
+#ifdef _MSC_VER
+#include "windows.h"
+#else
+#include <sys/time.h>
+#endif
 
 #ifndef NDEBUG
 #include <iostream>
@@ -28,8 +36,49 @@ using namespace vl ;
  * Helpers
  * ---------------------------------------------------------------- */
 
+int vl::gcd(int a, int b, int& u, int& v)
+{
+  assert(a >= 0) ;
+  assert(b >= 0) ;
+  int u_ = 0 ;
+  int v_ = 1 ;
+  u = 1 ;
+  v = 0 ;
+  while (b > 0) {
+    int tmp ;
+    int q = a / b ;
+
+    tmp = b ;
+    b = a - q*b ;
+    a = tmp ;
+
+    tmp = u_ ;
+    u_ = u - q*u_ ;
+    u = tmp ;
+
+    tmp = v_ ;
+    v_ = v - q*v_ ;
+    v = tmp ;
+  }
+  return a ;
+}
+
+size_t vl::getTime()
+{
+#ifdef _MSC_VER
+  LARGE_INTEGER t ;
+  QueryPerformanceFrequency(&t) ;
+  return (size_t)(t.QuadPart / 1000ULL) ;
+#else
+  struct timeval time ;
+  int error = gettimeofday(&time, NULL) ;
+  assert(error == 0) ;
+  return (size_t)time.tv_sec * 1000000 + (size_t)time.tv_usec ;
+#endif
+}
+
 const char *
-vl::getErrorMessage(Error error)
+vl::getErrorMessage(ErrorCode error)
 {
   static char const * messages[] = {
     "success",
@@ -39,24 +88,90 @@ vl::getErrorMessage(Error error)
     "cuBLAS error",
     "out of memory error",
     "out of GPU memory error",
-    "unknown error"
+    "unknown error",
+    "timeout",
+    "no data",
+    "illegal message",
+    "interrupted"
   } ;
-  if (error < vlSuccess || error > vlErrorUnknown) {
-    error = vlErrorUnknown ;
+  if (error < VLE_Success || error > VLE_Unknown) {
+    error = VLE_Unknown ;
   }
   return messages[error] ;
 }
 
 static int
-getTypeSize(Type dataType)
+getTypeSize(DataType dataType)
 {
   switch (dataType) {
-    case vlTypeChar : return sizeof(char) ;
-    case vlTypeFloat : return sizeof(float) ;
-    case vlTypeDouble : return sizeof(double) ;
+    case VLDT_Char : return sizeof(char) ;
+    case VLDT_Float : return sizeof(float) ;
+    case VLDT_Double : return sizeof(double) ;
     default: abort() ;
   }
   return 0 ;
+}
+
+namespace vl { namespace impl {
+class Randn
+{
+public:
+  Randn()
+  {
+    tx[1] = 3.655420419026953 ;
+    ty[1] = f(tx[1]) ;
+    double A = ty[1] * (tx[1] + 1./tx[1]) ;
+    for (int k = 1 ; k < K ; ++k) {
+      ty[k] = f(tx[k]) ;
+      tx[k+1] = invf(A/tx[k] + ty[k]) ;
+    }
+    tx[0] = A / ty[1] ;
+  }
+
+  double sample() {
+    while (true) {
+      int k =  rand() % K ;
+      double u = (double)rand() / RAND_MAX ;
+      double x = tx[k] * (2.*u - 1.) ;
+      double absx = fabs(x) ;
+      if (absx <= tx[k+1]) { return x ; }
+      double v = (double)rand() / RAND_MAX ;
+      if (k > 1) {
+        double y = v * (ty[k+1] - ty[k]) + ty[k] ;
+        if (y <= f(absx)) { return x ; }
+      } else {
+        double w = (double)rand() / RAND_MAX ;
+        double dx = - log(w) / tx[1] ;
+        if (- 2.0 * log(v) > dx*dx) {
+          double s = (rand() & 0x1) ? +1 : -1 ;
+          return s * (tx[1] + dx) ;
+        }
+      }
+    }
+  }
+
+private:
+  enum { K = 256, } ;
+  double tx [K+1] ;
+  double ty [K+1] ;
+
+  double f(double x) {
+    // 1/sqrt(2*pi)
+    return 0.398942280401433 * exp(-0.5 * x * x) ;
+  }
+
+  double invf(double y) {
+    // sqrt(2*pi)
+    return sqrt(-2.0 * log(2.506628274631000 * y));
+  }
+} ;
+
+} } // namespaces
+
+double vl::randn()
+{
+  static vl::impl::Randn rnd ;
+  return rnd.sample() ;
 }
 
 /* -------------------------------------------------------------------
@@ -65,7 +180,7 @@ getTypeSize(Type dataType)
 
 vl::impl::Buffer::Buffer()
 :
-deviceType(vl::CPU), dataType(vlTypeChar),
+deviceType(vl::VLDT_CPU), dataType(VLDT_Char),
 size(0), memory(NULL), numReallocations(0)
 { }
 
@@ -81,26 +196,26 @@ vl::impl::Buffer::getNumReallocations() const
   return numReallocations ;
 }
 
-vl::Error
-vl::impl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
+vl::ErrorCode
+vl::impl::Buffer::init(DeviceType deviceType_, DataType dataType_, size_t size_)
 {
   bool ok =
   (deviceType == deviceType_) &
   (dataType == dataType_) &
   (size >= size_) ;
-  if (ok) { return vl::vlSuccess ; }
+  if (ok) { return vl::VLE_Success ; }
   clear() ;
   void * memory_ = NULL ;
   size_t sizeInBytes = getTypeSize(dataType_) * size_ ;
   switch (deviceType_) {
-    case vl::CPU:
+    case vl::VLDT_CPU:
       memory_ = malloc(sizeInBytes) ;
-      if (memory_ == NULL) { return vl::vlErrorOutOfMemory ; }
+      if (memory_ == NULL) { return vl::VLE_OutOfMemory ; }
       break ;
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_GPU
       cudaError_t error = cudaMalloc(&memory_, sizeInBytes) ;
-      if (error != cudaSuccess) { return vl::vlErrorOutOfMemory ; }
+      if (error != cudaSuccess) { return vl::VLE_OutOfMemory ; }
       break ;
 #else
       abort() ;
@@ -111,7 +226,7 @@ vl::impl::Buffer::init(Device deviceType_, Type dataType_, size_t size_)
   size = size_ ;
   memory = memory_ ;
   numReallocations ++ ;
-  return vl::vlSuccess ;
+  return vl::VLE_Success ;
 }
 
 void
@@ -119,10 +234,10 @@ vl::impl::Buffer::clear()
 {
   if (memory != NULL) {
     switch (deviceType) {
-      case vl::CPU:
+      case vl::VLDT_CPU:
         free(memory) ;
         break ;
-      case vl::GPU:
+      case vl::VLDT_GPU:
 #if ENABLE_GPU
         cudaFree(memory) ;
         break ;
@@ -131,8 +246,8 @@ vl::impl::Buffer::clear()
 #endif
     }
   }
-  deviceType = vl::CPU ;
-  dataType= vlTypeChar ;
+  deviceType = vl::VLDT_CPU ;
+  dataType= VLDT_Char ;
   size = 0 ;
   memory = NULL ;
 }
@@ -140,7 +255,7 @@ vl::impl::Buffer::clear()
 void
 vl::impl::Buffer::invalidateGpu()
 {
-  if (deviceType == vl::GPU) {
+  if (deviceType == vl::VLDT_GPU) {
     memory = NULL ;
     clear() ;
   }
@@ -152,7 +267,7 @@ vl::impl::Buffer::invalidateGpu()
 
 vl::Context::Context()
 :
-lastError(vl::vlSuccess), lastErrorMessage(), cudaHelper(NULL)
+lastError(vl::VLE_Success), lastErrorMessage(), cudaHelper(NULL)
 { }
 
 vl::CudaHelper &
@@ -173,11 +288,11 @@ void vl::Context::clear()
 #ifndef NDEBUG
   std::cout<<"Context::clear()"<<std::endl ;
 #endif
-  clearWorkspace(CPU) ;
-  clearAllOnes(CPU) ;
+  clearWorkspace(VLDT_CPU) ;
+  clearAllOnes(VLDT_CPU) ;
 #if ENABLE_GPU
-  clearWorkspace(GPU) ;
-  clearAllOnes(GPU) ;
+  clearWorkspace(VLDT_GPU) ;
+  clearAllOnes(VLDT_GPU) ;
   if (cudaHelper) {
     delete cudaHelper ;
     cudaHelper = NULL ;
@@ -189,8 +304,8 @@ void
 vl::Context::invalidateGpu()
 {
 #if ENABLE_GPU
-  workspace[vl::GPU].invalidateGpu() ;
-  allOnes[vl::GPU].invalidateGpu() ;
+  workspace[vl::VLDT_GPU].invalidateGpu() ;
+  allOnes[vl::VLDT_GPU].invalidateGpu() ;
   getCudaHelper().invalidateGpu() ;
 #endif
 }
@@ -210,14 +325,14 @@ vl::Context::~Context()
 void
 vl::Context::resetLastError()
 {
-  lastError = vl::vlSuccess ;
+  lastError = vl::VLE_Success ;
   lastErrorMessage = std::string() ;
 }
 
-vl::Error
-vl::Context::passError(vl::Error error, char const* description)
+vl::ErrorCode
+vl::Context::passError(vl::ErrorCode error, char const* description)
 {
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     if (description) {
       lastErrorMessage = std::string(description) + ": " + lastErrorMessage ;
     }
@@ -225,23 +340,23 @@ vl::Context::passError(vl::Error error, char const* description)
   return error ;
 }
 
-vl::Error
-vl::Context::setError(vl::Error error, char const* description)
+vl::ErrorCode
+vl::Context::setError(vl::ErrorCode error, char const* description)
 {
-  if (error != vl::vlSuccess ) {
+  if (error != vl::VLE_Success ) {
     lastError = error ;
     std::string message = getErrorMessage(error) ;
     if (description) {
       message = std::string(description) + " [" + message + "]" ;
     }
 #if ENABLE_GPU
-    if (error == vl::vlErrorCuda) {
+    if (error == vl::VLE_Cuda) {
       std::string cudaMessage = getCudaHelper().getLastCudaErrorMessage() ;
       if (cudaMessage.length() > 0) {
         message += " [cuda: " + cudaMessage + "]" ;
       }
     }
-    if (error == vl::vlErrorCublas) {
+    if (error == vl::VLE_Cublas) {
       std::string cublasMessage = getCudaHelper().getLastCublasErrorMessage() ;
       if (cublasMessage.length() > 0) {
         message += " [cublas:" + cublasMessage + "]" ;
@@ -249,7 +364,7 @@ vl::Context::setError(vl::Error error, char const* description)
     }
 #endif
 #if ENABLE_CUDNN
-    if (error == vl::vlErrorCudnn) {
+    if (error == vl::VLE_Cudnn) {
       std::string cudnnMessage = getCudaHelper().getLastCudnnErrorMessage() ;
       if (cudnnMessage.length() > 0) {
         message += " [cudnn: " + cudnnMessage + "]" ;
@@ -261,7 +376,7 @@ vl::Context::setError(vl::Error error, char const* description)
   return error ;
 }
 
-vl::Error
+vl::ErrorCode
 vl::Context::getLastError() const
 {
   return lastError ;
@@ -278,10 +393,10 @@ vl::Context::getLastErrorMessage() const
  * ---------------------------------------------------------------- */
 
 void *
-vl::Context::getWorkspace(Device deviceType, size_t size)
+vl::Context::getWorkspace(DeviceType deviceType, size_t size)
 {
-  vl::Error error = workspace[deviceType].init(deviceType, vlTypeChar, size) ;
-  if (error != vlSuccess) {
+  vl::ErrorCode error = workspace[deviceType].init(deviceType, VLDT_Char, size) ;
+  if (error != VLE_Success) {
     setError(error, "getWorkspace") ;
     return NULL ;
   }
@@ -289,7 +404,7 @@ vl::Context::getWorkspace(Device deviceType, size_t size)
 }
 
 void
-vl::Context::clearWorkspace(Device deviceType)
+vl::Context::clearWorkspace(DeviceType deviceType)
 {
   workspace[deviceType].clear() ;
 }
@@ -308,22 +423,22 @@ setToOnes (type * data, int size)
 #endif
 
 void *
-vl::Context::getAllOnes(Device deviceType, Type dataType, size_t size)
+vl::Context::getAllOnes(DeviceType deviceType, DataType dataType, size_t size)
 {
   int n = allOnes[deviceType].getNumReallocations() ;
   void * data = NULL ;
 
   // make sure that there is enough space for the buffer
-  vl::Error error = allOnes[deviceType].init(deviceType, dataType, size) ;
-  if (error != vlSuccess) { goto done ; }
+  vl::ErrorCode error = allOnes[deviceType].init(deviceType, dataType, size) ;
+  if (error != VLE_Success) { goto done ; }
   data = allOnes[deviceType].getMemory() ;
 
   // detect if a new buffer has been allocated and if so initialise it
   if (n < allOnes[deviceType].getNumReallocations()) {
     switch (deviceType) {
-      case vl::CPU:
+      case vl::VLDT_CPU:
         for (int i = 0 ; i < size ; ++i) {
-          if (dataType == vlTypeFloat) {
+          if (dataType == VLDT_Float) {
             ((float*)data)[i] = 1.0f ;
           } else {
             ((double*)data)[i] = 1.0 ;
@@ -331,15 +446,15 @@ vl::Context::getAllOnes(Device deviceType, Type dataType, size_t size)
         }
         break ;
 
-      case GPU:
+      case vl::VLDT_GPU:
 #if ENABLE_GPU
-        if (dataType == vlTypeFloat) {
+        if (dataType == VLDT_Float) {
           setToOnes<float>
-          <<<divideUpwards(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+          <<<divideAndRoundUp(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
           ((float*)data, size) ;
         } else {
           setToOnes<double>
-          <<<divideUpwards(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+          <<<divideAndRoundUp(size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
           ((double*)data, size) ;
         }
         error = getCudaHelper().catchCudaError() ;
@@ -351,7 +466,7 @@ vl::Context::getAllOnes(Device deviceType, Type dataType, size_t size)
     }
   }
 done:
-  if (setError(error, "getAllOnes: ") == vl::vlSuccess) {
+  if (setError(error, "getAllOnes: ") == vl::VLE_Success) {
     return data ;
   } else {
     return NULL ;
@@ -359,7 +474,7 @@ done:
 }
 
 void
-vl::Context::clearAllOnes(Device deviceType)
+vl::Context::clearAllOnes(DeviceType deviceType)
 {
   allOnes[deviceType].clear() ;
 }
@@ -392,6 +507,15 @@ vl::TensorShape::TensorShape(size_t height, size_t width, size_t depth, size_t s
 void vl::TensorShape::clear()
 {
   numDimensions = 0 ;
+}
+
+void vl::TensorShape::setDimensions(size_t const * newDimensions, size_t newNumDimensions)
+{
+  assert(newNumDimensions  <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  for (int k = 0 ; k < newNumDimensions ; ++k) {
+    dimensions[k] = newDimensions[k] ;
+  }
+  numDimensions = newNumDimensions ;
 }
 
 void vl::TensorShape::setDimension(size_t num, size_t dimension)
@@ -486,12 +610,12 @@ void vl::TensorShape::reshape(TensorShape const & newShape)
  * ---------------------------------------------------------------- */
 
 vl::Tensor::Tensor()
-: TensorShape(), dataType(vlTypeFloat),
-  deviceType(CPU), memory(NULL), memorySize(0)
+: TensorShape(), dataType(VLDT_Float),
+  deviceType(VLDT_CPU), memory(NULL), memorySize(0)
 { }
 
-vl::Tensor::Tensor(TensorShape const & shape, Type dataType,
-                   Device deviceType, void * memory, size_t memorySize)
+vl::Tensor::Tensor(TensorShape const & shape, DataType dataType,
+                   DeviceType deviceType, void * memory, size_t memorySize)
 : TensorShape(shape),
 dataType(dataType),
 deviceType(deviceType),
@@ -503,10 +627,10 @@ TensorShape vl::Tensor::getShape() const
   return TensorShape(*this) ;
 }
 
-vl::Type vl::Tensor::getDataType() const { return dataType ; }
+vl::DataType vl::Tensor::getDataType() const { return dataType ; }
 void * vl::Tensor::getMemory() { return memory ; }
 void vl::Tensor::setMemory(void * x) { memory = x ; }
-vl::Device vl::Tensor::getDeviceType() const { return deviceType ; }
+vl::DeviceType vl::Tensor::getDeviceType() const { return deviceType ; }
 bool vl::Tensor::isNull() const { return memory == NULL ; }
 vl::Tensor::operator bool() const { return !isNull() ; }
 

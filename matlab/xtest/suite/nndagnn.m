@@ -110,6 +110,13 @@ classdef nndagnn < nntest
       end
       test.net.vars(outputIdx).precious = false;
     end
+
+    function getReceptiveFields(test)
+      % Just test if it does not crash
+      for vi = 1:numel(test.net.vars)
+        test.net.getVarReceptiveFields(test.net.vars(vi).name);
+      end
+    end
   end
 
   methods

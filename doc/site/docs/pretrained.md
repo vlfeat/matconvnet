@@ -211,25 +211,25 @@ This is a summary of the performance of these models on the ILSVRC
 
 |                         model|introduced|top-1 err.|top-5 err.|  images/s|
 |------------------------------|----------|----------|----------|----------|
-|                 resnet-50-dag|      2015|      24.6|       7.7|     315.3|
-|                resnet-101-dag|      2015|      23.4|       7.0|     212.7|
-|                resnet-152-dag|      2015|      23.0|       6.7|     156.6|
-|    matconvnet-vgg-verydeep-16|      2014|      28.3|       9.5|     184.5|
-|               vgg-verydeep-19|      2014|      28.7|       9.9|     154.5|
-|               vgg-verydeep-16|      2014|      28.5|       9.9|     183.1|
-|                 googlenet-dag|      2014|      34.2|      12.9|     501.8|
-|              matconvnet-vgg-s|      2013|      37.0|      15.8|     415.9|
-|              matconvnet-vgg-m|      2013|      36.9|      15.5|     623.1|
-|              matconvnet-vgg-f|      2013|      41.4|      19.1|     793.1|
-|                         vgg-s|      2013|      36.7|      15.3|     395.4|
-|                         vgg-m|      2013|      37.3|      15.9|     586.9|
-|                         vgg-f|      2013|      41.1|      18.8|     785.7|
-|                     vgg-m-128|      2013|      40.8|      18.4|     588.7|
-|                    vgg-m-1024|      2013|      37.8|      16.1|     596.8|
-|                    vgg-m-2048|      2013|      37.1|      15.8|     589.4|
-|               matconvnet-alex|      2012|      41.8|      19.2|     760.3|
-|                     caffe-ref|      2012|      42.4|      19.6|     384.8|
-|                    caffe-alex|      2012|      42.6|      19.6|     382.4|
+|                 resnet-50-dag|      2015|      24.6|       7.7|     396.3|
+|                resnet-101-dag|      2015|      23.4|       7.0|     247.3|
+|                resnet-152-dag|      2015|      23.0|       6.7|     172.5|
+|    matconvnet-vgg-verydeep-16|      2014|      28.3|       9.5|     200.9|
+|               vgg-verydeep-19|      2014|      28.7|       9.9|     166.2|
+|               vgg-verydeep-16|      2014|      28.5|       9.9|     200.2|
+|                 googlenet-dag|      2014|      34.2|      12.9|     770.6|
+|              matconvnet-vgg-s|      2013|      37.0|      15.8|     586.2|
+|              matconvnet-vgg-m|      2013|      36.9|      15.5|    1212.5|
+|              matconvnet-vgg-f|      2013|      41.4|      19.1|    2482.7|
+|                         vgg-s|      2013|      36.7|      15.3|     560.1|
+|                         vgg-m|      2013|      37.3|      15.9|    1025.1|
+|                         vgg-f|      2013|      41.1|      18.8|    1118.9|
+|                     vgg-m-128|      2013|      40.8|      18.4|    1031.3|
+|                    vgg-m-1024|      2013|      37.8|      16.1|     958.5|
+|                    vgg-m-2048|      2013|      37.1|      15.8|     984.2|
+|               matconvnet-alex|      2012|      41.8|      19.2|    2133.3|
+|                     caffe-ref|      2012|      42.6|      19.7|    1071.7|
+|                    caffe-alex|      2012|      42.6|      19.6|    1379.8|
 
 Important notes:
 
@@ -243,12 +243,9 @@ Important notes:
   ensembles are evaluated.
 
 * The **evaluation speed** was measured on a 12-cores machine using a
-  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v4; performance
-  varies hugely depending on the network but also on how the data was
-  preprocessed; for example, `caffe-ref` and `caffe-alex` should be as
-  fast as `matconvnet-alex`, but they are not since images were
-  pre-processed in such a way that MATLAB had to call `imresize` for
-  each input image for the Caffe models.
+  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v5.1. A
+  significant bottleneck for many networks is the data reading speed
+  of `vl_imreadjpeg`.
 
 * The GoogLeNet model performance is a little lower than expected (the
   model should be on par or a little better than VGG-VD). This network

@@ -28,6 +28,7 @@ display(opts);
 
 if exist(opts.imdbPath)
   imdb = load(opts.imdbPath) ;
+  imdb.imageDir = fullfile(opts.dataDir, 'images');
 else
   imdb = cnn_imagenet_setup_data('dataDir', opts.dataDir, 'lite', opts.lite) ;
   mkdir(opts.expDir) ;
@@ -106,42 +107,48 @@ imdb = cnn_imagenet_sync_labels(imdb, net);
 % -------------------------------------------------------------------------
 function fn = getBatchFn(opts, meta)
 % -------------------------------------------------------------------------
-useGpu = numel(opts.train.gpus) > 0 ;
-bopts = meta.normalization ;
-bopts.numThreads = opts.numFetchThreads ;
 
-% Most networks are trained by resizing images to 256 pixels and then
-% cropping a slightly smaller subarea. Reproduce this effect (center
-% crop) for a more accurate evaluation (it also avoids resizing the
-% images if these have been pre-processed to be of this size, which
-% accelerates everything).
-
-bopts.border = 256 - meta.normalization.imageSize ;
-
-switch lower(opts.networkType)
-  case 'simplenn'
-    fn = @(x,y) getSimpleNNBatch(bopts,x,y) ;
-  case 'dagnn'
-    fn = @(x,y) getDagNNBatch(bopts,useGpu,x,y) ;
+if isfield(meta.normalization, 'keepAspect')
+  keepAspect = meta.normalization.keepAspect ;
+else
+  keepAspect = true ;
 end
 
-% -------------------------------------------------------------------------
-function [im,labels] = getSimpleNNBatch(opts, imdb, batch)
-% -------------------------------------------------------------------------
-images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-im = cnn_imagenet_get_batch(images, opts, ...
-                            'prefetch', nargout == 0) ;
-labels = imdb.images.label(batch) ;
+if numel(meta.normalization.averageImage) == 3
+  mu = double(meta.normalization.averageImage(:)) ;
+else
+  mu = imresize(single(meta.normalization.averageImage), ...
+                meta.normalization.imageSize(1:2)) ;
+end
+
+useGpu = numel(opts.train.gpus) > 0 ;
+
+bopts.test = struct(...
+  'useGpu', useGpu, ...
+  'numThreads', opts.numFetchThreads, ...
+  'imageSize',  meta.normalization.imageSize(1:2), ...
+  'cropSize', max(meta.normalization.imageSize(1:2)) / 256, ...
+  'subtractAverage', mu, ...
+  'keepAspect', keepAspect) ;
+
+fn = @(x,y) getBatch(bopts,useGpu,lower(opts.networkType),x,y) ;
 
 % -------------------------------------------------------------------------
-function inputs = getDagNNBatch(opts, useGpu, imdb, batch)
+function varargout = getBatch(opts, useGpu, networkType, imdb, batch)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir filesep], imdb.images.name(batch)) ;
-im = cnn_imagenet_get_batch(images, opts, ...
-                            'prefetch', nargout == 0) ;
+if ~isempty(batch) && imdb.images.set(batch(1)) == 1
+  phase = 'train' ;
+else
+  phase = 'test' ;
+end
+data = getImageBatch(images, opts.(phase), 'prefetch', nargout == 0) ;
 if nargout > 0
-  if useGpu
-    im = gpuArray(im) ;
+  labels = imdb.images.label(batch) ;
+  switch networkType
+    case 'simplenn'
+      varargout = {data, labels} ;
+    case 'dagnn'
+      varargout{1} = {'input', data, 'label', labels} ;
   end
-  inputs = {'input', im, 'label', imdb.images.label(batch)} ;
 end

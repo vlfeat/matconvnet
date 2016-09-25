@@ -7,7 +7,7 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{tikz}
 \usetikzlibrary{positioning,calc,matrix,arrows}
-\usepackage{pgfplots} 
+\usepackage{pgfplots}
 \usepackage{listings}
 \usepackage{color}
 \usepackage{textcomp}
@@ -17,6 +17,7 @@
 \usepackage{cleveref}
 
 \newtheorem{example}{Example}
+\newtheorem{lemma}{Lemma}
 
 \newcommand{\real}{\mathbb{R}}
 \newcommand{\vv}{\operatorname{vec}}
@@ -40,7 +41,7 @@
 \newcommand{\argmax}{\operatornamewithlimits{argmax}}
 \newcommand{\sign}{\operatornamewithlimits{sign}}
 
-\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em] 
+\tikzstyle{block} = [draw, rectangle, minimum height=3em, minimum width=3em]
 \tikzstyle{data} = []
 \tikzstyle{datac} = [draw, circle, minimum height=2.5em, minimum width=2.5em,inner sep=3pt,font=\footnotesize]
 \tikzstyle{par} = [draw, circle, minimum height=2.5em, minimum width=2.5em,fill=black!20,inner sep=3pt,font=\footnotesize]
@@ -88,8 +89,20 @@ Convolutional Neural Networks for MATLAB}
 \author{
 Andrea Vedaldi
 \and
-Karel Lenc}
+Karel Lenc
+\and
+Ankush Gupta
+}
 \date{}
+
+\hypersetup{
+  pdfinfo={
+    Title={MatConvNet: Convolutional Neural Networks for MATLAB},
+    Author={Andrea Vedaldi, Karel Lenc and Ankush Gupta},
+		Subject={Reference Manual},
+    Keywords={computer vision, convolutional neural networks, deep learning, image understanding, machine learning}
+  }
+}
 
 \sloppy
 
@@ -125,6 +138,3 @@ Karel Lenc}
 \bibliography{references,/Users/vedaldi/src/bibliography/vedaldi}
 \end{document}
 % ------------------------------------------------------------------
-
-
-

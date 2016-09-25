@@ -66,6 +66,28 @@ Note that the padded input must be at least as large as the filters: $H +P_h^- +
 
 An application of grouping is implementing the Krizhevsky and Hinton network~\cite{krizhevsky12imagenet} which uses two such streams. Another application is sum pooling; in the latter case, one can specify $D$ groups of $D'=1$ dimensional filters identical filters of value 1 (however, this is considerably slower than calling the dedicated pooling function as given in \cref{s:pooling}).
 
+\paragraph{Dilation.} !vl_nnconv! allows kernels to be spatially dilated on the fly by inserting zeros between elements. For instance, a dilation factor $d=2$ causes the 1D kernel $[f_1,f_2]$ to be implicitly transformed in the kernel $[f_1,0,0,f_2]$. Thus, with dilation factors $d_h,d_w$, a filter of size $(H_f,W_f)$ is equivalent to a filter of size:
+\[
+  H' = d_h(H_f - 1) + 1,
+  \qquad
+  W' = d_w(W_f - 1) + 1.
+\]
+With dilation, the convolution becomes:
+\[
+y_{i''j''d''}
+=
+b_{d''}
++
+\sum_{i'=1}^{H_f}
+\sum_{j'=1}^{W_f}
+\sum_{d'=1}^D
+f_{i'j'd} \times x_{
+S_h (i''-1)+d_h(i'-1)-P_h^-+1,
+S_w (j''-1)+d_w(j'-1)-P_w^-+1,
+d',d''}.
+\]
+
+
 % ------------------------------------------------------------------
 \section{Convolution transpose (deconvolution)}\label{s:convt}
 % ------------------------------------------------------------------
@@ -73,10 +95,10 @@ An application of grouping is implementing the Krizhevsky and Hinton network~\ci
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=0.7\textwidth]{figures/svg/convt}
-	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied in a sliding-window, in a pattern that is the transpose of \cref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represent crops with $C_-=2$ and $C_+=3$ which are discarded.  The samples of $x$ involved in the calculation of a sample of $y$ are shown with arrow. Note that, differently from \cref{f:conv}, there are no samples to the right of $\by$ which are involved in a convolution operation. This is because the width $H''$ of the output $\by$, which given $H'$ can be determined up to $U_h$ samples, is selected to be the smallest possible.}\label{f:convt}
+	\caption{\textbf{Convolution transpose.} The figure illustrates the process of filtering a 1D signal $x$ by a filter $f$ to obtain a signal $y$. The filter is applied as a sliding-window, forming a pattern which is the transpose of the one of \cref{f:conv}. The filter has $H'=4$ samples in total, although each filter application uses two of them (blue squares) in a circulant manner. The purple areas represent crops with $C_-=2$ and $C_+=3$ which are discarded. The arrows exemplify which samples of $x$ are involved in the calculation of a particular sample of $y$. Note that, differently from the forward convolution \cref{f:conv}, there is no need to add padding to the input array; instead, the convolution transpose filters can be seen as being applied with maximum input padding (more would result in zero output values), and the latter can be reduced by cropping the output instead.}\label{f:convt}
 \end{figure}
 
-The \emph{convolution transpose} block (sometimes referred to as ``deconvolution'') is the transpose of the convolution block described in \cref{s:convolution}. In \matconvnet, convolution transpose is  implemented by the function !vl_nnconvt!. 
+The \emph{convolution transpose} block (sometimes referred to as ``deconvolution'') is the transpose of the convolution block described in \cref{s:convolution}. In \matconvnet, convolution transpose is  implemented by the function !vl_nnconvt!.
 
 In order to understand convolution transpose, let:
 \[
@@ -86,11 +108,11 @@ In order to understand convolution transpose, let:
 \]
 be the input tensor, filters, and output tensors. Imagine operating in the reverse direction by using the filter bank $\bff$ to convolve the output $\by$ to obtain the input $\bx$, using the definitions given in~\cref{s:convolution} for the convolution operator; since convolution is linear, it can be expressed as a matrix $M$ such that  $\vv \bx = M \vv\by$; convolution transpose computes instead $\vv \by = M^\top \vv \bx$. This process is illustrated for a 1D slice in \cref{f:convt}.
 
-There are two important applications of convolution transpose. The first one are the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping. 
+There are two important applications of convolution transpose. The first one is the so called \emph{deconvolutional networks}~\cite{zeiler14visualizing} and other networks such as convolutional decoders that use the transpose of a convolution. The second one is implementing data interpolation. In fact, as the convolution block supports input padding and output downsampling, the convolution transpose block supports input upsampling and output cropping.
 
 Convolution transpose can be expressed in closed form in the following rather unwieldy expression (derived in \cref{s:impl-convolution-transpose}):
 \begin{multline}\label{e:convt}
-y_{i''j''d''} = 
+y_{i''j''d''} =
  \sum_{d'=1}^{D}
  \sum_{i'=0}^{q(H',S_h)}
  \sum_{j'=0}^{q(W',S_w)}
@@ -99,7 +121,7 @@ f_{
 1+ S_wj' + m(j''+ P_w^-, S_w),\ %
 d'',
 d'
-} 
+}
 \times \\
 x_{
 1 - i' + q(i''+P_h^-,S_h),\ %
@@ -129,7 +151,7 @@ We now illustrate the action of convolution transpose in an example (see also \c
 
 !vl_nnpool! implements max and sum pooling. The \emph{max pooling} operator computes the maximum response of each feature channel in a $H' \times W'$ patch
 \[
-y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i-1',j''+j'-1,d}.
+y_{i''j''d} = \max_{1\leq i' \leq H', 1 \leq j' \leq W'} x_{i''+i'-1,j''+j'-1,d}.
 \]
 resulting in an output of size $\by\in\real^{H''\times W'' \times D}$, similar to the convolution operator of \cref{s:convolution}. Sum-pooling computes the average of the values instead:
 \[
@@ -174,10 +196,10 @@ See \cref{s:impl-activation} for implementation details.
 \]
 The same transformation is applied to all the features channels in the input, as follows:
 \begin{equation}\label{e:bilinear}
-  y_{i''j''c} 
-  = 
+  y_{i''j''c}
+  =
   \sum_{i=1}^H
-  \sum_{j=1}^W 
+  \sum_{j=1}^W
   x_{ijc}
   \max\{0, 1-|\alpha_v g_{1i''j''} + \beta_v - i|\}
   \max\{0, 1-|\alpha_u g_{2i''j''} + \beta_u - j|\},
@@ -187,7 +209,7 @@ where, for each feature channel $c$, the output $y_{i''j''c}$ at the location $(
 \alpha_v = \frac{H-1}{2},\quad
 \beta_v = -\frac{H+1}{2},\quad
 \alpha_u = \frac{W-1}{2},\quad
-\beta_u = -\frac{W+1}{2}. 
+\beta_u = -\frac{W+1}{2}.
 \]
 
 See \cref{s:impl-sampler} for implementation details.
@@ -260,14 +282,14 @@ Note that the operator is applied across feature channels and in a convolutional
 \section{Categorical losses}\label{s:losses}
 % ------------------------------------------------------------------
 
-The purpose of a categorical loss function $\ell(\bx,\bc)$ is to compare a prediction $\bx$ to a ground truth class label $\bc$. As in the rest of \matconvnet, the loss is treated as a convolutional operator, in the sense that the loss is evaluated independently at each spatial location. However, the contribution of different samples are summed together (possibly after weighting) and the output of the loss is a scalar. \Cref{s:loss-classification} losses useful for multi-class classification and the \cref{s:loss-attributes} losses useful for binary attribute prediction. Further technical details are in \cref{s:impl-loss}. !vl_nnloss! implements the following all of these.
+The purpose of a categorical loss function $\ell(\bx,\bc)$ is to compare a prediction $\bx$ to a ground truth class label $\bc$. As in the rest of \matconvnet, the loss is treated as a convolutional operator, in the sense that the loss is evaluated independently at each spatial location. However, the contribution of different samples are summed together (possibly after weighting) and the output of the loss is a scalar. \Cref{s:loss-classification} losses useful for multi-class classification and the \cref{s:loss-attributes} losses useful for binary attribute prediction. Further technical details are in \cref{s:impl-losses}. !vl_nnloss! implements the following all of these.
 
 % ------------------------------------------------------------------
 \subsection{Classification losses}\label{s:loss-classification}
 % ------------------------------------------------------------------
 
 Classification losses decompose additively as follows:
-\begin{equation}\label{e:addloss}	
+\begin{equation}\label{e:addloss}
 \ell(\bx,\bc) = \sum_{ijn} w_{ij1n} \ell(\bx_{ij:n}, \bc_{ij:n}).
 \end{equation}
 Here $\bx \in \mathbb{R}^{H \times W \times C \times N}$ and $\bc \in \{1, \dots, C\}^{H \times W \times 1 \times N}$, such that the slice $\bx_{ij:n}$ represent a vector of $C$ class scores and and $c_{ij1n}$ is the ground truth class label. The !`instanceWeights`! option can be used to specify the tensor $\bw$ of weights, which are otherwise set to all ones; $\bw$ has the same dimension as $\bc$.
@@ -275,13 +297,13 @@ Here $\bx \in \mathbb{R}^{H \times W \times C \times N}$ and $\bc \in \{1, \dots
 Unless otherwise noted, we drop the other indices and denote by $\bx$ and $c$  the slice $\bx_{ij:n}$ and the scalar $c_{ij1n}$. !vl_nnloss! automatically skips all samples such that $c=0$, which can be used as an ``ignore'' label.
 
 \paragraph{Classification error.} The classification error is zero if class $c$ is assigned the largest score and zero otherwise:
-\begin{equation}\label{e:loss-classerror}	
+\begin{equation}\label{e:loss-classerror}
 \ell(\bx,c) = \mathbf{1}\left[c \not= \argmax_k x_c\right].
 \end{equation}
 Ties are broken randomly.
 
 \paragraph{Top-$K$ classification error.} The top-$K$ classification error is zero if class $c$ is within the top $K$ ranked scores:
-\begin{equation}\label{e:loss-classerror}	
+\begin{equation}\label{e:loss-classerror}
 \ell(\bx,c) = \mathbf{1}\left[ |\{k : x_k \geq x_c \}| \leq K \right].
 \end{equation}
 The classification error is the same as the top-$1$ classification error.
@@ -323,7 +345,7 @@ Hence $y_c$ represent the \emph{confidence margin} between class $c$ and the oth
 % ------------------------------------------------------------------
 
 Attribute losses are similar to classification losses, but in this case classes are not mutually exclusive; they are, instead, binary attributes. Attribute losses decompose additively as follows:
-\begin{equation}\label{e:addlossattribute}	
+\begin{equation}\label{e:addlossattribute}
 \ell(\bx,\bc) = \sum_{ijkn} w_{ijkn} \ell(\bx_{ijkn}, \bc_{ijkn}).
 \end{equation}
 Here $\bx\in \mathbb{R}^{H \times W \times C \times N}$ and $\bc \in \{-1,+1\}^{H \times W \times C \times N}$, such that the scalar $x_{ijkn}$ represent a confidence that attribute $k$ is on and $c_{ij1n}$ is the ground truth attribute label. The !`instanceWeights`! option can be used to specify the tensor $\bw$ of weights, which are otherwise set to all ones; $\bw$ has the same dimension as $\bc$.
@@ -345,7 +367,7 @@ Here $\tau$ is a configurable threshold, often set to zero.
 - \log (1 - x), & c = -1, \\
 \end{cases}
 \\
-&= 
+&=
 - \log \left[ c \left(x - \frac{1}{2}\right) + \frac{1}{2} \right].
 \end{align}
 Similarly to the multi-class log loss, the assumption $x \in [0,1]$ must be enforced by the block computing $x$.
@@ -353,7 +375,7 @@ Similarly to the multi-class log loss, the assumption $x \in [0,1]$ must be enfo
 \paragraph{Binary logistic loss.} This is the same as the multi-class logistic loss, but this time $x/2$ represents the confidence that the attribute is on and $-x/2$ that it is off. This is obtained by using the logistic function $\sigma(x)$
 \begin{equation}\label{e:loss-binarylogistic}
  \ell(x,c)
- = 
+ =
  - \log \sigma(cx)
  =
  -\log \frac{1}{1 + e^{-{cx}}}
@@ -404,15 +426,15 @@ See \cref{s:impl-pdistance} for implementation details.
 % \frac{dz}{dx^{(1)}_{ijd}}
 %  =
 % \sum_{i''j''d''}
-%  \frac{dz}{dy_{i''j''d''}} 
+%  \frac{dz}{dy_{i''j''d''}}
 %  \frac{dy_{i''j''d''}}{dx^{(1)}_{ijd}}
 %  =
-%  \frac{dz}{dy_{ijd''}} 
+%  \frac{dz}{dy_{ijd''}}
 %  x^{(2)}_{ijd},
 %  \qquad
 %  \frac{dz}{dx^{(2)}_{ijd}}
 %   =
-%  \frac{dz}{dy_{ijd}} 
+%  \frac{dz}{dy_{ijd}}
 %  x^{(1)}_{ijd}.
 %\]
 %
@@ -427,7 +449,7 @@ See \cref{s:impl-pdistance} for implementation details.
 %
 %\[
 % \frac{dz}{dx_{ijd}} =
-%\sum_{i''j''d''} 
+%\sum_{i''j''d''}
 % \frac{dz}{dy_{i''j''d''}^{(1)}}
 %  \frac{dy_{i''j''d''}^{(1)}}{dx_{ijd}}
 % +

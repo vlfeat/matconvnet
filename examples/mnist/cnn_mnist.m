@@ -5,6 +5,7 @@ run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
 opts.batchNormalization = false ;
+opts.network = [] ;
 opts.networkType = 'simplenn' ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
@@ -23,8 +24,13 @@ if ~isfield(opts.train, 'gpus'), opts.train.gpus = []; end;
 %                                                         Prepare data
 % --------------------------------------------------------------------
 
-net = cnn_mnist_init('batchNormalization', opts.batchNormalization, ...
-                     'networkType', opts.networkType) ;
+if isempty(opts.network)
+  net = cnn_mnist_init('batchNormalization', opts.batchNormalization, ...
+    'networkType', opts.networkType) ;
+else
+  net = opts.network ;
+  opts.network = [] ;
+end
 
 if exist(opts.imdbPath, 'file')
   imdb = load(opts.imdbPath) ;

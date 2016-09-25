@@ -206,9 +206,9 @@ __global__ void grid_backward_kernel
 }
 
 /** get the number of threads (1D) and blocks (2D). **/
-vl::Error get_launch_params(const int& N, int& nTh, int& nGx, int& nGy)
+vl::ErrorCode get_launch_params(const int& N, int& nTh, int& nGx, int& nGy)
 {
-  nGx = vl::divideUpwards(N, VL_CUDA_NUM_THREADS);
+  nGx = vl::divideAndRoundUp(N, VL_CUDA_NUM_THREADS);
   if (nGx == 1) {
     nTh = N;
     nGy = 1;
@@ -217,22 +217,22 @@ vl::Error get_launch_params(const int& N, int& nTh, int& nGx, int& nGy)
     if (nGx <= MAX_GRID_DIM) {
       nGy = 1;
     } else {
-      nGy = vl::divideUpwards(nGx, MAX_GRID_DIM);
+      nGy = vl::divideAndRoundUp(nGx, MAX_GRID_DIM);
       nGx = MAX_GRID_DIM;
       if (nGy > MAX_GRID_DIM) {
         // the following print statement is probably not
         // shown in the matlab JVM console:
         std::printf("BilinearSamper: output volume should be smaller.");
-        return vl::vlErrorCuda;
+        return vl::VLE_Cuda;
       }
     }
   }
-  return vl::vlSuccess;
+  return vl::VLE_Success;
 }
 
 // use a template to define both directions as they are nearly identical code-wise
 template<typename type, bool backwardData, bool backwardGrid>
-static vl::Error
+static vl::ErrorCode
 forward_backward
 (vl::Context& context,
  type* output,
@@ -244,16 +244,17 @@ forward_backward
  size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
  size_t inHeight, size_t inWidth, size_t inCardinality)
 {
+  bool backward = backwardData || backwardGrid ;
   // common conditions
   assert(grid) ;
   assert(divides(inCardinality, outCardinality)) ;
 
   // forward conditions
-  assert(backward || data) ;
-  assert(backward || output) ;
+  //assert(backward || data) ;
+  //assert(backward || output) ;
 
   // backward conditions
-  assert(!backward || derOutput) ;
+  //assert(!backward || derOutput) ;
   assert(!backwardData || derData) ;
   assert(!backwardGrid || derGrid) ;
   assert(!backwardGrid || data) ;
@@ -265,8 +266,8 @@ forward_backward
   // setup and launch the kernel for DER-DATA:
   int nTh, nGx, nGy;
   const int outVolume = outHeight * outWidth * outDepth * outCardinality ;
-  vl::Error volume_ok = get_launch_params(outVolume, nTh, nGx, nGy);
-  if (volume_ok != vl::vlSuccess) { return volume_ok;}
+  vl::ErrorCode volume_ok = get_launch_params(outVolume, nTh, nGx, nGy);
+  if (volume_ok != vl::VLE_Success) { return volume_ok;}
 
   dim3  gridDim(nGx,nGy); // grid-dimensions
   forward_backward_kernel <type, backwardData>
@@ -279,13 +280,13 @@ forward_backward
                           inHeight, inWidth, inCardinality) ;
 
   cudaError_t status = cudaPeekAtLastError() ;
-  if (status != cudaSuccess) { return vl::vlErrorCuda; }
+  if (status != cudaSuccess) { return vl::VLE_Cuda; }
 
   if (backwardGrid) {
     // setup and launch kernel for DER-GRID:
     const int outN = outHeight * outWidth * outCardinality;
     volume_ok = get_launch_params(outN, nTh, nGx, nGy);
-    if (volume_ok != vl::vlSuccess) { return volume_ok;}
+    if (volume_ok != vl::VLE_Success) { return volume_ok;}
 
     gridDim.x = nGx; gridDim.y = nGy; // grid-dimensions
     grid_backward_kernel <type>
@@ -297,20 +298,20 @@ forward_backward
   status = cudaPeekAtLastError() ;
   }
   // catch any errors:
-  return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+  return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
 }
 
 namespace vl { namespace impl {
 
   template<typename type>
-  struct bilinearsampler<vl::GPU, type>
+  struct bilinearsampler<vl::VLDT_GPU, type>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             type* output,
             type const* data,
@@ -334,7 +335,7 @@ error = forward_backward<type, bwData, bwGrid> \
      outHeight, outWidth, outDepth, outCardinality, \
      inHeight, inWidth,inCardinality) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              type* derData,
              type* derGrid,
@@ -344,7 +345,7 @@ error = forward_backward<type, bwData, bwGrid> \
              size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
              size_t inHeight, size_t inWidth, size_t inCardinality)
     {
-      vl::Error error = vlSuccess ;
+      vl::ErrorCode error = VLE_Success ;
 
       // optimized codepaths depending on what needs to be comptued
       if (derData && derGrid == NULL) {
@@ -360,9 +361,9 @@ error = forward_backward<type, bwData, bwGrid> \
 
 } } // namespace vl::impl
 
-template struct vl::impl::bilinearsampler<vl::GPU, float> ;
+template struct vl::impl::bilinearsampler<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::bilinearsampler<vl::GPU, double> ;
+template struct vl::impl::bilinearsampler<vl::VLDT_GPU, double> ;
 #endif
 

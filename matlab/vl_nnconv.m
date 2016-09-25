@@ -31,30 +31,52 @@
 %   options:
 %
 %   `Stride`:: 1
-%     The output stride or downsampling factor. If the value is a
+%     Set the output stride or downsampling factor. If the value is a
 %     scalar, then the same stride is applied to both vertical and
 %     horizontal directions; otherwise, passing [STRIDEY STRIDEX]
 %     allows specifying different downsampling factors for each
 %     direction.
 %
 %   `Pad`:: 0
-%     The amount of input padding. Input images are padded with zeros
+%     Set the amount of input padding. Input images are padded with zeros
 %     by this number of pixels before the convolution is
 %     computed. Passing [TOP BOTTOM LEFT RIGHT] allows specifying
 %     different padding amounts for the top, bottom, left, and right
 %     sides respectively. Passing a single scalar applies the same
 %     padding to all borders.
 %
+%   `Dilate`:: 1
+%     Set the kernel dilation factor. Passing [DILATEY DILATEX] allows
+%     specifying different dilation factors for Y and X. Filters are
+%     dilated by inserting DILATE-1 zeros between filter elements. For
+%     example, the filter
+%
+%       [1 3]
+%       [2 4]
+%
+%     is implicitly treated as
+%
+%       [1 0 3]
+%       [0 0 0]
+%       [2 0 4]
+%
+%     by setting DILATE equal to 2.
+%
 %   The filter size must be not larger than the padded image, i.e.
 %
-%     1 <= FH <= H + 2*(PADTOP+PADBOTTOM),
-%     1 <= FW <= W + 2*(PADLEFT+PADRIGHT).
+%     1 <= FH <= H + PADTOP + PADBOTTOM,
+%     1 <= FW <= W + PADLEFT + PADRIGHT.
 %
 %   The output a is an array of dimension YH x YW x K x N of N images
 %   with K feature challens and size:
 %
 %     YH = floor((H + (PADTOP+PADBOTTOM) - FH)/STRIDEY) + 1,
 %     YW = floor((W + (PADLEFT+PADRIGHT) - FW)/STRIDEX) + 1.
+%
+%   Accounting for dilation, the formulas become:
+%
+%     YH = floor((H + (PADTOP+PADBOTTOM) - FH*(DILATEY-1) -1)/STRIDEY) + 1,
+%     YW = floor((W + (PADLEFT+PADRIGHT) - FW*(DILATEX-1) -1)/STRIDEX) + 1.
 %
 %   Arguments can be SINGLE or DOUBLE and CPU or GPU arrays; however,
 %   they must all be of the same type (unless empty).
@@ -75,7 +97,7 @@
 %   check how much memory is being used.
 
 % Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
-% Copyright (C) 2015 Andrea Vedaldi.
+% Copyright (C) 2015, 2016 Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under

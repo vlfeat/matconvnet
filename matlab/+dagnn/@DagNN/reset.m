@@ -4,6 +4,7 @@ function reset(obj)
 %   object, including parameter gradients. It also calls the reset
 %   function of every layer.
 
+obj.clearParameterServer() ;
 [obj.vars.value] = deal([]) ;
 [obj.vars.der] = deal([]) ;
 [obj.params.der] = deal([]) ;

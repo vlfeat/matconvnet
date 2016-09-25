@@ -2,7 +2,7 @@
 
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
-<a href="download/matconvnet-1.0-beta20.tar.gz">
+<a href="download/matconvnet-1.0-beta21.tar.gz">
 <div class="menuicon"><span class="fa fa-download fa-2x"></span></div>
 Download</a>
 </div>
@@ -31,6 +31,18 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta22](about.md#changes) released with a few bugfixes.
+>
+> **New:** [1.0-beta21](about.md#changes) provides two new tools,
+> [`vl_tmove`](mfiles/vl_tmove.md) and `ParameterServer`, to
+> accelerate significantly data transfers between multiple GPUs. It
+> also provides a new version of
+> [`vl_imreadjpeg`](mfiles/vl_imreadjpeg) that allows to load,
+> transform, and transfer data to the GPU in parallel, resulting in
+> significant speedups in training and testing (20% to 400%, depending
+> on the model). [`vl_nnconv`](mfiles/vl_nnconv) now has a `dilate`
+> option for dilated convolution.
+>
 > **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
 > layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
 > spatial transformer example.
@@ -38,32 +50,9 @@ recognition, and text detection are available.
 > **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
 > models (demo training code coming next), CuDNN V5 support, and
 > numerous other improvements and bugfixes.
->
-> **New:** [1.0-beta18](about.md#changes) adds support fod DOUBLE data
-> type. [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) can now resize
-> images. This version also contains numerous bugfixes.
->
-> **New:** [1.0-beta17](about.md#changes) tidies up the library in
-> many ways. It also improves how batch normalization is
-> handled. Please check carefully the [changes](about.md#changes) to
-> see if any of this might impact your workflow. In particular, check
-> out the [`vl_simplenn_tidy`](mfiles/simplenn/vl_simplenn_tidy.md)
-> function to bring old models up to date. We also have opened a new
-> [discussion group](https://groups.google.com/d/forum/matconvnet) for
-> MatConvNet users (please use this group for discussions and GitHub
-> for reporting bugs or similar). cuDNN v4 is also supported (although
-> not all v4 features are used yet). Several pre-trained ImageNet models
-> trained with MatConvNet using the supplied *example code* are now
-> available.
->
-> **New:** 1.0-beta16 adds VGG-Face as a [pretrained model](pretrained.md).
->
-> **New:** Fully-Convolutional Networks (FCN) training and evaluation
-> code is available
-> [here](https://github.com/vlfeat/matconvnet-fcn).
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta20](download/matconvnet-1.0-beta20.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta22](download/matconvnet-1.0-beta22.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>
@@ -74,7 +63,7 @@ recognition, and text detection are available.
   @inproceedings{vedaldi15matconvnet,
       author    = {A. Vedaldi and K. Lenc},
       title     = {MatConvNet -- Convolutional Neural Networks for MATLAB},
-      booktitle = {Proceeding of the {ACM} Int. Conf. on Multimedia}
+      booktitle = {Proceeding of the {ACM} Int. Conf. on Multimedia},
       year      = {2015},
   }</pre>
   </div>
@@ -96,6 +85,8 @@ recognition, and text detection are available.
   [slides](http://www.robots.ox.ac.uk/~vedaldi/assets/teach/2015/vedaldi15aims-bigdata-lecture-4-deep-learning-handout.pdf)
 
 ## Use cases
+- Fully-Convolutional Networks (FCN) training and evaluation code is available
+[here](https://github.com/vlfeat/matconvnet-fcn).
 - The computer vision course at MIT is using MatConvNet for their [final project](http://6.869.csail.mit.edu/fa15/project.html)
 - Deep Learning for Computer Vision with MATLAB and cuDNN ([NVIDIA...](http://devblogs.nvidia.com/parallelforall/deep-learning-for-computer-vision-with-matlab-and-cudnn/))
 - Planetary science research by the  University of Arizona ([NVIDIA...](http://devblogs.nvidia.com/parallelforall/deep-learning-image-understanding-planetary-science/))

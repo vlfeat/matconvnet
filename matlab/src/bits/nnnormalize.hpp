@@ -18,14 +18,14 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-  vl::Error
+  vl::ErrorCode
   nnlrn_forward(vl::Context& context,
                       vl::Tensor output,
                       vl::Tensor data,
                       size_t normDetph,
                       double kappa, double alpha, double beta) ;
 
-  vl::Error
+  vl::ErrorCode
   nnlrn_backward(vl::Context& context,
                        vl::Tensor derData,
                        vl::Tensor data,

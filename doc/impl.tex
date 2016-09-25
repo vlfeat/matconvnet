@@ -12,14 +12,14 @@ It is often convenient to express the convolution operation in matrix form. To t
 \[
    [\phi(\bx)]_{pq} \underset{(i,j,d)=t(p,q)}{=} x_{ijd}
 \]
-where the index mapping $(i,j,d) = t(p,q)$ is
+where the correspondence between indexes $(i,j,d)$ and $(p,q)$ is given by the map $(i,j,d) = t(p,q)$ where:
 \[
  i = i''+i'-1, \quad
  j = j''+j'-1, \quad
  p = i'' + H'' (j''-1), \quad
  q = i' + H'(j'-1) + H'W' (d-1).
 \]
-It is also useful to define the ``transposed'' operator \verb!row2im!:
+In practice, this map is slightly modified to account for the padding, stride, and dilation factors. It is also useful to define the ``transposed'' operator \verb!row2im!:
 \[
    [\phi^*(M)]_{ijd}
    =
@@ -83,7 +83,7 @@ In summary, after reshaping these terms we obtain the formulas:
 \right)
 }
 \]
-where $X\in\real^{(H'W')\times D}$ is the matrix obtained by reshaping $\bx$. Notably, these expressions are used to implement the convolutional operator; while this may seem inefficient, it is instead a fast approach when the number of filters is large and it allows leveraging fast BLAS and GPU BLAS implementations.
+where $X\in\real^{(HW)\times D}$ is the matrix obtained by reshaping $\bx$. Notably, these expressions are used to implement the convolutional operator; while this may seem inefficient, it is instead a fast approach when the number of filters is large and it allows leveraging fast BLAS and GPU BLAS implementations.
 
 % ------------------------------------------------------------------
 \section{Convolution transpose}\label{s:impl-convolution-transpose}
@@ -95,7 +95,7 @@ In order to understand the definition of convolution transpose, let $\by$ to be 
    \quad
     1 \leq i'' \leq 1 + \left\lfloor \frac{H - H' + P_h^- + P_h^+}{S} \right\rfloor,
 \]
-where $S$ is the downsampling factor, $P_h^-$ and $P_h^+$ the padding, $H$ the length of the input signal, $\bx$ and $H'$ the length of the filter $\bff$. Due to padding, the index of the input data $\bx$ may exceed the range $[1,H]$; we implicitly assume that the signal is zero padded outside this range.
+where $S$ is the downsampling factor, $P_h^-$ and $P_h^+$ the padding, $H$ the length of the input signal $\bx$ and $H'$ the length of the filter $\bff$. Due to padding, the index of the input data $\bx$ may exceed the range $[1,H]$; we implicitly assume that the signal is zero padded outside this range.
 
 In order to derive an expression of the convolution transpose,  we make use of the identity $\vv \by^\top (M \vv \bx) = (\vv \by^\top M) \vv\bx = \vv\bx^\top (M^\top \vv\by)$. Expanding this in formulas:
 \begin{align*}
@@ -129,7 +129,7 @@ y_{\left\lfloor \frac{k-1+ P_h^-}{S} \right\rfloor + 2 - q}
 \ %
 f_{(k-1+ P_h^-)\bmod S +S(q - 1)+1}.
 \end{align*}
-Summation ranges have been extended to infinity by assuming that all signals are zero padded as needed. In order to recover such ranges, note that $k \in [1,H]$ (since this is the range of elements of $\bx$ involved in the original convolution). Furthermore, $q\geq 1$ is the minimum value of $q$ for which the filter $\bff$ is non zero; likewise, $q\leq \lfloor (H'-1)/2\rfloor +1$ is a fairly tight upper bound on the maximum value (although, depending on $k$, there could be an element less). Hence
+Summation ranges have been extended to infinity by assuming that all signals are zero padded as needed. In order to recover such ranges, note that $k \in [1,H]$ (since this is the range of elements of $\bx$ involved in the original convolution). Furthermore, $q\geq 1$ is the minimum value of $q$ for which the filter $\bff$ is non zero; likewise, $q\leq \lfloor (H'-1)/S\rfloor +1$ is a fairly tight upper bound on the maximum value (although, depending on $k$, there could be an element less). Hence
 \begin{equation}\label{e:convt-step}
  x_k = 
  \sum_{q=1}^{1 + \lfloor \frac{H'-1}{S} \rfloor}
@@ -160,7 +160,7 @@ Since max pooling simply selects for each output element an input element, the r
 $
     \vv\by = S(\bx) \vv \bx
 $
-for a suitable selector matrix $S(\bx)\in\{0,1\}^{(H''W''D) \times (HWD)}$. The derivatives can the be written as:
+for a suitable selector matrix $S(\bx)\in\{0,1\}^{(H''W''D) \times (HWD)}$. The derivatives can be written as:
 $
 \frac{d z}{d (\vv \bx)^\top}
 =
@@ -206,7 +206,7 @@ where $\bfs = [\vv \bx > 0] \in\{0,1\}^{HWD}$ is an indicator vector.
 
 The derivative of the sigmoid function is given by
 \begin{align*}
-\frac{dz}{dx_{ijk}}
+\frac{dz}{dx_{ijd}}
 &= 
 \frac{dz}{d y_{ijd}} 
 \frac{d y_{ijd}}{d x_{ijd}}
@@ -507,7 +507,7 @@ y_{ijd}
 \frac{dz}{d y_{ijd}}
 -
 \sum_{k=1}^K
-\frac{dz}{d y_{ijk}} y_{ijk}.
+\frac{dz}{d y_{ijk}} y_{ijk}
 \right).
 \]
 In matrix form:
@@ -634,8 +634,105 @@ p |x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})
 \\
 &= 
 \frac{dz}{dy_{ij}}
-\frac{|x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}};
-\frac{dz}{d\bar x_{ijd}} = -\frac{dz}{dx_{ijd}}.
+\frac{|x_{ijd} - \bar x_{ijd}|^{p-1} \sign(x_{ijd} - \bar x_{ijd})}{y_{ij}^{p-1}}, \\
+\frac{dz}{d\bar x_{ijd}} &= -\frac{dz}{dx_{ijd}}.
 \end{align*}
 The formulas simplify a little for $p=1,2$ which are therefore implemented as special cases.
+
+
+% ------------------------------------------------------------------
+\section{Other implementation details}\label{s:impl-others}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\subsection{Normal sampler}\label{s:impl-normal}
+% ------------------------------------------------------------------
+
+The function \verb!vl::randn()! uses the Ziggurah method~\cite{marsaglia00the-ziggurat} to sample from a Normally-distributed random variable. Let $f(x) = \frac{1}{\sqrt{2\pi}} \exp\left(-\frac{1}{2}x^2\right)$ the standard Normal distribution. The sampler encloses $f(x)$ in a simple shape made of $K-1$ horizontal rectangles and a base composed of a rectangle tapering off in an exponential distribution. These are defined by points $x_1 > x_2 > x_3 > \dots > x_K=0$ such that (for the right half of $f(x)$) the layers of the Ziggurat are given by
+\[
+\forall k=1,\dots,K-1:
+\quad R_k = [f(x_k),f(x_{k+1})] \times [0,x_k].
+\]
+and such that its basis is given by
+\[
+R_0 = ([0,f(x_{1})] \times [0,x_1]) \cup 
+\{ (x,y) : x \geq x_1,\ y \leq f(x_1) \exp(-x_1(x - x_1)) \}
+\]
+Note that, since the last point $x_K=0$, (half of) the distribution is enclosed by the Ziggurat, i.e. $\forall x \geq 0:(x,f(x)) \in \cup_{k=0}^K R_k$.
+
+The first point $x_1$ in the sequence determines the area of the Ziggurat base:
+\[
+A = |R_0| = f(x_1)x_1 + f(x_1)/x_1.
+\]
+The other points are defined recursively such that the area is the same for all rectangles:
+\[
+A = |R_k| = (f(x_{k+1}) - f(x_k))x_k
+\quad\Rightarrow\quad
+x_{k+1} = f^{-1} (A/x_k + f(x_k)).
+\]
+There are two degrees of freedom: the number of subdivisions $K$ and the point $x_1$. Given $K$, the goal is to choose $x_1$ such that the $K$-th points $x_K=0$ lands on zero, enclosing tightly $f(x)$. The required value of $x_1$ is easily found using bisection and, for $K=256$, is $x_1=3.655420419026953$. Given $x_1$, $A$ and all other points in the sequence can be derived easily using the formulas above.
+
+The Ziggurath can be used to quickly sample from the Normal distribution. In order to do so, one first samples a point $(x,y)$ uniformly at random from the Ziggurat $\cup_{k=0}^K R_k$ and then rejects pairs $(x,y)$ that do not belong to the graph of $f(x)$, i.e.\ $y > f(x)$. Specifically:
+\begin{enumerate}
+\item Sample a point $(x,y)$ uniformly from the Ziggurat. To do so, sample uniformly at random an index $k \in\{0,1,\dots,K-1\}$ and two scalars $u,v$ in the interval $[0,1)$. Then, for $k\geq 1$, set $x = u x_k$ and $y = v f(x_{k+1}) + (1-v)f(x_k)$ (for $k=0$ see below). Since all regions $R_k$ have the same area and $(x,y)$ are then drawn uniformly form the selected rectangle, this samples a point $(x,y)$ from the Ziggurat uniformly at random.
+\item If $y \leq f(x)$, accept $x$ as a sample; otherwise, sample again. Note that, when $x \leq x_{k+1}$, the test $y \leq f(x_{k+1}) < f(x)$ is always successful, and the variable $y$ and test can be skipped in the step above.
+\end{enumerate}
+Next, we complete the procedure for $k=0$, when $R_0$ is not just a rectangle but rather the union of a rectangle and an exponential distribution. To sample from $R_0$ uniformly, we either choose the rectangle or the exponential distribution with a probability proportional to their area. Reusing the notation (and corresponding code) above, we can express this as sampling $x = u x_0$ and accepting the latter as a sample from the rectangle component if $ux_0 \leq x_1$; here the pseudo-point $x_0$ is defined such that $x_1 / x_0 = f(x_1)x_1 / A$, i.e.\ $x_0 = A/f(x_1)$. If the test fails, we sample instead from the exponential distribution $x\sim x_1\exp(-x_1(x-x_1)),$ $x\geq x_1$. To do so, let $z= x_1\exp(-x_1(x-x_1))$; then $x = x_1 - (1/x_1) \ln z/x_1$ and $dx = |- (x_1/z)|dz$, where $z\in(0,x_1]$. Since $x_1\exp(-x_1(x-x_1)) dx = (1/x_1) dz$ is uniform, we can implement this by sampling $u$ uniformly in $(0,1]$ and setting $x = x_1 - (1/x_1) \ln u$. Finally, recall that the goal is to sample from the Normal distribution, not the exponential, so the latter sample must be refined by rejection sampling. As before, this requires sampling a pair $(x,y)$ under the exponential distribution graph. Given $x$ sampled from the exponential distribution, we sample the corresponding $y$ uniformly at random in the interval $[0, f(x_1) \exp(-x_1(x-x_1))]$, and write the latter as $y = v f(x_1) \exp(-x_1(x-x_1))$, where $v$ is uniform in $[0,1]$. The latter is then accepted provided that $y$ is below the Normal distribution graph $f(x)$, i.e. $v f(x_1) \exp(-x_1(x-x_1)) \leq f(x).$ A short calculation yields the test:
+\[
+-2\ln v \geq x_1^2 +  x^2 - 2x_1x = (x_1 - x)^2 =
+((1/x_1) \ln u)^2.
+\]
+
+% ------------------------------------------------------------------
+\subsection{Euclid's algorithm}\label{s:impl-euclid}
+% ------------------------------------------------------------------
+
+Euclid's algorithm finds the \emph{greatest common divisor} (GCD) of two non-negative integers $a$ and $b$. Recall that the GCD is the largest integer that divides both $a$ and $b$:
+\[
+    \gcd(a,b) = \max\{ d \in \mathbb{N} : d|a \ \wedge\ d|b \}.
+\]
+
+\begin{lemma}[Euclid's algorithm]
+Let $a,b\in\mathbb{N}$ and let $q\in\mathbb{Z}$ such that $a - qb \geq 0$. Then
+$$
+\gcd(a,b) = \gcd(a-qb,b).
+$$
+\end{lemma}
+\begin{proof}
+Let $d$ be a divisor of both $a$ and $b$. Then $d$ divides $a - qb$ as well because:
+$$
+\frac{a - qb}{d} = 
+\underbrace{\frac{a}{d}}_{\in\mathcal{Z}} - q 
+\underbrace{\frac{b}{d}}_{\in\mathbb{Z}}
+\quad\Rightarrow\quad
+\frac{a - qb}{d} \in \mathbb{Z}.
+$$
+Hence  $\gcd(a,b) \leq \gcd(q-qb,b)$. In the same way, we can show that, if $d$ divides $a - qb$ as well as $b$, then it must divide $a$ too, hence $\gcd(a-qb, b) \leq\gcd(a,b)$.
+\end{proof}
+
+Euclid's algorithm starts with $a > b \geq 1$ and sets $q$ to the quotient of the integer division $a/b$. Due to the lemma above, the GCD of $a$ and $b$ is the same as the GCD of the remainder $r = a - qb = (a \mod b)$ and $b$:
+\[
+   \gcd(a,b) = \gcd(a, a\mod b).
+\]
+Since the remainder $(a\mod b) < b$ is strictly smaller than $b$, now GCD is called with smaller arguments. The recursion terminates when a zero reminder is generated, because
+\[
+   \gcd(a,0) = a.
+\]
+
+We can modify the algorithms to also find two integers  $u,v$, the B\'ezout's coefficients, such that:
+$$
+   a u + bv = \gcd(a,b).
+$$
+To do so, we replace $a = b (a/b) + r$ as above:
+$$
+  ru  +  b v'= \gcd(a,b) = \gcd(r,b), \qquad v' = \frac{a}{b} u + v.
+$$
+The recursion terminates when $r=0$, in which case
+$$
+  b v'= \gcd(0,b) = b \quad\Rightarrow\quad v'=b.
+$$
+
+
+
+
 

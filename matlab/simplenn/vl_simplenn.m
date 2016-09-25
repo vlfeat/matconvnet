@@ -37,7 +37,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   VL_SIMPLENN(NET, X, DZDY, RES, 'OPT', VAL, ...) takes the following
 %   options:
 %
-%   `Mode`:: `normal`
+%   `Mode`:: `'normal'`
 %      Specifies the mode of operation. It can be either `'normal'` or
 %      `'test'`. In test mode, dropout and batch-normalization are
 %      bypassed. Note that, when a network is deployed, it may be
@@ -114,6 +114,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - `layer.weights` is a cell array with filters and biases.
 %     - `layer.stride` is the sampling stride (e.g. 1).
 %     - `layer.pad` is the padding (e.g. 0).
+%     - `layer.dilate` is the dilation factor (e.g. 1).
 %
 %   Convolution transpose layer::
 %     The convolution transpose layer wraps VL_NNCONVT(). It has fields:
@@ -229,7 +230,9 @@ opts.mode = 'normal' ;
 opts.accumulate = false ;
 opts.cudnn = true ;
 opts.backPropDepth = +inf ;
-opts.skipForward = false;
+opts.skipForward = false ;
+opts.parameterServer = [] ;
+opts.holdOn = false ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -248,8 +251,10 @@ end
 
 if opts.cudnn
     cudnn = {'CuDNN'} ;
+  bnormCudnn = {'NoCuDNN'} ; % ours seems slighty faster
 else
     cudnn = {'NoCuDNN'} ;
+  bnormCudnn = {'NoCuDNN'} ;
 end
 
 switch lower(opts.mode)
@@ -282,120 +287,124 @@ if ~opts.skipForward
     res(1).x = x ;
 end
 
-
 % -------------------------------------------------------------------------
 %                                                              Forward pass
 % -------------------------------------------------------------------------
 
 for i=1:n
-    if opts.skipForward, break; end;
-    l = net.layers{i} ;
-    res(i).time = tic ;
-    switch l.type
-        case 'conv'
-            res(i+1).x = vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
-                'pad', l.pad, ...
-                'stride', l.stride, ...
-                l.opts{:}, ...
-                cudnn{:}) ;
-            
-        case 'convt'
-            res(i+1).x = vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, ...
-                'crop', l.crop, ...
-                'upsample', l.upsample, ...
-                'numGroups', l.numGroups, ...
-                l.opts{:}, ...
-                cudnn{:}) ;
-            
-        case 'pool'
-            res(i+1).x = vl_nnpool(res(i).x, l.pool, ...
-                'pad', l.pad, 'stride', l.stride, ...
-                'method', l.method, ...
-                l.opts{:}, ...
-                cudnn{:}) ;
-            
-        case {'normalize', 'lrn'}
-            res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
-            
-        case 'softmax'
-            res(i+1).x = vl_nnsoftmax(res(i).x) ;
-            
-        case 'loss'
-            res(i+1).x = vl_nnloss(res(i).x, l.class) ;
-            
-        case 'softmaxloss'
-            res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
-            
-        case 'relu'
-            if l.leak > 0, leak = {'leak', l.leak} ; else leak = {} ; end
-            res(i+1).x = vl_nnrelu(res(i).x,[],leak{:}) ;
-            
+  if opts.skipForward, break; end;
+  l = net.layers{i} ;
+  res(i).time = tic ;
+  switch l.type
+    case 'conv'
+      res(i+1).x = vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
+        'pad', l.pad, ...
+        'stride', l.stride, ...
+        'dilate', l.dilate, ...
+        l.opts{:}, ...
+        cudnn{:}) ;
+
+    case 'convt'
+      res(i+1).x = vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, ...
+        'crop', l.crop, ...
+        'upsample', l.upsample, ...
+        'numGroups', l.numGroups, ...
+        l.opts{:}, ...
+        cudnn{:}) ;
+
+    case 'pool'
+      res(i+1).x = vl_nnpool(res(i).x, l.pool, ...
+        'pad', l.pad, 'stride', l.stride, ...
+        'method', l.method, ...
+        l.opts{:}, ...
+        cudnn{:}) ;
+
+    case {'normalize', 'lrn'}
+      res(i+1).x = vl_nnnormalize(res(i).x, l.param) ;
+
+    case 'softmax'
+      res(i+1).x = vl_nnsoftmax(res(i).x) ;
+
+    case 'loss'
+      res(i+1).x = vl_nnloss(res(i).x, l.class) ;
+
+    case 'softmaxloss'
+      res(i+1).x = vl_nnsoftmaxloss(res(i).x, l.class) ;
+
+    case 'relu'
+      if l.leak > 0, leak = {'leak', l.leak} ; else leak = {} ; end
+      res(i+1).x = vl_nnrelu(res(i).x,[],leak{:}) ;
+
         case 'elu'
             if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
             res(i+1).x = vl_nnelu(res(i).x,[],alpha{:}) ;
             
-        case 'sigmoid'
-            res(i+1).x = vl_nnsigmoid(res(i).x) ;
-            
-        case 'noffset'
-            res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
-            
-        case 'spnorm'
-            res(i+1).x = vl_nnspnorm(res(i).x, l.param) ;
-            
-        case 'dropout'
-            if testMode
-                res(i+1).x = res(i).x ;
-            else
-                [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
-            end
-            
-        case 'bnorm'
-            if testMode
-                res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, 'moments', l.weights{3}) ;
-            else
-                res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}) ;
-            end
-            
-        case 'pdist'
-            if ~isfield(l, 'normed'), l.normed = false; end;
-            if ~isfield(l, 'hinge'), l.hinge = 0; end;
-            if ~isfield(l, 'hard_samples_percent'), l.hard_samples_percent = []; end;
-            
-            res(i+1).x = vl_nnpdist(res(i).x, l.class, l.p, ...
-                'noRoot', l.noRoot, ...
-                'epsilon', l.epsilon, ...
-                'instanceWeights', l.instanceWeights, ...
-                'aggregate', l.aggregate, ...
-                'normed', l.normed, ...
-                'hinge', l.hinge, ...
-                'hard_samples_percent', l.hard_samples_percent) ;
-            
-        case 'custom'
-            res(i+1) = l.forward(l, res(i), res(i+1)) ;
-            
-        otherwise
-            error('Unknown layer type ''%s''.', l.type) ;
-    end
-    
-    % optionally forget intermediate results
-    needsBProp = doder && i >= backPropLim;
-    forget = opts.conserveMemory && ~needsBProp ;
-    if i > 1
-        lp = net.layers{i-1} ;
-        % forget RELU input, even for BPROP
-        forget = forget && (~needsBProp || (strcmp(l.type, 'relu') && ~lp.precious)) ;
-        forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
-        forget = forget && ~lp.precious ;
-    end
-    if forget
-        res(i).x = [] ;
-    end
-    
-    if gpuMode && opts.sync
-        wait(gpuDevice) ;
-    end
-    res(i).time = toc(res(i).time) ;
+
+    case 'sigmoid'
+      res(i+1).x = vl_nnsigmoid(res(i).x) ;
+
+    case 'noffset'
+      res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
+
+    case 'spnorm'
+      res(i+1).x = vl_nnspnorm(res(i).x, l.param) ;
+
+    case 'dropout'
+      if testMode
+        res(i+1).x = res(i).x ;
+      else
+        [res(i+1).x, res(i+1).aux] = vl_nndropout(res(i).x, 'rate', l.rate) ;
+      end
+
+    case 'bnorm'
+      if testMode
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                                'moments', l.weights{3}, ...
+                                'epsilon', l.epsilon, ...
+                                bnormCudnn{:}) ;
+      else
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                                'epsilon', l.epsilon, ...
+                                bnormCudnn{:}) ;
+      end
+
+    case 'pdist'
+        if ~isfield(l, 'normed'), l.normed = false; end;
+        if ~isfield(l, 'hinge'), l.hinge = 0; end;
+        
+      res(i+1).x = vl_nnpdist(res(i).x, l.class, l.p, ...
+        'noRoot', l.noRoot, ...
+        'epsilon', l.epsilon, ...
+        'aggregate', l.aggregate, ...
+        'normed', l.normed, ...
+        'hinge', l.hinge, ...
+		'instanceWeights', l.instanceWeights) ;
+
+    case 'custom'
+      res(i+1) = l.forward(l, res(i), res(i+1)) ;
+
+    otherwise
+      error('Unknown layer type ''%s''.', l.type) ;
+  end
+
+  % optionally forget intermediate results
+  needsBProp = doder && i >= backPropLim;
+  forget = opts.conserveMemory && ~needsBProp ;
+  if i > 1
+    lp = net.layers{i-1} ;
+    % forget RELU input, even for BPROP
+    forget = forget && (~needsBProp || (strcmp(l.type, 'relu') && ~lp.precious)) ;
+    forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
+    forget = forget && ~lp.precious ;
+  end
+  if forget
+    res(i).x = [] ;
+  end
+
+  if gpuMode && opts.sync
+    wait(gpuDevice) ;
+  end
+  res(i).time = toc(res(i).time) ;
 end
 
 % -------------------------------------------------------------------------
@@ -403,57 +412,6 @@ end
 % -------------------------------------------------------------------------
 
 if doder
-    res(n+1).dzdx = dzdy ;
-    for i=n:-1:backPropLim
-        l = net.layers{i} ;
-        res(i).backwardTime = tic ;
-        switch l.type
-            
-            case 'conv'
-                [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
-                    vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
-                    'pad', l.pad, ...
-                    'stride', l.stride, ...
-                    l.opts{:}, ...
-                    cudnn{:}) ;
-                
-            case 'convt'
-                [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
-                    vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
-                    'crop', l.crop, ...
-                    'upsample', l.upsample, ...
-                    'numGroups', l.numGroups, ...
-                    l.opts{:}, ...
-                    cudnn{:}) ;
-                
-            case 'pool'
-                res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
-                    'pad', l.pad, 'stride', l.stride, ...
-                    'method', l.method, ...
-                    l.opts{:}, ...
-                    cudnn{:}) ;
-                
-            case {'normalize', 'lrn'}
-                res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
-                
-            case 'softmax'
-                res(i).dzdx = vl_nnsoftmax(res(i).x, res(i+1).dzdx) ;
-                
-            case 'loss'
-                res(i).dzdx = vl_nnloss(res(i).x, l.class, res(i+1).dzdx) ;
-                
-            case 'softmaxloss'
-                res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
-                
-            case 'relu'
-                if l.leak > 0, leak = {'leak', l.leak} ; else leak = {} ; end
-                if ~isempty(res(i).x)
-                    res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx, leak{:}) ;
-                else
-                    % if res(i).x is empty, it has been optimized away, so we use this
-                    % hack (which works only for ReLU):
-                    res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx, leak{:}) ;
-                end
                 
             case 'elu'
                 if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
@@ -465,73 +423,109 @@ if doder
                     res(i).dzdx = vl_nnelu(res(i+1).x, res(i+1).dzdx, alpha{:}) ;
                 end
                 
-            case 'sigmoid'
-                res(i).dzdx = vl_nnsigmoid(res(i).x, res(i+1).dzdx) ;
-                
-            case 'noffset'
-                res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
-                
-            case 'spnorm'
-                res(i).dzdx = vl_nnspnorm(res(i).x, l.param, res(i+1).dzdx) ;
-                
-            case 'dropout'
-                if testMode
-                    res(i).dzdx = res(i+1).dzdx ;
-                else
-                    res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, ...
-                        'mask', res(i+1).aux) ;
-                end
-                
-            case 'bnorm'
-                [res(i).dzdx, dzdw{1}, dzdw{2}, dzdw{3}] = ...
-                    vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx) ;
-                % multiply the moments update by the number of images in the batch
-                % this is required to make the update additive for subbatches
-                % and will eventually be normalized away
-                dzdw{3} = dzdw{3} * size(res(i).x,4) ;
-                
-            case 'pdist'
-                if ~isfield(l, 'normed'), l.normed = false; end;
-                if ~isfield(l, 'hinge'), l.hinge = 0; end;
-                if ~isfield(l, 'hard_samples_percent'), l.hard_samples_percent = []; end;
-                
-                res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...
-                    l.p, res(i+1).dzdx, ...
-                    'noRoot', l.noRoot, ...
-                    'epsilon', l.epsilon, ...
-                    'instanceWeights', l.instanceWeights, ...
-                    'aggregate', l.aggregate, ...
-                    'normed', l.normed, ...
-                    'hinge', l.hinge, ...
-                    'hard_samples_percent', l.hard_samples_percent) ;
-                
-            case 'custom'
-                res(i) = l.backward(l, res(i), res(i+1)) ;
-                
-        end % layers
-        
-        switch l.type
-            case {'conv', 'convt', 'bnorm'}
-                if ~opts.accumulate
-                    res(i).dzdw = dzdw ;
-                else
-                    for j=1:numel(dzdw)
-                        res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
-                    end
-                end
-                dzdw = [] ;
+  res(n+1).dzdx = dzdy ;
+  for i=n:-1:backPropLim
+    l = net.layers{i} ;
+    res(i).backwardTime = tic ;
+    switch l.type
+
+      case 'conv'
+        [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+          vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
+          'pad', l.pad, ...
+          'stride', l.stride, ...
+          'dilate', l.dilate, ...
+          l.opts{:}, ...
+          cudnn{:}) ;
+
+      case 'convt'
+        [res(i).dzdx, dzdw{1}, dzdw{2}] = ...
+          vl_nnconvt(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
+          'crop', l.crop, ...
+          'upsample', l.upsample, ...
+          'numGroups', l.numGroups, ...
+          l.opts{:}, ...
+          cudnn{:}) ;
+
+      case 'pool'
+        res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
+                                'pad', l.pad, 'stride', l.stride, ...
+                                'method', l.method, ...
+                                l.opts{:}, ...
+                                cudnn{:}) ;
+
+      case {'normalize', 'lrn'}
+        res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
+
+      case 'softmax'
+        res(i).dzdx = vl_nnsoftmax(res(i).x, res(i+1).dzdx) ;
+
+      case 'loss'
+        res(i).dzdx = vl_nnloss(res(i).x, l.class, res(i+1).dzdx) ;
+
+      case 'softmaxloss'
+        res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
+
+      case 'relu'
+        if l.leak > 0, leak = {'leak', l.leak} ; else leak = {} ; end
+        if ~isempty(res(i).x)
+          res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx, leak{:}) ;
+        else
+          % if res(i).x is empty, it has been optimized away, so we use this
+          % hack (which works only for ReLU):
+          res(i).dzdx = vl_nnrelu(res(i+1).x, res(i+1).dzdx, leak{:}) ;
         end
         if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
             res(i+1).dzdx = [] ;
             res(i+1).x = [] ;
         end
-        if gpuMode && opts.sync
-            wait(gpuDevice) ;
+        if ~isfield(l, 'normed'), l.normed = false; end;
+        if ~isfield(l, 'hinge'), l.hinge = 0; end;
+          'normed', l.normed, ...
+          'hinge', l.hinge, ...
+
+      case 'bnorm'
+        [res(i).dzdx, dzdw{1}, dzdw{2}, dzdw{3}] = ...
+          vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
+                     'epsilon', l.epsilon, ...
+                     bnormCudnn{:}) ;
+        % multiply the moments update by the number of images in the batch
+        % this is required to make the update additive for subbatches
+        % and will eventually be normalized away
+        dzdw{3} = dzdw{3} * size(res(i).x,4) ;
+
+      case 'pdist'
+        res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...
+          l.p, res(i+1).dzdx, ...
+          'noRoot', l.noRoot, ...
+          'epsilon', l.epsilon, ...
+          'aggregate', l.aggregate, ...
+          'instanceWeights', l.instanceWeights) ;
+
+      case 'custom'
+        res(i) = l.backward(l, res(i), res(i+1)) ;
+
+    end % layers
+
+    switch l.type
+      case {'conv', 'convt', 'bnorm'}
+        if ~opts.accumulate
+          res(i).dzdw = dzdw ;
+        else
+          for j=1:numel(dzdw)
+            res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
+          end
         end
         res(i).backwardTime = toc(res(i).backwardTime) ;
+        if ~isempty(opts.parameterServer) && ~opts.holdOn
+          for j = 1:numel(res(i).dzdw)
+            opts.parameterServer.push(sprintf('l%d_%d',i,j),res(i).dzdw{j}) ;
+            res(i).dzdw{j} = [] ;
+          end
+        end
     end
-    if i > 1 && i == backPropLim && opts.conserveMemory && ~net.layers{i}.precious
-        res(i).dzdx = [] ;
-        res(i).x = [] ;
-    end
+  if i > 1 && i == backPropLim && opts.conserveMemory && ~net.layers{i}.precious
+    res(i).dzdx = [] ;
+    res(i).x = [] ;
+  end
 end

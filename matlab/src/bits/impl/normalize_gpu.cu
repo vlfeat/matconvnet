@@ -133,14 +133,14 @@ namespace vl { namespace impl {
 
 
   template<typename type>
-  struct lrn<vl::GPU, type>
+  struct lrn<vl::VLDT_GPU, type>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(type * output,
             type  const* data,
             size_t width,
@@ -151,11 +151,11 @@ namespace vl { namespace impl {
             type kappa, type alpha, type beta)
     {
       normalize_forward_kernel<type >
-      <<< divideUpwards(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (output, data, width, height, depth, size, normDepth, kappa, alpha, beta) ;
 
       cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
 
@@ -163,7 +163,7 @@ namespace vl { namespace impl {
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type * derData,
              type  const* data,
              type  const* derOutput,
@@ -175,11 +175,11 @@ namespace vl { namespace impl {
              type kappa, type alpha, type beta)
     {
       normalize_backward_kernel<type >
-      <<< divideUpwards(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData, data, derOutput, width, height, depth, size, normDepth, kappa, alpha, beta) ;
 
       cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
   } ;
@@ -187,10 +187,10 @@ namespace vl { namespace impl {
 } }
 
 // Instantiations
-template struct vl::impl::lrn<vl::GPU, float> ;
+template struct vl::impl::lrn<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::lrn<vl::GPU, double> ;
+template struct vl::impl::lrn<vl::VLDT_GPU, double> ;
 #endif
 
 

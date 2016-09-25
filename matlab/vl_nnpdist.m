@@ -38,7 +38,7 @@ function [y1, y2] = vl_nnpdist(x, x0, p, varargin)
 %      Instead of returning one scalar for each spatial location in
 %      the inputs, sum all of them into a single scalar.
 %
-%   `InstanceWeights``:: `[]`
+%   `InstanceWeights`:: `[]`
 %      Optionally weight individual instances. This parameter can be
 %      eigther a scalar or a weight mask, one for each pixel in the
 %      input tensor.
@@ -58,6 +58,7 @@ opts.epsilon = 1e-6 ;
 opts.aggregate = false ;
 opts.normed = false ;
 opts.instanceWeights = [] ;
+opts.normed = false ;
 opts.hinge = 0;
 opts.hard_samples_percent = [];
 backMode = numel(varargin) > 0 && ~ischar(varargin{1}) ;
@@ -89,6 +90,15 @@ end
 
 if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
     dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
+end
+
+if ~isempty(dzdy) && ~isempty(opts.hard_samples_percent)
+    absd = abs(d) ;
+    if opts.aggregate
+        absd = sum(absd,3) ;
+    end
+    th = prctile(absd,100-opts.hard_samples_percent);
+    d = bsxfun(@times, d, absd >= th);
 end
 
 if ~opts.noRoot

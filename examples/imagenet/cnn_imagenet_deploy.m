@@ -113,7 +113,7 @@ for name = names
   playerName = dagFindLayersWithOutput(net, layer.inputs{1}) ;
   playerName = playerName{1} ;
   playerIndex = net.getLayerIndex(playerName) ;
-  player = net.layers(playerIndex)
+  player = net.layers(playerIndex) ;
   if ~isa(player.block, 'dagnn.Conv')
     error('Batch normalization cannot be merged as it is not preceded by a conv layer.') ;
   end

@@ -480,10 +480,20 @@ for layer in layers_list:
         clayer = CaffeConcat(layer.name, bottom, top,
                              3 - opts.concat_dim)  # todo: depreceted in recent Caffes
 
+
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     elif ltype in ['slice', 'Slice']:
         opts = getopts(layer, 'slice_param')
         clayer = CaffeSlice(layer.name, bottom, top, 3 - opts.axis, opts.slice_point)
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype in ['Scale']:
+    opts = getopts(layer, 'scale_param')
+    clayer = CaffeScale(layer.name, bottom, top,
+                        axis = opts.axis,
+                        num_axes = opts.num_axes,
+                        bias_term = opts.bias_term)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     elif ltype in ['Scale']:

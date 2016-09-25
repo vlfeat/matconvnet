@@ -5,7 +5,7 @@
 
 /*
 Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -40,13 +40,14 @@ data, dataMult, \
 filters, biases, \
 strideY, strideX, \
 padTop, padBottom, \
-padLeft, padRight) ;
+padLeft, padRight, \
+dilateY, dilateX) ;
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
 #define DISPATCHCUDNN(dataType) \
@@ -57,16 +58,17 @@ error = vl::impl::nnconv_cudnn<dataType>::forward \
  filters, biases, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
 #define DISPATCHCUDNN2() \
 switch (dataType) { \
-case vlTypeFloat : DISPATCHCUDNN(vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCHCUDNN(vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnconv_forward(Context& context,
                    Tensor output, double outputMult,
                    Tensor data, double dataMult,
@@ -74,32 +76,33 @@ vl::nnconv_forward(Context& context,
                    Tensor biases,
                    int strideY, int strideX,
                    int padTop, int padBottom,
-                   int padLeft, int padRight)
+                   int padLeft, int padRight,
+                   int dilateY, int dilateX)
 {
-  vl::Error error = vlSuccess ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode error = VLE_Success ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (output.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
-        if (error == vl::vlSuccess) { return error ; }
-        if (error != vl::vlErrorUnsupported) { goto done ; }
+        if (error == vl::VLE_Success) { return error ; }
+        if (error != vl::VLE_Unsupported) { goto done ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH2(vl::GPU) ;
+      DISPATCH2(vl::VLDT_GPU) ;
       break ;
 #endif
   }
@@ -128,7 +131,8 @@ error = vl::impl::nnconv_backward_blas<deviceType, dataType> \
  data, filters, derOutput, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
 #undef DISPATCHCUDNN
 #define DISPATCHCUDNN(dataType) \
@@ -138,9 +142,10 @@ error = vl::impl::nnconv_cudnn<dataType>::backward \
  data, filters, derOutput, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
-vl::Error
+vl::ErrorCode
 vl::nnconv_backward(Context& context,
                     Tensor derData,
                     Tensor derFilters,
@@ -150,32 +155,33 @@ vl::nnconv_backward(Context& context,
                     Tensor derOutput,
                     int strideY, int strideX,
                     int padTop, int padBottom,
-                    int padLeft, int padRight)
+                    int padLeft, int padRight,
+                    int dilateY, int dilateX)
 {
-  vl::Error error = vl::vlSuccess ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode error = vl::VLE_Success ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
-        if (error == vl::vlSuccess) { return error ; }
-        if (error != vl::vlErrorUnsupported) { goto done ; }
+        if (error == vl::VLE_Success) { return error ; }
+        if (error != vl::VLE_Unsupported) { goto done ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH2(vl::GPU) ;
+      DISPATCH2(vl::VLDT_GPU) ;
       break ;
 #endif
   }
@@ -190,7 +196,7 @@ done:
 /*                                                  nnconvt_forward */
 /* ---------------------------------------------------------------- */
 
-vl::Error
+vl::ErrorCode
 vl::nnconvt_forward(Context& context,
                     Tensor output,
                     Tensor data,
@@ -200,7 +206,7 @@ vl::nnconvt_forward(Context& context,
                     int cropTop, int cropBottom,
                     int cropLeft, int cropRight)
 {
-  vl::Error error = vlSuccess ;
+  vl::ErrorCode error = VLE_Success ;
   size_t dataOffset = data.getHeight()*data.getWidth()*data.getDepth() ;
   size_t outputOffset = output.getHeight()*output.getWidth()*output.getDepth() ;
 
@@ -211,11 +217,11 @@ vl::nnconvt_forward(Context& context,
     Tensor outputSlice(output) ;
 
     switch (data.getDataType()) {
-      case vlTypeFloat:
+      case VLDT_Float:
         dataSlice.setMemory((float*)data.getMemory() + dataOffset * image) ;
         outputSlice.setMemory((float*)output.getMemory() + outputOffset * image) ;
         break ;
-      case vlTypeDouble:
+      case VLDT_Double:
         dataSlice.setMemory((double*)data.getMemory() + dataOffset * image) ;
         outputSlice.setMemory((double*)output.getMemory() + outputOffset * image) ;
         break ;
@@ -230,8 +236,9 @@ vl::nnconvt_forward(Context& context,
                                 Tensor(), filters, dataSlice,
                                 upsampleY, upsampleX,
                                 cropTop, cropBottom,
-                                cropLeft, cropRight) ;
-    if (error != vlSuccess) { goto done ; }
+                                cropLeft, cropRight,
+                                1, 1) ;
+    if (error != VLE_Success) { goto done ; }
   }
   if (biases) {
     error = vl::nnbias_forward(context,
@@ -247,7 +254,7 @@ done:
 /*                                                 nnconvt_backward */
 /* ---------------------------------------------------------------- */
 
-vl::Error
+vl::ErrorCode
 vl::nnconvt_backward(Context& context,
                      Tensor derData,
                      Tensor derFilters,
@@ -259,34 +266,36 @@ vl::nnconvt_backward(Context& context,
                      int cropTop, int cropBottom,
                      int cropLeft, int cropRight)
 {
-  vl::Error error = vl::vlSuccess ;
+  vl::ErrorCode error = vl::VLE_Success ;
 
   if (derData) {
     error = vl::nnconv_forward(context,
-                                derData, 0,
-                                derOutput, 1,
-                                filters, Tensor(),
-                                upsampleY, upsampleX,
-                                cropTop, cropBottom,
-                                cropLeft, cropRight) ;
-    if (error != vlSuccess) { goto done ; }
+                               derData, 0,
+                               derOutput, 1,
+                               filters, Tensor(),
+                               upsampleY, upsampleX,
+                               cropTop, cropBottom,
+                               cropLeft, cropRight,
+                               1, 1) ;
+    if (error != VLE_Success) { goto done ; }
   }
 
   if (derFilters) {
     error = vl::nnconv_backward(context,
-                                 Tensor(), derFilters, Tensor(),
-                                 derOutput, Tensor(), data,
-                                 upsampleY, upsampleX,
-                                 cropTop, cropBottom,
-                                 cropLeft, cropRight) ;
-    if (error != vlSuccess) { goto done ; }
+                                Tensor(), derFilters, Tensor(),
+                                derOutput, Tensor(), data,
+                                upsampleY, upsampleX,
+                                cropTop, cropBottom,
+                                cropLeft, cropRight,
+                                1, 1) ;
+    if (error != VLE_Success) { goto done ; }
   }
 
   if (derBiases) {
     error = vl::nnbias_backward(context,
-                                 Tensor(), 0,
-                                 derBiases, 0,
-                                 derOutput, 1) ;
+                                Tensor(), 0,
+                                derBiases, 0,
+                                derOutput, 1) ;
   }
 
 done:

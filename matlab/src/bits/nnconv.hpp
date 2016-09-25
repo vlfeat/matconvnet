@@ -5,7 +5,7 @@
 
 /*
 Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -20,7 +20,7 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-  vl::Error
+  vl::ErrorCode
   nnconv_forward(vl::Context& context,
                  vl::Tensor output, double outputMult,
                  vl::Tensor data, double dataMult,
@@ -28,9 +28,10 @@ namespace vl {
                  vl::Tensor biases,
                  int strideY, int strideX,
                  int padTop, int padBottom,
-                 int padLeft, int padRight) ;
+                 int padLeft, int padRight,
+                 int dilateY, int dilateX) ;
 
-  vl::Error
+  vl::ErrorCode
   nnconv_backward(vl::Context& context,
                   vl::Tensor derData,
                   vl::Tensor derFilters,
@@ -40,9 +41,10 @@ namespace vl {
                   vl::Tensor derOutput,
                   int strideY, int strideX,
                   int padTop, int padBottom,
-                  int padLeft, int padRight) ;
+                  int padLeft, int padRight,
+                  int dilateY, int dilateX) ;
 
-  vl::Error
+  vl::ErrorCode
   nnconvt_forward(vl::Context& context,
                   vl::Tensor output,
                   vl::Tensor data,
@@ -52,7 +54,7 @@ namespace vl {
                   int cropTop, int cropBottom,
                   int cropLeft, int cropRight) ;
 
-  vl::Error
+  vl::ErrorCode
   nnconvt_backward(vl::Context& context,
                    vl::Tensor derData,
                    vl::Tensor derFilters,

@@ -15,6 +15,7 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
+#include <assert.h>
 #ifndef NDEBUG
 #include<iostream>
 #endif
@@ -52,10 +53,10 @@ vl::MexContext::~MexContext()
 
 // Do noting if the GPU is not initialized, otherwise invalidate it
 // if needed
-vl::Error
+vl::ErrorCode
 MexContext::validateGpu()
 {
-  if (!gpuIsInitialized) { return vl::vlSuccess ; }
+  if (!gpuIsInitialized) { return vl::VLE_Success ; }
   gpuIsInitialized = mxGPUIsValidGPUData(canary) ;
   if (!gpuIsInitialized) {
 #ifndef NDEBUG
@@ -65,11 +66,11 @@ MexContext::validateGpu()
     canary = NULL ;
     Context::invalidateGpu() ;
   }
-  return vl::vlSuccess ;
+  return vl::VLE_Success ;
 }
 
 // Initialize GPU; also make sure that it was not reset by MATLAB
-vl::Error
+vl::ErrorCode
 vl::MexContext::initGpu()
 {
   validateGpu() ;
@@ -84,7 +85,7 @@ vl::MexContext::initGpu()
     mxGPUDestroyGPUArray(gpuArray) ;
     gpuIsInitialized = true ;
   }
-  return vl::vlSuccess ;
+  return vl::VLE_Success ;
 }
 #endif
 
@@ -95,24 +96,24 @@ vl::MexContext::initGpu()
 /*
  The MexTensor class helps handling MATLAB CPU and GPU arrays.
 
- The design is somewhat ackward to match MATLAB assumpitons.
+ The design is somewhat awkward to match MATLAB assumptions.
 
  The class can either:
 
  - wrap an existing mxArray (or mxArray + mxGPUArray)
  - or create a new mxArray (or mxArray + mxGPUArray)
 
- In the last case, the array is released when the destructor is
+ In the second case, the array is released when the destructor is
  called. However, this would normally interfere with MATLAB
  automatic garbage collection upon raising an exception (which
  can happen using mexErrMsgTxt() or, implicitly, when an array
  creation function cannot complete, for example due to a memory error).
 
  Therefore the constructors make the allocated memory persistent. C++
- guarantees that the arrays are freeed upon error in the destructors.
+ guarantees that the arrays are freed upon error in the destructors.
 
- Note that, upon cerating an array, errors such as running out of
- CPU/GPU memory can occurr. In this case, MATLAB throws an error
+ Note that, upon creating an array, errors such as running out of
+ CPU/GPU memory can occur. In this case, MATLAB throws an error
  and quits the MEX file (either implicitly or because we call
  mexErrMsgTxt()). Hence constructors always complete with a well
  defined object.
@@ -149,6 +150,13 @@ vl::MexTensor::relinquish()
 }
 
 void
+vl::MexTensor::makePersistent()
+{
+  assert(isArrayOwner) ;
+  mexMakeArrayPersistent((mxArray*)array) ;
+}
+
+void
 vl::MexTensor::clear()
 {
 #if ENABLE_GPU
@@ -166,7 +174,7 @@ vl::MexTensor::clear()
   }
   memory = NULL ;
   memorySize = 0 ;
-  deviceType = vl::CPU ;
+  deviceType = vl::VLDT_CPU ;
   vl::TensorShape::clear() ;
 }
 
@@ -179,9 +187,8 @@ vl::MexTensor::~MexTensor()
 /* init with optional zero filling                                  */
 /* ---------------------------------------------------------------- */
 
-
-vl::Error
-vl::MexTensor::initHelper(Device newDeviceType, Type newDataType,
+vl::ErrorCode
+vl::MexTensor::initHelper(DeviceType newDeviceType, DataType newDataType,
                           TensorShape const & newShape, bool fillWithZeros)
 {
   clear() ;
@@ -196,13 +203,13 @@ vl::MexTensor::initHelper(Device newDeviceType, Type newDataType,
   mwSize newMemorySize = newShape.getNumElements() ;
   mxClassID classID ;
   switch (newDataType) {
-    case vlTypeFloat:
-      newMemorySize *= sizeof(DataTypeTraits<vlTypeFloat>::type) ;
+    case VLDT_Float:
+      newMemorySize *= sizeof(DataTypeTraits<VLDT_Float>::type) ;
       classID = mxSINGLE_CLASS ;
       break ;
 #ifdef ENABLE_DOUBLE
-    case vlTypeDouble:
-      newMemorySize *= sizeof(DataTypeTraits<vlTypeDouble>::type) ;
+    case VLDT_Double:
+      newMemorySize *= sizeof(DataTypeTraits<VLDT_Double>::type) ;
       classID = mxDOUBLE_CLASS ;
       break ;
 #endif
@@ -217,7 +224,7 @@ vl::MexTensor::initHelper(Device newDeviceType, Type newDataType,
   mxGPUArray* newGpuArray = NULL ;
 #endif
 
-  if (newDeviceType == vl::CPU) {
+  if (newDeviceType == vl::VLDT_CPU) {
     if (fillWithZeros) {
       newArray = mxCreateNumericArray(4, dimensions, classID, mxREAL) ;
       newMemory = mxGetData(newArray) ;
@@ -258,46 +265,46 @@ vl::MexTensor::initHelper(Device newDeviceType, Type newDataType,
 #if ENABLE_GPU
   gpuArray = newGpuArray ;
 #endif
-  return vl::vlSuccess ;
+  return vl::VLE_Success ;
 }
 
 /* ---------------------------------------------------------------- */
 /*                                                          init*() */
 /* ---------------------------------------------------------------- */
 
-vl::Error
-vl::MexTensor::init(Device newDeviceType,
-                    Type newDataType,
+vl::ErrorCode
+vl::MexTensor::init(DeviceType newDeviceType,
+                    DataType newDataType,
                     TensorShape const & newShape)
 {
   return initHelper(newDeviceType, newDataType, newShape, false) ;
 }
 
-vl::Error
-vl::MexTensor::initWithZeros(Device newDeviceType,
-                             Type newDataType,
+vl::ErrorCode
+vl::MexTensor::initWithZeros(DeviceType newDeviceType,
+                             DataType newDataType,
                              TensorShape const & newShape)
 {
   return initHelper(newDeviceType, newDataType, newShape, true) ;
 }
 
-vl::Error
-vl::MexTensor::initWithValue(Device newDeviceType,
-                             Type newDataType,
+vl::ErrorCode
+vl::MexTensor::initWithValue(DeviceType newDeviceType,
+                             DataType newDataType,
                              TensorShape const & newShape,
                              double value)
 {
   if (value == 0) {
     return initHelper(newDeviceType, newDataType, newShape, true) ;
   } else {
-    vl::Error error = initHelper(newDeviceType, newDataType, newShape, false) ;
-    if (error != vlSuccess) { return error ; }
+    vl::ErrorCode error = initHelper(newDeviceType, newDataType, newShape, false) ;
+    if (error != VLE_Success) { return error ; }
     size_t const n = getNumElements() ;
-    if (newDeviceType == vl::CPU) {
+    if (newDeviceType == vl::VLDT_CPU) {
       switch (newDataType) {
-        case vlTypeFloat: error = operations<vl::CPU,float>::fill((float*)memory, n, (float)value) ; break ;
+        case VLDT_Float: error = operations<vl::VLDT_CPU,float>::fill((float*)memory, n, (float)value) ; break ;
 #ifdef ENABLE_DOUBLE
-        case vlTypeDouble: error = operations<vl::CPU,double>::fill((double*)memory, n, (double)value) ; break ;
+        case VLDT_Double: error = operations<vl::VLDT_CPU,double>::fill((double*)memory, n, (double)value) ; break ;
 #endif
         default: abort() ;
       }
@@ -305,13 +312,13 @@ vl::MexTensor::initWithValue(Device newDeviceType,
 #ifdef ENABLE_GPU
     else {
       switch (newDataType) {
-        case vlTypeFloat: error = operations<vl::GPU,float>::fill((float*)memory, n, (float)value) ; break ;
+        case VLDT_Float: error = operations<vl::VLDT_GPU,float>::fill((float*)memory, n, (float)value) ; break ;
 #ifdef ENABLE_DOUBLE
-        case vlTypeDouble: error = operations<vl::GPU,double>::fill((double*)memory, n, (double)value) ; break ;
+        case VLDT_Double: error = operations<vl::VLDT_GPU,double>::fill((double*)memory, n, (double)value) ; break ;
 #endif
         default: abort() ;
       }
-      if (error == vlErrorCuda) {
+      if (error == VLE_Cuda) {
         cudaError_t error = cudaGetLastError() ;
         clear() ;
         mexErrMsgTxt((std::string("MexTensor: fill [CUDA error: ")
@@ -322,21 +329,21 @@ vl::MexTensor::initWithValue(Device newDeviceType,
     }
 #endif
   }
-  return vl::vlSuccess ;
+  return vl::VLE_Success ;
 }
 
 /* ---------------------------------------------------------------- */
 /* init by wrapping a given array                                   */
 /* ---------------------------------------------------------------- */
 
-vl::Error
+vl::ErrorCode
 vl::MexTensor::init(mxArray const * array_)
 {
   clear() ;
-  if (array_ == NULL) { return vl::vlSuccess ; } // empty
+  if (array_ == NULL) { return vl::VLE_Success ; } // empty
 
-  vl::Device newDeviceType ;
-  vl::Type newDataType ;
+  vl::DeviceType newDeviceType ;
+  vl::DataType newDataType ;
   void const * newMemory = NULL ;
   mxArray * newArray = (mxArray*)array_ ;
 #if ENABLE_GPU
@@ -350,7 +357,7 @@ vl::MexTensor::init(mxArray const * array_)
 #ifdef ENABLE_GPU
   context.initGpu() ;
   if (mxIsGPUArray(array_)) {
-    newDeviceType = GPU ;
+    newDeviceType = vl::VLDT_GPU ;
     newGpuArray = (mxGPUArray*) mxGPUCreateFromMxArray(newArray) ;
     newMemory = mxGPUGetDataReadOnly(newGpuArray) ;
     newClassID = mxGPUGetClassID(newGpuArray) ;
@@ -362,7 +369,7 @@ vl::MexTensor::init(mxArray const * array_)
     if (!mxIsNumeric(newArray)) {
       mexErrMsgTxt("An input is not a numeric array (or GPU support not compiled).") ;
     }
-    newDeviceType = CPU ;
+    newDeviceType = VLDT_CPU ;
     newMemory = mxGetData(newArray) ;
     newClassID = mxGetClassID(newArray) ;
     newDimensions = mxGetDimensions(newArray) ;
@@ -388,20 +395,20 @@ vl::MexTensor::init(mxArray const * array_)
 
   switch (newClassID) {
     case mxSINGLE_CLASS:
-      newDataType = vlTypeFloat ;
-      newMemorySize *= sizeof(DataTypeTraits<vlTypeFloat>::type) ;
+      newDataType = VLDT_Float ;
+      newMemorySize *= sizeof(DataTypeTraits<VLDT_Float>::type) ;
       break ;
 
 #ifdef ENABLE_DOUBLE
     case mxDOUBLE_CLASS:
-      newDataType = vlTypeDouble ;
-      newMemorySize *= sizeof(DataTypeTraits<vlTypeDouble>::type) ;
+      newDataType = VLDT_Double ;
+      newMemorySize *= sizeof(DataTypeTraits<VLDT_Double>::type) ;
       break ;
 #endif
 
     default:
       if (isEmpty()) {
-        newDataType = vlTypeFloat ;
+        newDataType = VLDT_Float ;
         newMemorySize = 0 ;
         break ;
       }
@@ -423,8 +430,7 @@ vl::MexTensor::init(mxArray const * array_)
   gpuArray = newGpuArray ;
 #endif
 
-
-  return vl::vlSuccess ;
+  return vl::VLE_Success ;
 }
 
 size_t
@@ -455,13 +461,13 @@ void vl::print(char const * str, vl::MexTensor const & tensor)
   }
   const char * dev = "" ;
   switch (tensor.getDeviceType()) {
-    case vl::CPU : dev = "CPU" ; break ;
-    case vl::GPU : dev = "GPU" ; break ;
+    case vl::VLDT_CPU : dev = "CPU" ; break ;
+    case vl::VLDT_GPU : dev = "GPU" ; break ;
   }
   switch (tensor.getDataType()) {
-    case vl::vlTypeFloat: type = "float" ; break ;
-    case vl::vlTypeDouble: type = "double" ; break ;
-    case vl::vlTypeChar: type = "char" ; break ;
+    case vl::VLDT_Float: type = "float" ; break ;
+    case vl::VLDT_Double: type = "double" ; break ;
+    case vl::VLDT_Char: type = "char" ; break ;
     default: type = "uknown type" ;
   }
   mexPrintf("%s[", str) ;

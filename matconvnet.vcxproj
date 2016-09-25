@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -77,18 +77,24 @@
     <None Include="matlab\src\bits\impl\pooling_gpu.cu" />
     <None Include="matlab\src\bits\impl\subsample_gpu.cu" />
     <None Include="matlab\src\bits\nnbias.cu" />
+    <None Include="matlab\src\bits\nnbilinearsampler.cu" />
     <None Include="matlab\src\bits\nnbnorm.cu" />
     <None Include="matlab\src\bits\nnconv.cu" />
     <None Include="matlab\src\bits\nnfullyconnected.cu" />
     <None Include="matlab\src\bits\nnnormalize.cu" />
     <None Include="matlab\src\bits\nnpooling.cu" />
     <None Include="matlab\src\bits\nnsubsample.cu" />
+    <None Include="matlab\src\vl_cudatool.cu" />
     <None Include="matlab\src\vl_imreadjpeg.cu" />
+    <None Include="matlab\src\vl_imreadjpeg2.cu" />
+    <None Include="matlab\src\vl_nnbilinearsampler.cu" />
     <None Include="matlab\src\vl_nnbnorm.cu" />
     <None Include="matlab\src\vl_nnconv.cu" />
     <None Include="matlab\src\vl_nnconvt.cu" />
     <None Include="matlab\src\vl_nnnormalize.cu" />
     <None Include="matlab\src\vl_nnpool.cu" />
+    <None Include="matlab\src\vl_taccummex.cu" />
+    <None Include="matlab\src\vl_tmovemex.cu" />
     <None Include="matlab\vl_argparse.m" />
     <None Include="matlab\vl_compilenn.m" />
     <None Include="matlab\vl_imreadjpeg.m" />
@@ -124,18 +130,23 @@
     <ClCompile Include="matlab\src\bits\impl\tinythread.cpp" />
     <ClCompile Include="matlab\src\bits\imread.cpp" />
     <ClCompile Include="matlab\src\bits\nnbias.cpp" />
+    <ClCompile Include="matlab\src\bits\nnbilinearsampler.cpp" />
     <ClCompile Include="matlab\src\bits\nnbnorm.cpp" />
     <ClCompile Include="matlab\src\bits\nnconv.cpp" />
     <ClCompile Include="matlab\src\bits\nnfullyconnected.cpp" />
     <ClCompile Include="matlab\src\bits\nnnormalize.cpp" />
     <ClCompile Include="matlab\src\bits\nnpooling.cpp" />
     <ClCompile Include="matlab\src\bits\nnsubsample.cpp" />
+    <ClCompile Include="matlab\src\vl_cudatool.cpp" />
     <ClCompile Include="matlab\src\vl_imreadjpeg.cpp" />
+    <ClCompile Include="matlab\src\vl_nnbilinearsampler.cpp" />
     <ClCompile Include="matlab\src\vl_nnbnorm.cpp" />
     <ClCompile Include="matlab\src\vl_nnconv.cpp" />
     <ClCompile Include="matlab\src\vl_nnconvt.cpp" />
     <ClCompile Include="matlab\src\vl_nnnormalize.cpp" />
     <ClCompile Include="matlab\src\vl_nnpool.cpp" />
+    <ClCompile Include="matlab\src\vl_taccummex.cpp" />
+    <ClCompile Include="matlab\src\vl_tmovemex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matlab\src\bits\data.hpp" />
@@ -159,6 +170,7 @@
     <ClInclude Include="matlab\src\bits\imread.hpp" />
     <ClInclude Include="matlab\src\bits\mexutils.h" />
     <ClInclude Include="matlab\src\bits\nnbias.hpp" />
+    <ClInclude Include="matlab\src\bits\nnbilinearsampler.hpp" />
     <ClInclude Include="matlab\src\bits\nnbnorm.hpp" />
     <ClInclude Include="matlab\src\bits\nnconv.hpp" />
     <ClInclude Include="matlab\src\bits\nnfullyconnected.hpp" />

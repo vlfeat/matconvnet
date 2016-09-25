@@ -187,9 +187,89 @@ for l = 1:numel(net.layers)
         if ~isempty(params(p).learningRate)
             obj.params(pindex).learningRate = params(p).learningRate ;
         end
-        if ~isempty(params(p).weightDecay)
-            obj.params(pindex).weightDecay = params(p).weightDecay ;
-        end
+      end
+      switch net.layers{l}.type
+        case 'conv'
+          block = Conv() ;
+          block.size = sz ;
+          block.pad = net.layers{l}.pad ;
+          block.stride = net.layers{l}.stride ;
+          block.dilate = net.layers{l}.dilate ;
+        case 'convt'
+          block = ConvTranspose() ;
+          block.size = sz ;
+          block.upsample = net.layers{l}.upsample ;
+          block.crop = net.layers{l}.crop ;
+          block.numGroups = net.layers{l}.numGroups ;
+      end
+      block.hasBias = hasBias ;
+      block.opts = net.layers{l}.opts ;
+
+    case 'pool'
+      block = Pooling() ;
+      block.method = net.layers{l}.method ;
+      block.poolSize = net.layers{l}.pool ;
+      block.pad = net.layers{l}.pad ;
+      block.stride = net.layers{l}.stride ;
+      block.opts = net.layers{l}.opts ;
+
+    case {'normalize', 'lrn'}
+      block = LRN() ;
+      block.param = net.layers{l}.param ;
+
+    case {'dropout'}
+      block = DropOut() ;
+      block.rate = net.layers{l}.rate ;
+
+    case {'relu'}
+      block = ReLU() ;
+      block.leak = net.layers{l}.leak ;
+
+    case {'sigmoid'}
+      block = Sigmoid() ;
+
+    case {'softmax'}
+      block = SoftMax() ;
+
+    case {'softmaxloss'}
+      block = Loss('loss', 'softmaxlog') ;
+      % The loss has two inputs
+      inputs{2} = getNewVarName(obj, 'label') ;
+
+    case {'bnorm'}
+      block = BatchNorm() ;
+      params(1).name = sprintf('%sm',name) ;
+      params(1).value = net.layers{l}.weights{1} ;
+      params(2).name = sprintf('%sb',name) ;
+      params(2).value = net.layers{l}.weights{2} ;
+      params(3).name = sprintf('%sx',name) ;
+      params(3).value = net.layers{l}.weights{3} ;
+      if isfield(net.layers{l},'learningRate')
+        params(1).learningRate = net.layers{l}.learningRate(1) ;
+        params(2).learningRate = net.layers{l}.learningRate(2) ;
+        params(3).learningRate = net.layers{l}.learningRate(3) ;
+      end
+      if isfield(net.layers{l},'weightDecay')
+        params(1).weightDecay = net.layers{l}.weightDecay(1) ;
+        params(2).weightDecay = net.layers{l}.weightDecay(2) ;
+        params(3).weightDecay = 0 ;
+      end
+
+    otherwise
+      error([net.layers{l}.type ' is unsupported']) ;
+  end
+
+  obj.addLayer(...
+    name, ...
+    block, ...
+    inputs, ...
+    outputs, ...
+    {params.name}) ;
+
+  for p = 1:numel(params)
+    pindex = obj.getParamIndex(params(p).name) ;
+    if ~isempty(params(p).value)
+      obj.params(pindex).value = params(p).value ;
     end
 end
 

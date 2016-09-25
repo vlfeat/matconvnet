@@ -42,9 +42,9 @@ data.getHeight(), data.getWidth(), data.getSize());
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType, float) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType, double) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType, float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
 #define DISPATCHCUDNN(dataType) \
@@ -53,42 +53,42 @@ error = vl::impl::nnbilinearsampler_cudnn<dataType>::forward \
 
 #define DISPATCHCUDNN2() \
 switch (dataType) { \
-case vlTypeFloat : DISPATCHCUDNN(vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCHCUDNN(vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnbilinearsampler_forward(Context& context,
                               Tensor output,
                               Tensor data,
                               Tensor grid)
 {
-  vl::Error error = vlSuccess ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode error = VLE_Success ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (output.getDeviceType())
   {
     default:
       assert(false);
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
-      if (error == vl::vlSuccess) { return error ; }
-      if (error != vl::vlErrorUnsupported) { return error ; }
+      if (error == vl::VLE_Success) { return error ; }
+      if (error != vl::VLE_Unsupported) { return error ; }
     }
 #endif
-    DISPATCH2(vl::GPU) ;
-    if (error == vlErrorCuda) {
+    DISPATCH2(vl::VLDT_GPU) ;
+    if (error == VLE_Cuda) {
       context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
     }
     break;
@@ -121,7 +121,7 @@ error = vl::impl::nnbilinearsampler_cudnn<dataType>::backward \
   data, grid, \
   derOutput );
 
-vl::Error
+vl::ErrorCode
 vl::nnbilinearsampler_backward(Context& context,
                                Tensor derData,
                                Tensor derGrid,
@@ -129,32 +129,32 @@ vl::nnbilinearsampler_backward(Context& context,
                                Tensor grid,
                                Tensor derOutput)
 {
-  vl::Error error = vlSuccess ;
-  vl::Device deviceType = derOutput.getDeviceType() ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode error = VLE_Success ;
+  vl::DeviceType deviceType = derOutput.getDeviceType() ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (derOutput.getDeviceType())
   {
     default:
       assert(false);
-      error = vl::vlErrorUnknown ;
+      error = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN && (CUDNN_VERSION >= 5000)
     if (context.getCudaHelper().getCudnnEnabled()) {
       DISPATCHCUDNN2() ;
-      if (error == vl::vlSuccess) { return error ; }
-      if (error != vl::vlErrorUnsupported) { return error ; }
+      if (error == vl::VLE_Success) { return error ; }
+      if (error != vl::VLE_Unsupported) { return error ; }
     }
 #endif
-    DISPATCH2(vl::GPU) ;
-    if (error == vlErrorCuda) {
+    DISPATCH2(vl::VLDT_GPU) ;
+    if (error == VLE_Cuda) {
       context.setError(context.getCudaHelper().catchCudaError("GPU")) ;
     }
     break;
