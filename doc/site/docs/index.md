@@ -31,6 +31,9 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta23](about.md#changes) released with
+> [`vl_nnroipool`](mfiles/vl_nnroipool) and a Fast-RCNN demo.
+>
 > **New:** [1.0-beta22](about.md#changes) released with a few bugfixes.
 >
 > **New:** [1.0-beta21](about.md#changes) provides two new tools,
