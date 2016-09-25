@@ -177,6 +177,8 @@ roipooling_max_kernel
 /*                                                        atomicAdd */
 /* ---------------------------------------------------------------- */
 
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
 // an implementation of atomicAdd() for double (really slow)
 static __device__ double atomicAdd(double* address, double val)
 {
@@ -190,6 +192,7 @@ static __device__ double atomicAdd(double* address, double val)
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+#endif
 
 /* ---------------------------------------------------------------- */
 /*                                      roipooling_average_backward */
