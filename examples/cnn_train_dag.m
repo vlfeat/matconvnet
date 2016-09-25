@@ -135,7 +135,7 @@ for epoch=start+1:opts.numEpochs
       plot(1:epoch, values','o-') ;
       xlabel('epoch') ;
       title(p,'Interpreter','none') ;
-      legend(leg{:},'Interpreter','none') ;
+      legend(leg,'Interpreter','none') ;
       grid on ;
       w = linspace(0.3,1,size(values,2));
       valm = sum(bsxfun(@times,values,w),2) ./ sum(w);
