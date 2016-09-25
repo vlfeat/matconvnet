@@ -168,8 +168,6 @@ for c=1:numel(VOCopts.classes)
 end
 fprintf('mean ap %.1f\n',100*mean(aps));
 
-keyboard
-
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
 % --------------------------------------------------------------------
