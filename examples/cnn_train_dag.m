@@ -125,6 +125,7 @@ for epoch=start+1:opts.numEpochs
           values(end+1,:) = tmp(1,:)' ;
           leg{end+1} = f ;
         end
+        print(1, modelPdfPath, '-dpdf', '-bestfit');
       end
       subplot(1,numel(plots),find(strcmp(p,plots))) ;
       plot(1:epoch, values','o-') ;
