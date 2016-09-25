@@ -145,7 +145,7 @@
     <None Include="matlab\src\vl_taccummex.cu">
       <Filter>src</Filter>
     </None>
-    <None Include="matlab\src\vl_tmovemex.cu">
+    <None Include="matlab\src\vl_tmove.cu">
       <Filter>src</Filter>
     </None>
     <None Include="matlab\src\bits\nnbilinearsampler.cu">
@@ -254,7 +254,7 @@
     <ClCompile Include="matlab\src\vl_taccummex.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="matlab\src\vl_tmovemex.cpp">
+    <ClCompile Include="matlab\src\vl_tmove.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="matlab\src\bits\nnbilinearsampler.cpp">
