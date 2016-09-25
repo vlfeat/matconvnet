@@ -150,7 +150,7 @@ for epoch=start+1:opts.numEpochs
             ylim([min(valm) - max(vals), max(valm) + max(vals)])
         end
         drawnow ;
-        print(1, modelPdfPath, '-dpdf');
+        print(1, modelPdfPath, '-dpdf', '-bestfit');
         saveas(1, modelFigPath);
     end
     
@@ -466,7 +466,7 @@ end
 if numGpus >= 1 && cold
     fprintf('%s: resetting GPU\n', mfilename)
     if numGpus == 1
-        gpuDevice(opts.gpus)
+%         gpuDevice(opts.gpus)
     else
         spmd, gpuDevice(opts.gpus(labindex)), end
     end
