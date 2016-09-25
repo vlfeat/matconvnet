@@ -111,10 +111,14 @@ for epoch=start+1:opts.numEpochs
 
   if opts.plotStatistics
     switchFigure(1) ; clf ;
+    maximize(1);
     plots = setdiff(...
       cat(2,...
       fieldnames(stats.train)', ...
       fieldnames(stats.val)'), {'num', 'time'}) ;
+    n = ceil(sqrt(numel(plots)));
+    m = ceil(numel(plots)/n);
+        
     for p = plots
       p = char(p) ;
       values = zeros(0, epoch) ;
@@ -127,10 +131,10 @@ for epoch=start+1:opts.numEpochs
           leg{end+1} = f ;
         end
       end
-      subplot(1,numel(plots),find(strcmp(p,plots))) ;
+      subplot(n,m,find(strcmp(p,plots))) ;
       plot(1:epoch, values','o-') ;
       xlabel('epoch') ;
-      title(p) ;
+      title(p,'Interpreter','none') ;
       legend(leg{:},'Interpreter','none') ;
       grid on ;
       w = linspace(0.3,1,size(values,2));
