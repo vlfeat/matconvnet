@@ -82,7 +82,7 @@ LDFLAGS =
 LDOPTIMFLAGS =
 LINKLIBS = -lmwblas
 
-NVCCFLAGS_PASS = -gencode=arch=compute_30,code=\"sm_30,compute_30\"
+NVCCFLAGS_PASS = -D_FORCE_INLINES -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 NVCCVER = $(shell $(NVCC) --version | \
 sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
 xargs printf '%02d%02d%02d')
