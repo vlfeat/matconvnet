@@ -1,4 +1,4 @@
-function aps = fast_rcnn_evaluate(varargin)
+function [aps,aps_auc] = fast_rcnn_evaluate(varargin)
 %FAST_RCNN_EVALUATE  Evaluate a trained Fast-RCNN model on PASCAL VOC 2007
 
 % Evaluate the performance of trained Fast-RCNN model on PASCAL VOC 2007
@@ -141,6 +141,7 @@ end
 %% PASCAL VOC evaluation
 VOCdevkitPath = fullfile(vl_rootnn,'data','VOCdevkit');
 aps = zeros(numel(VOCopts.classes),1);
+aps_auc = zeros(numel(VOCopts.classes),1);
 
 % fix voc folders
 VOCopts.imgsetpath = fullfile(VOCdevkitPath,'VOC2007','ImageSets','Main','%s.txt');
@@ -163,10 +164,12 @@ for c=1:numel(VOCopts.classes)
   end
   fclose(fid);
   [rec,prec,ap] = VOCevaldet(VOCopts,'comp3',VOCopts.classes{c},0);
-  fprintf('%s %.1f\n',VOCopts.classes{c},100*ap);
+  ap_auc = xVOCap(rec,prec);
+  fprintf('%s ap %.1f ap_auc %.1f\n',VOCopts.classes{c},100*ap,100*ap_auc);
   aps(c) = ap;
+  aps_auc(c) = ap_auc;
 end
-fprintf('mean ap %.1f\n',100*mean(aps));
+fprintf('mean ap %.1f ap_auc %.1f\n',100*mean(aps),100*mean(aps_auc));
 
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
