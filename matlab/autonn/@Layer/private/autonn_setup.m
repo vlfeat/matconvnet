@@ -89,3 +89,18 @@ function reshape_setup(layer)
   layer.numInputDer = 1 ;
 end
 
+function rand_setup(layer)
+  % no derivatives defined
+  layer.numInputDer = 0 ;
+end
+
+function randn_setup(layer)
+  % no derivatives defined
+  layer.numInputDer = 0 ;
+end
+
+function randi_setup(layer)
+  % no derivatives defined
+  layer.numInputDer = 0 ;
+end
+

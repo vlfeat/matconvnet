@@ -456,6 +456,18 @@ classdef Layer < matlab.mixin.Copyable
         obj.diagnostics = value ;
       end
     end
+    
+    % overloaded native Matlab functions, static (first argument is not a
+    % Layer object, call with Layer.rand(...)).
+    function y = rand(obj, varargin)
+      y = Layer(@rand, obj, varargin{:}) ;
+    end
+    function y = randi(obj, varargin)
+      y = Layer(@randi, obj, varargin{:}) ;
+    end
+    function y = randn(obj, varargin)
+      y = Layer(@randn, obj, varargin{:}) ;
+    end
   end
 end
 
