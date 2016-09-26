@@ -1,6 +1,6 @@
 #! /bin/bash
 # brief: Import Fast R-CNN models
-# author: Abishek Dutta 
+# author: Abhishek Dutta 
 # author: Hakan Bilen
 
 # Models are written to <MATCONVNET>/data/models-import/fast-rcnn

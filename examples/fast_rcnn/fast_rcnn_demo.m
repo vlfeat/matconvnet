@@ -1,7 +1,7 @@
 function fast_rcnn_demo(varargin)
 %FAST_RCNN_DEMO  Demonstrates Fast-RCNN
 %
-% Copyright (C) 2016 Abishek Dutta and Hakan Bilen.
+% Copyright (C) 2016 Abhishek Dutta and Hakan Bilen.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
