@@ -23,6 +23,28 @@ from the example code included in the [quickstart guide](quick.md).
 > 3.  These models are provided here for convenience, but please
 >     credit the original authors.
 
+
+## Object detection
+
+These models are trained for object detection in PASCAL VOC.
+
+- **Fast R-CNN**. Models from the [Fast
+    R-CNN](https://github.com/rbgirshick/fast-rcnn) page.
+
+   - [fast-rcnn-caffenet-pascal07-dagnn](models/fast-rcnn-caffenet-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-caffenet-pascal07-dagnn)
+   - [fast-rcnn-vggm1k-pascal07-dagnn](models/fast-rcnn-vggm1k-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vggm1k-pascal07-dagnn)
+   - [fast-rcnn-vgg16-pascal07-dagnn](models/fast-rcnn-vgg16-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vgg16-pascal07-dagnn)
+
+Models are as follows:
+
+|model                                | training set | PASCAL07 test mAP |
+|-------------------------------------|--------------| ------------------|
+|fast-rcnn-caffenet-pascal07-dagnn    | pas07        | XX %              |
+|fast-rcnn-vggm12-pascal07-dagnn      | pas07        | XX %              |
+|fast-rcnn-vgg16-pascal07-dagnn       | pas07        | XX %              |
+|fast-rcnn-vgg16-pascal07-12-dagnn    | pas07 + 12   | XX %              |
+
+
 ## Face recognition
 
 These models are trained for face classification and verification.
