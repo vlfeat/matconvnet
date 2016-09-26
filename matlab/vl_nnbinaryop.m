@@ -22,17 +22,23 @@ function [y, db] = vl_nnbinaryop(a, b, op, dy)
     % backward function
     if isequal(op, @times)
       da = bsxfun(@times, b, dy) ;
-      db = bsxfun(@times, a, dy) ;
+      if nargout > 1
+        db = bsxfun(@times, a, dy) ;
+      end
 
     elseif isequal(op, @rdivide)
       % note: @ldivide is just @rdivide with swapped inputs (see
       % autonn_setup/vl_nnbinaryop_setup)
       da = bsxfun(@rdivide, dy, b) ;
-      db = -dy .* bsxfun(@rdivide, a, b .^ 2) ;
+      if nargout > 1
+        db = -dy .* bsxfun(@rdivide, a, b .^ 2) ;
+      end
 
     elseif isequal(op, @power)
       da = dy .* a .^ (b - 1) .* b ;
-      db = dy .* (a .^ b) .* log(a) ;
+      if nargout > 1  % prevents error if log(a) becomes complex, but is not needed anyway because b is constant
+        db = dy .* (a .^ b) .* log(a) ;
+      end
 
     else
       error('Derivative not implemented.') ;
@@ -43,7 +49,7 @@ function [y, db] = vl_nnbinaryop(a, b, op, dy)
       if size(a,t) == 1  % this means the original was a singleton dimension
         da = sum(da, t) ;
       end
-      if size(b,t) == 1
+      if nargout > 1 && size(b,t) == 1
         db = sum(db, t) ;
       end
     end
