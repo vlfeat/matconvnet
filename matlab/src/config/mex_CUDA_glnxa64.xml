@@ -31,7 +31,7 @@
           CXX="$NVCC"
           DEFINES="--compiler-options=-D_GNU_SOURCE,$MATLABMEX"
           MATLABMEX="-DMATLAB_MEX_FILE"
-          NVCCFLAGS="-gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=&#92;&quot;sm_30,compute_30&#92;&quot; $NVCC_FLAGS"
+          NVCCFLAGS="-D_FORCE_INLINES -gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=&#92;&quot;sm_30,compute_30&#92;&quot; $NVCC_FLAGS"
           CXXFLAGS="--compiler-options=-ansi,-fexceptions,-fPIC,-fno-omit-frame-pointer,-pthread"
           INCLUDE="-I&quot;$MATLABROOT/extern/include&quot; -I&quot;$MATLABROOT/simulink/include&quot; -I&quot;$MATLABROOT/toolbox/distcomp/gpu/extern/include/&quot;"
           CXXOPTIMFLAGS="-O -DNDEBUG"

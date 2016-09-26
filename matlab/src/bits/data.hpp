@@ -101,6 +101,11 @@ namespace vl {
     return (a + b - 1) / b ;
   }
 
+  inline size_t divideAndRoundUp(size_t a, size_t b)
+  {
+    return (a + b - 1) / b ;
+  }
+
   /// Compute the greatest common divisor g of non-negative integers
   /// @a a and @a b as well as two integers @a u and @a v such that
   /// $au + bv = g$ (Bezout's coefficients).

@@ -151,7 +151,7 @@ namespace vl { namespace impl {
             type kappa, type alpha, type beta)
     {
       normalize_forward_kernel<type >
-      <<< divideAndRoundUp(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (output, data, width, height, depth, size, normDepth, kappa, alpha, beta) ;
 
       cudaError_t status = cudaPeekAtLastError() ;
@@ -175,7 +175,7 @@ namespace vl { namespace impl {
              type kappa, type alpha, type beta)
     {
       normalize_backward_kernel<type >
-      <<< divideAndRoundUp(width*height*size, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (derData, data, derOutput, width, height, depth, size, normDepth, kappa, alpha, beta) ;
 
       cudaError_t status = cudaPeekAtLastError() ;

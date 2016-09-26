@@ -33,21 +33,30 @@ function str = print(obj, inputSizes, varargin)
 %      for a `digraph` (supported in MATLAB>=R2015b) and the last one
 %      prints a graph  in `dot` format. In case of zero outputs, it
 %      attmepts to compile and visualise the dot graph using `dot` command
-%      and `display` (Linux) or `open` (Mac OSX) on your system.
+%      and `start` (Windows), `display` (Linux) or `open` (Mac OSX) on your system.
 %      In the latter case, all variables and layers are included in the
 %      graph, regardless of the other parameters.
 %
-%   `PdfPath`:: temporary file
-%      Sets the path where any generated PDF will be saved. Currently, 
+%   `FigurePath`:: 'tempname.pdf'
+%      Sets the path where any generated `dot` figure will be saved. Currently,
 %      this is useful only in combination with the format `dot`. 
-%      By default, a unique temporary filename is used.
+%      By default, a unique temporary filename is used (`tempname`
+%      is replaced with a `tempname()` call). The extension specifies the
+%      output format (passed to dot as a `-Text` parameter).
+%      If not extension provided, PDF used by default.
+%      Additionally, stores the .dot file used to generate the figure to
+%      the same location.
+%
+%    `dotArgs`:: ''
+%       Additional dot arguments. E.g. '-Gsize="7"' to generate a smaller
+%       output (for a review of the network structure etc.).
 %
 %   `MaxNumColumns`:: 18
 %      Maximum number of columns in each table.
 %
 %   See also: DAGNN, DAGNN.GETVARSIZES().
 
-if nargin > 1 && isstr(inputSizes)
+if nargin > 1 && ischar(inputSizes)
   % called directly with options, skipping second argument
   varargin = {inputSizes, varargin{:}} ;
   inputSizes = {} ;
@@ -55,7 +64,8 @@ end
 
 opts.all = false ;
 opts.format = 'ascii' ;
-opts.pdfPath = 'tempname' ;
+opts.figurePath = 'tempname.pdf' ;
+opts.dotArgs = '';
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.layers = '*' ;
@@ -80,7 +90,7 @@ str = {''} ;
 if strcmpi(opts.format, 'dot')
   str = printDot(obj, varSizes, paramSizes, opts) ;
   if nargout == 0
-    displayDot(str, opts.pdfPath) ;
+    displayDot(str, opts) ;
   end
   return ;
 end
@@ -391,47 +401,60 @@ str = cat(2,str{:}) ;
 end
 
 % -------------------------------------------------------------------------
-function displayDot(str, pdfPath)
+function displayDot(str, opts)
 % -------------------------------------------------------------------------
 %mwdot = fullfile(matlabroot, 'bin', computer('arch'), 'mwdot') ;
-dotPaths = {'dot', '/opt/local/bin/dot'} ;
+dotPaths = {'/opt/local/bin/dot', 'dot'} ;
+if ismember(computer, {'PCWIN64', 'PCWIN'})
+  winPath = 'c:\Program Files (x86)';
+  dpath = dir(fullfile(winPath, 'Graphviz*'));
+  if ~isempty(dpath)
+    dotPaths = [{fullfile(winPath, dpath.name, 'bin', 'dot.exe')}, dotPaths];
+  end
+end
 dotExe = '' ;
 for i = 1:numel(dotPaths)
-  if exist(dotPaths{i},'file')
+  [~,~,ext] = fileparts(dotPaths{i});
+  if exist(dotPaths{i},'file') && ~strcmp(ext, '.m')
     dotExe = dotPaths{i} ;
+    break;
   end
 end
 if isempty(dotExe)
-  warning('Could not genereate a PDF figure because the `dot` utility could not be found.') ;
+  warning('Could not genereate a figure because the `dot` utility could not be found.') ;
   return ;
 end
 
-in = [tempname '.dot'] ;
+[path, figName, ext] = fileparts(opts.figurePath) ;
 
-if strcmp(pdfPath, 'tempname')
-    out = [tempname '.pdf'] ;
-else
-    % ensure .pdf suffix for output
-    [path, name, ext] = fileparts(pdfPath) ;
-    out = fullfile(path, [ name '.pdf' ]) ;
+if isempty(ext), ext = '.pdf' ; end
+if strcmp(figName, 'tempname')
+  figName = tempname();
 end
+in = fullfile(path, [ figName, '.dot' ]) ;
+out = fullfile(path, [ figName, ext ]) ;
 
-f = fopen(in,'w') ; fwrite(f, str) ; fclose(f) ;
+f = fopen(in, 'w') ; fwrite(f, str) ; fclose(f) ;
 
-cmd = sprintf('"%s" -Tpdf -o "%s" "%s"', dotExe, out, in) ;
+cmd = sprintf('"%s" -T%s %s -o "%s" "%s"', dotExe, ext(2:end), ...
+  opts.dotArgs, out, in) ;
 [status, result] = system(cmd) ;
 if status ~= 0
   error('Unable to run %s\n%s', cmd, result) ;
 end
-fprintf('Dot output:\n%s\n', result) ;
+if ~isempty(strtrim(result))
+  fprintf('Dot output:\n%s\n', result) ;
+end
 
 %f = fopen(out,'r') ; file=fread(f, 'char=>char')' ; fclose(f) ;
 switch computer
+  case {'PCWIN64', 'PCWIN'}
+    system(sprintf('start "" "%s"', out)) ;
   case 'MACI64'
     system(sprintf('open "%s"', out)) ;
   case 'GLNXA64'
     system(sprintf('display "%s"', out)) ;
   otherwise
-    fprintf('PDF figure saved at "%s"\n', out) ;
+    fprintf('The figure saved at "%s"\n', out) ;
 end
 end

@@ -381,8 +381,8 @@ private:
 
   // Shared CPU memory
   void * memoryMap ;
-  int memoryMapSize ;
-  int memoryMapLabStride ;
+  size_t memoryMapSize ;
+  size_t memoryMapLabStride ;
   std::string memoryMapName ;
   int memoryMapFD ;
   bool memoryMapIsCudaRegistered ;
@@ -504,7 +504,7 @@ vl::ErrorCode SharedTensorSpace::mexInit(mxArray const *descriptor)
       tensors.push_back(tensor) ;
 
       offset +=
-      vl::divideAndRoundUp(tensor.descriptor.getSizeInBytes(), alignFactor) * alignFactor ;
+        vl::divideAndRoundUp(tensor.descriptor.getSizeInBytes(), alignFactor) * alignFactor ;
 
       if (verbosity >= 2) {
         mexPrintf("[info] %s: registered tensor %s\n", __func__, name.c_str()) ;
