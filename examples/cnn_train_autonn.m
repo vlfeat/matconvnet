@@ -298,6 +298,7 @@ assert(isequal(Param.trainMethods, {'gradient', 'average', 'none'})) ;
 paramVars = [net.params.var] ;
 w = net.getValue(paramVars) ;
 dw = net.getDer(paramVars) ;
+if isscalar(paramVars), w = {w} ; dw = {dw} ; end
 
 for p=1:numel(paramVars)
   % bring in gradients from other GPUs if any
@@ -332,6 +333,7 @@ for p=1:numel(paramVars)
   end
 end
 
+if isscalar(paramVars), w = w{1} ; end
 net.setValue(paramVars, w) ;
 
 % -------------------------------------------------------------------------
