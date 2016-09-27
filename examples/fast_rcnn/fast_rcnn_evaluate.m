@@ -122,6 +122,10 @@ for c = 1:numel(VOCopts.classes)
   cls_thresholds(q) = so(min(max_per_set,numel(so)));
   
   for t=1:numel(testIdx)
+    
+    if q==1 && mod(t-1,50) == 0
+      fprintf('Applying NMS %d / %d\n',t,numel(testIdx));
+    end
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
     pbox = imdb.boxes.pbox{testIdx(t)};
 
