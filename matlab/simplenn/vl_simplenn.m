@@ -335,10 +335,9 @@ for i=1:n
       if l.leak > 0, leak = {'leak', l.leak} ; else leak = {} ; end
       res(i+1).x = vl_nnrelu(res(i).x,[],leak{:}) ;
 
-        case 'elu'
-            if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
-            res(i+1).x = vl_nnelu(res(i).x,[],alpha{:}) ;
-            
+    case 'elu'
+      if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
+      res(i+1).x = vl_nnelu(res(i).x,[],alpha{:}) ;        
 
     case 'sigmoid'
       res(i+1).x = vl_nnsigmoid(res(i).x) ;
@@ -412,17 +411,6 @@ end
 % -------------------------------------------------------------------------
 
 if doder
-                
-            case 'elu'
-                if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
-                if ~isempty(res(i).x)
-                    res(i).dzdx = vl_nnelu(res(i).x, res(i+1).dzdx, alpha{:}) ;
-                else
-                    % if res(i).x is empty, it has been optimized away, so we use this
-                    % hack (which works only for ReLU):
-                    res(i).dzdx = vl_nnelu(res(i+1).x, res(i+1).dzdx, alpha{:}) ;
-                end
-                
   res(n+1).dzdx = dzdy ;
   for i=n:-1:backPropLim
     l = net.layers{i} ;
@@ -481,8 +469,18 @@ if doder
         end
         if ~isfield(l, 'normed'), l.normed = false; end;
         if ~isfield(l, 'hinge'), l.hinge = 0; end;
-          'normed', l.normed, ...
-          'hinge', l.hinge, ...
+%           'normed', l.normed, ...
+%           'hinge', l.hinge, ...
+
+        case 'elu'
+            if l.alpha ~= 1, alpha = {'alpha', l.alpha} ; else alpha = {} ; end
+            if ~isempty(res(i).x)
+                res(i).dzdx = vl_nnelu(res(i).x, res(i+1).dzdx, alpha{:}) ;
+            else
+                % if res(i).x is empty, it has been optimized away, so we use this
+                % hack (which works only for ReLU):
+                res(i).dzdx = vl_nnelu(res(i+1).x, res(i+1).dzdx, alpha{:}) ;
+            end
 
       case 'bnorm'
         [res(i).dzdx, dzdw{1}, dzdw{2}, dzdw{3}] = ...
@@ -495,11 +493,17 @@ if doder
         dzdw{3} = dzdw{3} * size(res(i).x,4) ;
 
       case 'pdist'
+        if ~isfield(l, 'normed'), l.normed = false; end;
+        if ~isfield(l, 'hinge'), l.hinge = 0; end;
+        if ~isfield(l, 'hard_samples_percent'), l.hard_samples_percent = []; end;
         res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...
           l.p, res(i+1).dzdx, ...
           'noRoot', l.noRoot, ...
           'epsilon', l.epsilon, ...
           'aggregate', l.aggregate, ...
+          'normed', l.normed, ...
+          'hinge', l.hinge, ...
+          'hard_samples_percent', l.hard_samples_percent, ...
           'instanceWeights', l.instanceWeights) ;
 
       case 'custom'
@@ -516,7 +520,7 @@ if doder
             res(i).dzdw{j} = res(i).dzdw{j} + dzdw{j} ;
           end
         end
-        res(i).backwardTime = toc(res(i).backwardTime) ;
+        dzdw = [] ;
         if ~isempty(opts.parameterServer) && ~opts.holdOn
           for j = 1:numel(res(i).dzdw)
             opts.parameterServer.push(sprintf('l%d_%d',i,j),res(i).dzdw{j}) ;
@@ -524,6 +528,15 @@ if doder
           end
         end
     end
+    if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
+      res(i+1).dzdx = [] ;
+      res(i+1).x = [] ;
+    end
+    if gpuMode && opts.sync
+      wait(gpuDevice) ;
+    end
+    res(i).backwardTime = toc(res(i).backwardTime) ;
+  end
   if i > 1 && i == backPropLim && opts.conserveMemory && ~net.layers{i}.precious
     res(i).dzdx = [] ;
     res(i).x = [] ;
