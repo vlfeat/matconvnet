@@ -24,8 +24,8 @@ opts.modelPath = fullfile(opts.expDir, 'net-deployed.mat') ;
 opts.gpu = [] ;
 opts.numFetchThreads = 1 ;
 opts.nmsThresh = 0.3 ;
-opts.probThresh = 0.05 ;
-opts.maxNumThresh = 100 ;
+% heuristic: keep at most 100 detection per class per image prior to NMS
+opts.max_per_image = 100 ;
 
 opts = vl_argparse(opts, varargin) ;
 display(opts);
@@ -74,6 +74,7 @@ VOCinit;
 VOCopts.testset='test';
 
 testIdx = find(imdb.images.set == 3) ;
+
 cls_probs  = cell(1,numel(testIdx)) ;
 box_deltas = cell(1,numel(testIdx)) ;
 boxscores_nms = cell(numel(VOCopts.classes),numel(testIdx)) ;
@@ -103,14 +104,28 @@ for t=1:numel(testIdx)
 
   cls_probs{t} = squeeze(gather(net.vars(probVarI).value)) ;
   box_deltas{t} = squeeze(gather(net.vars(boxVarI).value)) ;
+end
 
-  for c = 1:numel(VOCopts.classes)
-    q = find(strcmp(VOCopts.classes{c}, net.meta.classes.name)) ;
+% heuristic: keep an average of 40 detections per class per images prior
+% to NMS
+max_per_set = 40 * numel(testIdx);
 
-    si = find(cls_probs{t}(q,:) > opts.probThresh) ;
+% detection thresold for each class (this is adaptively set based on the
+% max_per_set constraint)
+cls_thresholds = zeros(1,numel(VOCopts.classes));
+cls_probs_concat = horzcat(cls_probs{:});
 
+
+for c = 1:numel(VOCopts.classes)
+  q = find(strcmp(VOCopts.classes{c}, net.meta.classes.name)) ;
+  so = sort(cls_probs_concat(q,:),'descend');
+  cls_thresholds(q) = so(min(max_per_set,numel(so)));
+  
+  for t=1:numel(testIdx)
+    si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
     pbox = imdb.boxes.pbox{testIdx(t)};
 
+    % back-transform bounding box corrections
     delta = box_deltas{t}(4*(q-1)+1:4*q,:)';
     delta = bsxfun(@times,delta,imdb.boxes.bboxMeanStd{2}(c,:));
     delta = bsxfun(@plus,delta,imdb.boxes.bboxMeanStd{1}(c,:));
@@ -120,7 +135,13 @@ for t=1:numel(testIdx)
     im_size = [imf.Height imf.Width];
     pred_box = bbox_clip(round(pred_box), im_size);
 
+    % threshold
     boxscore = [pred_box(si,:) cls_probs{t}(q,si)'];
+    [~,si] = sort(boxscore(:,5),'descend');
+    boxscore = boxscore(si,:);
+    boxscore = boxscore(1:min(size(boxscore,1),opts.max_per_image),:);
+    
+    % NMS
     pick = bbox_nms(double(boxscore),opts.nmsThresh);
 
     boxscores_nms{c,t} = boxscore(pick,:) ;
@@ -132,11 +153,12 @@ for t=1:numel(testIdx)
                 boxscores_nms{c,t}) ;
       title(net.meta.classes.name{q}) ;
       drawnow ;
-      %pasue;
+      %pause;
       %keyboard
     end
-  end
+  end  
 end
+
 
 %% PASCAL VOC evaluation
 VOCdevkitPath = fullfile(vl_rootnn,'data','VOCdevkit');
@@ -155,7 +177,6 @@ for c=1:numel(VOCopts.classes)
   for i=1:numel(testIdx)
     if isempty(boxscores_nms{c,i}), continue; end
     dets = boxscores_nms{c,i};
-    dets = dets(1:min(size(dets,1),opts.maxNumThresh),:);
     for j=1:size(dets,1)
       fprintf(fid,'%s %.6f %d %d %d %d\n', ...
         imdb.images.name{testIdx(i)}(1:end-4), ...
