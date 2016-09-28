@@ -23,14 +23,14 @@ opts = vl_argparse(opts, varargin) ;
 paths = {opts.modelPath, ...
          './fast-rcnn-vgg16-dagnn.mat', ...
          fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal-dagnn.mat'), ...
-         fullfile(vl_rootnn, 'data', 'models-import', 'fast-rcnn-vgg16-pascal-dagnn.mat')} ;
+         fullfile(vl_rootnn, 'data', 'models-import', 'fast-rcnn-vgg16-pascal07-dagnn.mat')} ;
 ok = min(find(cellfun(@(x)exist(x,'file'), paths))) ;
 
 if isempty(ok)
   fprintf('Downloading the Fast RCNN model ... this may take a while\n') ;
-  opts.modelPath = fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal-dagnn.mat') ;
+  opts.modelPath = fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal07-dagnn.mat') ;
   mkdir(fileparts(opts.modelPath)) ;
-  urlwrite('http://www.vlfeat.org/matconvnet/models/fast-rcnn-vgg16-pascal-dagnn.mat', ...
+  urlwrite('http://www.vlfeat.org/matconvnet/models/fast-rcnn-vgg16-pascal07-dagnn.mat', ...
            opts.modelPath) ;
 else
   opts.modelPath = paths{ok} ;
