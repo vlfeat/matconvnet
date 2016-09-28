@@ -193,7 +193,6 @@ void mexFunction(int nout, mxArray *out[],
   }
   rois.reshape(vl::TensorShape(1, 1, 5, numROIs)) ;
 
-  /* Todo: I am not sure why we allow reshpaing here */
   vl::TensorShape dataShape = data.getShape();
   dataShape.reshape(4);
 
@@ -203,8 +202,12 @@ void mexFunction(int nout, mxArray *out[],
                               dataShape.getDepth(),
                               numROIs) ;
 
+  vl::TensorShape derOutputShape = derOutput.getShape();
+  /* in case there is only one roi */ 
+  derOutputShape.reshape(4);
+
   if (backMode) {
-    if (derOutput.getShape() != outputShape) {
+    if (derOutputShape != outputShape) {
       vlmxError(VLMXE_IllegalArgument, "The shape of DEROUTPUT is incorrect.") ;
     }
   }
