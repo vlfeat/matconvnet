@@ -8,7 +8,7 @@ function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
-
+opts.useGpu = false ;
 opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
 opts.batchSize = 256 ;
@@ -111,7 +111,7 @@ for epoch=start+1:opts.numEpochs
 
   if opts.plotStatistics
     switchFigure(1) ; clf ;
-    maximize(1);
+%     maximize(1);
     plots = setdiff(...
       cat(2,...
       fieldnames(stats.train)', ...
@@ -340,6 +340,49 @@ for p=1:numel(net.params)
       net.params(p).value = vl_taccum(...
         1,  net.params(p).value, thisLR, delta) ;
 
+    case 'RMSprop' %http://cs231n.github.io/neural-networks-3/#ada
+            
+            thisLR = params.learningRate * net.params(p).learningRate ;           
+            eps=1e-8;
+            decayRate = 0.99;
+            if (isfield(net.params(p),'decayRate'))
+               decayRate=net.params(p).decayRate;
+            end    
+            if (~isfield(net.params(p),'cacheRMSprop') || isempty(net.params(p).cacheRMSprop))
+                net.params(p).cacheRMSprop=0;
+            end
+            
+            net.params(p).cacheRMSprop=decayRate*net.params(p).cacheRMSprop+(1-decayRate)*(((1 / batchSize) * net.params(p).der).^2);
+            thisWeightDecay = params.weightDecay * net.params(p).weightDecay* net.params(p).value ;
+            thisGrad=(1 / batchSize) * net.params(p).der./(sqrt( net.params(p).cacheRMSprop)+eps);
+            
+            net.params(p).value = net.params(p).value- thisLR*thisGrad-thisLR*thisWeightDecay;
+    case 'Adam' %http://cs231n.github.io/neural-networks-3/#ada           
+           thisLR = params.learningRate * net.params(p).learningRate ;            
+           beta1=0.9;
+           if (isfield(net.params(p),'beta1'))
+               beta1=net.params(p).beta1;
+           end
+           beta2=0.999;
+           if (isfield(net.params(p),'beta2'))
+               beta1=net.params(p).beta2;
+           end           
+           eps=1e-8;
+
+            if (~isfield(net.params(p),'m') || isempty(net.params(p).m))
+                net.params(p).m=0;
+            end
+            if (~isfield(net.params(p),'v') || isempty(net.params(p).v))
+                net.params(p).v=0;
+            end
+            
+           net.params(p).m=beta1*net.params(p).m+(1-beta1)*((1 / batchSize) * net.params(p).der);
+           net.params(p).v=beta2*net.params(p).v+(1-beta2)*(((1 / batchSize) * net.params(p).der).^2);
+           
+           thisGrad=net.params(p).m./(sqrt(net.params(p).v)+eps);
+           thisWeightDecay = params.weightDecay * net.params(p).weightDecay* net.params(p).value ;           
+           net.params(p).value = net.params(p).value- thisLR*thisGrad -thisLR*thisWeightDecay;
+           
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
         net.params(p).trainMethod, ...
