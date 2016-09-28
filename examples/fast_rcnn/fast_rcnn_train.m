@@ -115,6 +115,8 @@ opts.prefetch = (nargout == 0);
 [im,rois,labels,btargets] = fast_rcnn_train_get_batch(images,imdb,...
   batch, opts);
 
+if opts.prefetch, return; end
+
 nb = numel(labels);
 nc = numel(imdb.classes.name) + 1;
 
