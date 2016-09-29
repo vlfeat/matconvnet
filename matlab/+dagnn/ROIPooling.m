@@ -43,6 +43,15 @@ classdef ROIPooling < dagnn.Layer
       derParams = {} ;
     end
 
+    function outputSizes = getOutputSizes(obj, inputSizes)
+      if isempty(inputSizes{1})
+        n = 0 ;
+      else
+        n = prod(inputSizes{2})/5 ;
+      end
+      outputSizes{1} = [obj.subdivisions, inputSizes{1}(3), n] ;
+    end
+
     function obj = ROIPooling(varargin)
       obj.load(varargin) ;
     end
