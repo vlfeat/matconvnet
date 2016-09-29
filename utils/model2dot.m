@@ -42,13 +42,22 @@ else
 end
 
 inputs = opts.inputs;
-inputNames = net.getInputs();
-if isempty(inputs) && numel(inputNames) == 1 ...
-  && isfield(obj, 'meta') && isfield(obj.meta, 'normalization') ...
-  && isfield(obj.meta.normalization, 'imageSize')
-  inputSize = [obj.meta.normalization.imageSize(1:3), opts.batchSize];
-  fprintf('Input %s guessed to be: %s.\n', inputNames{1}, mat2str(inputSize));
-  inputs = {inputNames{1}, inputSize};
+if isempty(inputs)
+  inputs = {} ;
+  inputNames = net.getInputs() ;
+  for i = 1:numel(inputNames)
+    inputSize = [NaN NaN NaN NaN] ;
+    if isfield(obj, 'meta')
+      if isfield(obj.meta, 'inputs')
+        ii = find(strcmp(inputNames{i}, {obj.meta.inputs.name})) ;
+        inputSize = obj.meta.inputs(ii).size ;
+      elseif isfield(obj.meta, 'normalization') && ...
+          (i == 1 || strcmp(inputNames{i}, 'data'))
+        inputSize = [obj.meta.normalization.imageSize(1:3), 1] ;
+      end
+    end
+    inputs = {inputs{:}, inputNames{i}, inputSize} ;
+  end
 end
 
 if isempty(inputs)
