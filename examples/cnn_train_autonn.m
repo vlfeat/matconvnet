@@ -246,7 +246,7 @@ for t=1:opts.batchSize:numel(subset)
     
     % accumulate learning stats
     for k = 1:numel(opts.stats)
-      statsAccum(k) = statsAccum(k) + gather(net.vars{statsVars(k)}) ;
+      statsAccum(k) = statsAccum(k) + gather(sum(net.vars{statsVars(k)}(:))) ;
     end
   end
 
