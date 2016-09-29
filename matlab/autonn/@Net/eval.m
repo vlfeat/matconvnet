@@ -76,19 +76,20 @@ function eval(net, mode, derOutput, accumulateParamDers)
             vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;
           end
         else
-          % special case, do not accumulat derivatives; used to implement
+          % special case, do not accumulate derivatives; used to implement
           % ReLU short-circuiting.
           ii = inputArgPos <= numel(out) ;
           vars(inputDers(ii)) = out(inputArgPos(ii)) ;
         end
       else
         % special case, indexing. the derivative update is sparse.
-        % args = {input, slicing indexes, output derivative}.
+        % args = {X, I1, I2, ..., DYDZ}, derivative of X(I1, I2, ...).
         inputDer = layer.inputVars(1) + 1 ;  % index of input derivative var
         if isequal(vars{inputDer}, 0)  % must initialize with the right size
           vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
         end
-        vars{inputDer}(args{2}{:}) = vars{inputDer}(args{2}{:}) + args{3} ;
+        % note: very efficient, but doesn't handle repeated indexes
+        vars{inputDer}(args{2:end-1}) = vars{inputDer}(args{2:end-1}) + args{end} ;
       end
     end
   end

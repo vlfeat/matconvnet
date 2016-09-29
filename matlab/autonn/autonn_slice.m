@@ -1,6 +1,6 @@
-function y = autonn_slice(x, subs)
+function y = autonn_slice(x, varargin)
 % Helper function implementing forward indexing operation. The derivative
-% is implemented in Layer.eval() for efficiency with sparse updates, so
+% is implemented in Net.eval() for efficiency with sparse updates, so
 % this does not correspond to the usual vl_nn* interface.
 
 % Copyright (C) 2016 Joao F. Henriques.
@@ -9,6 +9,6 @@ function y = autonn_slice(x, subs)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-  y = x(subs{:}) ;
+  y = x(varargin{:}) ;
 end
 
