@@ -35,6 +35,11 @@ function dx = ipermute_der(~, dim, dy)
   dx = permute(dy, dim) ;
 end
 
+function dx = abs_der(x, dy)
+  assert(isreal(dy), 'Complex values not supported by ABS derivative.');
+  dx = dy .* sign(x) ;
+end
+
 function dx = sqrt_der(x, dy)
   dx = dy ./ sqrt(x) ;
 end

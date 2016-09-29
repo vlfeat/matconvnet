@@ -239,6 +239,9 @@ classdef Layer < matlab.mixin.Copyable
     function y = min(obj, varargin)
       y = Layer(@min, obj, varargin{:}) ;
     end
+    function y = abs(obj, varargin)
+      y = Layer(@abs, obj, varargin{:}) ;
+    end
     function y = sqrt(obj, varargin)
       y = Layer(@sqrt, obj, varargin{:}) ;
     end
