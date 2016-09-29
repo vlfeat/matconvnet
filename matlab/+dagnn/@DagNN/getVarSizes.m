@@ -29,7 +29,11 @@ for i = 1:2:numel(inputSizes)
   if isnan(v)
     error('Variable `%s` not found in the network.', inputSizes{i});
   end;
-  sizes{v} = [inputSizes{i+1}(:)' ones(1, 4 - numel(inputSizes{i+1}))] ;
+  if isempty(inputSizes{i+1})
+    sizes{v} = [0 0 0 0] ;
+  else
+    sizes{v} = [inputSizes{i+1}(:)' ones(1, 4 - numel(inputSizes{i+1}))] ;
+  end
 end
 
 for layer = obj.layers(obj.executionOrder)
