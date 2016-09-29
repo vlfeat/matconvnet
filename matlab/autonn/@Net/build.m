@@ -147,11 +147,12 @@ function build(net, varargin)
       layer.accumDer = obj.accumDer ;
       layer = Net.parseArgs(layer, obj.inputs) ;
 
-      % figure out position of derivative argument: it's right before
-      % the first string (property-value pair), or at the end if none.
+      % figure out position of derivative argument: it's at the end of the
+      % list, right before any property-value pairs or keywords, if they
+      % exist (as determined by ISVARNAME).
       args = layer.args ;
       for lastInput = 0:numel(args)
-        if lastInput < numel(args) && ischar(args{lastInput + 1})
+        if lastInput < numel(args) && isvarname(args{lastInput + 1})
           break
         end
       end
