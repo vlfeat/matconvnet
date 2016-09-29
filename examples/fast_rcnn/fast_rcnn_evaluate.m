@@ -16,19 +16,26 @@ addpath(fullfile(vl_rootnn, 'data', 'VOCdevkit', 'VOCcode'));
 addpath(genpath(fullfile(vl_rootnn, 'examples', 'fast_rcnn')));
 
 opts.dataDir   = fullfile(vl_rootnn, 'data') ;
-opts.sswDir    = fullfile(vl_rootnn, 'data', 'SSW');
-opts.expDir    = fullfile(vl_rootnn, 'data', 'fast-rcnn-vgg16-pascal') ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.sswDir    = fullfile(opts.dataDir, 'SSW');
+opts.expDir    = fullfile(opts.dataDir, 'fast-rcnn-vgg16-pascal07') ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
 opts.imdbPath  = fullfile(opts.expDir, 'imdb.mat');
 opts.modelPath = fullfile(opts.expDir, 'net-deployed.mat') ;
 
 opts.gpu = [] ;
 opts.numFetchThreads = 1 ;
 opts.nmsThresh = 0.3 ;
-% heuristic: keep at most 100 detection per class per image prior to NMS
-opts.max_per_image = 100 ;
-
+opts.maxPerImage = 100 ;
 opts = vl_argparse(opts, varargin) ;
-display(opts);
+
+display(opts) ;
+
+if ~exist(opts.expDir,'dir')
+  mkdir(opts.expDir) ;
+end
 
 if ~isempty(opts.gpu)
   gpuDevice(opts.gpu)
@@ -48,10 +55,11 @@ end
 % -------------------------------------------------------------------------
 %                                                   Database initialization
 % -------------------------------------------------------------------------
-fprintf('Loading imdb...');
-if exist(opts.imdbPath,'file')==2
+if exist(opts.imdbPath,'file')
+  fprintf('Loading precomputed imdb...\n');
   imdb = load(opts.imdbPath) ;
 else
+  fprintf('Obtaining dataset and imdb...\n');
   imdb = cnn_setup_data_voc07_ssw(...
     'dataDir',opts.dataDir,...
     'sswDir',opts.sswDir);
@@ -120,12 +128,9 @@ for c = 1:numel(VOCopts.classes)
   q = find(strcmp(VOCopts.classes{c}, net.meta.classes.name)) ;
   so = sort(cls_probs_concat(q,:),'descend');
   cls_thresholds(q) = so(min(max_per_set,numel(so)));
-  
   fprintf('Applying NMS for %s\n',VOCopts.classes{c});
-  
-  for t=1:numel(testIdx)
-    
 
+  for t=1:numel(testIdx)
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
     if isempty(si), continue; end
     cls_prob = cls_probs{t}(q,si)';
@@ -134,16 +139,17 @@ for c = 1:numel(VOCopts.classes)
     % back-transform bounding box corrections
     delta = box_deltas{t}(4*(q-1)+1:4*q,si)';
     pred_box = bbox_transform_inv(pbox, delta);
-    
+
     im_size = imdb.images.size(testIdx(t),[2 1]);
     pred_box = bbox_clip(round(pred_box), im_size);
 
-    % threshold
-    boxscore = [pred_box cls_prob];
+    % Threshold. Heuristic: keep at most 100 detection per class per image
+    % prior to NMS.
+    boxscore = [pred_box(si,:) cls_probs{t}(q,si)'];
     [~,si] = sort(boxscore(:,5),'descend');
     boxscore = boxscore(si,:);
-    boxscore = boxscore(1:min(size(boxscore,1),opts.max_per_image),:);
-    
+    boxscore = boxscore(1:min(size(boxscore,1),opts.maxPerImage),:);
+
     % NMS
     pick = bbox_nms(double(boxscore),opts.nmsThresh);
 
@@ -161,7 +167,7 @@ for c = 1:numel(VOCopts.classes)
       pause;
       %keyboard
     end
-  end  
+  end
 end
 
 

@@ -14,7 +14,7 @@ addpath(fullfile(vl_rootnn,'examples','fast_rcnn','datasets'));
 
 opts.dataDir   = fullfile(vl_rootnn, 'data') ;
 opts.sswDir    = fullfile(vl_rootnn, 'data', 'SSW');
-opts.expDir    = fullfile(vl_rootnn, 'data', 'fast-rcnn-vgg16-pascal') ;
+opts.expDir    = fullfile(vl_rootnn, 'data', 'fast-rcnn-vgg16-pascal07') ;
 opts.imdbPath  = fullfile(opts.expDir, 'imdb.mat');
 opts.modelPath = fullfile(opts.dataDir, 'models', ...
   'imagenet-vgg-verydeep-16.mat') ;
