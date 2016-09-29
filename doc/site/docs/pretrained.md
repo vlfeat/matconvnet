@@ -28,20 +28,19 @@ from the example code included in the [quickstart guide](quick.md).
 
 These models are trained for object detection in PASCAL VOC.
 
-- **Fast R-CNN**. Models from the [Fast
-    R-CNN](https://github.com/rbgirshick/fast-rcnn) page.
+- **Fast R-CNN**. Models from the [FastR-CNN](https://github.com/rbgirshick/fast-rcnn) page:
 
-   - [fast-rcnn-caffenet-pascal07-dagnn](models/fast-rcnn-caffenet-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-caffenet-pascal07-dagnn)
-   - [fast-rcnn-vggm1k-pascal07-dagnn](models/fast-rcnn-vggm1k-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vggm1k-pascal07-dagnn)
-   - [fast-rcnn-vgg16-pascal07-dagnn](models/fast-rcnn-vgg16-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vgg16-pascal07-dagnn)
+    - [fast-rcnn-caffenet-pascal07-dagnn](models/fast-rcnn-caffenet-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-caffenet-pascal07-dagnn)
+    - [fast-rcnn-vggm1k-pascal07-dagnn](models/fast-rcnn-vggm1k-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vggm1k-pascal07-dagnn)
+    - [fast-rcnn-vgg16-pascal07-dagnn](models/fast-rcnn-vgg16-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vgg16-pascal07-dagnn)
 
-Models are as follows (*mAP 11* indicates mean average precision computed using 11 point interpolation, as per PASCAL VOC 07 specification):
+The model performance is as follows (*mAP 11* indicates mean average precision computed using 11 point interpolation, as per PASCAL VOC 07 specification):
 
 |model                                | training set | PASCAL07 test mAP | mAP 11 |
 |-------------------------------------|--------------| ------------------|--------|
-|fast-rcnn-caffenet-pascal07-dagnn    | pas07        | 57.5 %            | 58.1 % |
-|fast-rcnn-vggm12-pascal07-dagnn      | pas07        | 59.6 %            | 68.7 % |
-|fast-rcnn-vgg16-pascal07-dagnn       | pas07        | 67.1 %            | 60.5 % |
+|fast-rcnn-caffenet-pascal07-dagnn    | imnet12+pas07| 57.5 %            | 58.1 % |
+|fast-rcnn-vggm12-pascal07-dagnn      | imnet12+pas07| 59.6 %            | 60.5 % |
+|fast-rcnn-vgg16-pascal07-dagnn       | imnet12+pas07| 67.1 %            | 68.7 % |
 
 ## Face recognition
 
