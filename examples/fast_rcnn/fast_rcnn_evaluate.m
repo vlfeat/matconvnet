@@ -52,7 +52,9 @@ fprintf('Loading imdb...');
 if exist(opts.imdbPath,'file')==2
   imdb = load(opts.imdbPath) ;
 else
-  imdb = cnn_setup_data_voc07_ssw(opts.dataDir,opts.sswDir,1);
+  imdb = cnn_setup_data_voc07_ssw(...
+    'dataDir',opts.dataDir,...
+    'sswDir',opts.sswDir);
   save(opts.imdbPath,'-struct', 'imdb','-v7.3');
 end
 
@@ -123,7 +125,7 @@ for c = 1:numel(VOCopts.classes)
   
   for t=1:numel(testIdx)
     
-    if q==1 && mod(t-1,50) == 0
+    if q==2 && mod(t-1,50) == 0
       fprintf('Applying NMS %d / %d\n',t,numel(testIdx));
     end
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
@@ -131,12 +133,11 @@ for c = 1:numel(VOCopts.classes)
 
     % back-transform bounding box corrections
     delta = box_deltas{t}(4*(q-1)+1:4*q,:)';
-    delta = bsxfun(@times,delta,imdb.boxes.bboxMeanStd{2}(c,:));
-    delta = bsxfun(@plus,delta,imdb.boxes.bboxMeanStd{1}(c,:));
+%     delta = bsxfun(@times,delta,imdb.boxes.bboxMeanStd{2}(c,:));
+%     delta = bsxfun(@plus,delta,imdb.boxes.bboxMeanStd{1}(c,:));
     pred_box = bbox_transform_inv(pbox, delta);
-
-    imf = imfinfo(fullfile(imdb.imageDir, imdb.images.name{testIdx(t)}));
-    im_size = [imf.Height imf.Width];
+    
+    im_size = imdb.images.size(testIdx(t),[2 1]);
     pred_box = bbox_clip(round(pred_box), im_size);
 
     % threshold
