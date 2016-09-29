@@ -17,14 +17,25 @@ function [da, db] = max_der(a, b, dim, dy)
     
   elseif nargin == 3
     % derivative of MAX(A, B)
-    dy = dim;  % 3rd argument
-    i = (a > b);
+    dy = dim ;  % 3rd argument
+    if isscalar(dy)  % if dy is scalar, replicate it to size of A or B
+      dy = dy + zeros(max(size(a), size(b))) ;
+    end
+    i = (a > b) ;
     
-    da = zeros(size(a), 'like', a);
-    da(i) = dy(i);
+    if isscalar(a)
+      da = sum(dy(i)) ;
+    else
+      da = zeros(size(a), 'like', a) ;
+      da(i) = dy(i) ;
+    end
     
-    db = zeros(size(b), 'like', b);
-    db(~i) = dy(~i);
+    if isscalar(b)
+      db = sum(dy(~i)) ;
+    else
+      db = zeros(size(b), 'like', b) ;
+      db(~i) = dy(~i) ;
+    end
     
     return
     
