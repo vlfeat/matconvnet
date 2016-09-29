@@ -1,4 +1,4 @@
-function [aps,aps_auc] = fast_rcnn_evaluate(varargin)
+function aps = fast_rcnn_evaluate(varargin)
 %FAST_RCNN_EVALUATE  Evaluate a trained Fast-RCNN model on PASCAL VOC 2007
 
 % Evaluate the performance of trained Fast-RCNN model on PASCAL VOC 2007
@@ -133,8 +133,6 @@ for c = 1:numel(VOCopts.classes)
 
     % back-transform bounding box corrections
     delta = box_deltas{t}(4*(q-1)+1:4*q,:)';
-%     delta = bsxfun(@times,delta,imdb.boxes.bboxMeanStd{2}(c,:));
-%     delta = bsxfun(@plus,delta,imdb.boxes.bboxMeanStd{1}(c,:));
     pred_box = bbox_transform_inv(pbox, delta);
     
     im_size = imdb.images.size(testIdx(t),[2 1]);
@@ -168,7 +166,6 @@ end
 %% PASCAL VOC evaluation
 VOCdevkitPath = fullfile(vl_rootnn,'data','VOCdevkit');
 aps = zeros(numel(VOCopts.classes),1);
-aps_auc = zeros(numel(VOCopts.classes),1);
 
 % fix voc folders
 VOCopts.imgsetpath = fullfile(VOCdevkitPath,'VOC2007','ImageSets','Main','%s.txt');
@@ -190,12 +187,10 @@ for c=1:numel(VOCopts.classes)
   end
   fclose(fid);
   [rec,prec,ap] = VOCevaldet(VOCopts,'comp3',VOCopts.classes{c},0);
-  ap_auc = xVOCap(rec,prec);
-  fprintf('%s ap %.1f ap_auc %.1f\n',VOCopts.classes{c},100*ap,100*ap_auc);
+  fprintf('%s ap %.1f\n',VOCopts.classes{c},100*ap);
   aps(c) = ap;
-  aps_auc(c) = ap_auc;
 end
-fprintf('mean ap %.1f ap_auc %.1f\n',100*mean(aps),100*mean(aps_auc));
+fprintf('mean ap %.1f\n',100*mean(aps));
 
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
