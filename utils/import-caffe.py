@@ -759,12 +759,19 @@ cmodel.display()
 #                                                        Normalization
 # --------------------------------------------------------------------
 
+minputs = np.empty(shape=[0,], dtype=minputdt)
 
-# Determine the size of the input image (dataShape)
+# Determine the size of the inputs and input image (dataShape)
 for i, inputVarName in enumerate(net.input):
+  shape = cmodel.vars[inputVarName].shape
+  # add metadata
+  minput = np.empty(shape=[1,], dtype=minputdt)
+  minput['name'][0] = inputVarName
+  minput['size'][0] = row(shape)
+  minputs = np.append(minputs, minput, axis=0)
   # heuristic: the first input or 'data' is the input image
   if i == 0 or inputVarName == 'data':
-    dataShape = cmodel.vars[inputVarName].shape
+    dataShape = shape
 
 print "Input image data tensor shape:", dataShape
 
@@ -836,7 +843,8 @@ mclasses = dictToMatlabStruct({'name': mclassnames,
 # --------------------------------------------------------------------
 
 # net.meta
-mmeta = dictToMatlabStruct({'normalization': mnormalization,
+mmeta = dictToMatlabStruct({'inputs': minputs.reshape(1,-1),
+                            'normalization': mnormalization,
                             'classes': mclasses})
 
 if args.output_format == 'dagnn':
