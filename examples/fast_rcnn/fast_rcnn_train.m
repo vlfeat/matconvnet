@@ -170,13 +170,18 @@ if ~isnan(idxBox)
   filters = net.params(net.getParamIndex(blayer.params{1})).value ;
   biases = net.params(net.getParamIndex(blayer.params{2})).value ;
   
+  boxMeans = single(imdb.boxes.bboxMeanStd{1}');
+  boxStds = single(imdb.boxes.bboxMeanStd{2}');
+  
   net.params(net.getParamIndex(blayer.params{1})).value = ...
     bsxfun(@times,filters,...
-    reshape([imdb.boxes.bboxMeanStd{2}(:)' zeros(1,4,'single')]',...
+    reshape([boxStds(:)' zeros(1,4,'single')]',...
     [1 1 1 4*numel(net.meta.classes.name)]));
 
+  biases = biases .* [boxStds(:)' zeros(1,4,'single')];
+  
   net.params(net.getParamIndex(blayer.params{2})).value = ...
-    bsxfun(@plus,biases, [imdb.boxes.bboxMeanStd{1}(:)' zeros(1,4,'single')]);
+    bsxfun(@plus,biases, [boxMeans(:)' zeros(1,4,'single')]);
 end
 
 net.mode = 'test' ;

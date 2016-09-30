@@ -76,7 +76,6 @@ VOCinit;
 VOCopts.testset='test';
 
 testIdx = find(imdb.images.set == 3) ;
-
 cls_probs  = cell(1,numel(testIdx)) ;
 box_deltas = cell(1,numel(testIdx)) ;
 boxscores_nms = cell(numel(VOCopts.classes),numel(testIdx)) ;
@@ -122,11 +121,11 @@ for c = 1:numel(VOCopts.classes)
   so = sort(cls_probs_concat(q,:),'descend');
   cls_thresholds(q) = so(min(max_per_set,numel(so)));
   
+  fprintf('Applying NMS for %s\n',VOCopts.classes{c});
+  
   for t=1:numel(testIdx)
     
-    if q==numel(VOCopts.classes{c} && mod(t-1,50) == 0
-      fprintf('Applying NMS %d / %d\n',t,numel(testIdx));
-    end
+
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
     if isempty(si), continue; end
     cls_prob = cls_probs{t}(q,si)';
