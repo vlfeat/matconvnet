@@ -30,9 +30,9 @@ These models are trained for object detection in PASCAL VOC.
 
 - **Fast R-CNN**. Models from the [FastR-CNN](https://github.com/rbgirshick/fast-rcnn) page:
 
-    - [fast-rcnn-caffenet-pascal07-dagnn](models/fast-rcnn-caffenet-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-caffenet-pascal07-dagnn)
-    - [fast-rcnn-vggm1k-pascal07-dagnn](models/fast-rcnn-vggm1k-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vggm1k-pascal07-dagnn)
-    - [fast-rcnn-vgg16-pascal07-dagnn](models/fast-rcnn-vgg16-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vgg16-pascal07-dagnn)
+    - [fast-rcnn-caffenet-pascal07-dagnn](models/fast-rcnn-caffenet-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-caffenet-pascal07-dagnn.svg)
+    - [fast-rcnn-vggm1k-pascal07-dagnn](models/fast-rcnn-vggm1k-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vggm1k-pascal07-dagnn.svg)
+    - [fast-rcnn-vgg16-pascal07-dagnn](models/fast-rcnn-vgg16-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vgg16-pascal07-dagnn.svg)
 
 The model performance is as follows (*mAP 11* indicates mean average precision computed using 11 point interpolation, as per PASCAL VOC 07 specification):
 
