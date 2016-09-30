@@ -359,30 +359,6 @@ classdef Layer < matlab.mixin.Copyable
   end
   
   methods (Access = {?Net, ?Layer})
-    function resetOrder(obj)
-      obj.outputVar = 0 ;
-      for i = 1:numel(obj.inputs)  % recurse on inputs
-        if isa(obj.inputs{i}, 'Layer')
-          obj.inputs{i}.resetOrder() ;
-        end
-      end
-    end
-    
-    function layers = buildOrder(obj, layers)
-      % recurse on inputs with unassigned indexes (not on the list yet)
-      for i = 1:numel(obj.inputs)
-        if isa(obj.inputs{i}, 'Layer') && obj.inputs{i}.outputVar == 0
-          layers = obj.inputs{i}.buildOrder(layers) ;
-        end
-      end
-      
-      % add self to the execution order, after all inputs are there
-      layers{end+1} = obj ;
-      
-      % assign an output var sequentially, leaving slots for derivatives
-      obj.outputVar = numel(layers) * 2 - 1 ;
-    end
-    
     function deepCopyReset(obj)
       obj.copied = [] ;
       for i = 1:numel(obj.inputs)  % recurse on inputs

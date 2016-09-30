@@ -27,15 +27,14 @@ function sequentialNames(varargin)
     modifier = @deal ;
   end
 
-  % figure out the execution order, and list layer objects
+  % list all layer objects, in forward order
   assert(~isempty(varargin), 'Not enough input arguments.') ;
+  objs = cell(1, numel(varargin)) ;
   for i = 1:numel(varargin)
-    varargin{i}.resetOrder() ;
+    objs{i} = varargin{i}.find() ;
   end
-  objs = {} ;
-  for i = 1:numel(varargin)
-    objs = varargin{i}.buildOrder(objs) ;
-  end
+  objs = [objs{:}] ;  % flatten array of results
+
 
   % automatically set missing names, according to the execution order
   for k = 1:numel(objs)

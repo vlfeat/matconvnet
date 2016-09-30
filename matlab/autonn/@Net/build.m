@@ -51,10 +51,13 @@ function build(net, varargin)
   end
 
   
-  % figure out the execution order, and list layer objects
-  rootLayer.resetOrder() ;
-  objs = rootLayer.buildOrder({}) ;
+  % list all layer objects, in forward order
+  objs = rootLayer.find() ;
   
+  % allocate an output variable to each one, sequentially
+  for k = 1:numel(objs)
+    objs{k}.outputVar = 2 * k - 1 ;
+  end
   
   % do variable allocation optimizations, e.g. ReLU short-circuiting
   net.optimizeVars(opts, objs) ;
