@@ -60,7 +60,7 @@ classdef Layer < matlab.mixin.Copyable
     print(obj)
   end
   methods (Access = {?Net, ?Layer})
-    objs = findRecursive(obj, what, n, depth, objs)
+    [visited, selected, numSeen] = findRecursive(obj, what, n, depth, visited, selected, numSeen)
     other = deepCopyRecursive(obj, shared, rename)
   end
   
