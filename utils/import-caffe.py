@@ -798,26 +798,27 @@ mnormalization = {
   'border': row([0,0]),
   'cropSize': 1.0}
 
-if args.preproc == 'caffe':
-  mnormalization['interpolation'] = 'bicubic'
-  mnormalization['keepAspect'] = False
-  if len(fullImageSize) == 1:
-    fw = fullImageSize[0]
-    fh = fullImageSize[0]
-    mnormalization['border'] = max([fw - dataShape[1],
-                                    fh - dataShape[0]])
-    mnormalization['cropSize'] = min([float(dataShape[1]) / fw,
-                                      float(dataShape[0]) / fh])
-  else:
-    fw = fullImageSize[0]
-    fh = fullImageSize[1]
-    mnormalization['border'] = [fw - dataShape[1],
-                                fh - dataShape[0]]
-    mnormalization['cropSize'] = [float(dataShape[1]) / fw,
-                                  float(dataShape[0]) / fh]
+if len(fullImageSize) == 1:
+  fw = max(fullImageSize[0],dataShape[1])
+  fh = max(fullImageSize[0],dataShape[0])
+  mnormalization['border'] = max([float(fw - dataShape[1]),
+                                  float(fh - dataShape[0])])
+  mnormalization['cropSize'] = min([float(dataShape[1]) / fw,
+                                    float(dataShape[0]) / fh])
+else:
+  fw = max(fullImageSize[0],dataShape[1])
+  fh = max(fullImageSize[1],dataShape[0])
+  mnormalization['border'] = row([float(fw - dataShape[1]),
+                                  float(fh - dataShape[0])])
+  mnormalization['cropSize'] = row([float(dataShape[1]) / fw,
+                                    float(dataShape[0]) / fh])
 
 if args.caffe_variant == 'caffe_fastrcnn':
   mnormalization['interpolation'] = 'bilinear'
+
+if args.preproc == 'caffe':
+  mnormalization['interpolation'] = 'bicubic'
+  mnormalization['keepAspect'] = False
 
 print 'Input image border: ', mnormalization['border']
 print 'Full input image relative crop size: ', mnormalization['cropSize']
