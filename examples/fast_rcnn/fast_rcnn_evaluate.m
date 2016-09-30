@@ -67,7 +67,7 @@ bopts.bgLabel = 21;
 bopts.visualize = 0;
 bopts.scale = 600;
 bopts.interpolation = net.meta.normalization.interpolation;
-bopts.numThreads = 1;
+bopts.numThreads = opts.numFetchThreads;
 
 % -------------------------------------------------------------------------
 %                                                                  Evaluate
@@ -124,7 +124,7 @@ for c = 1:numel(VOCopts.classes)
   
   for t=1:numel(testIdx)
     
-    if q==numel(net.meta.classes.name) && mod(t-1,50) == 0
+    if q==numel(VOCopts.classes{c} && mod(t-1,50) == 0
       fprintf('Applying NMS %d / %d\n',t,numel(testIdx));
     end
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;

@@ -72,17 +72,17 @@ fprintf('done\n');
 % use train + val split to train
 imdb.images.set(imdb.images.set == 2) = 1;
 
-% minbatch options
+% minibatch options
 bopts = net.meta.normalization;
 bopts.useGpu = numel(opts.train.gpus) >  0 ;
 bopts.numFgRoisPerImg = 16;
 bopts.numRoisPerImg = 64;
 bopts.maxScale = 1000;
+bopts.scale = 600;
 bopts.bgLabel = numel(imdb.classes.name)+1;
 bopts.visualize = 0;
-bopts.scale = 600;
-bopts.interpolation = 'bilinear';
-bopts.numThreads = 2;
+bopts.interpolation = net.meta.normalization.interpolation;
+bopts.numThreads = opts.numFetchThreads;
 bopts.prefetch = opts.train.prefetch;
 
 [net,info] = cnn_train_dag(net, imdb, @(i,b) ...
@@ -94,7 +94,7 @@ bopts.prefetch = opts.train.prefetch;
 % --------------------------------------------------------------------
 modelPath = fullfile(opts.expDir, 'net-deployed.mat');
 if ~exist(modelPath,'file')
-  net = deployFRCNN(net);
+  net = deployFRCNN(net,imdb);
   net_ = net.saveobj() ;
   save(modelPath, '-struct', 'net_') ;
   clear net_ ;
@@ -123,7 +123,7 @@ instance_weights = zeros(1,1,4*nc,nb,'single');
 targets = zeros(1,1,4*nc,nb,'single');
 
 for b=1:nb
-  if labels(b)>0 && labels(b)<nc
+  if labels(b)>0 && labels(b)~=opts.bgLabel
     targets(1,1,4*(labels(b)-1)+1:4*labels(b),b) = btargets(b,:)';
     instance_weights(1,1,4*(labels(b)-1)+1:4*labels(b),b) = 1;
   end
@@ -137,12 +137,12 @@ if opts.useGpu > 0
   targets = gpuArray(targets) ;
   instance_weights = gpuArray(instance_weights) ;
 end
-% inputs = {'input', im, 'label', labels, 'rois', rois} ;
+
 inputs = {'input', im, 'label', labels, 'rois', rois, 'targets', targets, ...
   'instance_weights', instance_weights} ;
 
 % --------------------------------------------------------------------
-function net = deployFRCNN(net)
+function net = deployFRCNN(net,imdb)
 % --------------------------------------------------------------------
 % function net = deployFRCNN(net)
 for l = numel(net.layers):-1:1
