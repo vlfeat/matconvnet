@@ -1,8 +1,6 @@
 function [aps, speed] = fast_rcnn_evaluate(varargin)
 %FAST_RCNN_EVALUATE  Evaluate a trained Fast-RCNN model on PASCAL VOC 2007
 
-% Evaluate the performance of trained Fast-RCNN model on PASCAL VOC 2007
-%
 % Copyright (C) 2016 Hakan Bilen.
 % All rights reserved.
 %
@@ -145,7 +143,7 @@ for c = 1:numel(VOCopts.classes)
 
     % Threshold. Heuristic: keep at most 100 detection per class per image
     % prior to NMS.
-    boxscore = [pred_box(si,:) cls_probs{t}(q,si)'];
+    boxscore = [pred_box cls_prob];
     [~,si] = sort(boxscore(:,5),'descend');
     boxscore = boxscore(si,:);
     boxscore = boxscore(1:min(size(boxscore,1),opts.maxPerImage),:);
