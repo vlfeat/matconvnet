@@ -47,7 +47,7 @@ if isempty(inputs)
   inputNames = net.getInputs() ;
   for i = 1:numel(inputNames)
     inputSize = [NaN NaN NaN NaN] ;
-    if isfield(net, 'meta')
+    if isprop(net, 'meta') || isfield(net, 'meta')
       if isfield(net.meta, 'inputs')
         ii = find(strcmp(inputNames{i}, {net.meta.inputs.name})) ;
         inputSize = net.meta.inputs(ii).size ;
