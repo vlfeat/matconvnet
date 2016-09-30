@@ -33,7 +33,7 @@ end
 fprintf('Loading %s.\n', modelPath);
 obj = load(modelPath);
 
-if isstruct(obj.layers) % DAGnn format
+if isstruct(obj.layers) % DagNN format
   net = dagnn.DagNN.loadobj(obj);
 elseif iscell(obj.layers)
   net = dagnn.DagNN.fromSimpleNN(obj);
@@ -47,13 +47,13 @@ if isempty(inputs)
   inputNames = net.getInputs() ;
   for i = 1:numel(inputNames)
     inputSize = [NaN NaN NaN NaN] ;
-    if isfield(obj, 'meta')
-      if isfield(obj.meta, 'inputs')
-        ii = find(strcmp(inputNames{i}, {obj.meta.inputs.name})) ;
-        inputSize = obj.meta.inputs(ii).size ;
-      elseif isfield(obj.meta, 'normalization') && ...
+    if isfield(net, 'meta')
+      if isfield(net.meta, 'inputs')
+        ii = find(strcmp(inputNames{i}, {net.meta.inputs.name})) ;
+        inputSize = net.meta.inputs(ii).size ;
+      elseif isfield(net.meta, 'normalization') && ...
           (i == 1 || strcmp(inputNames{i}, 'data'))
-        inputSize = [obj.meta.normalization.imageSize(1:3), 1] ;
+        inputSize = [net.meta.normalization.imageSize(1:3), 1] ;
       end
     end
     inputs = {inputs{:}, inputNames{i}, inputSize} ;
