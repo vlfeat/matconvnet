@@ -1,4 +1,4 @@
-function aps = fast_rcnn_evaluate(varargin)
+function [aps, speed] = fast_rcnn_evaluate(varargin)
 %FAST_RCNN_EVALUATE  Evaluate a trained Fast-RCNN model on PASCAL VOC 2007
 
 % Evaluate the performance of trained Fast-RCNN model on PASCAL VOC 2007
@@ -102,10 +102,10 @@ end
 net.vars(probVarI).precious = true ;
 net.vars(boxVarI).precious = true ;
 
+start = tic ;
 for t=1:numel(testIdx)
-  if mod(t-1,50) == 0
-    fprintf('Running network %d / %d\n',t,numel(testIdx));
-  end
+  speed = t/toc(start) ;
+  fprintf('Image %d of %d (%.f HZ)\n', t, numel(testIdx), speed) ;
   batch = testIdx(t);
   inputs = getBatch(bopts, imdb, batch);
   inputs{1} = dataVar ;

@@ -38,9 +38,9 @@ The model performance is as follows (*mAP 11* indicates mean average precision c
 
 |model                                | training set | PASCAL07 test mAP | mAP 11 |
 |-------------------------------------|--------------| ------------------|--------|
-|fast-rcnn-caffenet-pascal07-dagnn    | imnet12+pas07| 57.5 %            | 58.1 % |
-|fast-rcnn-vggm12-pascal07-dagnn      | imnet12+pas07| 59.6 %            | 60.5 % |
-|fast-rcnn-vgg16-pascal07-dagnn       | imnet12+pas07| 67.1 %            | 68.7 % |
+|fast-rcnn-caffenet-pascal07-dagnn    | imnet12+pas07| 57.3 %            | 58.1 % |
+|fast-rcnn-vggm12-pascal07-dagnn      | imnet12+pas07| 59.4 %            | 60.5 % |
+|fast-rcnn-vgg16-pascal07-dagnn       | imnet12+pas07| 67.3 %            | 68.7 % |
 
 ## Face recognition
 
