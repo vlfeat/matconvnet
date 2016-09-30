@@ -92,11 +92,13 @@ bopts.prefetch = opts.train.prefetch;
 % --------------------------------------------------------------------
 %                                                               Deploy
 % --------------------------------------------------------------------
-net = deployFRCNN(net);
 modelPath = fullfile(opts.expDir, 'net-deployed.mat');
-net_ = net.saveobj() ;
-save(modelPath, '-struct', 'net_') ;
-clear net_ ;
+if ~exist(modelPath,'file')
+  net = deployFRCNN(net);
+  net_ = net.saveobj() ;
+  save(modelPath, '-struct', 'net_') ;
+  clear net_ ;
+end
 
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
@@ -142,6 +144,7 @@ inputs = {'input', im, 'label', labels, 'rois', rois, 'targets', targets, ...
 % --------------------------------------------------------------------
 function net = deployFRCNN(net)
 % --------------------------------------------------------------------
+% function net = deployFRCNN(net)
 for l = numel(net.layers):-1:1
   if isa(net.layers(l).block, 'dagnn.Loss') || ...
       isa(net.layers(l).block, 'dagnn.DropOut')
@@ -159,9 +162,21 @@ net.addLayer('probcls',dagnn.SoftMax(),net.layers(pfc8).outputs{1},...
 
 net.vars(net.getVarIndex('probcls')).precious = true ;
 
-idxBox = net.getVarIndex('predbbox') ;
+idxBox = net.getLayerIndex('predbbox') ;
 if ~isnan(idxBox)
-  net.vars(idxBox).precious = true ;
+  net.vars(net.layers(idxBox).outputIndexes(1)).precious = true ;
+  % incorporate mean and std to bbox regression parameters
+  blayer = net.layers(idxBox) ;
+  filters = net.params(net.getParamIndex(blayer.params{1})).value ;
+  biases = net.params(net.getParamIndex(blayer.params{2})).value ;
+  
+  net.params(net.getParamIndex(blayer.params{1})).value = ...
+    bsxfun(@times,filters,...
+    reshape([imdb.boxes.bboxMeanStd{2}(:)' zeros(1,4,'single')]',...
+    [1 1 1 4*numel(net.meta.classes.name)]));
+
+  net.params(net.getParamIndex(blayer.params{2})).value = ...
+    bsxfun(@plus,biases, [imdb.boxes.bboxMeanStd{1}(:)' zeros(1,4,'single')]);
 end
 
 net.mode = 'test' ;

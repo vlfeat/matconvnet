@@ -117,7 +117,6 @@ max_per_set = 40 * numel(testIdx);
 cls_thresholds = zeros(1,numel(VOCopts.classes));
 cls_probs_concat = horzcat(cls_probs{:});
 
-
 for c = 1:numel(VOCopts.classes)
   q = find(strcmp(VOCopts.classes{c}, net.meta.classes.name)) ;
   so = sort(cls_probs_concat(q,:),'descend');
@@ -125,21 +124,23 @@ for c = 1:numel(VOCopts.classes)
   
   for t=1:numel(testIdx)
     
-    if q==2 && mod(t-1,50) == 0
+    if q==numel(net.meta.classes.name) && mod(t-1,50) == 0
       fprintf('Applying NMS %d / %d\n',t,numel(testIdx));
     end
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
-    pbox = imdb.boxes.pbox{testIdx(t)};
+    if isempty(si), continue; end
+    cls_prob = cls_probs{t}(q,si)';
+    pbox = imdb.boxes.pbox{testIdx(t)}(si,:);
 
     % back-transform bounding box corrections
-    delta = box_deltas{t}(4*(q-1)+1:4*q,:)';
+    delta = box_deltas{t}(4*(q-1)+1:4*q,si)';
     pred_box = bbox_transform_inv(pbox, delta);
     
     im_size = imdb.images.size(testIdx(t),[2 1]);
     pred_box = bbox_clip(round(pred_box), im_size);
 
     % threshold
-    boxscore = [pred_box(si,:) cls_probs{t}(q,si)'];
+    boxscore = [pred_box cls_prob];
     [~,si] = sort(boxscore(:,5),'descend');
     boxscore = boxscore(si,:);
     boxscore = boxscore(1:min(size(boxscore,1),opts.max_per_image),:);
@@ -152,11 +153,13 @@ for c = 1:numel(VOCopts.classes)
 
     if 0
       figure(1) ; clf ;
+      idx = boxscores_nms{c,t}(:,5)>0.5;
+      if sum(idx)==0, continue; end
       bbox_draw(imread(fullfile(imdb.imageDir,imdb.images.name{testIdx(t)})), ...
-                boxscores_nms{c,t}) ;
+                boxscores_nms{c,t}(idx,:)) ;
       title(net.meta.classes.name{q}) ;
       drawnow ;
-      %pause;
+      pause;
       %keyboard
     end
   end  
