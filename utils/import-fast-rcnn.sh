@@ -1,6 +1,6 @@
 #! /bin/bash
 # brief: Import Fast R-CNN models
-# author: Abhishek Dutta 
+# author: Abhishek Dutta
 # author: Hakan Bilen
 
 # Models are written to <MATCONVNET>/data/models-import/fast-rcnn
@@ -40,7 +40,7 @@ function get()
 # FCN models
 # --------------------------------------------------------------------
 
-if true 
+if true
 then
     echo "Downloading pre-trained fast-rcnn model files (this may take some time) ..."
     get $FRCNN_CAFFENET_PROTO_URL
@@ -56,9 +56,21 @@ fi
 if true
 then
 
-    ins=(caffenet_fast_rcnn_iter_40000 vgg_cnn_m_1024_fast_rcnn_iter_40000 vgg16_fast_rcnn_iter_40000)
-    protos=(caffenet_test vggm1k_test vgg16_test)
-    outs=(fast-rcnn-caffenet-pascal-dagnn fast-rcnn-vggm1k-pascal-dagnn fast-rcnn-vgg16-pascal-dagnn)
+    ins=( \
+        caffenet_fast_rcnn_iter_40000 \
+        vgg_cnn_m_1024_fast_rcnn_iter_40000 \
+        vgg16_fast_rcnn_iter_40000)
+    protos=( \
+        caffenet_test \
+        vggm1k_test \
+        vgg16_test)
+    outs=( \
+        fast-rcnn-caffenet-pascal07-dagnn \
+        fast-rcnn-vggm1k-pascal07-dagnn \
+        fast-rcnn-vgg16-pascal07-dagnn \
+        fast-rcnn-vgg16-pascal07-12-dagnn \
+        fast-rcnn-vgg16-pascal12-dagnn \
+        )
 
     for ((i=0;i<${#ins[@]};++i)); do
         in="$data/tmp/fast-rcnn/fast_rcnn_models/${ins[i]}"

@@ -209,6 +209,10 @@ if opts.canonicalNames
   end
 end
 
+if isfield(obj.meta, 'inputs')
+  obj.meta.inputs(1).name = obj.layers(1).inputs{1} ;
+end
+
 % --------------------------------------------------------------------
 function name = getNewVarName(obj, prefix)
 % --------------------------------------------------------------------

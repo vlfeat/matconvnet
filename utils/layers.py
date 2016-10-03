@@ -100,6 +100,9 @@ mlayerdt = [('name',object),
 mparamdt = [('name',object),
             ('value',object)]
 
+minputdt = [('name',object),
+            ('size',object)]
+
 # --------------------------------------------------------------------
 #                                                      Vars and params
 # --------------------------------------------------------------------

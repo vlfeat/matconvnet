@@ -1,5 +1,5 @@
 site_name: MatConvNet
-markdown_extensions: ['extra', 'mathjax', 'toc']
+markdown_extensions: ['extra', 'math', 'toc']
 theme_dir: theme
 
 extra_css: ['css/fixes.css']

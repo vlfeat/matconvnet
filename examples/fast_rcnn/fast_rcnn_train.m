@@ -14,7 +14,7 @@ addpath(fullfile(vl_rootnn,'examples','fast_rcnn','datasets'));
 
 opts.dataDir   = fullfile(vl_rootnn, 'data') ;
 opts.sswDir    = fullfile(vl_rootnn, 'data', 'SSW');
-opts.expDir    = fullfile(vl_rootnn, 'data', 'fast-rcnn-vgg16-pascal') ;
+opts.expDir    = fullfile(vl_rootnn, 'data', 'fast-rcnn-vgg16-pascal07') ;
 opts.imdbPath  = fullfile(opts.expDir, 'imdb.mat');
 opts.modelPath = fullfile(opts.dataDir, 'models', ...
   'imagenet-vgg-verydeep-16.mat') ;
@@ -72,17 +72,17 @@ fprintf('done\n');
 % use train + val split to train
 imdb.images.set(imdb.images.set == 2) = 1;
 
-% minbatch options
+% minibatch options
 bopts = net.meta.normalization;
 bopts.useGpu = numel(opts.train.gpus) >  0 ;
 bopts.numFgRoisPerImg = 16;
 bopts.numRoisPerImg = 64;
 bopts.maxScale = 1000;
+bopts.scale = 600;
 bopts.bgLabel = numel(imdb.classes.name)+1;
 bopts.visualize = 0;
-bopts.scale = 600;
-bopts.interpolation = 'bilinear';
-bopts.numThreads = 2;
+bopts.interpolation = net.meta.normalization.interpolation;
+bopts.numThreads = opts.numFetchThreads;
 bopts.prefetch = opts.train.prefetch;
 
 [net,info] = cnn_train_dag(net, imdb, @(i,b) ...
@@ -92,11 +92,13 @@ bopts.prefetch = opts.train.prefetch;
 % --------------------------------------------------------------------
 %                                                               Deploy
 % --------------------------------------------------------------------
-net = deployFRCNN(net);
 modelPath = fullfile(opts.expDir, 'net-deployed.mat');
-net_ = net.saveobj() ;
-save(modelPath, '-struct', 'net_') ;
-clear net_ ;
+if ~exist(modelPath,'file')
+  net = deployFRCNN(net,imdb);
+  net_ = net.saveobj() ;
+  save(modelPath, '-struct', 'net_') ;
+  clear net_ ;
+end
 
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
@@ -113,6 +115,8 @@ opts.prefetch = (nargout == 0);
 [im,rois,labels,btargets] = fast_rcnn_train_get_batch(images,imdb,...
   batch, opts);
 
+if opts.prefetch, return; end
+
 nb = numel(labels);
 nc = numel(imdb.classes.name) + 1;
 
@@ -121,7 +125,7 @@ instance_weights = zeros(1,1,4*nc,nb,'single');
 targets = zeros(1,1,4*nc,nb,'single');
 
 for b=1:nb
-  if labels(b)>0 && labels(b)<nc
+  if labels(b)>0 && labels(b)~=opts.bgLabel
     targets(1,1,4*(labels(b)-1)+1:4*labels(b),b) = btargets(b,:)';
     instance_weights(1,1,4*(labels(b)-1)+1:4*labels(b),b) = 1;
   end
@@ -135,13 +139,14 @@ if opts.useGpu > 0
   targets = gpuArray(targets) ;
   instance_weights = gpuArray(instance_weights) ;
 end
-% inputs = {'input', im, 'label', labels, 'rois', rois} ;
+
 inputs = {'input', im, 'label', labels, 'rois', rois, 'targets', targets, ...
   'instance_weights', instance_weights} ;
 
 % --------------------------------------------------------------------
-function net = deployFRCNN(net)
+function net = deployFRCNN(net,imdb)
 % --------------------------------------------------------------------
+% function net = deployFRCNN(net)
 for l = numel(net.layers):-1:1
   if isa(net.layers(l).block, 'dagnn.Loss') || ...
       isa(net.layers(l).block, 'dagnn.DropOut')
@@ -159,9 +164,26 @@ net.addLayer('probcls',dagnn.SoftMax(),net.layers(pfc8).outputs{1},...
 
 net.vars(net.getVarIndex('probcls')).precious = true ;
 
-idxBox = net.getVarIndex('predbbox') ;
+idxBox = net.getLayerIndex('predbbox') ;
 if ~isnan(idxBox)
-  net.vars(idxBox).precious = true ;
+  net.vars(net.layers(idxBox).outputIndexes(1)).precious = true ;
+  % incorporate mean and std to bbox regression parameters
+  blayer = net.layers(idxBox) ;
+  filters = net.params(net.getParamIndex(blayer.params{1})).value ;
+  biases = net.params(net.getParamIndex(blayer.params{2})).value ;
+  
+  boxMeans = single(imdb.boxes.bboxMeanStd{1}');
+  boxStds = single(imdb.boxes.bboxMeanStd{2}');
+  
+  net.params(net.getParamIndex(blayer.params{1})).value = ...
+    bsxfun(@times,filters,...
+    reshape([boxStds(:)' zeros(1,4,'single')]',...
+    [1 1 1 4*numel(net.meta.classes.name)]));
+
+  biases = biases .* [boxStds(:)' zeros(1,4,'single')];
+  
+  net.params(net.getParamIndex(blayer.params{2})).value = ...
+    bsxfun(@plus,biases, [boxMeans(:)' zeros(1,4,'single')]);
 end
 
 net.mode = 'test' ;
