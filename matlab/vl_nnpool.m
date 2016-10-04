@@ -24,12 +24,12 @@
 %     by this number of pixels on all sides before the convolution is
 %     computed. It can also be a vector [TOP BOTTOM LEFT RIGHT] to
 %     specify a different amount of padding in each direction. The
-%     size of the poolin filter has to exceed the padding.
+%     size of the pooling filter has to exceed the padding.
 %
 %   `Method`:: 'max'
 %     Specify method of pooling. It can be either 'max' (retain max value
 %     over the pooling region per channel) or 'avg' (compute the average
-%     value over the poolling region per channel).
+%     value over the pooling region per channel).
 %
 %   The pooling window must be not larger than the padded image, i.e.
 %
@@ -49,7 +49,7 @@
 %
 %   If compiled in, the function will use cuDNN convolution routines
 %   (with the exception of asymmetric left-right or top-bottom
-%   padding and avergage pooling that triggers a bug in cuDNN). You
+%   padding and average pooling that triggers a bug in cuDNN). You
 %   can use the 'NoCuDNN' option to disable cuDNN or 'cuDNN' to
 %   activate it back again (the choice sticks until MATLAB purges the
 %   MEX files for any reason).
