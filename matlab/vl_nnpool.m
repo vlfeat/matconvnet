@@ -12,7 +12,7 @@
 %   block projected onto DZDY. DZDX and DZDY have the same dimensions
 %   as X and Y respectively.
 %
-%   VL_NNCONV(..., 'option', value, ...) takes the following options:
+%   VL_NNPOOL(..., 'option', value, ...) takes the following options:
 %
 %   `Stride`:: 1
 %     The output stride (downsampling factor). It can be either a
