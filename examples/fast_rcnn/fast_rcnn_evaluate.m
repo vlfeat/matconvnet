@@ -1,8 +1,6 @@
-function aps = fast_rcnn_evaluate(varargin)
+function [aps, speed] = fast_rcnn_evaluate(varargin)
 %FAST_RCNN_EVALUATE  Evaluate a trained Fast-RCNN model on PASCAL VOC 2007
 
-% Evaluate the performance of trained Fast-RCNN model on PASCAL VOC 2007
-%
 % Copyright (C) 2016 Hakan Bilen.
 % All rights reserved.
 %
@@ -16,19 +14,26 @@ addpath(fullfile(vl_rootnn, 'data', 'VOCdevkit', 'VOCcode'));
 addpath(genpath(fullfile(vl_rootnn, 'examples', 'fast_rcnn')));
 
 opts.dataDir   = fullfile(vl_rootnn, 'data') ;
-opts.sswDir    = fullfile(vl_rootnn, 'data', 'SSW');
-opts.expDir    = fullfile(vl_rootnn, 'data', 'fast-rcnn-vgg16-pascal') ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
+opts.sswDir    = fullfile(opts.dataDir, 'SSW');
+opts.expDir    = fullfile(opts.dataDir, 'fast-rcnn-vgg16-pascal07') ;
+[opts, varargin] = vl_argparse(opts, varargin) ;
+
 opts.imdbPath  = fullfile(opts.expDir, 'imdb.mat');
 opts.modelPath = fullfile(opts.expDir, 'net-deployed.mat') ;
 
 opts.gpu = [] ;
 opts.numFetchThreads = 1 ;
 opts.nmsThresh = 0.3 ;
-% heuristic: keep at most 100 detection per class per image prior to NMS
-opts.max_per_image = 100 ;
-
+opts.maxPerImage = 100 ;
 opts = vl_argparse(opts, varargin) ;
-display(opts);
+
+display(opts) ;
+
+if ~exist(opts.expDir,'dir')
+  mkdir(opts.expDir) ;
+end
 
 if ~isempty(opts.gpu)
   gpuDevice(opts.gpu)
@@ -48,10 +53,11 @@ end
 % -------------------------------------------------------------------------
 %                                                   Database initialization
 % -------------------------------------------------------------------------
-fprintf('Loading imdb...');
-if exist(opts.imdbPath,'file')==2
+if exist(opts.imdbPath,'file')
+  fprintf('Loading precomputed imdb...\n');
   imdb = load(opts.imdbPath) ;
 else
+  fprintf('Obtaining dataset and imdb...\n');
   imdb = cnn_setup_data_voc07_ssw(...
     'dataDir',opts.dataDir,...
     'sswDir',opts.sswDir);
@@ -67,7 +73,7 @@ bopts.bgLabel = 21;
 bopts.visualize = 0;
 bopts.scale = 600;
 bopts.interpolation = net.meta.normalization.interpolation;
-bopts.numThreads = 1;
+bopts.numThreads = opts.numFetchThreads;
 
 % -------------------------------------------------------------------------
 %                                                                  Evaluate
@@ -76,7 +82,6 @@ VOCinit;
 VOCopts.testset='test';
 
 testIdx = find(imdb.images.set == 3) ;
-
 cls_probs  = cell(1,numel(testIdx)) ;
 box_deltas = cell(1,numel(testIdx)) ;
 boxscores_nms = cell(numel(VOCopts.classes),numel(testIdx)) ;
@@ -95,10 +100,10 @@ end
 net.vars(probVarI).precious = true ;
 net.vars(boxVarI).precious = true ;
 
+start = tic ;
 for t=1:numel(testIdx)
-  if mod(t-1,50) == 0
-    fprintf('Running network %d / %d\n',t,numel(testIdx));
-  end
+  speed = t/toc(start) ;
+  fprintf('Image %d of %d (%.f HZ)\n', t, numel(testIdx), speed) ;
   batch = testIdx(t);
   inputs = getBatch(bopts, imdb, batch);
   inputs{1} = dataVar ;
@@ -117,33 +122,32 @@ max_per_set = 40 * numel(testIdx);
 cls_thresholds = zeros(1,numel(VOCopts.classes));
 cls_probs_concat = horzcat(cls_probs{:});
 
-
 for c = 1:numel(VOCopts.classes)
   q = find(strcmp(VOCopts.classes{c}, net.meta.classes.name)) ;
   so = sort(cls_probs_concat(q,:),'descend');
   cls_thresholds(q) = so(min(max_per_set,numel(so)));
-  
+  fprintf('Applying NMS for %s\n',VOCopts.classes{c});
+
   for t=1:numel(testIdx)
-    
-    if q==2 && mod(t-1,50) == 0
-      fprintf('Applying NMS %d / %d\n',t,numel(testIdx));
-    end
     si = find(cls_probs{t}(q,:) >= cls_thresholds(q)) ;
-    pbox = imdb.boxes.pbox{testIdx(t)};
+    if isempty(si), continue; end
+    cls_prob = cls_probs{t}(q,si)';
+    pbox = imdb.boxes.pbox{testIdx(t)}(si,:);
 
     % back-transform bounding box corrections
-    delta = box_deltas{t}(4*(q-1)+1:4*q,:)';
+    delta = box_deltas{t}(4*(q-1)+1:4*q,si)';
     pred_box = bbox_transform_inv(pbox, delta);
-    
+
     im_size = imdb.images.size(testIdx(t),[2 1]);
     pred_box = bbox_clip(round(pred_box), im_size);
 
-    % threshold
-    boxscore = [pred_box(si,:) cls_probs{t}(q,si)'];
+    % Threshold. Heuristic: keep at most 100 detection per class per image
+    % prior to NMS.
+    boxscore = [pred_box cls_prob];
     [~,si] = sort(boxscore(:,5),'descend');
     boxscore = boxscore(si,:);
-    boxscore = boxscore(1:min(size(boxscore,1),opts.max_per_image),:);
-    
+    boxscore = boxscore(1:min(size(boxscore,1),opts.maxPerImage),:);
+
     % NMS
     pick = bbox_nms(double(boxscore),opts.nmsThresh);
 
@@ -152,14 +156,16 @@ for c = 1:numel(VOCopts.classes)
 
     if 0
       figure(1) ; clf ;
+      idx = boxscores_nms{c,t}(:,5)>0.5;
+      if sum(idx)==0, continue; end
       bbox_draw(imread(fullfile(imdb.imageDir,imdb.images.name{testIdx(t)})), ...
-                boxscores_nms{c,t}) ;
+                boxscores_nms{c,t}(idx,:)) ;
       title(net.meta.classes.name{q}) ;
       drawnow ;
-      %pause;
+      pause;
       %keyboard
     end
-  end  
+  end
 end
 
 

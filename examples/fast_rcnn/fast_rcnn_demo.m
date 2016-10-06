@@ -22,15 +22,15 @@ opts = vl_argparse(opts, varargin) ;
 % Load or download the Fast RCNN model
 paths = {opts.modelPath, ...
          './fast-rcnn-vgg16-dagnn.mat', ...
-         fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal-dagnn.mat'), ...
-         fullfile(vl_rootnn, 'data', 'models-import', 'fast-rcnn-vgg16-pascal-dagnn.mat')} ;
+         fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal07-dagnn.mat'), ...
+         fullfile(vl_rootnn, 'data', 'models-import', 'fast-rcnn-vgg16-pascal07-dagnn.mat')} ;
 ok = min(find(cellfun(@(x)exist(x,'file'), paths))) ;
 
 if isempty(ok)
   fprintf('Downloading the Fast RCNN model ... this may take a while\n') ;
-  opts.modelPath = fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal-dagnn.mat') ;
+  opts.modelPath = fullfile(vl_rootnn, 'data', 'models', 'fast-rcnn-vgg16-pascal07-dagnn.mat') ;
   mkdir(fileparts(opts.modelPath)) ;
-  urlwrite('http://www.vlfeat.org/matconvnet/models/fast-rcnn-vgg16-pascal-dagnn.mat', ...
+  urlwrite('http://www.vlfeat.org/matconvnet/models/fast-rcnn-vgg16-pascal07-dagnn.mat', ...
            opts.modelPath) ;
 else
   opts.modelPath = paths{ok} ;
@@ -48,8 +48,10 @@ net.vars(net.getVarIndex('bbox_pred')).precious = 1 ;
 
 % Load a test image and candidate bounding boxes.
 im = single(imread('000004.jpg')) ;
+imo = im; % keep original image
 boxes = load('000004_boxes.mat') ;
 boxes = single(boxes.boxes') + 1 ;
+boxeso = boxes - 1; % keep original boxes
 
 % Resize images and boxes to a size compatible with the network.
 imageSize = size(im) ;
@@ -88,7 +90,7 @@ for i = 1:numel(opts.classes)
   c = find(strcmp(opts.classes{i}, net.meta.classes.name)) ;
   cprobs = probs(c,:) ;
   cdeltas = deltas(4*(c-1)+(1:4),:)' ;
-  cboxes = bbox_transform_inv(boxes', cdeltas);
+  cboxes = bbox_transform_inv(boxeso', cdeltas);
   cls_dets = [cboxes cprobs'] ;
 
   keep = bbox_nms(cls_dets, opts.nmsThreshold) ;
@@ -96,7 +98,7 @@ for i = 1:numel(opts.classes)
 
   sel_boxes = find(cls_dets(:,end) >= opts.confThreshold) ;
 
-  im = bbox_draw(im/255,cls_dets(sel_boxes,:));
+  imo = bbox_draw(imo/255,cls_dets(sel_boxes,:));
   title(sprintf('Detections for class ''%s''', opts.classes{i})) ;
 
   fprintf('Detections for category ''%s'':\n', opts.classes{i});

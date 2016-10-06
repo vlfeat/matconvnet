@@ -32,7 +32,7 @@ using namespace vl ;
 error = vl::impl::lrn<deviceType,type>::forward \
 ((type*)output.getMemory(), (type const*)data.getMemory(), \
 data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
-normDetph, kappa, alpha, beta) ;
+normDepth, kappa, alpha, beta) ;
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
@@ -45,7 +45,7 @@ vl::ErrorCode
 vl::nnlrn_forward(vl::Context& context,
                   vl::Tensor output,
                   vl::Tensor data,
-                  size_t normDetph,
+                  size_t normDepth,
                   double kappa, double alpha, double beta)
 {
   vl::ErrorCode error = vl::VLE_Success ;
@@ -96,14 +96,14 @@ vl::nnlrn_forward(vl::Context& context,
 error = vl::impl::lrn<deviceType,type>::backward \
 ((type*)derData.getMemory(), (type const*)data.getMemory(), (type const*)derOutput.getMemory(), \
 data.getHeight(), data.getWidth(), data.getDepth(), data.getSize(), \
-normDetph, kappa, alpha, beta) ;
+normDepth, kappa, alpha, beta) ;
 
 vl::ErrorCode
 vl::nnlrn_backward(vl::Context& context,
                    vl::Tensor derData,
                    vl::Tensor data,
                    vl::Tensor derOutput,
-                   size_t normDetph,
+                   size_t normDepth,
                    double kappa, double alpha, double beta)
 {
   vl::ErrorCode error = vl::VLE_Success ;

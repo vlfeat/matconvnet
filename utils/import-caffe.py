@@ -759,12 +759,19 @@ cmodel.display()
 #                                                        Normalization
 # --------------------------------------------------------------------
 
+minputs = np.empty(shape=[0,], dtype=minputdt)
 
-# Determine the size of the input image (dataShape)
+# Determine the size of the inputs and input image (dataShape)
 for i, inputVarName in enumerate(net.input):
+  shape = cmodel.vars[inputVarName].shape
+  # add metadata
+  minput = np.empty(shape=[1,], dtype=minputdt)
+  minput['name'][0] = inputVarName
+  minput['size'][0] = row(shape)
+  minputs = np.append(minputs, minput, axis=0)
   # heuristic: the first input or 'data' is the input image
   if i == 0 or inputVarName == 'data':
-    dataShape = cmodel.vars[inputVarName].shape
+    dataShape = shape
 
 print "Input image data tensor shape:", dataShape
 
@@ -791,26 +798,27 @@ mnormalization = {
   'border': row([0,0]),
   'cropSize': 1.0}
 
-if args.preproc == 'caffe':
-  mnormalization['interpolation'] = 'bicubic'
-  mnormalization['keepAspect'] = False
-  if len(fullImageSize) == 1:
-    fw = fullImageSize[0]
-    fh = fullImageSize[0]
-    mnormalization['border'] = max([fw - dataShape[1],
-                                    fh - dataShape[0]])
-    mnormalization['cropSize'] = min([float(dataShape[1]) / fw,
-                                      float(dataShape[0]) / fh])
-  else:
-    fw = fullImageSize[0]
-    fh = fullImageSize[1]
-    mnormalization['border'] = [fw - dataShape[1],
-                                fh - dataShape[0]]
-    mnormalization['cropSize'] = [float(dataShape[1]) / fw,
-                                  float(dataShape[0]) / fh]
+if len(fullImageSize) == 1:
+  fw = max(fullImageSize[0],dataShape[1])
+  fh = max(fullImageSize[0],dataShape[0])
+  mnormalization['border'] = max([float(fw - dataShape[1]),
+                                  float(fh - dataShape[0])])
+  mnormalization['cropSize'] = min([float(dataShape[1]) / fw,
+                                    float(dataShape[0]) / fh])
+else:
+  fw = max(fullImageSize[0],dataShape[1])
+  fh = max(fullImageSize[1],dataShape[0])
+  mnormalization['border'] = row([float(fw - dataShape[1]),
+                                  float(fh - dataShape[0])])
+  mnormalization['cropSize'] = row([float(dataShape[1]) / fw,
+                                    float(dataShape[0]) / fh])
 
 if args.caffe_variant == 'caffe_fastrcnn':
   mnormalization['interpolation'] = 'bilinear'
+
+if args.preproc == 'caffe':
+  mnormalization['interpolation'] = 'bicubic'
+  mnormalization['keepAspect'] = False
 
 print 'Input image border: ', mnormalization['border']
 print 'Full input image relative crop size: ', mnormalization['cropSize']
@@ -836,7 +844,8 @@ mclasses = dictToMatlabStruct({'name': mclassnames,
 # --------------------------------------------------------------------
 
 # net.meta
-mmeta = dictToMatlabStruct({'normalization': mnormalization,
+mmeta = dictToMatlabStruct({'inputs': minputs.reshape(1,-1),
+                            'normalization': mnormalization,
                             'classes': mclasses})
 
 if args.output_format == 'dagnn':
