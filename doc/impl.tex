@@ -429,12 +429,12 @@ The neighbourhood norm $n^2_{i''j''d}$ can be computed by applying average pooli
 The derivative of spatial normalization can be obtained as follows:
 \begin{align*}
 \frac{dz}{dx_{ijd}} 
-&= \sum_{i''j''d}
+&= \sum_{i''j''}
 \frac{dz}{d y_{i''j''d}} 
 \frac{d y_{i''j''d}}{d x_{ijd}}
 \\
 &=
-\sum_{i''j''d}
+\sum_{i''j''}
 \frac{dz}{d y_{i''j''d}} 
 (1 + \alpha n_{i''j''d}^2)^{-\beta}
 \frac{dx_{i''j''d}}{d x_{ijd}} 
@@ -450,7 +450,7 @@ x_{i''j''d}
 (1 + \alpha n_{ijd}^2)^{-\beta}
 -2\alpha\beta x_{ijd}
 \left[
-\sum_{i''j''d}
+\sum_{i''j''}
 \frac{dz}{d y_{i''j''d}} 
 (1 + \alpha n_{i''j''d}^2)^{-\beta-1}
 x_{i''j''d}
@@ -462,7 +462,7 @@ x_{i''j''d}
 (1 + \alpha n_{ijd}^2)^{-\beta}
 -2\alpha\beta x_{ijd}
 \left[
-\sum_{i''j''d}
+\sum_{i''j''}
 \eta_{i''j''d}
 \frac{dn_{i''j''d}^2}{d (x_{ijd}^2)}
 \right],
