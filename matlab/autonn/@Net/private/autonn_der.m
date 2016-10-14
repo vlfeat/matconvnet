@@ -36,11 +36,12 @@ function dx = ipermute_der(~, dim, dy)
 end
 
 function dx = abs_der(x, dy)
-  assert(isreal(dy), 'Complex values not supported by ABS derivative.');
+  assert(isreal(dy), 'Complex values not supported by ABS derivative.') ;
   dx = dy .* sign(x) ;
 end
 
 function dx = sqrt_der(x, dy)
+  assert(all(x(:) > eps), 'Derivative undefined for SQRT(0) (approaches infinity), and for negative numbers.') ;
   dx = dy ./ sqrt(x) ;
 end
 
