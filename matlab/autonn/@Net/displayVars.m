@@ -42,16 +42,21 @@ info = net.getVarsInfo() ;
 assert(numel(info) == numel(vars)) ;
 
 
-% function of each layer, as a string. empty for non-layers (e.g. params)
+% function of each layer, as a string. empty for params and inputs.
 funcs = cell(1, numel(info)) ;
 funcs([net.forward.outputVar]) = cellfun(@func2str, {net.forward.func}, 'UniformOutput', false) ;
 
-% print information for each variable (e.g. 'single 50x3x2', 'GPU')
+% fill in remaining slots with 'param' or 'input', depending on the type
+idx = ~strcmp({info.type}, 'layer') ;
+funcs(idx) = {info(idx).type} ;
+
+% print information for each variable
 values = cell(numel(vars), 1) ;
 flags = cell(numel(vars), 1) ;
 mins = zeros(numel(vars), 1) ;
 maxs = zeros(numel(vars), 1) ;
 for i = 1:numel(vars)
+  % size and underlying type (e.g. single 50x3x2)
   v = vars{i} ;
   if isa(v, 'gpuArray')
     str = classUnderlying(v) ;
@@ -61,6 +66,7 @@ for i = 1:numel(vars)
   str = [str ' ' sprintf('%ix', size(v))] ;  %#ok<*AGROW>
   values{i} = str(1:end-1) ;  % remove extraneous 'x' at the end of the var size
   
+  % flags (GPU, NaN, Inf)
   str = '' ;
   if isa(v, 'gpuArray')
     str = [str 'GPU '] ;
@@ -77,6 +83,7 @@ for i = 1:numel(vars)
     flags{i} = str(1:end-1) ;  % delete extra space at the end
   end
   
+  % values range
   if opts.showRange && ~isempty(v)
     mins(i) = gather(min(v(:))) ;
     maxs(i) = gather(max(v(:))) ;
@@ -101,9 +108,7 @@ idx = arrayfun(@(i) num2str(i), 1:2:numel(info)-1, 'UniformOutput', false) ;
 str = repmat(' ', numel(info) / 2 + 1, 1) ;
 str = [str, char('Idx', idx{:})] ;
 str(:,end+1:end+2) = ' ' ;
-str = [str, char('Type', info(1:2:end-1).type)] ;
-str(:,end+1:end+2) = ' ' ;
-str = [str, char('Function', funcs{1:2:end-1})] ;
+str = [str, char('Type/function', funcs{1:2:end-1})] ;
 str(:,end+1:end+2) = ' ' ;
 str = [str, char('Name', info(1:2:end-1).name)] ;
 
