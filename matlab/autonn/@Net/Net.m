@@ -54,7 +54,7 @@ classdef Net < handle
   methods  % methods defined in their own files
     eval(net, mode, derOutput, accumulateParamDers)
     plotDiagnostics(net, numPoints)
-    displayVars(net, vars)
+    displayVars(net, vars, varargin)
   end
   methods (Access = private)
     build(net, varargin)
@@ -146,7 +146,12 @@ classdef Net < handle
       disp(net) ;
       
       if ~isempty(name)
-        fprintf('  <a href="matlab:%s.displayVars()">Display variables</a>\n\n', name) ;
+        if ~isempty(net.vars)
+          fprintf('  <a href="matlab:%s.displayVars()">Display variables</a>\n\n', name) ;
+        else
+          fprintf(['  <a href="matlab:%s.displayVars(vars)">Display variables ' ...
+            '(NOTE: Must be in the scope of NET.EVAL; use DBUP/DBDOWN)</a>\n\n'], name) ;
+        end
       end
     end
     
