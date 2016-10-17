@@ -81,10 +81,10 @@ classdef Net < handle
     end
     
     function value = getValue(net, var)
-      if ~isnumeric(var)
-        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = var.outputVar ;
-      end
+      %NET.GETVALUE(VAR)
+      % Returns the value of a given variable. VAR may either be a layer
+      % name or Layer object (referring to its output), or a var index.
+      var = net.getVarIndex(var) ;
       if isscalar(var)
         value = net.vars{var} ;
       else
@@ -94,10 +94,10 @@ classdef Net < handle
     
     
     function der = getDer(net, var)
-      if ~isnumeric(var)
-        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = var.outputVar ;
-      end
+      %NET.GETDER(VAR)
+      % Returns the derivative of a variable. VAR may either be a layer
+      % name or Layer object (referring to its output), or a var index.
+      var = net.getVarIndex(var) ;
       if isscalar(var)
         der = net.vars{var + 1} ;
       else
@@ -106,10 +106,10 @@ classdef Net < handle
     end
     
     function setValue(net, var, value)
-      if ~isnumeric(var)
-        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = var.outputVar ;
-      end
+      %NET.SETVALUE(VAR, VALUE)
+      % Sets the value of a given variable. VAR may either be a layer name
+      % or Layer object (referring to its output), or a var index.
+      var = net.getVarIndex(var) ;
       if isscalar(var)
         net.vars{var} = value ;
       else
@@ -118,10 +118,10 @@ classdef Net < handle
     end
     
     function setDer(net, var, der)
-      if ~isnumeric(var)
-        assert(isa(var, 'Layer'), 'VAR must either be var indexes or a Layer object.') ;
-        var = var.outputVar ;
-      end
+      %NET.SETDER(VAR)
+      % Sets the derivative of a variable. VAR may either be a layer name
+      % or Layer object (referring to its output), or a var index.
+      var = net.getVarIndex(var) ;
       if isscalar(var)
         net.vars{var + 1} = der ;
       else
@@ -135,6 +135,29 @@ classdef Net < handle
       
       for i = 1 : 2 : numel(varargin) - 1
         net.vars{net.inputs.(varargin{i})} = varargin{i+1} ;
+      end
+    end
+    
+    function idx = getVarIndex(net, var)
+      if ischar(var)
+        % search for var/layer by name
+        if isfield(net.inputs, var)  % search inputs
+          idx = net.inputs.(var) ;
+        else  % search params
+          param = strcmp({net.params.name}, var) ;
+          if any(param)
+            idx = net.params(param).var ;
+          else  % search layers
+            layer = strcmp({net.forward.name}, var) ;
+            assert(any(layer), ['No var with specified name ''' var '''.']);
+            idx = net.forward(layer).outputVar ;
+          end
+        end
+      elseif isa(var, 'Layer')
+        idx = var.outputVar ;
+      else
+        assert(isnumeric(var), 'VAR must either be a layer name, a Layer object, or var indexes.') ;
+        idx = var ;
       end
     end
     
