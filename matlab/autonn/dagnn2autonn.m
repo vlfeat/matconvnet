@@ -143,7 +143,8 @@ function netOutputs = dagnn2autonn(dag)
       obj = cat(block.dim, inputs{:}) ;
       
     case 'dagnn.Sum'
-      for i = 1:numel(inputs)
+      obj = inputs{1} ;
+      for i = 2:numel(inputs)
         obj = obj + inputs{i} ;
       end
       
