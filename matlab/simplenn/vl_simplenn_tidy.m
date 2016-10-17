@@ -3,7 +3,7 @@ function tnet = vl_simplenn_tidy(net)
 %   NET = VL_SIMPLENN_TIDY(NET) takes the NET object and upgrades
 %   it to the current version of MatConvNet. This is necessary in
 %   order to allow MatConvNet to evolve, while maintaining the NET
-%   objects clean.
+%   objects clean. This function ignores custom layers.
 %
 %   The function is also generally useful to fill in missing default
 %   values in NET.
@@ -51,7 +51,7 @@ for l = 1:numel(net.layers)
     layer.weights = {} ;
   end
 
-  % check that weights inlcude moments in batch normalization
+  % Check that weights include moments in batch normalization.
   if strcmp(layer.type, 'bnorm')
     if numel(layer.weights) < 3
       layer.weights{3} = ....
@@ -59,9 +59,16 @@ for l = 1:numel(net.layers)
     end
   end
 
-  % fill in missing values
+  % Fill in missing values.
   switch layer.type
-    case {'conv', 'pool'}
+    case 'conv'
+      defaults = [ defaults {...
+        'pad', 0, ...
+        'stride', 1, ...
+        'dilate', 1, ...
+        'opts', {}}] ;
+
+    case 'pool'
       defaults = [ defaults {...
         'pad', 0, ...
         'stride', 1, ...
@@ -100,6 +107,10 @@ for l = 1:numel(net.layers)
         'p', 2, ...
         'epsilon', 1e-3, ...
         'instanceWeights', []} ];
+
+    case {'bnorm'}
+      defaults = [ defaults {...
+        'epsilon', 1e-5 } ] ;
   end
 
   for i = 1:2:numel(defaults)

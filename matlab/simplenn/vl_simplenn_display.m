@@ -68,7 +68,7 @@ end
 
 
 fields={'layer', 'type', 'name', '-', ...
-        'support', 'filtd', 'nfilt', 'stride', 'pad', '-', ...
+        'support', 'filtd', 'filtdil', 'nfilt', 'stride', 'pad', '-', ...
         'rfsize', 'rfoffset', 'rfstride', '-', ...
         'dsize', 'ddepth', 'dnum', '-', ...
         'xmem', 'wmem'};
@@ -78,11 +78,9 @@ for l = 1:numel(net.layers)
   ly = net.layers{l} ;
   switch ly.type
     case 'conv'
-      if isfield(ly, 'weights')
-        info.support(1:2,l) = max([size(ly.weights{1},1) ; size(ly.weights{1},2)],1) ;
-      else
-        info.support(1:2,l) = max([size(ly.filters,1) ; size(ly.filters,2)],1) ;
-      end
+      ks = max([size(ly.weights{1},1) ; size(ly.weights{1},2)],1) ;
+      ks = (ks - 1) .* ly.dilate + 1 ;
+      info.support(1:2,l) = ks ;
     case 'pool'
       info.support(1:2,l) = ly.pool(:) ;
     otherwise
@@ -163,6 +161,7 @@ for wi=1:numel(fields)
     case 'dnum', s = 'data num' ;
     case 'nfilt', s = 'num filts' ;
     case 'filtd', s = 'filt dim' ;
+    case 'filtdil', s = 'filt dilat' ;
     case 'wmem', s = 'param mem' ;
     case 'xmem', s = 'data mem' ;
     otherwise, s = char(w) ;
@@ -215,12 +214,18 @@ for wi=1:numel(fields)
             case 'filtd'
               switch ly.type
                 case 'conv'
-                  if isfield(ly, 'weights'), a = size(ly.weights{1},3) ;
-                  else, a = size(ly.filters,3) ; end
-                  s=sprintf('%d',a) ;
+                  s=sprintf('%d',size(ly.weights{1},3)) ;
                 otherwise
                   s='n/a' ;
               end
+            case 'filtdil'
+              switch ly.type
+                case 'conv'
+                  s=sprintf('%d',ly.dilate) ;
+                otherwise
+                  s='n/a' ;
+              end
+
             case 'support'
               s = pdims(info.support(:,l)) ;
             case 'stride'

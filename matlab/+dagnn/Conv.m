@@ -12,6 +12,7 @@ classdef Conv < dagnn.Filter
         inputs{1}, params{1}, params{2}, ...
         'pad', obj.pad, ...
         'stride', obj.stride, ...
+        'dilate', obj.dilate, ...
         obj.opts{:}) ;
     end
 
@@ -21,6 +22,7 @@ classdef Conv < dagnn.Filter
         inputs{1}, params{1}, params{2}, derOutputs{1}, ...
         'pad', obj.pad, ...
         'stride', obj.stride, ...
+        'dilate', obj.dilate, ...
         obj.opts{:}) ;
     end
 
@@ -34,10 +36,12 @@ classdef Conv < dagnn.Filter
     end
 
     function params = initParams(obj)
+      % Xavier improved
       sc = sqrt(2 / prod(obj.size(1:3))) ;
+      %sc = sqrt(2 / prod(obj.size([1 2 4]))) ;
       params{1} = randn(obj.size,'single') * sc ;
       if obj.hasBias
-        params{2} = zeros(obj.size(4),1,'single') * sc ;
+        params{2} = zeros(obj.size(4),1,'single') ;
       end
     end
 

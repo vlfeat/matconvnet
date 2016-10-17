@@ -47,9 +47,10 @@ compute_moments(T * moments,
     }
   }
   for(int i = 0; i < depth; ++i) {
-    moments[i] /= mass;
-    moments[i + depth] = sqrt(moments[i + depth]/mass
-                              - moments[i]*moments[i] + epsilon);
+    T mean = moments[i] / mass ;
+    T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
+    moments[i] = mean ;
+    moments[i + depth] = sqrt(sigma2 + epsilon);
   }
 }
 
@@ -108,8 +109,9 @@ compute_ders_and_moments(T * derMultipliers,
 
   T mass = WH*num;
   for(int i = 0; i < depth; ++i) {
-    T mean = moments[i] /= mass ;
-    T sigma = sqrt(moments[i + depth]/mass - mean*mean + epsilon);
+    T mean = moments[i] / mass ;
+    T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
+    T sigma = sqrt(sigma2 + epsilon);
     moments[i] = mean ;
     moments[i + depth] = sigma ;
     derMultipliers[i] = (derMultipliers[i] - mean*derBiases[i]) / sigma;
@@ -157,14 +159,14 @@ batch_normalize_backward(T * derData,
 namespace vl { namespace impl {
 
   template<typename T>
-  struct bnorm<vl::CPU,T>
+  struct bnorm<vl::VLDT_CPU,T>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward_given_moments(Context& context,
                           T* output,
                           T const* moments,
@@ -187,10 +189,10 @@ namespace vl { namespace impl {
           }
         }
       }
-      return vlSuccess;
+      return VLE_Success;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             T* output,
             T* moments,
@@ -200,12 +202,12 @@ namespace vl { namespace impl {
             size_t height, size_t width, size_t depth, size_t size,
             T epsilon)
     {
-      vl::Error error = vlSuccess ;
+      vl::ErrorCode error = VLE_Success ;
       bool ownMoments = false ;
       if (moments == NULL) {
         moments = (T*)calloc(sizeof(T),2*depth);
         if (!moments) {
-          error = vlErrorOutOfMemory ;
+          error = VLE_OutOfMemory ;
           goto done ;
         }
         ownMoments = true ;
@@ -216,7 +218,7 @@ namespace vl { namespace impl {
                          data, width*height, depth, size,
                          epsilon) ;
 
-      error = bnorm<vl::CPU,T>::forward_given_moments
+      error = bnorm<vl::VLDT_CPU,T>::forward_given_moments
       (context,
        output,
        moments, data,
@@ -233,7 +235,7 @@ namespace vl { namespace impl {
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward_given_moments(Context& context,
                            T* derData,
                            T* derMultipliers,
@@ -246,16 +248,8 @@ namespace vl { namespace impl {
                            size_t height, size_t width, size_t depth, size_t size,
                            T epsilon)
     {
-      vl::Error error = vlSuccess ;
-      T * muz;
+      vl::ErrorCode error = VLE_Success ;
       int WH = width * height;
-
-      // Allocate muz
-      muz = (T*)calloc(sizeof(T),depth);
-      if (!muz) {
-        error = vlErrorOutOfMemory ;
-        goto done ;
-      }
 
       // Compute derMultipliers, derBiases, muz, and moments
       compute_ders<T>(derMultipliers, derBiases,
@@ -265,16 +259,15 @@ namespace vl { namespace impl {
 
       // Compute derData
       batch_normalize_backward<T>(derData,
-                                  moments, data, muz,
-                                  multipliers, derMultipliers, derOutput,
+                                  moments, data,
+                                  multipliers,
+                                  derMultipliers, derBiases, derOutput,
                                   WH, depth, size);
-
     done:;
-      if (muz) { free(muz) ; }
       return error ;
     }
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              T* derData,
              T* derMultipliers,
@@ -287,22 +280,18 @@ namespace vl { namespace impl {
              size_t height, size_t width, size_t depth, size_t size,
              T epsilon)
     {
-      vl::Error error = vlSuccess ;
-      T* muz = NULL ;
-      bool ownMoments = false ;
+      vl::ErrorCode error = VLE_Success ;
       int WH = width * height;
 
-      // Allocate or reuse moments
+      // Get workspace if needed
       if (moments == NULL) {
-        moments = (T*)calloc(sizeof(T),2*depth);
+        moments = (T*)context.getWorkspace(vl::VLDT_CPU, sizeof(T)*2*depth) ;
         if (!moments) {
-          error = vlErrorOutOfMemory ;
+          error = VLE_OutOfMemory ;
           goto done ;
         }
-        ownMoments = true ;
-      } else {
-        memset(moments, 0, sizeof(T) * 2*depth) ;
       }
+      memset(moments, 0, sizeof(T) * 2*depth) ;
 
       // Compute derMultipliers, derBiases, and moments
       compute_ders_and_moments<T>(derMultipliers, derBiases, moments,
@@ -317,18 +306,16 @@ namespace vl { namespace impl {
                                   derMultipliers, derBiases, derOutput,
                                   WH, depth, size);
 
-      // Delete intermediate variable
     done:;
-      if (ownMoments) { free(moments) ; }
       return error ;
     }
   } ;
 
 } } // namespace vl::impl
 
-template struct vl::impl::bnorm<vl::CPU, float> ;
+template struct vl::impl::bnorm<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::bnorm<vl::CPU, double> ;
+template struct vl::impl::bnorm<vl::VLDT_CPU, double> ;
 #endif
 

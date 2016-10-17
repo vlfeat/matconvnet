@@ -27,10 +27,10 @@
 %      MatConvNet (as these could be interpreted as 'channels' in
 %      GRID).
 %
-%   Furthre, Ng can be a multiple of N; in this case, it is assumed
-%   that there are Ng/Ni transforms per input image, hence, the
-%   transforms [1 ... Ng/Ni] are applied to the first image, [Ng/Ni+1
-%   ... 2*Ng/Ni] are applied to the second image, etc.
+%   Furthre, No can be a multiple of N; in this case, it is assumed
+%   that there are No/N transforms per input image, hence, the
+%   transforms [1 ... No/N] are applied to the first image, [No/N+1
+%   ... 2*No/N] are applied to the second image, etc.
 %
 %   [DX, DGRID] = VL_NNBILINEARSAMPLER(X, GRID, DY) computes the
 %   derivatives of the block projected onto DY. DX, DGRID, DY have the

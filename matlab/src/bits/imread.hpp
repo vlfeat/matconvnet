@@ -55,8 +55,8 @@ namespace vl {
   public:
     ImageReader() ;
     ~ImageReader() ;
-    vl::Error readShape(ImageShape & image, char const * fileName) ;
-    vl::Error readPixels(float * memory, char const * fileName) ;
+    vl::ErrorCode readShape(ImageShape & image, char const * fileName) ;
+    vl::ErrorCode readPixels(float * memory, char const * fileName) ;
     char const * getLastErrorMessage() const ;
 
   private:

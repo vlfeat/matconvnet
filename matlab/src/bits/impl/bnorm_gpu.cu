@@ -427,9 +427,11 @@ __global__ void normalize_moments(T * moments,
 {
   int unsigned i = blockIdx.x*blockDim.x+threadIdx.x;
   if (i < numChannels){
+    // max(0, __) is for numerical issues
     T mean = moments[i] / mass ;
+    T sigma2 = max((T).0, moments[i + numChannels]/mass - mean*mean) ;
     moments[i] = mean ;
-    moments[i + numChannels] = sqrt(moments[i + numChannels]/mass - mean*mean + epsilon);
+    moments[i + numChannels] = sqrt(sigma2 + epsilon);
   }
 }
 
@@ -689,8 +691,9 @@ __global__ void normalize_ders_and_moments(T * derMultipliers,
 {
   unsigned int idx = blockIdx.x*blockDim.x+threadIdx.x;
   if (idx < numChannels){
-    T mean = moments[idx]/mass;
-    T sigma = sqrt(moments[idx + numChannels]/mass - mean*mean + epsilon);
+    T mean = moments[idx] / mass;
+    T sigma2 = max((T).0, moments[idx + numChannels]/mass - mean*mean) ;
+    T sigma = sqrt(sigma2 + epsilon);
     moments[idx] = mean ;
     moments[idx + numChannels] = sigma ;
     derMultipliers[idx] = (derMultipliers[idx]-mean*derBiases[idx]) / sigma ;
@@ -800,14 +803,14 @@ __global__ void batch_normalize_backward(T * derData,
 namespace vl { namespace impl {
 
   template<typename T>
-  struct bnorm<vl::GPU, T>
+  struct bnorm<vl::VLDT_GPU, T>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             T* output,
             T* moments,
@@ -898,7 +901,7 @@ namespace vl { namespace impl {
 
         unsigned int accumulatorSize = 2 * nextMultipleOf(gridSize, WARP_SIZE) ;
         unsigned int workspaceSize = accumulatorSize + (moments ? 0 : 2 * depth) ;
-        T * workspace = (T*)context.getWorkspace(vl::GPU, workspaceSize * sizeof(T)) ;
+        T * workspace = (T*)context.getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(T)) ;
 
         T * accumulator = workspace;
         if (moments == NULL) {
@@ -915,7 +918,7 @@ namespace vl { namespace impl {
          numChunks) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
         // Sum over the chunks (rows of accumulator[])
         int blockSizeSum = getBlockSize(numChunks) ;
@@ -923,11 +926,11 @@ namespace vl { namespace impl {
         (moments, accumulator, numChunks) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
       } else {
         if (moments == NULL) {
-          moments = (T*) context.getWorkspace(vl::GPU, 2*depth * sizeof(T)) ;
+          moments = (T*) context.getWorkspace(vl::VLDT_GPU, 2*depth * sizeof(T)) ;
         }
 
         accumulate_moments_partial <<<gridSize, blockSize, 2*blockSize*sizeof(T)>>>
@@ -939,11 +942,11 @@ namespace vl { namespace impl {
          1) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
       }
 
       T mass = planeArea*size;
-      normalize_moments <<<divideUpwards(depth,blockSize),blockSize>>>
+      normalize_moments <<<divideAndRoundUp(depth,blockSize),blockSize>>>
       (moments, depth, mass, epsilon) ;
 
       // Finally, normalize the data
@@ -955,14 +958,14 @@ namespace vl { namespace impl {
        depth) ;
 
       status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
     /* ------------------------------------------------------------ */
     /*                                        forward_given_moments */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward_given_moments(Context& context,
                           T* output,
                           T const* moments,
@@ -997,14 +1000,14 @@ namespace vl { namespace impl {
        depth) ;
 
       status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
     /* ------------------------------------------------------------ */
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              T* derData,
              T* derMultipliers,
@@ -1039,7 +1042,7 @@ namespace vl { namespace impl {
 
         unsigned int accumulatorSize = 4 * nextMultipleOf(gridSize, WARP_SIZE) ;
         unsigned int workspaceSize = accumulatorSize + (moments ? 0 : 2 * depth) ;
-        T * workspace = (T*)context.getWorkspace(vl::GPU, workspaceSize * sizeof(T)) ;
+        T * workspace = (T*)context.getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(T)) ;
 
         T * accumulator = workspace;
         if (moments == NULL) {
@@ -1047,7 +1050,7 @@ namespace vl { namespace impl {
         }
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
         // Mean, variance, derMultipliers and derBiases computation
         accumulate_ders_and_moments_partial<T> <<<gridSize, blockSize, 4*blockSize*sizeof(T)>>>
@@ -1061,7 +1064,7 @@ namespace vl { namespace impl {
          numChunks) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
         // Sum over the chunks (rows of accumulator[])
         int blockSizeSum = getBlockSize(numChunks) ;
@@ -1069,11 +1072,11 @@ namespace vl { namespace impl {
         (derMultipliers, derBiases, moments, accumulator, numChunks, depth) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
       } else {
         if (moments == NULL) {
-          moments = (T*) context.getWorkspace(vl::GPU, 2*depth * sizeof(T)) ;
+          moments = (T*) context.getWorkspace(vl::VLDT_GPU, 2*depth * sizeof(T)) ;
         }
 
         accumulate_ders_and_moments_partial<T> <<<gridSize, blockSize, 4*blockSize*sizeof(T)>>>
@@ -1087,11 +1090,11 @@ namespace vl { namespace impl {
          1) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
       }
 
       T mass = planeArea*size;
-      normalize_ders_and_moments<T> <<<divideUpwards(depth,blockSize),blockSize>>>
+      normalize_ders_and_moments<T> <<<divideAndRoundUp(depth,blockSize),blockSize>>>
       (derMultipliers, derBiases, moments, depth, mass, epsilon) ;
 
       // Compute output
@@ -1103,14 +1106,14 @@ namespace vl { namespace impl {
        mass) ;
 
       status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
     /* ------------------------------------------------------------ */
     /*                                       backward_given_moments */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward_given_moments(Context& context,
                            T* derData,
                            T* derMultipliers,
@@ -1144,10 +1147,10 @@ namespace vl { namespace impl {
       if (numChunks > 1) {
 
         unsigned int workspaceSize = 2 * nextMultipleOf(gridSize, WARP_SIZE) ;
-        T * accumulator = (T*)context.getWorkspace(vl::GPU, workspaceSize * sizeof(T)) ;
+        T * accumulator = (T*)context.getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(T)) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
         // Mean, variance, derMultipliers and derBiases computation
         accumulate_ders_partial<T> <<<gridSize, blockSize, 2*blockSize*sizeof(T)>>>
@@ -1161,7 +1164,7 @@ namespace vl { namespace impl {
          numChunks) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
         // Sum over the chunks (rows of accumulator[])
         int blockSizeSum = getBlockSize(numChunks) ;
@@ -1169,7 +1172,7 @@ namespace vl { namespace impl {
         (derMultipliers, derBiases, accumulator, numChunks, depth) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
 
       } else {
         accumulate_ders_partial<T> <<<gridSize, blockSize, 2*blockSize*sizeof(T)>>>
@@ -1183,11 +1186,11 @@ namespace vl { namespace impl {
          1) ;
 
         status = cudaPeekAtLastError() ;
-        if (status != cudaSuccess) return vl::vlErrorCuda ;
+        if (status != cudaSuccess) return vl::VLE_Cuda ;
       }
 
       T mass = planeArea*size;
-      normalize_ders<T> <<<divideUpwards(depth,blockSize),blockSize>>>
+      normalize_ders<T> <<<divideAndRoundUp(depth,blockSize),blockSize>>>
       (derMultipliers, derBiases, moments, depth, mass, epsilon) ;
 
       // Compute output
@@ -1199,14 +1202,14 @@ namespace vl { namespace impl {
        mass) ;
 
       status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::vlSuccess : vl::vlErrorCuda ;
+      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
     }
 
   } ; // struct bnorm
 } } // namespace vl::impl
 
-template struct vl::impl::bnorm<vl::GPU, float> ;
+template struct vl::impl::bnorm<vl::VLDT_GPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::bnorm<vl::GPU, double> ;
+template struct vl::impl::bnorm<vl::VLDT_GPU, double> ;
 #endif

@@ -42,14 +42,14 @@ namespace vl { namespace impl {
 
 
   template<typename type>
-  struct im2row<vl::CPU, type>
+  struct im2row<vl::VLDT_CPU, type>
   {
 
     /* ------------------------------------------------------------ */
     /*                                                      forward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context & context,
             type* stacked,
             type const* data,
@@ -63,16 +63,21 @@ namespace vl { namespace impl {
             size_t padLeft,
             size_t padRight,
             size_t padTop,
-            size_t padBottom)
+            size_t padBottom,
+            int dilateX,
+            int dilateY)
     {
-      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
+      int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
+      int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
       int numRows = windowWidth * windowHeight * depth ;
 
       /*
-       Fill a row of the stacked image at a time. Since patches are stored
-       along the columns, scanning a row menas visiting all patche once.
-       Each row corresponds to a particular offset within each patch.
+       Fill a row of the patch matrix. Since patches are stored
+       along the columns of the matrix, scanning a row menas visiting all
+       the patches. Different rows corresponds to a different
+       offset within each patch.
 
        In this manner, as we fill a row
        we tend to access spatially adiacent elements
@@ -90,35 +95,41 @@ namespace vl { namespace impl {
         v %= windowHeight ;
 
         /*
-         Filling this row amounts to visiting all the pixels in the input
-         image that appear at a given offset in the outut patches. Accounting
-         for the subsampling of the output patches and input padding,
-         these pixels are given by
+         Filling this row requires visiting the pixels in the input tensor
+         `data` that appear at the given offset (u,v) in the output patches.
+         For the patch at (x,y), the pixel coordinates (x_data,y_data) in the
+         `data` tensor are:
 
-         x_data(x) = x * strideX + u - padLeft,  0 <= x < numPatchesX
-         y_data(y) = y * strideY + v - padTop,   0 <= y < numPatchesY
+         x_data(x) = x * strideX + u * dilateX - padLeft,  0 <= x < numPatchesX,
+         y_data(y) = y * strideY + v * dilateY - padTop,   0 <= y < numPatchesY,
          z_data(z) = z.
 
-         Here (x,y) are the spatial indexes of the output patches. Depending
-         on the padding, some of these values will read pixels outised
-         the input image, which should default to 0. In particular, x lands
-         on a x_data(x) within the image if x0 <= x < x1 where:
+         Now we visit all patches (x,y) in lexicographical order to fill
+         successive output pixels. Patches around the boundary may peek outside
+         the `data` tensor, which is padded with zero. We calcualte these
+         borders here and fill them with zeros in the output.
+         
+         In particular, patch x peeks within the input tensor `data`
+         if x is in the range [x0,x1] given by:
 
-         x_data(x) >= 0 <=> x >= (padLeft - u) / stride
-         <=> x >= ceil((padLeft - u) / stride) = x0
-         x_data(x) <= width-1 <=> x <= (width-1 + padLeft - u) / stride
-         <=> x <= floor((width-1 + padLeft - u) / stride)
-         <=> x <  floor((width-1 + padLeft - u) / stride) + 1 = x1
+         x_data(x) >= 0
+         <=> x >= (padLeft - u * dilateX) / stride
+         <=> x >= ceil((padLeft - u * dilateX) / stride) = x0
+         
+         x_data(x) <= width-1
+         <=> x <= (width-1 + padLeft - u * dilateX) / stride
+         <=> x <= floor((width-1 + padLeft - u * dilateX) / stride)
+         <=> x <  floor((width-1 + padLeft - u * dilateX) / stride) + 1 = x1
 
          and the same for y. Note that, while usually x0 <= x1, there are
          special cases for which x1 < x0. This is accounted for in the loops
          below.
          */
 
-        int x0 = static_min(numPatchesX, ceil_divide(padLeft - u, strideX)) ;
-        int y0 = static_min(numPatchesY, ceil_divide(padTop - v, strideY)) ;
-        int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u, strideX) + 1) ;
-        int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v, strideY) + 1) ;
+        int x0 = static_min(numPatchesX, ceil_divide(padLeft - u * dilateX, strideX)) ;
+        int y0 = static_min(numPatchesY, ceil_divide(padTop - v * dilateY, strideY)) ;
+        int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u * dilateX, strideX) + 1) ;
+        int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v * dilateY, strideY) + 1) ;
         int x ;
         int y ;
 
@@ -131,8 +142,8 @@ namespace vl { namespace impl {
           for (x = 0 ; x < x0 ; ++x) {
             *stacked++ = 0 ;
           }
-          int y_data = y * strideY + v - padTop ;
-          int x_data = x * strideX + u - padLeft ;
+          int y_data = y * strideY + v * dilateY - padTop ;
+          int x_data = x * strideX + u * dilateX - padLeft ;
           type const * b = data + (z * height + y_data) * width + x_data ;
           for ( ; x < x1 ; ++x) {
             *stacked++ = *b ;
@@ -148,14 +159,14 @@ namespace vl { namespace impl {
           }
         }
       }
-      return vl::vlSuccess ;
+      return vl::VLE_Success ;
     }
 
     /* ------------------------------------------------------------ */
     /*                                                     backward */
     /* ------------------------------------------------------------ */
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context & context,
              type* data,
              type const* stacked,
@@ -169,10 +180,14 @@ namespace vl { namespace impl {
              size_t padLeft,
              size_t padRight,
              size_t padTop,
-             size_t padBottom)
+             size_t padBottom,
+             int dilateX,
+             int dilateY)
     {
-      int numPatchesX = (width + (padLeft + padRight) - windowWidth)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowHeight)/strideY + 1 ;
+      int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
+      int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
+      int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
+      int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
       int numRows = windowWidth * windowHeight * depth ;
 
       memset(data, 0, sizeof(type) * width * height * depth) ;
@@ -188,10 +203,10 @@ namespace vl { namespace impl {
         u %= windowWidth ;
         v %= windowHeight ;
 
-        int x0 = static_min(numPatchesX, ceil_divide(padLeft - u, strideX)) ;
-        int y0 = static_min(numPatchesY, ceil_divide(padTop - v, strideY)) ;
-        int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u, strideX) + 1) ;
-        int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v, strideY) + 1) ;
+        int x0 = static_min(numPatchesX, ceil_divide(padLeft - u * dilateX, strideX)) ;
+        int y0 = static_min(numPatchesY, ceil_divide(padTop - v * dilateY, strideY)) ;
+        int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u * dilateX, strideX) + 1) ;
+        int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v * dilateY, strideY) + 1) ;
         int x ;
         int y ;
 
@@ -199,8 +214,8 @@ namespace vl { namespace impl {
         stacked += numPatchesX * static_max(y, 0) ;
         for ( ; y < y1 ; ++y) {
           x = static_max(0, x0) ;
-          int y_data = y * strideY + v - padTop ;
-          int x_data = x * strideX + u - padLeft ;
+          int y_data = y * strideY + v * dilateY - padTop ;
+          int x_data = x * strideX + u * dilateX - padLeft ;
           type * b = data + (z * height + y_data) * width + x_data ;
           stacked += x ;
           for ( ; x < x1 ; ++x) {
@@ -211,15 +226,15 @@ namespace vl { namespace impl {
         }
         stacked += numPatchesX * (numPatchesY - y) ;
       }
-      return vl::vlSuccess ;
+      return vl::VLE_Success ;
     }
   } ;
 
 } }
 
 // Instantiations
-template struct vl::impl::im2row<vl::CPU, float> ;
+template struct vl::impl::im2row<vl::VLDT_CPU, float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::im2row<vl::CPU, double> ;
+template struct vl::impl::im2row<vl::VLDT_CPU, double> ;
 #endif

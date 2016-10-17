@@ -19,11 +19,11 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct pooling_max {
     typedef type data_type ;
 
-    static vl::Error
+    static vl::ErrorCode
     forward(data_type* output,
             data_type const* data,
             size_t height, size_t width, size_t depth,
@@ -31,7 +31,7 @@ namespace vl { namespace impl {
             size_t strideY, size_t strideX,
             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(data_type* derData,
              data_type const* data,
              data_type const* derOutput,
@@ -41,11 +41,11 @@ namespace vl { namespace impl {
              size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
   } ;
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct pooling_average {
     typedef type data_type ;
 
-    static vl::Error
+    static vl::ErrorCode
     forward(data_type* output,
             data_type const* data,
             size_t height, size_t width, size_t depth,
@@ -53,7 +53,7 @@ namespace vl { namespace impl {
             size_t strideY, size_t strideX,
             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(type* derData,
              type const* derOutput,
              size_t height, size_t width, size_t depth,

@@ -23,6 +23,25 @@ from the example code included in the [quickstart guide](quick.md).
 > 3.  These models are provided here for convenience, but please
 >     credit the original authors.
 
+
+## Object detection
+
+These models are trained for object detection in PASCAL VOC.
+
+- **Fast R-CNN**. Models from the [FastR-CNN](https://github.com/rbgirshick/fast-rcnn) page:
+
+    - [fast-rcnn-caffenet-pascal07-dagnn](models/fast-rcnn-caffenet-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-caffenet-pascal07-dagnn.svg)
+    - [fast-rcnn-vggm1k-pascal07-dagnn](models/fast-rcnn-vggm1k-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vggm1k-pascal07-dagnn.svg)
+    - [fast-rcnn-vgg16-pascal07-dagnn](models/fast-rcnn-vgg16-pascal07-dagnn.mat) [<i class="fa fa-file-image-o"></i>](models/fast-rcnn-vgg16-pascal07-dagnn.svg)
+
+The model performance is as follows (*mAP 11* indicates mean average precision computed using 11 point interpolation, as per PASCAL VOC 07 specification):
+
+|model                                | training set | PASCAL07 test mAP | mAP 11 |
+|-------------------------------------|--------------| ------------------|--------|
+|fast-rcnn-caffenet-pascal07-dagnn    | imnet12+pas07| 57.3 %            | 58.1 % |
+|fast-rcnn-vggm12-pascal07-dagnn      | imnet12+pas07| 59.4 %            | 60.5 % |
+|fast-rcnn-vgg16-pascal07-dagnn       | imnet12+pas07| 67.3 %            | 68.7 % |
+
 ## Face recognition
 
 These models are trained for face classification and verification.
@@ -119,10 +138,10 @@ These modes are trained to perform classification in the ImageNet
 ILSVRC challenge data.
 
 -   **ResNet** models imported from the
-    [MSRC version](https://github.com/KaimingHe/deep-residual-networks).
+    [MSRA version](https://github.com/KaimingHe/deep-residual-networks).
 
     > 'Deep Residual Learning for Image Recognition', K. He, X. Zhang,
-    S. Ren and J. Sun, ICCV, 2015
+    S. Ren and J. Sun, CVPR, 2016
     ([paper](http://arxiv.org/pdf/1512.03385.pdf)).
 
     -  [imagenet-resnet-50-dag](models/imagenet-resnet-50-dag.mat) [<i class="fa fa-file-image-o"></i>](models/imagenet-resnet-50-dag.svg)
@@ -211,25 +230,25 @@ This is a summary of the performance of these models on the ILSVRC
 
 |                         model|introduced|top-1 err.|top-5 err.|  images/s|
 |------------------------------|----------|----------|----------|----------|
-|                 resnet-50-dag|      2015|      24.6|       7.7|     315.3|
-|                resnet-101-dag|      2015|      23.4|       7.0|     212.7|
-|                resnet-152-dag|      2015|      23.0|       6.7|     156.6|
-|    matconvnet-vgg-verydeep-16|      2014|      28.3|       9.5|     184.5|
-|               vgg-verydeep-19|      2014|      28.7|       9.9|     154.5|
-|               vgg-verydeep-16|      2014|      28.5|       9.9|     183.1|
-|                 googlenet-dag|      2014|      34.2|      12.9|     501.8|
-|              matconvnet-vgg-s|      2013|      37.0|      15.8|     415.9|
-|              matconvnet-vgg-m|      2013|      36.9|      15.5|     623.1|
-|              matconvnet-vgg-f|      2013|      41.4|      19.1|     793.1|
-|                         vgg-s|      2013|      36.7|      15.3|     395.4|
-|                         vgg-m|      2013|      37.3|      15.9|     586.9|
-|                         vgg-f|      2013|      41.1|      18.8|     785.7|
-|                     vgg-m-128|      2013|      40.8|      18.4|     588.7|
-|                    vgg-m-1024|      2013|      37.8|      16.1|     596.8|
-|                    vgg-m-2048|      2013|      37.1|      15.8|     589.4|
-|               matconvnet-alex|      2012|      41.8|      19.2|     760.3|
-|                     caffe-ref|      2012|      42.4|      19.6|     384.8|
-|                    caffe-alex|      2012|      42.6|      19.6|     382.4|
+|                 resnet-50-dag|      2015|      24.6|       7.7|     396.3|
+|                resnet-101-dag|      2015|      23.4|       7.0|     247.3|
+|                resnet-152-dag|      2015|      23.0|       6.7|     172.5|
+|    matconvnet-vgg-verydeep-16|      2014|      28.3|       9.5|     200.9|
+|               vgg-verydeep-19|      2014|      28.7|       9.9|     166.2|
+|               vgg-verydeep-16|      2014|      28.5|       9.9|     200.2|
+|                 googlenet-dag|      2014|      34.2|      12.9|     770.6|
+|              matconvnet-vgg-s|      2013|      37.0|      15.8|     586.2|
+|              matconvnet-vgg-m|      2013|      36.9|      15.5|    1212.5|
+|              matconvnet-vgg-f|      2013|      41.4|      19.1|    2482.7|
+|                         vgg-s|      2013|      36.7|      15.3|     560.1|
+|                         vgg-m|      2013|      37.3|      15.9|    1025.1|
+|                         vgg-f|      2013|      41.1|      18.8|    1118.9|
+|                     vgg-m-128|      2013|      40.8|      18.4|    1031.3|
+|                    vgg-m-1024|      2013|      37.8|      16.1|     958.5|
+|                    vgg-m-2048|      2013|      37.1|      15.8|     984.2|
+|               matconvnet-alex|      2012|      41.8|      19.2|    2133.3|
+|                     caffe-ref|      2012|      42.6|      19.7|    1071.7|
+|                    caffe-alex|      2012|      42.6|      19.6|    1379.8|
 
 Important notes:
 
@@ -243,12 +262,9 @@ Important notes:
   ensembles are evaluated.
 
 * The **evaluation speed** was measured on a 12-cores machine using a
-  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v4; performance
-  varies hugely depending on the network but also on how the data was
-  preprocessed; for example, `caffe-ref` and `caffe-alex` should be as
-  fast as `matconvnet-alex`, but they are not since images were
-  pre-processed in such a way that MATLAB had to call `imresize` for
-  each input image for the Caffe models.
+  single *NVIDIA Titan X*, MATLAB R2015b, and CuDNN v5.1. A
+  significant bottleneck for many networks is the data reading speed
+  of `vl_imreadjpeg`.
 
 * The GoogLeNet model performance is a little lower than expected (the
   model should be on par or a little better than VGG-VD). This network
@@ -263,30 +279,33 @@ The following table summarizes the MD5 checksums for the model files.
 
 | MD5                              | File name                               |
 |----------------------------------|-----------------------------------------|
-| ed49ef44caf18496291ce0c3257b0596 | imagenet-caffe-alex.mat                 |
-| 6d69dfa6e549012c94546658737c5885 | imagenet-caffe-ref.mat                  |
-| 04cd60e8ea6a0d47742206749f624ec8 | imagenet-googlenet-dag.mat              |
-| 55743accfaf47f5c34fa50fa047143fd | imagenet-matconvnet-alex.mat            |
-| b359b6ad071155eafa35c84a78f397c7 | imagenet-matconvnet-vgg-f.mat           |
-| 1bcad2e93b0cc6da3b7d1bf610582279 | imagenet-matconvnet-vgg-m.mat           |
-| 314c982669e202e0d419803c54d1fb8f | imagenet-matconvnet-vgg-s.mat           |
-| 14ece491f7311f6dc33bc3186729de5b | imagenet-matconvnet-vgg-verydeep-16.mat |
-| be19a35a2b4f4c46ed61df684d08b900 | imagenet-resnet-101-dag.mat             |
-| 4461d3640d55aa2f58d990f7c92ff28c | imagenet-resnet-152-dag.mat             |
-| 73a3e51b75230d431c88bb795e14e91d | imagenet-resnet-50-dag.mat              |
-| f666c61dc968c413ef664a7e17b01144 | imagenet-vgg-f.mat                      |
-| d15f53a30bba3abde4377eced695adab | imagenet-vgg-m-1024.mat                 |
-| 779b86f55d0534d9fd322256372007a5 | imagenet-vgg-m-128.mat                  |
-| 9d20b7ab01ca47617e808008da6b18cc | imagenet-vgg-m-2048.mat                 |
-| 1c164950e882b4ea11623e669a86b1c4 | imagenet-vgg-m.mat                      |
-| 93b683d5420c2eeaf07a6eef492f182b | imagenet-vgg-s.mat                      |
-| 7f0f9f01dfd99c7b7088d1c5a26eb483 | imagenet-vgg-verydeep-16.mat            |
-| 49e623de543b207d57fab0f6eaf79a7e | imagenet-vgg-verydeep-19.mat            |
-| 48ccac8fb5c4961815705f1f84581ec3 | pascal-fcn16s-dag.mat                   |
-| bf3ca0a59d1525f63e7c28d526ee0656 | pascal-fcn32s-dag.mat                   |
-| 54b7ce1265a6cdd114d39d05515c73c4 | pascal-fcn8s-dag.mat                    |
-| 2a42dd1d2987983dacffc436cca5dabf | pascal-fcn8s-tvg-dag.mat                |
-| 27e94d9979dad2385f901f0c360cf3bc | vgg-face.mat                            |
+| 9dcc29b03edb5b136fda31fcd59bd025 | fast-rcnn-caffenet-pascal07-dagnn.mat   |
+| 961f997d7ff922f1ff6b7b20ad677a4c | fast-rcnn-vgg16-pascal07-dagnn.mat      |
+| f09a662aef88ac4c23d294eb1fb6f385 | fast-rcnn-vggm1k-pascal07-dagnn.mat     |
+| b5152a54bf61100a8ed61827c76e7d08 | imagenet-caffe-alex.mat                 |
+| 675dd47906d34f4d9a70fc44210d3804 | imagenet-caffe-ref.mat                  |
+| 97f4e1aa9ad6ed33fd325835710c5092 | imagenet-googlenet-dag.mat              |
+| 0998b7f66bd8dcbb78a3e75aaa6127f3 | imagenet-matconvnet-alex.mat            |
+| 790e116ec817a58960b103514891fdbf | imagenet-matconvnet-vgg-f.mat           |
+| 7e07705fc60c178ee3d2c09dab33acf3 | imagenet-matconvnet-vgg-m.mat           |
+| 82d5705d292714d0d6581a834485705b | imagenet-matconvnet-vgg-s.mat           |
+| 89a117515f66c3d7b0eb9d0516c65141 | imagenet-matconvnet-vgg-verydeep-16.mat |
+| 16ff04c36c7bd33510e4a81db6dc764b | imagenet-resnet-101-dag.mat             |
+| f399bef82f5bcaf290d07ccc818833d7 | imagenet-resnet-152-dag.mat             |
+| d72aa76a8ddf8bd96e405ac0ba827724 | imagenet-resnet-50-dag.mat              |
+| 3513562d28089bd965cc050cbf8597a6 | imagenet-vgg-f.mat                      |
+| 1410d01878346f911e991dd0c1bb983b | imagenet-vgg-m-1024.mat                 |
+| 3a8dc312a44a99d21ad43e8d96a8590f | imagenet-vgg-m-128.mat                  |
+| 087ec812e0a09980bd934e2e7ba157f6 | imagenet-vgg-m-2048.mat                 |
+| 29294d5f62578c96a3533859514235f2 | imagenet-vgg-m.mat                      |
+| dbe23da22e82078debda75842b16d5fa | imagenet-vgg-s.mat                      |
+| f72d927587ca4c97fbd165ec9cb9997f | imagenet-vgg-verydeep-16.mat            |
+| 106118b7cf60435e6d8e04f6a6dc3657 | imagenet-vgg-verydeep-19.mat            |
+| 2e49dd427829cdbc08a0154f994687d7 | pascal-fcn16s-dag.mat                   |
+| a1331885ec72a0721e51ac9d16262a48 | pascal-fcn32s-dag.mat                   |
+| 0eeb6a4bc819616ea66f88a3db878983 | pascal-fcn8s-dag.mat                    |
+| b0f7bd5833b555c6241dd0c05897ca41 | pascal-fcn8s-tvg-dag.mat                |
+| 3d6cd504bf9c98af4a561aad059565d1 | vgg-face.mat                            |
 
 ## Older file versions
 

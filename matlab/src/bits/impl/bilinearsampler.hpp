@@ -20,10 +20,10 @@ the terms of the BSD license (see the COPYING file).
 // defines the dispatcher for CUDA kernels:
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct bilinearsampler {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             type* output,
             type const* data,
@@ -32,7 +32,7 @@ namespace vl { namespace impl {
             size_t inHeight, size_t inWidth, size_t inCardinality) ;
 
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              type* derData,
              type* derGrid,

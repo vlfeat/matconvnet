@@ -18,10 +18,10 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Type dataType>
+  template<vl::DataType dataType>
   struct nnconv_cudnn
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             Tensor output, double outputMult,
             Tensor data, double dataMult,
@@ -29,9 +29,10 @@ namespace vl { namespace impl {
             Tensor biases,
             int strideX, int strideY,
             int padLeft, int padRight,
-            int padTop, int padBottom) ;
+            int padTop, int padBottom,
+            int dilateX, int dilateY) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              Tensor derData,
              Tensor derFilters,
@@ -41,7 +42,8 @@ namespace vl { namespace impl {
              Tensor derOutput,
              int strideX, int strideY,
              int padLeft, int padRight,
-             int padTop, int padBottom) ;
+             int padTop, int padBottom,
+             int dilateX, int dilateY) ;
   } ;
 
 } }

@@ -29,9 +29,9 @@ status = vl::impl::nnbias_forward_blas<deviceType,dataType> \
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
-case vlTypeFloat : DISPATCH(deviceType,vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCH(deviceType,vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCH(deviceType,VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType,VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
 #define DISPATCHCUDNN(dataType) \
@@ -40,41 +40,41 @@ status = vl::impl::nnbias_cudnn<dataType>::forward \
 
 #define DISPATCHCUDNN2() \
 switch (dataType) { \
-case vlTypeFloat : DISPATCHCUDNN(vlTypeFloat) ; break ; \
-IF_DOUBLE(case vlTypeDouble : DISPATCHCUDNN(vlTypeDouble) ; break ;) \
-default: assert(false) ; return vlErrorUnknown ; \
+case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
+IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
+default: assert(false) ; return VLE_Unknown ; \
 }
 
-vl::Error
+vl::ErrorCode
 vl::nnbias_forward(vl::Context& context,
                    vl::Tensor output, double outputMult,
                    vl::Tensor data, double dataMult,
                    vl::Tensor biases, double biasesMult)
 {
-  vl::Error status = vlSuccess ;
-  vl::Type dataType = output.getDataType() ;
+  vl::ErrorCode status = VLE_Success ;
+  vl::DataType dataType = output.getDataType() ;
 
   switch (output.getDeviceType()) {
     default:
       assert(false) ;
-      status = vl::vlErrorUnknown ;
+      status = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
-        if (status == vl::vlSuccess) { return status ; }
-        if (status != vl::vlErrorUnsupported) { goto done ; }
+        if (status == vl::VLE_Success) { return status ; }
+        if (status != vl::VLE_Unsupported) { goto done ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH2(vl::GPU) ;
+      DISPATCH2(vl::VLDT_GPU) ;
       break ;
 #endif
   }
@@ -98,36 +98,36 @@ status = vl::impl::nnbias_backward_blas<deviceType,dataType> \
 status = vl::impl::nnbias_cudnn<dataType>::backward \
 (context, derData, derDataMult, derBiases, derBiasesMult, derOutput, derOutputMult) ;
 
-vl::Error
+vl::ErrorCode
 vl::nnbias_backward(vl::Context& context,
                     vl::Tensor derData, double derDataMult,
                     vl::Tensor derBiases, double derBiasesMult,
                     vl::Tensor derOutput, double derOutputMult)
 {
-  vl::Error status = vlSuccess ;
-  vl::Type dataType = derOutput.getDataType() ;
+  vl::ErrorCode status = VLE_Success ;
+  vl::DataType dataType = derOutput.getDataType() ;
 
   switch (derOutput.getDeviceType()) {
     default:
       assert(false) ;
-      status = vl::vlErrorUnknown ;
+      status = vl::VLE_Unknown ;
       break ;
 
-    case vl::CPU:
-      DISPATCH2(vl::CPU) ;
+    case vl::VLDT_CPU:
+      DISPATCH2(vl::VLDT_CPU) ;
       break ;
 
 #if ENABLE_GPU
-    case vl::GPU:
+    case vl::VLDT_GPU:
 #if ENABLE_CUDNN
       if (context.getCudaHelper().getCudnnEnabled()) {
         DISPATCHCUDNN2() ;
-        if (status == vl::vlSuccess) { return status ; }
-        if (status != vl::vlErrorUnsupported) { goto done ; }
+        if (status == vl::VLE_Success) { return status ; }
+        if (status != vl::VLE_Unsupported) { goto done ; }
         /* this case was not supported by CUDNN -- fallback */
       }
 #endif
-      DISPATCH2(vl::GPU) ;
+      DISPATCH2(vl::VLDT_GPU) ;
       break ;
 #endif
   }

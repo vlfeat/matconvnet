@@ -41,6 +41,14 @@
 %       above. This is useful to disable batch normalization during
 %       testing.
 %
+%   `CuDNN`:: specified
+%       If specified, turns on CuDNN. CuDNN is on by default. This
+%       option can be useful to undo the effect of a previous
+%       `NoCuDNN` option in the argument list.
+%
+%   `NoCuDNN`:: not specified
+%       If specified, turns off CuDNN.
+%
 %   See also: VL_NNNORMALIZE().
 
 % Copyright (C) 2015 Sébastien Ehrhardt, Karel Lenc and Andrea Vedaldi.

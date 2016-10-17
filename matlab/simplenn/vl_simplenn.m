@@ -37,7 +37,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   VL_SIMPLENN(NET, X, DZDY, RES, 'OPT', VAL, ...) takes the following
 %   options:
 %
-%   `Mode`:: `normal`
+%   `Mode`:: `'normal'`
 %      Specifies the mode of operation. It can be either `'normal'` or
 %      `'test'`. In test mode, dropout and batch-normalization are
 %      bypassed. Note that, when a network is deployed, it may be
@@ -114,6 +114,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     - `layer.weights` is a cell array with filters and biases.
 %     - `layer.stride` is the sampling stride (e.g. 1).
 %     - `layer.pad` is the padding (e.g. 0).
+%     - `layer.dilate` is the dilation factor (e.g. 1).
 %
 %   Convolution transpose layer::
 %     The convolution transpose layer wraps VL_NNCONVT(). It has fields:
@@ -229,7 +230,9 @@ opts.mode = 'normal' ;
 opts.accumulate = false ;
 opts.cudnn = true ;
 opts.backPropDepth = +inf ;
-opts.skipForward = false;
+opts.skipForward = false ;
+opts.parameterServer = [] ;
+opts.holdOn = false ;
 opts = vl_argparse(opts, varargin);
 
 n = numel(net.layers) ;
@@ -248,8 +251,10 @@ end
 
 if opts.cudnn
   cudnn = {'CuDNN'} ;
+  bnormCudnn = {'NoCuDNN'} ; % ours seems slighty faster
 else
   cudnn = {'NoCuDNN'} ;
+  bnormCudnn = {'NoCuDNN'} ;
 end
 
 switch lower(opts.mode)
@@ -282,7 +287,6 @@ if ~opts.skipForward
   res(1).x = x ;
 end
 
-
 % -------------------------------------------------------------------------
 %                                                              Forward pass
 % -------------------------------------------------------------------------
@@ -296,6 +300,7 @@ for i=1:n
       res(i+1).x = vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, ...
         'pad', l.pad, ...
         'stride', l.stride, ...
+        'dilate', l.dilate, ...
         l.opts{:}, ...
         cudnn{:}) ;
 
@@ -348,9 +353,14 @@ for i=1:n
 
     case 'bnorm'
       if testMode
-        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, 'moments', l.weights{3}) ;
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                                'moments', l.weights{3}, ...
+                                'epsilon', l.epsilon, ...
+                                bnormCudnn{:}) ;
       else
-        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}) ;
+        res(i+1).x = vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, ...
+                                'epsilon', l.epsilon, ...
+                                bnormCudnn{:}) ;
       end
 
     case 'pdist'
@@ -403,6 +413,7 @@ if doder
           vl_nnconv(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
           'pad', l.pad, ...
           'stride', l.stride, ...
+          'dilate', l.dilate, ...
           l.opts{:}, ...
           cudnn{:}) ;
 
@@ -463,7 +474,9 @@ if doder
 
       case 'bnorm'
         [res(i).dzdx, dzdw{1}, dzdw{2}, dzdw{3}] = ...
-          vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx) ;
+          vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
+                     'epsilon', l.epsilon, ...
+                     bnormCudnn{:}) ;
         % multiply the moments update by the number of images in the batch
         % this is required to make the update additive for subbatches
         % and will eventually be normalized away
@@ -492,6 +505,12 @@ if doder
           end
         end
         dzdw = [] ;
+        if ~isempty(opts.parameterServer) && ~opts.holdOn
+          for j = 1:numel(res(i).dzdw)
+            opts.parameterServer.push(sprintf('l%d_%d',i,j),res(i).dzdw{j}) ;
+            res(i).dzdw{j} = [] ;
+          end
+        end
     end
     if opts.conserveMemory && ~net.layers{i}.precious && i ~= n
       res(i+1).dzdx = [] ;

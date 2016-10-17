@@ -26,7 +26,7 @@ enum {
 } ;
 
 /* options */
-vlmxOption  options [] = {
+VLMXOption  options [] = {
   {"Verbose",          0,   opt_verbose           },
   {0,                  0,   0                     }
 } ;
@@ -130,8 +130,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Create output buffers */
-  vl::Device deviceType = data.getDeviceType() ;
-  vl::Type dataType = data.getDataType() ;
+  vl::DeviceType deviceType = data.getDeviceType() ;
+  vl::DataType dataType = data.getDataType() ;
   vl::MexTensor output(context) ;
   vl::MexTensor derData(context) ;
   if (!backMode) {
@@ -141,7 +141,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   if (verbosity > 0) {
-    mexPrintf("vl_nnnormalize: mode %s; %s\n",  (data.getDeviceType()==vl::GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
+    mexPrintf("vl_nnnormalize: mode %s; %s\n",  (data.getDeviceType()==vl::VLDT_GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
     mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
               normDepth, normKappa, normAlpha, normBeta) ;
     vl::print("vl_nnnormalize: data: ", data) ;
@@ -157,7 +157,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
 
-  vl::Error error ;
+  vl::ErrorCode error ;
 
   if (!backMode) {
     error = vl::nnlrn_forward(context,
@@ -175,7 +175,7 @@ void mexFunction(int nout, mxArray *out[],
   /*                                                         Finish */
   /* -------------------------------------------------------------- */
 
-  if (error != vl::vlSuccess) {
+  if (error != vl::VLE_Success) {
     mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
   }
   if (backMode) {

@@ -1,7 +1,12 @@
 classdef BatchNorm < dagnn.ElementWise
   properties
     numChannels
-    epsilon = 1e-4
+    epsilon = 1e-5
+    opts = {'NoCuDNN'} % ours seems slightly faster
+  end
+
+  properties (Transient)
+    moments
   end
 
   methods
@@ -9,17 +14,23 @@ classdef BatchNorm < dagnn.ElementWise
       if strcmp(obj.net.mode, 'test')
         outputs{1} = vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
                                 'moments', params{3}, ...
-                                'epsilon', obj.epsilon) ;
+                                'epsilon', obj.epsilon, ...
+                                obj.opts{:}) ;
       else
-        outputs{1} = vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
-                                'epsilon', obj.epsilon) ;
+        [outputs{1},obj.moments] = ...
+            vl_nnbnorm(inputs{1}, params{1}, params{2}, ...
+                       'epsilon', obj.epsilon, ...
+                       obj.opts{:}) ;
       end
     end
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       [derInputs{1}, derParams{1}, derParams{2}, derParams{3}] = ...
         vl_nnbnorm(inputs{1}, params{1}, params{2}, derOutputs{1}, ...
-                   'epsilon', obj.epsilon) ;
+                   'epsilon', obj.epsilon, ...
+                   'moments', obj.moments, ...
+                   obj.opts{:}) ;
+      obj.moments = [] ;
       % multiply the moments update by the number of images in the batch
       % this is required to make the update additive for subbatches
       % and will eventually be normalized away
@@ -41,7 +52,7 @@ classdef BatchNorm < dagnn.ElementWise
       attach@dagnn.ElementWise(obj, net, index) ;
       p = net.getParamIndex(net.layers(index).params{3}) ;
       net.params(p).trainMethod = 'average' ;
-      net.params(p).learningRate = 0.01 ;
+      net.params(p).learningRate = 0.1 ;
     end
   end
 end

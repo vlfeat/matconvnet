@@ -18,16 +18,16 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Type dataType>
+  template<vl::DataType dataType>
   struct nnbilinearsampler_cudnn
   {
-    static vl::Error
+    static vl::ErrorCode
     forward(Context& context,
             Tensor output,
             Tensor data,
             Tensor grid) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(Context& context,
              Tensor derData,
              Tensor derGrid,

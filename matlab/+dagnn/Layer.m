@@ -140,9 +140,18 @@ classdef Layer < handle
               || isempty(net.params(p).der)
           net.params(p).der = derParams{i} ;
         else
-          net.params(p).der = net.params(p).der + derParams{i} ;
+          net.params(p).der = vl_taccum(...
+            1, net.params(p).der, ...
+            1, derParams{i}) ;
+          %net.params(p).der = net.params(p).der + derParams{i} ;
         end
         net.numPendingParamRefs(p) = net.numPendingParamRefs(p) + 1 ;
+        if net.numPendingParamRefs(p) == net.params(p).fanout
+          if ~isempty(net.parameterServer) && ~net.holdOn
+            net.parameterServer.pushWithIndex(p, net.params(p).der) ;
+            net.params(p).der = [] ;
+          end
+        end
       end
     end
 

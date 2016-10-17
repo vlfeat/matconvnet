@@ -24,18 +24,18 @@ the terms of the BSD license (see the COPYING file).
 #warning "bilinearsampler_cudnn.cu will be disabled as it requires CUDNN v5 or higher."
 
 namespace vl { namespace impl {
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& context,
                                                        Tensor output,
                                                        Tensor data,
                                                        Tensor grid)
   {
-    return vl::vlErrorUnsupported ;
+    return vl::VLE_Unsupported ;
   }
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& context,
                                                         Tensor derData,
                                                         Tensor derGrid,
@@ -43,7 +43,7 @@ namespace vl { namespace impl {
                                                         Tensor grid,
                                                         Tensor derOutput)
   {
-    return vl::vlErrorUnsupported ;
+    return vl::VLE_Unsupported ;
   }
 }}
 #else
@@ -65,8 +65,8 @@ goto done ; \
 /* ---------------------------------------------------------------- */
 namespace vl { namespace impl {
 
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& context,
                                                        Tensor output,
                                                        Tensor data,
@@ -96,11 +96,11 @@ namespace vl { namespace impl {
     int outHeight = output.getHeight();
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
-    vl::Type dynDataType = output.getDataType() ;
+    vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // get number of transforms/image == groupSize:
@@ -176,8 +176,8 @@ namespace vl { namespace impl {
   /* ---------------------------------------------------------------- */
   /*                                   bilinearsampler_backward_cudnn */
   /* ---------------------------------------------------------------- */
-  template<vl::Type dataType>
-  vl::Error
+  template<vl::DataType dataType>
+  vl::ErrorCode
   vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& context,
                                                         Tensor derData,
                                                         Tensor derGrid,
@@ -206,11 +206,11 @@ namespace vl { namespace impl {
     int outHeight = derOutput.getHeight();
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
-    vl::Type dynDataType = derOutput.getDataType() ;
+    vl::DataType dynDataType = derOutput.getDataType() ;
     assert(dynDataType == dataType) ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::Error error = vl::vlSuccess ;
+    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
     // get number of transforms/image == groupSize:
@@ -298,8 +298,8 @@ namespace vl { namespace impl {
 #endif // CUDNN >= v5.0
 
 // Instantiations
-template struct vl::impl::nnbilinearsampler_cudnn<vl::vlTypeFloat> ;
+template struct vl::impl::nnbilinearsampler_cudnn<vl::VLDT_Float> ;
 
 #ifdef ENABLE_DOUBLE
-template struct vl::impl::nnbilinearsampler_cudnn<vl::vlTypeDouble> ;
+template struct vl::impl::nnbilinearsampler_cudnn<vl::VLDT_Double> ;
 #endif

@@ -19,7 +19,7 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device deviceType, vl::Type dataType> inline vl::Error
+  template<vl::DeviceType deviceType, vl::DataType dataType> inline vl::ErrorCode
   nnconv_forward_blas(Context& context,
                       Tensor output, double outputMult,
                       Tensor data, double dataMult,
@@ -27,9 +27,10 @@ namespace vl { namespace impl {
                       Tensor biases,
                       int strideY, int strideX,
                       int padTop, int padBottom,
-                      int padLeft, int padRight) ;
+                      int padLeft, int padRight,
+                      int dilateY, int dilateX) ;
 
-  template<vl::Device deviceType, vl::Type dataType> inline vl::Error
+  template<vl::DeviceType deviceType, vl::DataType dataType> inline vl::ErrorCode
   nnconv_backward_blas(Context& context,
                        Tensor derData,
                        Tensor derFilters,
@@ -39,7 +40,8 @@ namespace vl { namespace impl {
                        Tensor derOutput,
                        int strideY, int strideX,
                        int padTop, int padBottom,
-                       int padLeft, int padRight) ;
+                       int padLeft, int padRight,
+                       int dilateY, int dilateX) ;
 
 } }
 
@@ -76,7 +78,7 @@ namespace vl { namespace impl {
 
  */
 
-template<vl::Device deviceType, vl::Type dataType> inline vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType> inline vl::ErrorCode
 vl::impl::nnconv_forward_blas(Context& context,
                               Tensor output, double outputMult,
                               Tensor data, double dataMult,
@@ -84,13 +86,14 @@ vl::impl::nnconv_forward_blas(Context& context,
                               Tensor biases,
                               int strideY, int strideX,
                               int padTop, int padBottom,
-                              int padLeft, int padRight)
+                              int padLeft, int padRight,
+                              int dilateY, int dilateX)
 {
   assert(output) ;
   assert(data) ;
   assert(filters) ;
 
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
 
   ptrdiff_t numGroups = data.getDepth() / filters.getDepth() ;
@@ -120,8 +123,9 @@ vl::impl::nnconv_forward_blas(Context& context,
      data.getHeight(), data.getWidth(), data.getDepth(),
      filters.getHeight(), filters.getWidth(),
      strideY, strideX,
-     padTop, padBottom, padLeft, padRight) ;
-    if (error != vl::vlSuccess) { goto done ; }
+     padTop, padBottom, padLeft, padRight,
+     dilateY, dilateX) ;
+    if (error != vl::VLE_Success) { goto done ; }
 
     for (int g = 0 ; g < numGroups ; ++ g) {
       ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
@@ -138,7 +142,7 @@ vl::impl::nnconv_forward_blas(Context& context,
        (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
        beta,
        (type*)output.getMemory() + outputOffset + outputGrpOffset, numOutputPixels) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
 
     if (biases) {
@@ -153,7 +157,7 @@ vl::impl::nnconv_forward_blas(Context& context,
        (type*)biases.getMemory(), 1,
        beta,
        (type*)output.getMemory() + outputOffset, numOutputPixels) ;
-      if (error != vl::vlSuccess) { goto done ; }
+      if (error != vl::VLE_Success) { goto done ; }
     }
   }
 
@@ -161,8 +165,8 @@ done:
   return context.passError(error, __func__) ;
 }
 
-template<vl::Device deviceType, vl::Type dataType>
-inline vl::Error
+template<vl::DeviceType deviceType, vl::DataType dataType>
+inline vl::ErrorCode
 vl::impl::nnconv_backward_blas(Context& context,
                                Tensor derData,
                                Tensor derFilters,
@@ -172,9 +176,10 @@ vl::impl::nnconv_backward_blas(Context& context,
                                Tensor derOutput,
                                int strideY, int strideX,
                                int padTop, int padBottom,
-                               int padLeft, int padRight)
+                               int padLeft, int padRight,
+                               int dilateY, int dilateX)
 {
-  vl::Error error ;
+  vl::ErrorCode error ;
   typedef typename vl::DataTypeTraits<dataType>::type type ;
 
   ptrdiff_t numGroups = 0 ;
@@ -241,7 +246,7 @@ vl::impl::nnconv_backward_blas(Context& context,
        allOnesMemory, 1,
        beta, /* beta */
        (type*)derBiases.getMemory(), 1) ;
-      if (error != vl::vlSuccess) { return error ; }
+      if (error != vl::VLE_Success) { return error ; }
     }
 
     /* compute derData dz/dx */
@@ -263,7 +268,7 @@ vl::impl::nnconv_backward_blas(Context& context,
          (type*)filters.getMemory() + filterGrpOffset, filtersVolume,
          beta,
          tempMemory + tempGrpOffset, numOutputPixels) ;
-        if (error != vl::vlSuccess) { return error ; }
+        if (error != vl::VLE_Success) { return error ; }
       }
       error = vl::impl::im2row<deviceType,type>::backward
       (context,
@@ -272,8 +277,9 @@ vl::impl::nnconv_backward_blas(Context& context,
        derData.getHeight(), derData.getWidth(), derData.getDepth(),
        filters.getHeight(), filters.getWidth(),
        strideY, strideX,
-       padTop, padBottom, padLeft, padRight) ;
-      if (error != vl::vlSuccess) { return error ; }
+       padTop, padBottom, padLeft, padRight,
+       dilateY, dilateX) ;
+      if (error != vl::VLE_Success) { return error ; }
     }
 
     /* compute derFilters dz/dF */
@@ -287,8 +293,9 @@ vl::impl::nnconv_backward_blas(Context& context,
        data.getHeight(), data.getWidth(), data.getDepth(),
        derFilters.getHeight(), derFilters.getWidth(),
        strideY, strideX,
-       padTop, padBottom, padLeft, padRight) ;
-      if (error != vl::vlSuccess) { return error ; }
+       padTop, padBottom, padLeft, padRight,
+       dilateY, dilateX) ;
+      if (error != vl::VLE_Success) { return error ; }
       for (int g = 0 ; g < numGroups ; ++ g) {
         ptrdiff_t filterGrpOffset = filtersVolume * numFiltersPerGroup * g ;
         ptrdiff_t tempGrpOffset = numOutputPixels * filtersVolume * g ;
@@ -305,7 +312,7 @@ vl::impl::nnconv_backward_blas(Context& context,
          (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
          beta,
          (type*)derFilters.getMemory() + filterGrpOffset, filtersVolume) ;
-        if (error != vl::vlSuccess) { return error ; }
+        if (error != vl::VLE_Success) { return error ; }
       }
     }
   }

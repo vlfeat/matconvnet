@@ -2,7 +2,7 @@ function net = cnn_imagenet_init(varargin)
 % CNN_IMAGENET_INIT  Initialize a standard CNN for ImageNet
 
 opts.scale = 1 ;
-opts.initBias = 0.1 ;
+opts.initBias = 0 ;
 opts.weightDecay = 1 ;
 %opts.weightInitMethod = 'xavierimproved' ;
 opts.weightInitMethod = 'gaussian' ;
@@ -10,6 +10,10 @@ opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts.networkType = 'simplenn' ;
 opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
+opts.classNames = {} ;
+opts.classDescriptions = {} ;
+opts.averageImage = zeros(3,1) ;
+opts.colorDeviation = zeros(3) ;
 opts = vl_argparse(opts, varargin) ;
 
 % Define layers
@@ -22,7 +26,7 @@ switch opts.model
     net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_f(net, opts) ;
     bs = 256 ;
-  case 'vgg-m'
+  case {'vgg-m', 'vgg-m-1024'}
     net.meta.normalization.imageSize = [224, 224, 3] ;
     net = vgg_m(net, opts) ;
     bs = 196 ;
@@ -50,13 +54,15 @@ end
 net.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 
 % Meta parameters
-net.meta.inputSize = net.meta.normalization.imageSize ;
-net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
-net.meta.normalization.interpolation = 'bicubic' ;
-net.meta.normalization.averageImage = [] ;
-net.meta.normalization.keepAspect = true ;
-net.meta.augmentation.rgbVariance = zeros(0,3) ;
-net.meta.augmentation.transformation = 'stretch' ;
+net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
+net.meta.normalization.cropSize = net.meta.normalization.imageSize(1) / 256 ;
+net.meta.normalization.averageImage = opts.averageImage ;
+net.meta.classes.name = opts.classNames ;
+net.meta.classes.description = opts.classDescriptions;
+net.meta.augmentation.jitterLocation = true ;
+net.meta.augmentation.jitterFlip = true ;
+net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
+net.meta.augmentation.jitterAspect = [2/3, 3/2] ;
 
 if ~opts.batchNormalization
   lr = logspace(-2, -4, 60) ;
@@ -103,6 +109,7 @@ net.layers{end+1} = struct('type', 'conv', 'name', sprintf('%s%s', name, id), ..
                              ones(out, 1, 'single')*opts.initBias}}, ...
                            'stride', stride, ...
                            'pad', pad, ...
+                           'dilate', 1, ...
                            'learningRate', [1 2], ...
                            'weightDecay', [opts.weightDecay 0], ...
                            'opts', {convOpts}) ;
@@ -110,7 +117,8 @@ if opts.batchNormalization
   net.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s',id), ...
                              'weights', {{ones(out, 1, 'single'), zeros(out, 1, 'single'), ...
                                zeros(out, 2, 'single')}}, ...
-                             'learningRate', [2 1 0.3], ...
+                             'epsilon', 1e-4, ...
+                             'learningRate', [2 1 0.1], ...
                              'weightDecay', [0 0]) ;
 end
 net.layers{end+1} = struct('type', 'relu', 'name', sprintf('relu%s',id)) ;
@@ -271,10 +279,16 @@ net.layers{end+1} = struct('type', 'pool', 'name', 'pool5', ...
 net = add_block(net, opts, '6', 6, 6, 512, 4096, 1, 0) ;
 net = add_dropout(net, opts, '6') ;
 
-net = add_block(net, opts, '7', 1, 1, 4096, 4096, 1, 0) ;
+switch opts.model
+  case 'vgg-m'
+    bottleneck = 4096 ;
+  case 'vgg-m-1024'
+    bottleneck = 1024 ;
+end
+net = add_block(net, opts, '7', 1, 1, 4096, bottleneck, 1, 0) ;
 net = add_dropout(net, opts, '7') ;
 
-net = add_block(net, opts, '8', 1, 1, 4096, 1000, 1, 0) ;
+net = add_block(net, opts, '8', 1, 1, bottleneck, 1000, 1, 0) ;
 net.layers(end) = [] ;
 if opts.batchNormalization, net.layers(end) = [] ; end
 

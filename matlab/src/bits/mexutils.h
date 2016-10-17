@@ -4,7 +4,7 @@
  **/
 
 /*
-Copyright (C) 2007-15 Andrea Vedaldi and Brian Fulkerson.
+Copyright (C) 2007-16 Andrea Vedaldi and Brian Fulkerson.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -14,32 +14,41 @@ the terms of the BSD license (see the COPYING file).
 #ifndef MEXUTILS_H
 #define MEXUTILS_H
 
-#include"mex.h"
-#include<ctype.h>
-#include<string.h>
-#include<stdio.h>
-#include<stdarg.h>
-#include<assert.h>
+#include "mex.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+#include <ctype.h>
+#include <string.h>
+#include <assert.h>
+
+#if defined(_MSC_VER) && _MSC_VER < 1700
+#define false 0
+#define true 1
+#elif _MSC_VER > 1700
+#include <stdbool.h>
+#endif
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
+#ifdef  _WIN64
+typedef signed __int64 ssize_t;
+#else
+typedef signed int ssize_t;
+#endif
 #if _MSC_VER < 1800
 // Add some missing functions from C99
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
-#define roundf(x) (float)(int)(x+0.5f)
+#define round(x) x >= 0.0 ? (double)(int)(x + 0.5f) : (double)(int)(x - 0.5f)
+#define roundf(x) x >= 0.0f ? (float)(int)(x + 0.5f) : (float)(int)(x - 0.5f)
 #endif
 #endif
 
-typedef mwSize vl_size ;
-typedef int unsigned  vl_uint  ;
-typedef int vl_bool ;
-typedef ptrdiff_t vl_index ;
-typedef size_t vl_uindex ;
 #define VL_INLINE static __inline
-#define VL_TRUE 1
-#define VL_FALSE 0
 
 /** @brief Access MEX input argument */
 #undef IN
@@ -49,87 +58,74 @@ typedef size_t vl_uindex ;
 #undef OUT
 #define OUT(x) (out[OUT_ ## x])
 
-#define MEXUTILS_RAISE_HELPER_A \
-char const * errorString ; \
-char formattedErrorId [512] ; \
-char formattedErrorMessage [1024] ; \
-\
-switch (errorId) { \
-case vlmxErrAlloc : errorString = "outOfMemory" ; break ; \
-case vlmxErrInvalidArgument : errorString = "invalidArgument" ; break ; \
-case vlmxErrNotEnoughInputArguments : errorString = "notEnoughInputArguments" ; break ; \
-case vlmxErrTooManyInputArguments : errorString = "tooManyInputArguments" ; break ; \
-case vlmxErrNotEnoughOutputArguments : errorString = "notEnoughOutputArguments" ; break ; \
-case vlmxErrTooManyOutputArguments : errorString = "tooManyOutputArguments" ; break ; \
-case vlmxErrInvalidOption : errorString = "invalidOption" ; break ; \
-case vlmxErrInconsistentData : errorString = "inconsistentData" ; break ; \
-case vlmxErrExecution: errorString = "execution" ; break ; \
-default : errorString = "undefinedError" ; break ; \
-} \
-\
-if (! errorMessage) { \
-switch (errorId) { \
-case vlmxErrAlloc: errorMessage = "Out of memory." ; break ; \
-case vlmxErrInvalidArgument: errorMessage = "Invalid argument." ; break ; \
-case vlmxErrNotEnoughInputArguments: errorMessage = "Not enough input arguments." ; break ; \
-case vlmxErrTooManyInputArguments: errorMessage = "Too many input arguments." ; break ; \
-case vlmxErrNotEnoughOutputArguments: errorMessage = "Not enough output arguments." ; break ; \
-case vlmxErrTooManyOutputArguments: errorMessage = "Too many output arguments." ; break ; \
-case vlmxErrInconsistentData: errorMessage = "Inconsistent data." ; break ; \
-case vlmxErrInvalidOption: errorMessage = "Invalid option." ; break ; \
-case vlmxErrExecution: errorMessage = "Execution error." ; break ; \
-default: errorMessage = "Undefined error message." ; \
-} \
-}
-
-#ifdef VL_COMPILER_LCC
-#define MEXUTILS_RAISE_HELPER_B \
-{ \
-va_list args ; \
-va_start(args, errorMessage) ; \
-sprintf(formattedErrorId, \
-"vl:%s", errorString) ; \
-vsprintf(formattedErrorMessage, \
-errorMessage, args) ; \
-va_end(args) ; \
-}
-#else
-#define MEXUTILS_RAISE_HELPER_B \
-{ \
-va_list args ; \
-va_start(args, errorMessage) ; \
-snprintf(formattedErrorId, \
-sizeof(formattedErrorId)/sizeof(char), \
-"vl:%s", errorString) ; \
-vsnprintf(formattedErrorMessage, \
-sizeof(formattedErrorMessage)/sizeof(char), \
-errorMessage, args) ; \
-va_end(args) ; \
-}
-#endif
-
-#define MEXUTILS_RAISE_HELPER MEXUTILS_RAISE_HELPER_A MEXUTILS_RAISE_HELPER_B
-
 /** @{
  ** @name Error handling
  **/
 
-/** @brief VLFeat MEX errors */
-typedef enum _VlmxErrorId {
-  vlmxErrAlloc = 1,
-  vlmxErrInvalidArgument,
-  vlmxErrNotEnoughInputArguments,
-  vlmxErrTooManyInputArguments,
-  vlmxErrNotEnoughOutputArguments,
-  vlmxErrTooManyOutputArguments,
-  vlmxErrInvalidOption,
-  vlmxErrInconsistentData,
-  vlmxErrExecution
-} VlmxErrorId ;
+/** @brief Error codes */
+typedef enum {
+  VLMXE_Success = 0,
+  VLMXE_Alloc,
+  VLMXE_IllegalArgument,
+  VLMXE_NotEnoughInputArguments,
+  VLMXE_TooManyInputArguments,
+  VLMXE_NotEnoughOutputArguments,
+  VLMXE_TooManyOutputArguments,
+  VLMXE_InvalidOption,
+  VLMXE_InconsistentData,
+  VLMXE_Execution,
+  VLMXE_TimeOut,
+  VLMXE_Undefined,
+  VLMXE_NumCodes // must be last
+} VLMXErrorCode ;
 
+static char const * vlmxErrorMessageTable [] = {
+  "Success",                 "Success.",
+  "Alloc",                   "Allocation failed.",
+  "InvalidArgument",         "Invalid argument.",
+  "NotEnoughInputArguments", "Not enough input arguments.",
+  "TooManyInputArguments",   "Too many input arguments.",
+  "NotEnoughOutputArguments","Not enough output arguments.",
+  "TooManyOutputArguments",  "Too many output arguments.",
+  "InvalidOption",           "Invalid option.",
+  "InconsistentData",        "Inconsistent data.",
+  "execution",               "Execution error.",
+  "Eimeout",                 "Timeout."
+  "UndefinedError",          "Undefined error.",
+} ;
 
-/** @brief Raise a MEX error with VLFeat format
- ** @param errorId error ID string.
+static inline void
+vlmxErrorHelper(bool isError, VLMXErrorCode errorCode,
+                char const * errorMessage,  va_list args)
+{
+  char const * errorString ;
+  char formattedErrorCode [512] ;
+  char formattedErrorMessage [1024] ;
+
+  if (errorCode < 0 || errorCode >= VLMXE_NumCodes) {
+    errorCode = VLMXE_Undefined ;
+  }
+
+  errorString = vlmxErrorMessageTable[2*errorCode] ;
+  errorMessage || (errorMessage = vlmxErrorMessageTable[2*errorCode+1]) ;
+
+  snprintf(formattedErrorCode,
+           sizeof(formattedErrorCode)/sizeof(char),
+           "VLMX:%s", errorString) ;
+
+  vsnprintf(formattedErrorMessage,
+            sizeof(formattedErrorMessage)/sizeof(char),
+            errorMessage, args) ;
+
+  if (isError) {
+    mexErrMsgIdAndTxt (formattedErrorCode, formattedErrorMessage) ;
+  } else {
+    mexWarnMsgIdAndTxt (formattedErrorCode, formattedErrorMessage) ;
+  }
+}
+
+/** @brief Throw a MEX error
+ ** @param errorCode error ID string.
  ** @param errorMessage error message C-style format string.
  ** @param ... format string arguments.
  **
@@ -142,14 +138,16 @@ static void __attribute__((noreturn))
 #else
 static void
 #endif
-vlmxError (VlmxErrorId errorId, char const * errorMessage, ...)
+vlmxError (VLMXErrorCode errorCode, char const * errorMessage, ...)
 {
-  MEXUTILS_RAISE_HELPER ;
-  mexErrMsgIdAndTxt (formattedErrorId, formattedErrorMessage) ;
+  va_list args ;
+  va_start(args, errorMessage) ;
+  vlmxErrorHelper(true, errorCode, errorMessage, args) ;
+  va_end(args) ;
 }
 
-/** @brief Raise a MEX warning with VLFeat format
- ** @param errorId error ID string.
+/** @brief Throw a MEX warning
+ ** @param errorCode error ID string.
  ** @param errorMessage error message C-style format string.
  ** @param ... format string arguments.
  **
@@ -157,10 +155,12 @@ vlmxError (VlmxErrorId errorId, char const * errorMessage, ...)
  **/
 
 static void
-vlmxWarning (VlmxErrorId errorId, char const * errorMessage, ...)
+vlmxWarning (VLMXErrorCode errorCode, char const * errorMessage, ...)
 {
-  MEXUTILS_RAISE_HELPER ;
-  mexWarnMsgIdAndTxt (formattedErrorId, formattedErrorMessage) ;
+  va_list args ;
+  va_start(args, errorMessage) ;
+  vlmxErrorHelper(false, errorCode, errorMessage, args) ;
+  va_end(args) ;
 }
 
 /** @} */
@@ -168,28 +168,26 @@ vlmxWarning (VlmxErrorId errorId, char const * errorMessage, ...)
 /** @name Check for array attributes
  ** @{ */
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is of a prescribed class
+/** @brief Check if a MATLAB array is of a prescribed class
  ** @param array MATLAB array.
  ** @param classId prescribed class of the array.
- ** @return ::VL_TRUE if the class is of the array is of the prescribed class.
+ ** @return ::true if the class is of the array is of the prescribed class.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
+VL_INLINE bool
 vlmxIsOfClass (mxArray const * array, mxClassID classId)
 {
   return mxGetClassID (array) == classId ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is real
+/** @brief Check if a MATLAB array is real
  ** @param array MATLAB array.
- ** @return ::VL_TRUE if the array is real.
+ ** @return ::true if the array is real.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
+VL_INLINE bool
 vlmxIsReal (mxArray const * array)
 {
   return mxIsNumeric (array) && ! mxIsComplex (array) ;
@@ -200,43 +198,41 @@ vlmxIsReal (mxArray const * array)
 /** @name Check for scalar, vector and matrix arrays
  ** @{ */
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is scalar
+/** @brief Check if a MATLAB array is scalar
  ** @param array MATLAB array.
- ** @return ::VL_TRUE if the array is scalar.
+ ** @return ::true if the array is scalar.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
+VL_INLINE bool
 vlmxIsScalar (mxArray const * array)
 {
   return (! mxIsSparse (array)) && (mxGetNumberOfElements (array) == 1)  ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is a vector.
+/** @brief Check if a MATLAB array is a vector.
  ** @param array MATLAB array.
  ** @param numElements number of elements (negative for any).
- ** @return ::VL_TRUE if the array is a vecotr of the prescribed size.
+ ** @return ::true if the array is a vecotr of the prescribed size.
  ** @sa @ref mexutils-array-test
  **/
 
-static vl_bool
-vlmxIsVector (mxArray const * array, vl_index numElements)
+static bool
+vlmxIsVector (mxArray const * array, ssize_t numElements)
 {
-  vl_size numDimensions = (unsigned) mxGetNumberOfDimensions (array) ;
+  size_t numDimensions = (unsigned) mxGetNumberOfDimensions (array) ;
   mwSize const * dimensions = mxGetDimensions (array) ;
-  vl_uindex di ;
+  size_t di ;
 
   /* check that it is not sparse */
   if (mxIsSparse (array)) {
-    return VL_FALSE ;
+    return false ;
   }
 
   /* check that the number of elements is the prescribed one */
   if ((numElements >= 0) && ((unsigned) mxGetNumberOfElements (array) !=
                              (unsigned) numElements)) {
-    return VL_FALSE ;
+    return false ;
   }
 
   /* check that all but at most one dimension is singleton */
@@ -244,43 +240,42 @@ vlmxIsVector (mxArray const * array, vl_index numElements)
     if (dimensions[di] != 1) break ;
   }
   for (++ di ; di < numDimensions ; ++di) {
-    if (dimensions[di] != 1) return VL_FALSE ;
+    if (dimensions[di] != 1) return false ;
   }
-  return VL_TRUE ;
+  return true ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is a matrix.
+/** @brief Check if a MATLAB array is a matrix.
  ** @param array MATLAB array.
  ** @param M number of rows (negative for any).
  ** @param N number of columns (negative for any).
- ** @return ::VL_TRUE if the array is a matrix of the prescribed size.
+ ** @return ::true if the array is a matrix of the prescribed size.
  ** @sa @ref mexutils-array-test
  **/
 
-static vl_bool
-vlmxIsMatrix (mxArray const * array, vl_index M, vl_index N)
+static bool
+vlmxIsMatrix (mxArray const * array, ssize_t M, ssize_t N)
 {
-  vl_size numDimensions = (unsigned) mxGetNumberOfDimensions (array) ;
+  size_t numDimensions = (unsigned) mxGetNumberOfDimensions (array) ;
   mwSize const * dimensions = mxGetDimensions (array) ;
-  vl_uindex di ;
+  size_t di ;
 
   /* check that it is not sparse */
   if (mxIsSparse (array)) {
-    return VL_FALSE ;
+    return false ;
   }
 
   /* check that the number of elements is the prescribed one */
   if ((M >= 0) && ((unsigned) mxGetM (array) != (unsigned) M)) {
-    return VL_FALSE;
+    return false;
   }
   if ((N >= 0) && ((unsigned) mxGetN (array) != (unsigned) N)) {
-    return VL_FALSE;
+    return false;
   }
 
   /* ok if empty and either M = 0 or N = 0 */
   if ((mxGetNumberOfElements (array) == 0) && (mxGetM (array) == 0 || mxGetN (array) == 0)) {
-    return VL_TRUE ;
+    return true ;
   }
 
   /* ok if any dimension beyond the first two is singleton */
@@ -288,9 +283,7 @@ vlmxIsMatrix (mxArray const * array, vl_index M, vl_index N)
   return di == numDimensions ;
 }
 
-
-/** ------------------------------------------------------------------
- ** @brief Check if the MATLAB array has the specified dimensions.
+/** @brief Check if the MATLAB array has the specified dimensions.
  ** @param array array to check.
  ** @param numDimensions number of dimensions.
  ** @param dimensions dimensions.
@@ -302,25 +295,25 @@ vlmxIsMatrix (mxArray const * array, vl_index M, vl_index N)
  ** either negative or equal to the corresponding array dimension.
  **/
 
-static vl_bool
-vlmxIsArray (mxArray const * array, vl_index numDimensions, vl_index* dimensions)
+static bool
+vlmxIsArray (mxArray const * array, ssize_t numDimensions, ssize_t* dimensions)
 {
   if (numDimensions >= 0) {
-    vl_index d ;
+    ssize_t d ;
     mwSize const * actualDimensions = mxGetDimensions (array) ;
 
     if ((unsigned) mxGetNumberOfDimensions (array) != (unsigned) numDimensions) {
-      return VL_FALSE ;
+      return false ;
     }
 
     if(dimensions != NULL) {
       for(d = 0 ; d < numDimensions ; ++d) {
         if (dimensions[d] >= 0 && (unsigned) dimensions[d] != (unsigned) actualDimensions[d])
-          return VL_FALSE ;
+          return false ;
       }
     }
   }
-  return VL_TRUE ;
+  return true ;
 }
 
 /** @} */
@@ -328,14 +321,13 @@ vlmxIsArray (mxArray const * array, vl_index numDimensions, vl_index* dimensions
 /** @name Check for plain arrays
  ** @{ */
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is plain
+/** @brief Check if a MATLAB array is plain
  ** @param array MATLAB array.
- ** @return ::VL_TRUE if the array is plain.
+ ** @return ::true if the array is plain.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
+VL_INLINE bool
 vlmxIsPlain (mxArray const * array)
 {
   return
@@ -344,51 +336,46 @@ vlmxIsPlain (mxArray const * array)
 }
 
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is plain scalar
+/** @brief Check if a MATLAB array is plain scalar
  ** @param array MATLAB array.
- ** @return ::VL_TRUE if the array is plain scalar.
+ ** @return ::true if the array is plain scalar.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
+VL_INLINE bool
 vlmxIsPlainScalar (mxArray const * array)
 {
   return vlmxIsPlain (array) && vlmxIsScalar (array) ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is a plain vector.
+/** @brief Check if a MATLAB array is a plain vector.
  ** @param array MATLAB array.
  ** @param numElements number of elements (negative for any).
- ** @return ::VL_TRUE if the array is a plain vecotr of the prescribed size.
+ ** @return ::true if the array is a plain vecotr of the prescribed size.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
-vlmxIsPlainVector (mxArray const * array, vl_index numElements)
+VL_INLINE bool
+vlmxIsPlainVector (mxArray const * array, ssize_t numElements)
 {
   return vlmxIsPlain (array) && vlmxIsVector (array, numElements) ;
 }
 
-
-/** ------------------------------------------------------------------
- ** @brief Check if a MATLAB array is a plain matrix.
+/** @brief Check if a MATLAB array is a plain matrix.
  ** @param array MATLAB array.
  ** @param M number of rows (negative for any).
  ** @param N number of columns (negative for any).
- ** @return ::VL_TRUE if the array is a plain matrix of the prescribed size.
+ ** @return ::true if the array is a plain matrix of the prescribed size.
  ** @sa @ref mexutils-array-test
  **/
 
-VL_INLINE vl_bool
-vlmxIsPlainMatrix (mxArray const * array, vl_index M, vl_index N)
+VL_INLINE bool
+vlmxIsPlainMatrix (mxArray const * array, ssize_t M, ssize_t N)
 {
   return vlmxIsPlain (array) && vlmxIsMatrix (array, M, N) ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Check if the array is a string
+/** @brief Check if the array is a string
  ** @param array array to test.
  ** @param length string length.
  ** @return true if the array is a string of the specified length
@@ -400,7 +387,7 @@ vlmxIsPlainMatrix (mxArray const * array, vl_index M, vl_index N)
  **/
 
 static int
-vlmxIsString (const mxArray* array, vl_index length)
+vlmxIsString (const mxArray* array, ssize_t length)
 {
   mwSize M = (mwSize) mxGetM (array) ;
   mwSize N = (mwSize) mxGetN (array) ;
@@ -415,8 +402,7 @@ vlmxIsString (const mxArray* array, vl_index length)
 
 /** @} */
 
-/** ------------------------------------------------------------------
- ** @brief Create a MATLAB array which is a plain scalar
+/** @brief Create a MATLAB array which is a plain scalar
  ** @param x scalar value.
  ** @return the new array.
  **/
@@ -429,8 +415,7 @@ vlmxCreatePlainScalar (double x)
   return array ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Case insensitive string comparison
+/** @brief Case insensitive string comparison
  ** @param s1 first string.
  ** @param s2 second string.
  ** @return comparison result.
@@ -456,8 +441,7 @@ vlmxCompareStringsI(const char *s1, const char *s2)
   return tolower((unsigned char)*s1) - tolower((unsigned char)*s2) ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Case insensitive string comparison with array
+/** @brief Case insensitive string comparison with array
  ** @param array first string (as a MATLAB array).
  ** @param string second string.
  ** @return comparison result.
@@ -472,7 +456,7 @@ vlmxCompareToStringI(mxArray const * array, char const  * string)
 {
   mxChar const * s1 = (mxChar const *) mxGetData(array) ;
   char unsigned const * s2 = (char unsigned const*) string ;
-  vl_size n = mxGetNumberOfElements(array) ;
+  size_t n = mxGetNumberOfElements(array) ;
 
   /*
    Since tolower has an int argument, characters must be unsigned
@@ -487,8 +471,7 @@ vlmxCompareToStringI(mxArray const * array, char const  * string)
   return tolower(n ? (unsigned)*s1 : 0) - tolower(*s2) ;
 }
 
-/** ------------------------------------------------------------------
- ** @brief Case insensitive string equality test with array
+/** @brief Case insensitive string equality test with array
  ** @param array first string (as a MATLAB array).
  ** @param string second string.
  ** @return true if the strings are equal.
@@ -506,19 +489,15 @@ vlmxIsEqualToStringI(mxArray const * array, char const  * string)
 
 /** @brief MEX option */
 
-struct _vlmxOption
+typedef struct
 {
   const char *name ; /**< option name */
-  int has_arg ;      /**< has argument? */
-  int val ;          /**< value to return */
-} ;
+  int hasArgument ;  /**< has argument? */
+  int value ;        /**< value to return */
+} VLMXOption ;
 
-/** @brief MEX option type */
 
-typedef struct _vlmxOption vlmxOption  ;
-
-/** ------------------------------------------------------------------
- ** @brief Parse the next option
+/** @brief Parse the next option
  ** @param args     MEX argument array.
  ** @param nargs    MEX argument array length.
  ** @param options  List of option definitions.
@@ -541,13 +520,12 @@ typedef struct _vlmxOption vlmxOption  ;
  **
  ** If the option name cannot be matched to the available options,
  ** either because the option name is not a string array or because
- ** the name is unknown, the function exits the MEX file with an
- ** error.
+ ** the name is unknown, the function throws a MEX error.
  **/
 
 static int
 vlmxNextOption (mxArray const *args[], int nargs,
-                vlmxOption  const *options,
+                VLMXOption  const *options,
                 int *next,
                 mxArray const **optarg)
 {
@@ -560,14 +538,14 @@ vlmxNextOption (mxArray const *args[], int nargs,
 
   /* check the array is a string */
   if (! vlmxIsString (args [*next], -1)) {
-    vlmxError (vlmxErrInvalidOption,
+    vlmxError (VLMXE_InvalidOption,
                "The option name is not a string (argument number %d)",
                *next + 1) ;
   }
 
   /* retrieve option name */
   if (mxGetString (args [*next], name, sizeof(name))) {
-    vlmxError (vlmxErrInvalidOption,
+    vlmxError (VLMXE_InvalidOption,
                "The option name is too long (argument number %d)",
                *next + 1) ;
   }
@@ -578,25 +556,25 @@ vlmxNextOption (mxArray const *args[], int nargs,
   /* now lookup the string in the option table */
   for (i = 0 ; options[i].name != 0 ; ++i) {
     if (vlmxCompareStringsI(name, options[i].name) == 0) {
-      opt = options[i].val ;
+      opt = options[i].value ;
       break ;
     }
   }
 
   /* unknown argument */
   if (opt < 0) {
-    vlmxError (vlmxErrInvalidOption, "Unknown option '%s'.", name) ;
+    vlmxError (VLMXE_InvalidOption, "Unknown option '%s'.", name) ;
   }
 
   /* no argument */
-  if (! options [i].has_arg) {
+  if (! options [i].hasArgument) {
     if (optarg) *optarg = 0 ;
     return opt ;
   }
 
   /* argument */
   if (*next >= nargs) {
-    vlmxError(vlmxErrInvalidOption,
+    vlmxError(VLMXE_InvalidOption,
               "Option '%s' requires an argument.", options[i].name) ;
   }
 
@@ -605,23 +583,22 @@ vlmxNextOption (mxArray const *args[], int nargs,
   return opt ;
 }
 
-
 /* -------------------------------------------------------------------
- *                                                       VlEnumeration
+ *                                                     VLMXEnumeration
  * ---------------------------------------------------------------- */
 
 /** @name String enumerations
  ** @{ */
 
-/** @brief Member of an enumeration */
-typedef struct _VlEnumerator
+/** @brief A member of an enumeration */
+typedef struct _VLMXEnumerationItem
 {
   char const *name ; /**< enumeration member name. */
-  vl_index value ;   /**< enumeration member value. */
-} VlEnumerator ;
+  int value ;        /**< enumeration member value. */
+} VLMXEnumerationItem ;
 
 /** @brief Get a member of an enumeration by name
- ** @param enumeration array of ::VlEnumerator objects.
+ ** @param enumeration array of ::VLMXEnumerator objects.
  ** @param name the name of the desired member.
  ** @return enumerator matching @a name.
  **
@@ -631,41 +608,45 @@ typedef struct _VlEnumerator
  ** @sa vl-stringop-enumeration
  **/
 
-static VlEnumerator*
-vl_enumeration_get (VlEnumerator const *enumeration, char const *name)
+static VLMXEnumerationItem *
+vlmxEnumerationGet (VLMXEnumerationItem const *enumeration, char const *name)
 {
   assert(enumeration) ;
   while (enumeration->name) {
-    if (strcmp(name, enumeration->name) == 0) return (VlEnumerator*)enumeration ;
+    if (strcmp(name, enumeration->name) == 0) {
+      return (VLMXEnumerationItem*)enumeration ;
+    }
     enumeration ++ ;
   }
   return NULL ;
 }
 
 /** @brief Get a member of an enumeration by name (case insensitive)
- ** @param enumeration array of ::VlEnumerator objects.
+ ** @param enumeration array of ::VLMXEnumerator objects.
  ** @param name the name of the desired member.
  ** @return enumerator matching @a name.
  **
  ** If @a name is not found in the enumeration, then the value
  ** @c NULL is returned. @a string is matched case insensitive.
  **
- **  @sa vl-stringop-enumeration
+ ** @sa vl-stringop-enumeration
  **/
 
-static VlEnumerator*
-vl_enumeration_get_casei (VlEnumerator const *enumeration, char const *name)
+static VLMXEnumerationItem *
+vlmxEnumerationGetCaseI (VLMXEnumerationItem const *enumeration, char const *name)
 {
   assert(enumeration) ;
   while (enumeration->name) {
-    if (vlmxCompareStringsI(name, enumeration->name) == 0) return (VlEnumerator*)enumeration ;
+    if (vlmxCompareStringsI(name, enumeration->name) == 0) {
+      return (VLMXEnumerationItem*)enumeration ;
+    }
     enumeration ++ ;
   }
   return NULL ;
 }
 
 /** @brief Get a member of an enumeration by value
- ** @param enumeration array of ::VlEnumerator objects.
+ ** @param enumeration array of ::VLMXEnumerator objects.
  ** @param value value of the desired member.
  ** @return enumerator matching @a value.
  **
@@ -675,45 +656,50 @@ vl_enumeration_get_casei (VlEnumerator const *enumeration, char const *name)
  ** @sa vl-stringop-enumeration
  **/
 
-static VlEnumerator *
-vl_enumeration_get_by_value (VlEnumerator const *enumeration, vl_index value)
+static VLMXEnumerationItem *
+vlmxEnumerationGetByValue (VLMXEnumerationItem const *enumeration, int value)
 {
   assert(enumeration) ;
   while (enumeration->name) {
-    if (enumeration->value == value) return (VlEnumerator*)enumeration ;
+    if (enumeration->value == value) {
+      return (VLMXEnumerationItem*)enumeration ;
+    }
     enumeration ++ ;
   }
   return NULL ;
 }
 
-/** @brief Get an emumeration member by name
+/** @brief Get an emumeration item by name
  ** @param enumeration the enumeration to decode.
  ** @param name_array member name as a MATLAB string array.
  ** @param caseInsensitive if @c true match the string case-insensitive.
  ** @return the corresponding enumeration member, or @c NULL if any.
+ **
+ ** The function throws a MEX error if @a name_array is not a string or
+ ** if the name is not found in the enumeration.
  **/
 
-static VlEnumerator *
+static VLMXEnumerationItem *
 vlmxDecodeEnumeration (mxArray const *name_array,
-                       VlEnumerator const *enumeration,
-                       vl_bool caseInsensitive)
+                       VLMXEnumerationItem const *enumeration,
+                       bool caseInsensitive)
 {
   char name [1024] ;
 
   /* check the array is a string */
   if (! vlmxIsString (name_array, -1)) {
-    vlmxError (vlmxErrInvalidArgument, "The array is not a string.") ;
+    vlmxError (VLMXE_IllegalArgument, "The array is not a string.") ;
   }
 
   /* retrieve option name */
   if (mxGetString (name_array, name, sizeof(name))) {
-    vlmxError (vlmxErrInvalidArgument, "The string array is too long.") ;
+    vlmxError (VLMXE_IllegalArgument, "The string array is too long.") ;
   }
 
   if (caseInsensitive) {
-    return vl_enumeration_get_casei(enumeration, name) ;
+    return vlmxEnumerationGetCaseI(enumeration, name) ;
   } else {
-    return vl_enumeration_get(enumeration, name) ;
+    return vlmxEnumerationGet(enumeration, name) ;
   }
 }
 

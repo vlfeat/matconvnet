@@ -12,6 +12,8 @@ classdef nnconv < nntest
     padx2 = {0 1 2}
     pady1 = {0 1 2}
     pady2 = {0 1 2}
+    dilatex = {1 2 3}
+    dilatey = {1 2 3}
   end
 
   methods (Test)
@@ -50,6 +52,37 @@ classdef nnconv < nntest
       test.der(@(x) vl_nnconv(x,w,b), x, dzdy, dzdx, test.range * 1e-2) ;
       test.der(@(w) vl_nnconv(x,w,b), w, dzdy, dzdw, test.range * 1e-2) ;
       test.der(@(b) vl_nnconv(x,w,b), b, dzdy, dzdb, test.range * 1e-2) ;
+    end
+
+    function dilate(test,bias,stridex,stridey,dilatex,dilatey)
+      n = 3 ;
+      fn = 5 ;
+      fw = 2 ;
+      fh = 3 ;
+      depth = 10 ;
+      opts = {'stride', [stridey,stridex], 'dilate', [dilatey dilatex]} ;
+      x = test.randn(9,16,depth,n) ;
+      if fh == 0 | fw == 0
+        w = test.toDataType([]) ;
+      else
+        w = test.randn(fh,fw,depth,fn) ;
+      end
+      if bias
+        if numel(w)==0
+          b = test.randn(1,size(x,3)) ;
+        else
+          b = test.randn(1,fn) ;
+        end
+      else
+        b = test.toDataType([]) ;
+      end
+      y = vl_nnconv(x,w,b,opts{:}) ;
+
+      dzdy = test.randn(size(y)) ;
+      [dzdx,dzdw,dzdb] = vl_nnconv(x,w,b,dzdy,opts{:}) ;
+      test.der(@(x) vl_nnconv(x,w,b,opts{:}), x, dzdy, dzdx, test.range * 1e-2) ;
+      test.der(@(w) vl_nnconv(x,w,b,opts{:}), w, dzdy, dzdw, test.range * 1e-2) ;
+      test.der(@(b) vl_nnconv(x,w,b,opts{:}), b, dzdy, dzdb, test.range * 1e-2) ;
     end
 
     function stride_correctness(test,emptyw,stridex,stridey)

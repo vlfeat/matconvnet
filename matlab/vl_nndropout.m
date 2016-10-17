@@ -64,7 +64,8 @@ if isempty(opts.mask)
   end
 end
 
-% do job
+% Apply dropout mask. Note that mask is either `single` or `double`
+% and a CPU or GPU array like the input argument `x`.
 if ~backMode
   y = opts.mask .* x ;
 else

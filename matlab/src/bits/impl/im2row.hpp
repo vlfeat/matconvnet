@@ -18,26 +18,28 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl { namespace impl {
 
-  template<vl::Device dev, typename type>
+  template<vl::DeviceType dev, typename type>
   struct im2row {
 
-    static vl::Error
+    static vl::ErrorCode
     forward(vl::Context& context,
             type* stacked,
             type const* data,
             size_t height, size_t width, size_t depth,
             size_t windowHeight, size_t windowWidth,
             size_t strideY, size_t strideX,
-            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
+            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight,
+            int dilateY, int dialteX) ;
 
-    static vl::Error
+    static vl::ErrorCode
     backward(vl::Context& context,
              type* data,
              type const* stacked,
              size_t height, size_t width, size_t depth,
              size_t windowHeight, size_t windowWidth,
              size_t strideY, size_t strideX,
-             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight) ;
+             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight,
+             int dilateY, int dilateX) ;
   } ;
 
 } }

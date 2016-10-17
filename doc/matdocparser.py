@@ -174,7 +174,7 @@ class Lexer(object):
 # P(indent) -> PL(indent)+
 #
 # A V(indent) is a verbatim (code) block. It contains text lines and blank
-# lines that have indentation strictly larger than indent:
+# lines that have indentation strictly larger than `indent`:
 #
 # V(indent) -> L(i) (B | L(j), j > indent)+, for all i > indent
 #
