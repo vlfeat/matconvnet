@@ -1,4 +1,4 @@
-function other = deepCopyRecursive(obj, shared, rename)
+function [other, visited, numVisited] = deepCopyRecursive(obj, shared, rename, visited, numVisited)
 % FINDRECURSIVE Recursion on layers, used by DEEPCOPY.
 
 % Copyright (C) 2016 Joao F. Henriques.
@@ -18,19 +18,26 @@ function other = deepCopyRecursive(obj, shared, rename)
   % copied layer that happens to share the same input
   obj.copied = other ;
 
-  % recurse on inputs that were not copied yet and are not shared
-  for i = 1:numel(other.inputs)
-    if isa(other.inputs{i}, 'Layer') && ...
-     ~any(cellfun(@(o) isequal(other.inputs{i}, o), shared))
 
+  % recurse on inputs
+  idx = other.getNextRecursion(visited, numVisited) ;
+  for i = idx
+    if ~any(cellfun(@(o) isequal(other.inputs{i}, o), shared))  % don't copy if shared
+      
+      other.inputs{i}.enableCycleChecks = false ;  % prevent cycle check when modifying a layer's input
+      
       if ~isempty(other.inputs{i}.copied)  % reuse same deep copy
         other.inputs{i} = other.inputs{i}.copied ;
       else  % create a new one
-        other.inputs{i} = other.inputs{i}.deepCopyRecursive(shared, rename) ;
+        [other.inputs{i}, visited, numVisited] = ...
+          other.inputs{i}.deepCopyRecursive(shared, rename, visited, numVisited) ;
       end
+      
+      other.inputs{i}.enableCycleChecks = true ;
     end
   end
-
+  
+  
   % repeat for test-mode inputs
   if ~isequal(other.testInputs, 'same')
     for i = 1:numel(other.testInputs)
@@ -40,9 +47,13 @@ function other = deepCopyRecursive(obj, shared, rename)
         if ~isempty(other.testInputs{i}.copied)  % reuse same deep copy
           other.testInputs{i} = other.testInputs{i}.copied ;
         else  % create a new one
-          other.testInputs{i} = other.testInputs{i}.deepCopyRecursive(shared, rename) ;
+          [other.testInputs{i}, visited, numVisited] = ...
+            other.testInputs{i}.deepCopyRecursive(shared, rename, visited, numVisited) ;
         end
       end
     end
   end
+  
+  
+  [visited, numVisited] = other.markRecursed(visited, numVisited) ;
 end
