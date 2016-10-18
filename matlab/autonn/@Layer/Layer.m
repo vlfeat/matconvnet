@@ -35,7 +35,7 @@ classdef Layer < matlab.mixin.Copyable
   properties (SetAccess = public, GetAccess = public)
     func = []  % main function being called
     testFunc = []  % function called in test mode (empty to use the same as in normal mode; 'none' to disable, e.g. dropout)
-    name = []  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
+    name = ''  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
     accumDer = true  % to manually specify that the input derivatives are *not* accumulated. used to implement ReLU short-circuiting.
     meta = []  % optional meta properties

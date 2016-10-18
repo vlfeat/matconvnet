@@ -13,7 +13,7 @@ function displayVars(net, varargin)
 %      If set to true, shows columns with the minimum and maximum for each
 %      variable.
 %
-%   `showLinks`:: `false`
+%   `showLinks`:: `true`
 %      If set to true, shows hyperlinks that print the syntax to access
 %      the value of each variable (e.g. 'net.vars{INDEX}').
 
@@ -32,8 +32,7 @@ else
   vars = net.vars ;
 end
 opts.showRange = true ;
-% opts.showLinks = usejava('desktop') ;
-opts.showLinks = false ;  % disabled for now, since it causes misaligned headers
+opts.showLinks = usejava('desktop') ;
 opts = vl_argparse(opts, varargin) ;
 
 assert(~isempty(vars), 'NET.VARS is empty.') ;
@@ -97,12 +96,20 @@ end
 
 
 if opts.showLinks
-  varname = inputname(1) ;
-  link = @(i) sprintf('<a href="matlab: display(''%s.vars{%d}'')">%s</a>', ...
+  if nargin >= 2 && ~isempty(inputname(2))  % a variables list was given
+    varname = inputname(2) ;
+  elseif ~isempty(inputname(1))  % only a Net object was given
+    varname = [inputname(1) '.vars'] ;
+  else  % unnamed Net object
+    varname = 'net.vars' ;
+  end
+  % note that the links must have a fixed number of characters, otherwise
+  % the columns will be misaligned
+  link = @(i) sprintf('<a href="matlab:display(''%s{%3d}'')">%s</a>', ...
     varname, i, values{i}) ;
-  values = arrayfun(@(i) link(i), 1:numel(values), 'UniformOutput', false) ;
+  values = arrayfun(@(i) {link(i)}, 1:numel(values)) ;
 end
-idx = arrayfun(@(i) num2str(i), 1:2:numel(info)-1, 'UniformOutput', false) ;
+idx = arrayfun(@(i) {num2str(i)}, 1:2:numel(info)-1) ;
 
 % now print out the info as a table
 str = repmat(' ', numel(info) / 2 + 1, 1) ;
@@ -112,11 +119,19 @@ str = [str, char('Type/function', funcs{1:2:end-1})] ;
 str(:,end+1:end+2) = ' ' ;
 str = [str, char('Name', info(1:2:end-1).name)] ;
 
-names = {'Value', 'Derivative'} ;  % repeat same columns for value and der
+% repeat same set of columns for value and der (size/class/flags/min/max)
+headers = {'Value', 'Derivative'} ;
+
+% create dummy links in the headers, to align them nicely
+if opts.showLinks
+  spaces = numel(['display(''' varname '{   }'')']);
+  headers = cellfun(@(name) {[name '<a href="matlab:' blanks(spaces) '"></a>']}, headers);
+end
+
 for i = 1:2
   idx = i : 2 : numel(values) - 2 + i ;  % odd or even elements, respectively
   str(:,end+1:end+2) = ' ' ;
-  str = [str, char(names{i}, values{idx})] ;
+  str = [str, char(headers{i}, values{idx})] ;
   str(:,end+1:end+2) = ' ' ;
   str = [str, char('Flags', flags{idx})] ;
   if opts.showRange
