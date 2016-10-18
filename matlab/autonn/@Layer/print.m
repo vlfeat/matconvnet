@@ -8,11 +8,15 @@ function print(net)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+  % gather all layers
   layers = net.find() ;
   
-  assert(all(cellfun(@(o) ~isempty(o.name), layers)), ...
+  % ensure non-empty, unique names
+  names = cellfun(@(o) {o.name}, layers) ;
+  assert(~any(cellfun('isempty', names)), ...
     'PRINT requires all layers to have names (e.g., with LAYER.SEQUENTIALNAMES).') ;
-
+  assert(numel(unique(names)) == numel(names), ...
+    'PRINT requires all layers to have unique names.') ;
 
   str = {} ;
   str{end+1} = sprintf('digraph DagNN {\n\tfontsize=12\n') ;
@@ -79,10 +83,17 @@ function displayDot(str)
     case 'MACI64'
       system(sprintf('open "%s"', out)) ;
     case 'GLNXA64'
+      % start with most generic command, to older/more specific.
+      % notice the library path is cleared beforehand, to prevent clashes
+      % with some applications.
+      commands = {'xdg-open', 'gvfs-open', 'gnome-open', 'kde-open', 'display'};
+      for i = 1:numel(commands)
+        result = system(sprintf('LD_LIBRARY_PATH= xdg-open "%s"', out)) ;
+        if result == 0, break; end
+      end
 %       system(sprintf('display "%s"', out)) ;
-      system(sprintf('xdg-open "%s"', out)) ;
     case 'PCWIN64'
-      system(sprintf('start "%s"', out)) ;
+      winopen(out) ;
     otherwise
       fprintf('PDF figure saved at "%s"\n', out) ;
   end
