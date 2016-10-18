@@ -29,8 +29,12 @@ function optimizeVars(net, opts, objs)
   % used by the next layers, but this is not implemented currently.
   
   if opts.shortCircuit
-    % cell array of cell arrays with each layer's inputs
-    objInputs = cellfun(@(o) o.inputs, objs, 'UniformOutput', false) ;
+    % cell array of cell arrays with each layer's input layers
+    objInputs = cell(numel(objs), 1) ;
+    isLayer = @(o) isa(o, 'Layer') ;
+    for k = 1:numel(objs)
+      objInputs{k} = objs{k}.inputs(cellfun(isLayer, objs{k}.inputs)) ;
+    end
     
     for k = 1:numel(objs)
       % a ReLU with Layer (non-constant) input, that is not a Param
@@ -39,7 +43,8 @@ function optimizeVars(net, opts, objs)
 
         % check if any other layer is using the same input
         otherInputs = [objInputs{[1:k-1, k+1:end]}] ;  % flatten cell arrays into one
-        if ~any(cellfun(@(o) isequal(o, objs{k}.inputs{1}), otherInputs))
+        x = objs{k}.inputs{1} ;
+        if ~any(cellfun(@(o) o == x, otherInputs))
           
           % it's safe, short-circuit it
           objs{k}.outputVar = objs{k}.inputs{1}.outputVar ;
