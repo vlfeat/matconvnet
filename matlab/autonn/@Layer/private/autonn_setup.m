@@ -75,8 +75,7 @@ function vl_nnmask_setup(layer)
 end
 
 function size_setup(layer)
-  % no derivatives defined for SIZE
-  layer.numInputDer = 0 ;
+  layer.numInputDer = 0 ;  % no derivatives defined
 end
 
 function repmat_setup(layer)
@@ -90,17 +89,26 @@ function reshape_setup(layer)
 end
 
 function rand_setup(layer)
-  % no derivatives defined
-  layer.numInputDer = 0 ;
+  layer.numInputDer = 0 ;  % no derivatives defined
 end
 
 function randn_setup(layer)
-  % no derivatives defined
-  layer.numInputDer = 0 ;
+  layer.numInputDer = 0 ;  % no derivatives defined
 end
 
 function randi_setup(layer)
-  % no derivatives defined
-  layer.numInputDer = 0 ;
+  layer.numInputDer = 0 ;  % no derivatives defined
+end
+
+function ones_setup(layer)
+  layer.numInputDer = 0 ;  % no derivatives defined
+end
+
+function zeros_setup(layer)
+  layer.numInputDer = 0 ;  % no derivatives defined
+end
+
+function eye_setup(layer)
+  layer.numInputDer = 0 ;  % no derivatives defined
 end
 

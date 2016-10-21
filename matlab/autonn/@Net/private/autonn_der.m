@@ -35,6 +35,10 @@ function dx = ipermute_der(~, dim, dy)
   dx = permute(dy, dim) ;
 end
 
+function dx = squeeze_der(x, dy)
+  dx = reshape(dy, size(x)) ;
+end
+
 function dx = abs_der(x, dy)
   assert(isreal(dy), 'Complex values not supported by ABS derivative.') ;
   dx = dy .* sign(x) ;
@@ -47,6 +51,11 @@ end
 
 function dx = exp_der(x, dy)
   dx = dy .* exp(x) ;
+end
+
+function dx = log_der(x, dy)
+  assert(all(abs(x(:)) > eps), 'Derivative undefined for LOG(0) (approaches infinity).') ;
+  dx = dy ./ x ;
 end
 
 function dx = sum_der(x, dim, dy)

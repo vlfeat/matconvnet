@@ -226,6 +226,9 @@ classdef Layer < matlab.mixin.Copyable
     function y = ipermute(obj, varargin)
       y = Layer(@ipermute, obj, varargin{:}) ;
     end
+    function y = squeeze(obj, varargin)
+      y = Layer(@squeeze, obj, varargin{:}) ;
+    end
     function y = size(obj, varargin)
       y = Layer(@size, obj, varargin{:}) ;
     end
@@ -249,6 +252,9 @@ classdef Layer < matlab.mixin.Copyable
     end
     function y = exp(obj, varargin)
       y = Layer(@exp, obj, varargin{:}) ;
+    end
+    function y = log(obj, varargin)
+      y = Layer(@log, obj, varargin{:}) ;
     end
     function y = cat(obj, varargin)
       y = Layer(@cat, obj, varargin{:}) ;
@@ -485,6 +491,15 @@ classdef Layer < matlab.mixin.Copyable
     end
     function y = randn(obj, varargin)
       y = Layer(@randn, obj, varargin{:}) ;
+    end
+    function y = zeros(obj, varargin)
+      y = Layer(@zeros, obj, varargin{:}) ;
+    end
+    function y = ones(obj, varargin)
+      y = Layer(@ones, obj, varargin{:}) ;
+    end
+    function y = eye(obj, varargin)
+      y = Layer(@eye, obj, varargin{:}) ;
     end
   end
 end
