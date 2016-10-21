@@ -56,7 +56,7 @@ mins = zeros(numel(vars), 1) ;
 maxs = zeros(numel(vars), 1) ;
 for i = 1:numel(vars)
   % size and underlying type (e.g. single 50x3x2)
-  v = vars{i} ;
+  v = gather(vars{i}) ;
   if isa(v, 'gpuArray')
     str = classUnderlying(v) ;
   else
