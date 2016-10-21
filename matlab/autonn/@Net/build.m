@@ -190,7 +190,7 @@ function build(net, varargin)
         % its var index: it's the output derivative for the current layer
         layer.inputVars(end+1) = obj.outputVar + 1 ;
       end
-
+      layer = orderfields(layer);
       net.backward(numel(idx) - k + 1) = layer ;
     end
 
