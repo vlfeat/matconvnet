@@ -18,8 +18,8 @@ function info = getVarsInfo(net)
 %     Whether the var is a derivative (all vars come in pairs, the main
 %     var and its derivative)
 %
-%   `fanout`::
-%     Indexes of layers (NET.FORWARD) that use this var in their inputs..
+%   `fanOutCount`::
+%     Number of layers (NET.FORWARD) that use this var in their inputs.
 
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.
@@ -66,11 +66,9 @@ function info = getVarsInfo(net)
   info(2:2:end) = info(1:2:end-1) ;
   [info(2:2:end).isDer] = deal(true) ;
 
-  % compute fanout (can probably optimize better)
-  for k = 1:numel(net.forward)
-    var = net.forward(k).inputVars ;
-    for i = 1:numel(var)
-      info(var(i)).fanout(end+1) = k ;
-    end
-  end
+  % compute fanout count
+  inputVars = [net.forward.inputVars] ;  % all indexes of input vars, possibly repeated
+  counts = accumarray(inputVars(:), ones(numel(inputVars), 1), [numVars, 1]) ;  % histogram them
+  [info.fanOutCount] = deal(num2cell(counts)) ;
+  
 end
