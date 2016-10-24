@@ -31,6 +31,7 @@ opts.parameterServer.prefix = 'mcn' ;
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts.plotStatistics = true;
+opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -134,6 +135,16 @@ for epoch=start+1:opts.numEpochs
     end
     drawnow ;
     print(1, modelFigPath, '-dpdf') ;
+  end
+  
+  if ~isempty(opts.postEpochFn)
+    if nargout(opts.postEpochFn) == 0
+      opts.postEpochFn(net, params, state) ;
+    else
+      lr = opts.postEpochFn(net, params, state) ;
+      if ~isempty(lr), opts.learningRate = lr; end
+      if opts.learningRate == 0, break; end
+    end
   end
 end
 
