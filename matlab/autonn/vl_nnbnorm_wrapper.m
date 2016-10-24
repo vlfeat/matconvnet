@@ -6,9 +6,6 @@ function [y, dzdg, dzdb, moments] = vl_nnbnorm_wrapper(x, g, b, moments, test, v
 %
 %   This also lets us supports nice features like setting the parameter
 %   sizes automatically (e.g. building a net with VL_NNBNORM(X) is valid).
-%
-%   Note that MOMENTS is pre-multiplied by the number of images in the
-%   batch (similar to dagnn.BatchNorm, and unlike VL_NNBNORM).
 
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.
