@@ -78,6 +78,10 @@ function size_setup(layer)
   layer.numInputDer = 0 ;  % no derivatives defined
 end
 
+function colon_setup(layer)
+  layer.numInputDer = 0 ;  % no derivatives defined
+end
+
 function repmat_setup(layer)
   % only first derivative defined for REPMAT
   layer.numInputDer = 1 ;

@@ -347,6 +347,10 @@ classdef Layer < matlab.mixin.Copyable
       y = Layer(@cat, 2, obj, varargin{:}) ;
     end
     
+    function y = colon(obj, varargin)
+      y = Layer(@colon, obj, varargin{:}) ;
+    end
+    
     % overloaded indexing
     function varargout = subsref(a, s)
       if strcmp(s(1).type, '()')
