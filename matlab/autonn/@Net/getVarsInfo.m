@@ -36,7 +36,7 @@ function info = getVarsInfo(net)
     numVars = numVars + 1 ;
   end
 
-  info = Net.initStruct(numVars, 'type', 'name', 'index', 'isDer', 'fanout') ;
+  info = Net.initStruct(numVars, 'type', 'name', 'index', 'isDer', 'fanOutCount') ;
   [info.isDer] = deal(false) ;
 
   % vars that correspond to inputs
@@ -69,6 +69,7 @@ function info = getVarsInfo(net)
   % compute fanout count
   inputVars = [net.forward.inputVars] ;  % all indexes of input vars, possibly repeated
   counts = accumarray(inputVars(:), ones(numel(inputVars), 1), [numVars, 1]) ;  % histogram them
-  [info.fanOutCount] = deal(num2cell(counts)) ;
+  counts = num2cell(counts) ;
+  [info.fanOutCount] = counts{:} ;
   
 end
