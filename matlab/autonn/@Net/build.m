@@ -1,7 +1,7 @@
 function build(net, varargin)
 %BUILD
-%   Constructor for a Net. Constructors can't be defined in external file
-%   directly, so we use this method.
+%   Constructor for a Net, taking as input one or more Layers (the
+%   network's outputs).
 
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.
@@ -10,34 +10,12 @@ function build(net, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 
-  % load from struct
-  if isscalar(varargin) && isstruct(varargin{1}) && ~isfield(varargin{1}, 'layers')  % distinguish from SimpleNN
-    net.loadobj(varargin{1}) ;
-    return
-  end
-
   % parse options after the other inputs
   opts.sequentialNames = true ;
   opts.shortCircuit = true ;
   opts.forwardOnly = false ;  % used mainly by evalOutputSize for faster build
   [opts, varargin] = vl_argparsepos(opts, varargin) ;
   
-  if isscalar(varargin) && ~isa(varargin{1}, 'Layer')
-    % convert SimpleNN or DagNN to Layer
-    s = varargin{1} ;
-    if isstruct(s) && isfield(s, 'layers')
-      s = dagnn.DagNN.fromSimpleNN(s, 'CanonicalNames', true) ;
-    end
-    if isa(s, 'dagnn.DagNN')
-      s = dagnn2autonn(s) ;
-    end
-    if iscell(s)
-      varargin = s ;  % varargin should contain a list of Layer objects
-    else
-      varargin = {s} ;
-    end
-  end
-
   if ~isscalar(varargin)
     % several output layers; create a dummy layer to hold them together
     rootLayer = Layer(@root, varargin{:}) ;

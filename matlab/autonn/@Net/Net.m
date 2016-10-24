@@ -63,7 +63,29 @@ classdef Net < handle
   
   methods
     function net = Net(varargin)
-      % constructors can't be defined in external files, so use a method
+      % load from struct, distinguishing from SimpleNN
+      if isscalar(varargin) && isstruct(varargin{1}) && ~isfield(varargin{1}, 'layers')
+        net = Net.loadobj(varargin{1}) ;
+        return
+      end
+
+      if isscalar(varargin) && ~isa(varargin{1}, 'Layer')
+        % convert SimpleNN or DagNN to Layer
+        s = varargin{1} ;
+        if isstruct(s) && isfield(s, 'layers')
+          s = dagnn.DagNN.fromSimpleNN(s, 'CanonicalNames', true) ;
+        end
+        if isa(s, 'dagnn.DagNN')
+          s = dagnn2autonn(s) ;
+        end
+        if iscell(s)
+          varargin = s ;  % varargin should contain a list of Layer objects
+        else
+          varargin = {s} ;
+        end
+      end
+
+      % build Net from a list of Layers
       net.build(varargin{:}) ;
     end
     
@@ -192,8 +214,11 @@ classdef Net < handle
       s.vars = cell(size(net.vars)) ;
       s.vars([net.params.var]) = net.vars([net.params.var]) ;
     end
-    
-    function loadobj(net, s)
+  end
+  
+  methods (Static, Access = private)
+    function net = loadobj(s)
+      net = Net() ;
       net.forward = s.forward ;
       net.backward = s.backward ;
       net.test = s.test ;
@@ -203,9 +228,7 @@ classdef Net < handle
       net.meta = s.meta ;
       net.diagnostics = s.diagnostics ;
     end
-  end
-  
-  methods (Static, Access = private)
+    
     function layer = parseArgs(layer, args)
       % helper function to parse a layer's arguments, storing the constant
       % arguments (args), non-constant var indexes (inputVars), and their
