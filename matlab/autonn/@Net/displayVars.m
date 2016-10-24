@@ -54,6 +54,7 @@ values = cell(numel(vars), 1) ;
 flags = cell(numel(vars), 1) ;
 mins = zeros(numel(vars), 1) ;
 maxs = zeros(numel(vars), 1) ;
+validRange = true(numel(vars), 1) ;
 for i = 1:numel(vars)
   % size and underlying type (e.g. single 50x3x2)
   v = gather(vars{i}) ;
@@ -82,16 +83,22 @@ for i = 1:numel(vars)
     flags{i} = str(1:end-1) ;  % delete extra space at the end
   end
   
-  % values range
-  if opts.showRange && ~isempty(v)
-    mins(i) = gather(min(v(:))) ;
-    maxs(i) = gather(max(v(:))) ;
+  % min and max
+  if opts.showRange
+    if isnumeric(v) && ~isempty(v)
+      mins(i) = gather(min(v(:))) ;
+      maxs(i) = gather(max(v(:))) ;
+    else
+      validRange(i) = false ;
+    end
   end
 end
 
-if opts.showRange
-  mins = num2str(mins, 2) ;
-  maxs = num2str(maxs, 2) ;
+if opts.showRange  % convert to string, filling invalid values with spaces
+  minStr(validRange,:) = num2str(mins(validRange), '%.2g') ;
+  maxStr(validRange,:) = num2str(maxs(validRange), '%.2g') ;
+  minStr(~validRange,:) = ' ' ;
+  maxStr(~validRange,:) = ' ' ;
 end
 
 
@@ -136,9 +143,9 @@ for i = 1:2
   str = [str, char('Flags', flags{idx})] ;
   if opts.showRange
     str(:,end+1:end+2) = ' ' ;
-    str = [str, char('Min', mins(idx,:))] ;
+    str = [str, char('Min', minStr(idx,:))] ;
     str(:,end+1:end+2) = ' ' ;
-    str = [str, char('Max', maxs(idx,:))] ;
+    str = [str, char('Max', maxStr(idx,:))] ;
   end
 end
 
