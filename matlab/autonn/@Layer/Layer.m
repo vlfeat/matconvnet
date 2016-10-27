@@ -256,6 +256,9 @@ classdef Layer < matlab.mixin.Copyable
     function y = log(obj, varargin)
       y = Layer(@log, obj, varargin{:}) ;
     end
+    function y = inv(obj, varargin)
+      y = Layer(@inv, obj, varargin{:}) ;
+    end
     function y = cat(obj, varargin)
       y = Layer(@cat, obj, varargin{:}) ;
     end

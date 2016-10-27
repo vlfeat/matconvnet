@@ -58,6 +58,11 @@ function dx = log_der(x, dy)
   dx = dy ./ x ;
 end
 
+function dx = inv_der(x, dy)
+  inv_x_t = inv(x)';
+  dx = -inv_x_t * dy * inv_x_t;
+end
+
 function dx = sum_der(x, dim, dy)
   if nargin < 3
     % one-argument syntax of sum, plus derivative
