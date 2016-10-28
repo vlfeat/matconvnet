@@ -11,7 +11,8 @@ compile GPU support in MatConvNet (see
 All the core computational functions (e.g. `vl_nnconv`) in the toolbox
 can work with either MATLAB arrays or MATLAB GPU arrays. Therefore,
 switching to use the GPU is as simple as converting the input CPU
-arrays in GPU arrays.
+arrays into GPU arrays. To move an entire network with all its parameters to 
+GPU please use `DagNN.move` or `vl_simplenn_move` functions.
 
 In order to make the very best of powerful GPUs, it is important to
 balance the load between CPU and GPU in order to avoid starving the

@@ -94,7 +94,7 @@
     <None Include="matlab\src\vl_nnnormalize.cu" />
     <None Include="matlab\src\vl_nnpool.cu" />
     <None Include="matlab\src\vl_taccummex.cu" />
-    <None Include="matlab\src\vl_tmovemex.cu" />
+    <None Include="matlab\src\vl_tmove.cu" />
     <None Include="matlab\vl_argparse.m" />
     <None Include="matlab\vl_compilenn.m" />
     <None Include="matlab\vl_imreadjpeg.m" />
@@ -146,7 +146,7 @@
     <ClCompile Include="matlab\src\vl_nnnormalize.cpp" />
     <ClCompile Include="matlab\src\vl_nnpool.cpp" />
     <ClCompile Include="matlab\src\vl_taccummex.cpp" />
-    <ClCompile Include="matlab\src\vl_tmovemex.cpp" />
+    <ClCompile Include="matlab\src\vl_tmove.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matlab\src\bits\data.hpp" />

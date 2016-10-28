@@ -23,6 +23,15 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta23 (September 2016).
+
+    **New features**
+
+    * A new function `vl_nnroipool.m` for region of interest pooling,
+      supporting networks such as Fast-RCNN.
+    * Imported Fast-RCNN models from Caffe.
+    * An example Fast-RCNN implementation, training and testing.
+
 -   1.0-beta22 (Spetember 2016).
 
     * Bugfixes.

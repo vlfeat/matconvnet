@@ -202,12 +202,14 @@ lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnnormalize.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbnorm.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbias.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbilinearsampler.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnroipooling.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconv.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconvt.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbnorm.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbilinearsampler.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnroipool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_taccummex.' ext]) ;
 switch arch
   case {'glnxa64','maci64'}
@@ -224,6 +226,7 @@ lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_cpu.cpp')
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','tinythread.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_cpu.cpp') ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','roipooling_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','imread.cpp') ;
 
 % GPU-specific files
@@ -235,6 +238,7 @@ if opts.enableGpu
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_gpu.cu') ;
+  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','roipooling_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','datacu.cu') ;
   mex_src{end+1} = fullfile(root,'matlab','src','vl_cudatool.cu') ;
 end
@@ -435,7 +439,7 @@ flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
 flags.mexlink = horzcat(flags.cc, flags.link, ...
                         {'-largeArrayDims'}, ...
                         {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
-                        {['LINKLIBS=$LINKLIBS ', strjoin(flags.linklibs)]}) ;
+                        {['LINKLIBS=', strjoin(flags.linklibs), ' $LINKLIBS']}) ;
 
 % nvcc: compile GPU
 flags.nvcc = horzcat(flags.cc, ...

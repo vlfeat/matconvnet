@@ -33,6 +33,7 @@ showing how to train CNNs.
 - [`vl_nnpdist`](mfiles/vl_nnpdist.md) Pairwise distances.
 - [`vl_nnpool`](mfiles/vl_nnpool.md) Max and sum pooling.
 - [`vl_nnrelu`](mfiles/vl_nnrelu.md) Rectified Linear Unit.
+- [`vl_nnroipool`](mfiles/vl_nnroipool.md) Reegion of interest pooling.
 - [`vl_nnsigmoid`](mfiles/vl_nnsigmoid.md) Sigmoid.
 - [`vl_nnsoftmax`](mfiles/vl_nnsoftmax.md) Channel soft-max.
 - [`vl_nnsoftmaxloss`](mfiles/vl_nnsoftmaxloss.md) *Deprecated*

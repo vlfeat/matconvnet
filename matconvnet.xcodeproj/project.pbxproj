@@ -221,6 +221,16 @@
 		2D708ACD1A52F65C004E7D42 /* matdocparser.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = matdocparser.py; path = doc/matdocparser.py; sourceTree = "<group>"; };
 		2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "matconvnet-manual.tex"; path = "doc/matconvnet-manual.tex"; sourceTree = "<group>"; };
 		2D717F2019B3A2A50028FE9E /* references.bib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = references.bib; path = doc/references.bib; sourceTree = "<group>"; };
+		2D7A6F6E1D8C5377008F8B22 /* nnroipooling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnroipooling.cpp; path = matlab/src/bits/nnroipooling.cpp; sourceTree = "<group>"; };
+		2D7A6F6F1D8C5377008F8B22 /* nnroipooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnroipooling.hpp; path = matlab/src/bits/nnroipooling.hpp; sourceTree = "<group>"; };
+		2D7A6F701D8C5377008F8B22 /* roipooling_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = roipooling_cpu.cpp; path = matlab/src/bits/impl/roipooling_cpu.cpp; sourceTree = "<group>"; };
+		2D7A6F711D8C5377008F8B22 /* roipooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = roipooling.hpp; path = matlab/src/bits/impl/roipooling.hpp; sourceTree = "<group>"; };
+		2D7A6F721D8C5377008F8B22 /* vl_nnroipool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnroipool.cpp; path = matlab/src/vl_nnroipool.cpp; sourceTree = "<group>"; };
+		2D7A6F731D8C5377008F8B22 /* nnbilinearsampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbilinearsampler.cpp; path = matlab/src/bits/nnbilinearsampler.cpp; sourceTree = "<group>"; };
+		2D7A6F741D8C53D0008F8B22 /* nnroipooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnroipooling.cu; path = matlab/src/bits/nnroipooling.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D7A6F751D8C53D0008F8B22 /* roipooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = roipooling_gpu.cu; path = matlab/src/bits/impl/roipooling_gpu.cu; sourceTree = "<group>"; };
+		2D7A6F761D8C53D0008F8B22 /* vl_nnroipool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnroipool.cu; path = matlab/src/vl_nnroipool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D7A6F771D8C58B4008F8B22 /* vl_nnroipool.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnroipool.m; path = matlab/vl_nnroipool.m; sourceTree = "<group>"; };
 		2D7B112A1A88E5CC00A3D8A0 /* nnconv_blas.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnconv_blas.hpp; path = matlab/src/bits/impl/nnconv_blas.hpp; sourceTree = "<group>"; };
 		2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling.cu; path = matlab/src/bits/nnpooling.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D7B112E1A88F0FF00A3D8A0 /* nnpooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnpooling.hpp; path = matlab/src/bits/nnpooling.hpp; sourceTree = "<group>"; };
@@ -314,6 +324,7 @@
 			children = (
 				2D375DCE18A84923008A97EE /* bits */,
 				2D6D0420196A892E00022E96 /* config */,
+				2DD177081D31760000B0A17E /* vl_cudatool.cpp */,
 				2D0FBD441D04116E0081FA19 /* vl_cudatool.cu */,
 				2DD177091D31760000B0A17E /* vl_imreadjpeg_old.cpp */,
 				2DD1770A1D31760000B0A17E /* vl_imreadjpeg_old.cu */,
@@ -331,6 +342,8 @@
 				2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */,
 				2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */,
 				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
+				2D7A6F721D8C5377008F8B22 /* vl_nnroipool.cpp */,
+				2D7A6F761D8C53D0008F8B22 /* vl_nnroipool.cu */,
 				2D9BC77C1D0ECDE400EC9F94 /* vl_taccummex.cpp */,
 				2D9BC77D1D0ECDE400EC9F94 /* vl_taccummex.cu */,
 				2D4080301CFD7A8C00B85345 /* vl_tmove.cpp */,
@@ -350,7 +363,6 @@
 		2D375DCE18A84923008A97EE /* bits */ = {
 			isa = PBXGroup;
 			children = (
-				2D479D071A88AE0400826D48 /* impl */,
 				2D528B9A1A8284C6006EC40A /* data.cpp */,
 				2D528B9B1A8284C6006EC40A /* data.cu */,
 				2D528B9C1A8284C6006EC40A /* data.hpp */,
@@ -359,12 +371,14 @@
 				2D528B9D1A8284C6006EC40A /* datamex.cpp */,
 				2D528B9E1A8284C6006EC40A /* datamex.cu */,
 				2D528B9F1A8284C6006EC40A /* datamex.hpp */,
+				2D479D071A88AE0400826D48 /* impl */,
 				2DF897C01C4182CE002C7EB9 /* imread.cpp */,
 				2DF07B6E1AAA4068001A3943 /* imread.hpp */,
 				2D528BA41A8284C6006EC40A /* mexutils.h */,
 				2D14F00B1B02AB9800A8F33D /* nnbias.cpp */,
 				2D14F0071B02AB5700A8F33D /* nnbias.cu */,
 				2D14F0081B02AB5700A8F33D /* nnbias.hpp */,
+				2D7A6F731D8C5377008F8B22 /* nnbilinearsampler.cpp */,
 				2DF0C6231CB54CBA005BEF89 /* nnbilinearsampler.cu */,
 				2DF0C6241CB54CBA005BEF89 /* nnbilinearsampler.hpp */,
 				2D80792D1AEF94650040BC14 /* nnbnorm.cpp */,
@@ -382,10 +396,12 @@
 				2D7B11311A88F12000A3D8A0 /* nnpooling.cpp */,
 				2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */,
 				2D7B112E1A88F0FF00A3D8A0 /* nnpooling.hpp */,
+				2D7A6F6E1D8C5377008F8B22 /* nnroipooling.cpp */,
+				2D7A6F741D8C53D0008F8B22 /* nnroipooling.cu */,
+				2D7A6F6F1D8C5377008F8B22 /* nnroipooling.hpp */,
 				2D7B11351A8AC85300A3D8A0 /* nnsubsample.cpp */,
 				2DA349BA1A86C5210073185F /* nnsubsample.cu */,
 				2DA349BB1A86C5210073185F /* nnsubsample.hpp */,
-				2DD177081D31760000B0A17E /* vl_cudatool.cpp */,
 			);
 			name = bits;
 			sourceTree = "<group>";
@@ -442,6 +458,9 @@
 				2D528BA91A8284C6006EC40A /* pooling_cpu.cpp */,
 				2D528BAB1A8284C6006EC40A /* pooling_gpu.cu */,
 				2D528BAA1A8284C6006EC40A /* pooling.hpp */,
+				2D7A6F701D8C5377008F8B22 /* roipooling_cpu.cpp */,
+				2D7A6F751D8C53D0008F8B22 /* roipooling_gpu.cu */,
+				2D7A6F711D8C5377008F8B22 /* roipooling.hpp */,
 				2D4E88271C37FAB80074DDEE /* sharedmem.cuh */,
 				2D479D121A88AF4300826D48 /* subsample_cpu.cpp */,
 				2D479D111A88AF4300826D48 /* subsample_gpu.cu */,
@@ -633,6 +652,7 @@
 				2D416C751B39E1C60092638E /* vl_nnpdist.m */,
 				2D5C34D519745588002B399E /* vl_nnpool.m */,
 				2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */,
+				2D7A6F771D8C58B4008F8B22 /* vl_nnroipool.m */,
 				2D416C761B39E1C60092638E /* vl_nnsigmoid.m */,
 				2DD3FACE18EC0E7B00053032 /* vl_nnsoftmax.m */,
 				2D6D0427196A896300022E96 /* vl_nnsoftmaxloss.m */,

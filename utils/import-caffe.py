@@ -92,6 +92,11 @@ parser.add_argument('--caffe-data',
 parser.add_argument('output',
                     type=argparse.FileType('w'),
                     help='Output MATLAB file')
+parser.add_argument('--full-image-size',
+                    type=str,
+                    nargs='?',
+                    default=None,
+                    help='Size of the full image')
 parser.add_argument('--average-image',
                     type=argparse.FileType('rb'),
                     nargs='?',
@@ -185,8 +190,10 @@ elif args.caffe_variant == 'caffe_6e3916':
   import proto.caffe_6e3916_pb2 as caffe_pb2
 elif args.caffe_variant == 'caffe_b590f1d':
   import proto.caffe_b590f1d_pb2 as caffe_pb2
+elif args.caffe_variant == 'caffe_fastrcnn':
+  import proto.caffe_fastrcnn_pb2 as caffe_pb2
 elif args.caffe_variant == '?':
-  print 'Supported variants: caffe, vgg-caffe, caffe-old, caffe_0115, caffe_6e3916, caffe_5b0f1d'
+  print 'Supported variants: caffe, vgg-caffe, caffe-old, caffe_0115, caffe_6e3916, caffe_b590f1d, caffe_fastrcnn'
   sys.exit(0)
 else:
   print 'Unknown Caffe variant', args.caffe_variant
@@ -333,7 +340,7 @@ if args.caffe_data:
 #                                   Read layers in a CaffeModel object
 # --------------------------------------------------------------------
 
-if args.caffe_variant in ['caffe_b590f1d']:
+if args.caffe_variant in ['caffe_b590f1d', 'caffe_fastrcnn']:
   layers_list = net.layer
   data_layers_list = data.layer
 else:
@@ -504,6 +511,14 @@ for layer in layers_list:
                        stable_prod_grad = opts.stable_prod_grad)
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  elif ltype in ['roipooling', 'ROIPooling']:
+    opts = getopts(layer, 'roi_pooling_param')
+    clayer = CaffeROIPooling(layer.name, bottom, top,
+                             pooled_w = opts.pooled_w,
+                             pooled_h = opts.pooled_h,
+                             spatial_scale = opts.spatial_scale)
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   elif ltype in ['accuracy', 'Accuracy']:
     continue
 
@@ -526,47 +541,32 @@ for layer in layers_list:
           clayer.setBlob(cmodel, i, blob)
 
 # --------------------------------------------------------------------
-#                             Get the size of the input to the network
+#                                Get the size of the network variables
 # --------------------------------------------------------------------
 
+# Get the sizes of the network inputs
 for i, inputVarName in enumerate(net.input):
   if hasattr(net, 'input_shape') and net.input_shape:
-    shape = copy.deepcopy(net.input_shape[i])
+    shape = net.input_shape[i].dim._values
+
+    # ensure that shape is a list of dimensions
+    if isinstance(shape, caffe_pb2.BlobShape):
+      # shape.tolist() may not preserve the order of dimensions
+      shape = shape.dim._values
+
     shape.reverse()
   else:
     shape = [net.input_dim[k + 4*i] for k in [3,2,1,0]]
-  print '  c- Input \'{}\' is {}'.format(inputVarName, shape)
+
   cmodel.vars[inputVarName].shape = shape
-  # heuristic: the first input or 'data' is the input image
-  if i == 0 or inputVarName == 'data': dataShape = shape
-
-  # mark any 3-channels input as BGR for the purpose of RGB conversion
-  # rare Caffe networks are trained in RGB format, so this can be skipped
-  # this is decided based on the value of the --color-format option
-  if cmodel.vars[inputVarName].shape[2] == 3:
-    cmodel.vars[inputVarName].bgrInput = (args.color_format == 'bgr')
+  print '  c- Input \'{}\' is {}'.format(inputVarName, shape)
 
 # --------------------------------------------------------------------
-#                                                      Edit operations
+#                                                             Sanitize
 # --------------------------------------------------------------------
 
-# The first step is to compute the size of all the variables in the
-# model, starting from the input. A small number of conversions
-# require this information to be done properly. In particular:
-#
-# * For Pooling layers, fix incompatibility between pooling padding in MatConvNet and Caffe
-# * For Crop layers (in FCNs), determine the amount of crop (in Caffe this is done at run time)
-
-cmodel.reshape()
-
-# Next, MATLAB uses a column major image format, whereas Caffe uses a
-# row major.  We fix this by transposing X and Y in all spatial
-# layers.
-
-if args.transpose: cmodel.transpose()
-
-# Rename layers, parametrs, and variables if they contain
-# symbols that are incompatible with MatConvNet
+# Rename layers, parametrs, and variables if they contain symbols that
+# are incompatible with MatConvNet.
 
 layerNames = cmodel.layers.keys()
 for name in layerNames:
@@ -593,7 +593,9 @@ for name in parNames:
   print "Renaming parameter {} to {}".format(name, ename)
   cmodel.renameParam(name, ename)
 
-# Split in-place layers
+# Split in-place layers. MatConvNet handles such optimizations
+# differently.
+
 for layer in cmodel.layers.itervalues():
   if len(layer.inputs[0]) >= 1 and \
         len(layer.outputs[0]) >= 1 and \
@@ -601,11 +603,47 @@ for layer in cmodel.layers.itervalues():
     name = layer.inputs[0]
     ename = layer.inputs[0]
     while cmodel.vars.has_key(ename): ename = ename + 'x'
-    print "Splitting in-place: renaming variable {} to {}".format(name, ename)
+    print "Splitting in-place layer: renaming variable {} to {}".format(name, ename)
     cmodel.addVar(ename)
     cmodel.renameVar(name, ename, afterLayer=layer.name)
     layer.inputs[0] = name
     layer.outputs[0] = ename
+
+# --------------------------------------------------------------------
+#                                                   Get variable sizes
+# --------------------------------------------------------------------
+
+# Get the size of all other variables. This information is required
+# for some special layer conversions:
+#
+# * For Pooling layers, fix incompatibility between padding in
+#   MatConvNet and Caffe.
+#
+# * For Crop layers (in FCNs), determine the amount of crop (in Caffe
+#   this is done at run time).
+
+# Unflatten ROIPooling. ROIPooling will produce a H x W array instead
+# of a stacked version of the same. The reshape operation below will
+# convert the following InnerProduct layers in corresponding
+# convolitions. This works well with transposition later.
+
+layerNames = cmodel.layers.keys()
+for name in layerNames:
+  layer = cmodel.layers[name]
+  if type(layer) is CaffeROIPooling:
+    childrenNames = cmodel.getLayersWithInput(layer.outputs[0])
+    for childName in childrenNames:
+      child = cmodel.layers[childName]
+      if type(child) is not CaffeInnerProduct:
+        print "Error: cannot unflatten ROIPooling if this is not followed only InnerProduct layers"
+        sys.exit(1)
+  layer.flatten = False
+
+cmodel.reshape()
+
+# --------------------------------------------------------------------
+#                                                                 Edit
+# --------------------------------------------------------------------
 
 # Remove dropout
 if args.remove_dropout:
@@ -618,7 +656,7 @@ if args.remove_dropout:
       cmodel.removeLayer(name)
 
 # Remove loss
-if args.remove_dropout:
+if args.remove_loss:
   layerNames = cmodel.layers.keys()
   for name in layerNames:
     layer = cmodel.layers[name]
@@ -627,9 +665,27 @@ if args.remove_dropout:
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 
+# Append softmax
+for i, name in enumerate(args.append_softmax):
+  # search for the layer to append SoftMax to
+  if not cmodel.layers.has_key(name):
+    print 'Cannot append softmax to layer {} as no such layer could be found'.format(name)
+    sys.exit(1)
+
+  if len(args.append_softmax) > 1:
+    layerName = 'softmax' + (l + 1)
+    outputs= ['prob' + (l + 1)]
+  else:
+    layerName = 'softmax'
+    outputs = ['prob']
+
+  cmodel.addLayer(CaffeSoftMax(layerName,
+                               cmodel.layers[name].outputs[0:1],
+                               outputs))
+
 # Simplifications
 if args.simplify:
-  # BatchNorm followed by Scale
+  # Merge BatchNorm followed by Scale
   layerNames = cmodel.layers.keys()
   for name in layerNames:
     layer = cmodel.layers[name]
@@ -656,29 +712,74 @@ if args.simplify:
       cmodel.renameVar(layer.outputs[0], layer.inputs[0])
       cmodel.removeLayer(name)
 
-# Append softmax
-for i, name in enumerate(args.append_softmax):
-  # search for the layer to append SoftMax to
-  if not cmodel.layers.has_key(name):
-    print 'Cannot append softmax to layer {} as no such layer could be found'.format(name)
-    sys.exit(1)
+# --------------------------------------------------------------------
+#                                                        Transposition
+# --------------------------------------------------------------------
+#
+# There are a few different conventions in MATLAB and Caffe:
+#
+# * In MATLAB, the frist spatial dimension is Y (vertical) followed by
+#   X (horizontal), whereas in Caffe the opposite is true.
+#
+# * In MATLAB, images are stored in RGB format, whereas Caffe uses
+#   BGR.
+#
+# * In MatConvNet, the first spatial coordinate is Y, whereas in Caffe
+#   it is X. This affects layers such as ROI pooling.
+#
+# These conventions means that, if the network is directly saved in
+# MCN format, then images and spatial coordinates are transposed as
+# just described. While this is not a deal breaker, it is
+# inconvenient.
+#
+# Thus we transpose all X,Y spatial dimensions in the network. For now,
+# this is partially heuristic. In the future, we should add adapter layer to
+# convert from MCN inputs and outputs to Caffe input and outputs and then
+# simplity those away using graph transformations.
 
-  if len(args.append_softmax) > 1:
-    layerName = 'softmax' + (l + 1)
-    outputs= ['prob' + (l + 1)]
+# Mark variables:
+#   - requiring BGR -> RGB conversion
+#   - requiring XY transposition
+
+for i, inputVarName in enumerate(net.input):
+  if inputVarName == 'data' or i == 0:
+    if cmodel.vars[inputVarName].shape[2] == 3:
+      cmodel.vars[inputVarName].bgrInput = (args.color_format == 'bgr')
+  if not inputVarName == 'rois':
+    cmodel.vars[inputVarName].transposable = True
   else:
-    layerName = 'softmax'
-    outputs = ['prob']
+    cmodel.vars[inputVarName].transposable = False
 
-  cmodel.addLayer(CaffeSoftMax(layerName,
-                               cmodel.layers[name].outputs[0:1],
-                               outputs))
+# Apply transformations
+if args.transpose: cmodel.transpose()
 
 cmodel.display()
 
 # --------------------------------------------------------------------
 #                                                        Normalization
 # --------------------------------------------------------------------
+
+minputs = np.empty(shape=[0,], dtype=minputdt)
+
+# Determine the size of the inputs and input image (dataShape)
+for i, inputVarName in enumerate(net.input):
+  shape = cmodel.vars[inputVarName].shape
+  # add metadata
+  minput = np.empty(shape=[1,], dtype=minputdt)
+  minput['name'][0] = inputVarName
+  minput['size'][0] = row(shape)
+  minputs = np.append(minputs, minput, axis=0)
+  # heuristic: the first input or 'data' is the input image
+  if i == 0 or inputVarName == 'data':
+    dataShape = shape
+
+print "Input image data tensor shape:", dataShape
+
+fullImageSize = [256, 256]
+if args.full_image_size:
+  fullImageSize = list(make_tuple(args.full_image_size))
+
+print "Full input image size:", fullImageSize
 
 if average_image is not None:
   if resize_average_image:
@@ -694,12 +795,33 @@ mnormalization = {
   'averageImage': average_image,
   'interpolation': 'bilinear',
   'keepAspect': True,
-  'border': row([0,0])}
+  'border': row([0,0]),
+  'cropSize': 1.0}
+
+if len(fullImageSize) == 1:
+  fw = max(fullImageSize[0],dataShape[1])
+  fh = max(fullImageSize[0],dataShape[0])
+  mnormalization['border'] = max([float(fw - dataShape[1]),
+                                  float(fh - dataShape[0])])
+  mnormalization['cropSize'] = min([float(dataShape[1]) / fw,
+                                    float(dataShape[0]) / fh])
+else:
+  fw = max(fullImageSize[0],dataShape[1])
+  fh = max(fullImageSize[1],dataShape[0])
+  mnormalization['border'] = row([float(fw - dataShape[1]),
+                                  float(fh - dataShape[0])])
+  mnormalization['cropSize'] = row([float(dataShape[1]) / fw,
+                                    float(dataShape[0]) / fh])
+
+if args.caffe_variant == 'caffe_fastrcnn':
+  mnormalization['interpolation'] = 'bilinear'
 
 if args.preproc == 'caffe':
   mnormalization['interpolation'] = 'bicubic'
   mnormalization['keepAspect'] = False
-  mnormalization['border'] = row([256 - dataShape[0], 256 - dataShape[1]])
+
+print 'Input image border: ', mnormalization['border']
+print 'Full input image relative crop size: ', mnormalization['cropSize']
 
 # --------------------------------------------------------------------
 #                                                              Classes
@@ -722,7 +844,8 @@ mclasses = dictToMatlabStruct({'name': mclassnames,
 # --------------------------------------------------------------------
 
 # net.meta
-mmeta = dictToMatlabStruct({'normalization': mnormalization,
+mmeta = dictToMatlabStruct({'inputs': minputs.reshape(1,-1),
+                            'normalization': mnormalization,
                             'classes': mclasses})
 
 if args.output_format == 'dagnn':

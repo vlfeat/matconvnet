@@ -11,8 +11,8 @@ speed, downloading the CNN model may require some time.
 
 ```matlab
 % Install and compile MatConvNet (needed once).
-untar('http://www.vlfeat.org/matconvnet/download/matconvnet-1.0-beta22.tar.gz') ;
-cd matconvnet-1.0-beta22
+untar('http://www.vlfeat.org/matconvnet/download/matconvnet-1.0-beta23.tar.gz') ;
+cd matconvnet-1.0-beta23
 run matlab/vl_compilenn ;
 
 % Download a pre-trained CNN from the web (needed once).
