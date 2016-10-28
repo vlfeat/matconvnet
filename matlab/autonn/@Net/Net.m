@@ -160,7 +160,10 @@ classdef Net < handle
       end
     end
     
-    function idx = getVarIndex(net, var)
+    function idx = getVarIndex(net, var, errorIfNotFound)
+      if nargin < 3
+        errorIfNotFound = true ;
+      end
       if ischar(var)
         % search for var/layer by name
         if isfield(net.inputs, var)  % search inputs
@@ -171,8 +174,14 @@ classdef Net < handle
             idx = net.params(param).var ;
           else  % search layers
             layer = strcmp({net.forward.name}, var) ;
-            assert(any(layer), ['No var with specified name ''' var '''.']);
-            idx = net.forward(layer).outputVar ;
+            if any(layer)
+              idx = net.forward(layer).outputVar ;
+            else
+              if errorIfNotFound,
+                error(['No var with specified name ''' var '''.']) ;
+              end
+              idx = 0 ;
+            end
           end
         end
       elseif isa(var, 'Layer')
