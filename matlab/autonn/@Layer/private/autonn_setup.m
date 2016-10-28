@@ -17,23 +17,31 @@ function [inputs, testInputs] = autonn_setup(obj)
   % do not modify inputs or test-mode inputs by default
   inputs = obj.inputs ;
   testInputs = obj.testInputs ;
-
-  % check existence of setup function
-  setupFunc = str2func([func2str(obj.func) '_setup']) ;
-  info = functions(setupFunc) ;
   
-  if ~isempty(info.file)
-    % accept between 0 and 2 return values: the inputs list, and the
-    % test-time inputs list. both are optional.
-    out = cell(1, nargout(setupFunc)) ;
-    [out{:}] = setupFunc(obj) ;
+  % several native functions have a very simple setup: just specify that
+  % their inputs are not differentiable.
+  non_differentiable = {'size', 'colon', 'rand', 'randn', 'randi', ...
+    'randperm', 'ones', 'zeros', 'eye'} ;
+  if any(strcmp(func2str(obj.func), non_differentiable))
+    obj.numInputDer = 0 ;
+  else
+    % check existence of setup function
+    setupFunc = str2func([func2str(obj.func) '_setup']) ;
+    info = functions(setupFunc) ;
 
-    if numel(out) >= 1  % changed inputs
-      inputs = out{1} ;
-    end
+    if ~isempty(info.file)
+      % accept between 0 and 2 return values: the inputs list, and the
+      % test-time inputs list. both are optional.
+      out = cell(1, nargout(setupFunc)) ;
+      [out{:}] = setupFunc(obj) ;
 
-    if numel(out) >= 2  % changed test mode inputs
-      testInputs = out{2} ;
+      if numel(out) >= 1  % changed inputs
+        inputs = out{1} ;
+      end
+
+      if numel(out) >= 2  % changed test mode inputs
+        testInputs = out{2} ;
+      end
     end
   end
 end
@@ -74,14 +82,6 @@ function vl_nnmask_setup(layer)
   layer.testFunc = 'none' ;
 end
 
-function size_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
-function colon_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
 function repmat_setup(layer)
   % only first derivative defined for REPMAT
   layer.numInputDer = 1 ;
@@ -90,29 +90,5 @@ end
 function reshape_setup(layer)
   % only first derivative defined for RESHAPE
   layer.numInputDer = 1 ;
-end
-
-function rand_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
-function randn_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
-function randi_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
-function ones_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
-function zeros_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
-end
-
-function eye_setup(layer)
-  layer.numInputDer = 0 ;  % no derivatives defined
 end
 

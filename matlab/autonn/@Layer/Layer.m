@@ -500,6 +500,9 @@ classdef Layer < matlab.mixin.Copyable
     function y = randn(obj, varargin)
       y = Layer(@randn, obj, varargin{:}) ;
     end
+    function y = randperm(obj, varargin)
+      y = Layer(@randperm, obj, varargin{:}) ;
+    end
     function y = zeros(obj, varargin)
       y = Layer(@zeros, obj, varargin{:}) ;
     end
