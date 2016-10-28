@@ -20,10 +20,10 @@ function inputs = vl_nnwsum_setup(layer)
   inputs = layer.inputs(1:end-2) ;
   origWeights = layer.inputs{end} ;
   weights = cell(size(inputs)) ;
-  
+
   for k = 1 : numel(inputs)
     in = inputs{k} ;
-    if isa(in, 'Layer') && isequal(in.func, @vl_nnwsum)
+    if isa(in, 'Layer') && isequal(in.func, @vl_nnwsum) && in.optimize
       % merge weights and store results
       inputs{k} = in.inputs(1:end-2) ;
       weights{k} = origWeights(k) * in.inputs{end} ;
@@ -37,7 +37,7 @@ function inputs = vl_nnwsum_setup(layer)
   % merge the results in order
   inputs = [inputs{:}] ;
   weights = [weights{:}] ;
-  
+
   % append weights as a property
   inputs = [inputs, {'weights', weights}] ;
 end

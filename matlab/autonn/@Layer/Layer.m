@@ -41,6 +41,7 @@ classdef Layer < matlab.mixin.Copyable
     meta = []  % optional meta properties
     source = []  % call stack (source files and line numbers) where this Layer was created
     diagnostics = []  % whether to plot the mean, min and max of the Layer's output var. empty for automatic (network outputs only).
+    optimize = true  % whether to optimize this Layer, function-dependent (e.g. merge vl_nnwsum)
   end
   
   properties (SetAccess = {?Net}, GetAccess = public)
