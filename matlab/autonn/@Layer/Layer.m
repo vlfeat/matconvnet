@@ -69,6 +69,7 @@ classdef Layer < matlab.mixin.Copyable
     func = []  % main function being called
     testFunc = []  % function called in test mode (empty to use the same as in normal mode; 'none' to disable, e.g. dropout)
     name = ''  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
+    numOutputs = []  % to manually specify the number of outputs returned in fwd mode
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
     accumDer = true  % to manually specify that the input derivatives are *not* accumulated. used to implement ReLU short-circuiting.
     meta = []  % optional meta properties
@@ -495,16 +496,18 @@ classdef Layer < matlab.mixin.Copyable
     function varargout = createLayer(func, args, varargin)
       % Create a layer with given function handle FUNC and arguments
       % cell array ARGS, optionally setting additional properties as
-      % name-value pairs (numInputDer).
+      % name-value pairs (numInputDer). numOutputs is inferred.
       % Supports multiple outputs.
       assert(isa(func, 'function_handle'), 'Argument must be a valid function handle.') ;
       
       opts.numInputDer = [] ;
+      opts.numOutputs = [] ;
       opts = vl_argparse(opts, varargin) ;
       
       % main output
       varargout = cell(1, nargout) ;
       varargout{1} = Layer(func, args{:}) ;
+      varargout{1}.numOutputs = nargout ;  % infer number of layer outputs from this function call
       varargout{1}.numInputDer = opts.numInputDer ;
       
       % selectors for any additional outputs

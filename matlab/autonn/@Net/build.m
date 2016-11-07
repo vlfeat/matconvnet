@@ -103,6 +103,13 @@ function build(net, varargin)
       % handle layers with multiple outputs: each output selector attached
       % to a layer appends its own output var to that layer.
       obj.inputs{1}.outputVar(obj.index) = obj.outputVar ;
+      
+    elseif ~isempty(obj.numOutputs) && obj.numOutputs > numel(obj.outputVar)
+      % layers with multiple outputs: assign a 0 index to any output vars
+      % that exist even if they are unused (e.g. the above IF case does not
+      % assign any index to them). this is so the backward build step is
+      % aware of missing outputs, and assigns them a proper (0) derivative.
+      obj.outputVar(end+1 : obj.numOutputs) = 0 ;
     end
   end
   
