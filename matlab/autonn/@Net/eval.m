@@ -36,7 +36,11 @@ function eval(net, mode, derOutput, accumulateParamDers)
     layer = forward(k) ;
     args = layer.args ;
     args(layer.inputArgPos) = vars(layer.inputVars) ;
-    [vars{layer.outputVar}] = layer.func(args{:}) ;
+    
+    out = cell(1, max(layer.outputArgPos)) ;
+    [out{:}] = layer.func(args{:}) ;
+    
+    vars(layer.outputVar) = out(layer.outputArgPos);
   end
 
   % backward pass

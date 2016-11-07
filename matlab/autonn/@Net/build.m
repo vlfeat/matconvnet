@@ -53,7 +53,7 @@ function build(net, varargin)
 
   % allocate memory
   net.forward = Net.initStruct(numel(idx), 'func', 'name', ...
-      'source', 'args', 'inputVars', 'inputArgPos', 'outputVar') ;
+      'source', 'args', 'inputVars', 'inputArgPos', 'outputVar', 'outputArgPos') ;
   net.test = net.forward ;
   net.backward = Net.initStruct(numel(idx), 'func', 'name', ...
       'source', 'args', 'inputVars', 'inputArgPos', 'numInputDer', 'accumDer') ;
@@ -114,7 +114,8 @@ function build(net, varargin)
     layer.func = obj.func ;
     layer.name = obj.name ;
     layer.source = obj.source ;
-    layer.outputVar = obj.outputVar ;
+    layer.outputArgPos = find(obj.outputVar ~= 0) ;  % skip unused outputs
+    layer.outputVar = obj.outputVar(layer.outputArgPos) ;
     net.forward(k) = Net.parseArgs(layer, obj.inputs) ;
   end
 
@@ -167,12 +168,18 @@ function build(net, varargin)
         next = layer.inputArgPos > lastInput ;
         layer.inputArgPos(next) = layer.inputArgPos(next) + numOutputDer ;
 
+        % some outputs in forward mode may be unused. in this case, their
+        % output derivatives will be 0. we need to treat them as constants.
+        outputArgPos = (obj.outputVar ~= 0) ;
+        layer.args(lastInput + find(~outputArgPos)) = {0} ;  % set them to 0
+        
         % positions of der args
-        layer.inputArgPos = [layer.inputArgPos, lastInput + 1 : lastInput + numOutputDer] ;
+        layer.inputArgPos = [layer.inputArgPos, lastInput + find(outputArgPos)] ;
 
         % corresponding var indexes: the output derivatives of the layer
         % (recall that vars come in pairs, even-numbered are derivatives).
-        layer.inputVars = [layer.inputVars, obj.outputVar + 1] ;
+        outputVar = obj.outputVar(outputArgPos) ;  % skip the ignored outputs mentioned above
+        layer.inputVars = [layer.inputVars, outputVar + 1] ;
       end
       layer = orderfields(layer);
       net.backward(numel(idx) - k + 1) = layer ;
@@ -187,7 +194,8 @@ function build(net, varargin)
       % add to execution order
       layer.name = obj.name ;
       layer.source = obj.source ;
-      layer.outputVar = obj.outputVar ;
+      layer.outputArgPos = find(obj.outputVar ~= 0) ;  % skip unused outputs
+      layer.outputVar = obj.outputVar(layer.outputArgPos) ;
 
       % default is to use the same arguments
       if isequal(obj.testInputs, 'same')

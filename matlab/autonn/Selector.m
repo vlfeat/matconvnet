@@ -16,6 +16,7 @@ classdef Selector < Layer
   
   methods
     function obj = Selector(input, index)
+      assert(index ~= 1, 'Cannot use a Selector to get the first output of a layer (it is returned by the layer itself).');
       obj.inputs = {input} ;
       obj.index = index ;
     end
