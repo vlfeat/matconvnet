@@ -36,7 +36,7 @@ function eval(net, mode, derOutput, accumulateParamDers)
     layer = forward(k) ;
     args = layer.args ;
     args(layer.inputArgPos) = vars(layer.inputVars) ;
-    vars{layer.outputVar} = layer.func(args{:}) ;
+    [vars{layer.outputVar}] = layer.func(args{:}) ;
   end
 
   % backward pass
@@ -70,7 +70,7 @@ function eval(net, mode, derOutput, accumulateParamDers)
         % input comes right next to it in the vars list. note that some
         % outputs may be ignored (because they're not input layers,
         % just constant arguments).
-        inputDers = layer.inputVars(1:end-1) + 1 ;  % last input is dzdy, doesn't count
+        inputDers = layer.inputVars + 1 ;  % note this includes incorrect indexes at output der args, but they'll be ignored with FIND
         if layer.accumDer
           for i = find(inputArgPos <= numel(out))
             vars{inputDers(i)} = vars{inputDers(i)} + out{inputArgPos(i)} ;

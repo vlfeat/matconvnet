@@ -48,8 +48,8 @@ function build(net, varargin)
     net.meta = objs{idx}.meta ;
   end
 
-  % indexes of callable Layer objects (not Inputs or Params)
-  idx = find(cellfun(@(o) ~isa(o, 'Input') && ~isa(o, 'Param'), objs)) ;
+  % indexes of callable Layer objects (not Inputs, Params or Selectors)
+  idx = find(cellfun(@(o) ~isa(o, 'Input') && ~isa(o, 'Param') && ~isa(o, 'Selector'), objs)) ;
 
   % allocate memory
   net.forward = Net.initStruct(numel(idx), 'func', 'name', ...
@@ -64,8 +64,7 @@ function build(net, varargin)
   end
   
   % there is one var for the output of each Layer in objs; plus another
-  % to hold its derivative. note if a Layer has multiple outputs, they
-  % can be stored as a nested cell array in the appropriate var.
+  % to hold its derivative.
   net.vars = cell(2 * numel(objs), 1) ;
 
   numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
@@ -74,7 +73,7 @@ function build(net, varargin)
   net.inputs = struct() ;
 
   
-  % first, handle Inputs and Params
+  % first, handle Inputs, Params and Selectors
   p = 1 ;
   for i = 1:numel(objs)
     obj = objs{i} ;
@@ -99,9 +98,14 @@ function build(net, varargin)
 
       net.vars{net.params(p).var} = obj.value ;  % set initial value
       p = p + 1 ;
+      
+    elseif isa(obj, 'Selector')
+      % handle layers with multiple outputs: each output selector attached
+      % to a layer appends its own output var to that layer.
+      obj.inputs{1}.outputVar(obj.index) = obj.outputVar ;
     end
   end
-
+  
   
   % store functions for forward pass
   layer = [] ;
@@ -155,18 +159,20 @@ function build(net, varargin)
         [layer.args, layer.inputArgPos, layer.inputVars] = deal({}, [], []) ;
 
       else
-        % store args for backward mode, with an empty slot for der arg
-        layer.args = [args(1:lastInput), {[]}, args(lastInput + 1 : end)] ;
+        % store args for backward mode, with empty slots for der args
+        numOutputDer = numel(obj.outputVar) ;
+        layer.args = [args(1:lastInput), cell(1, numOutputDer), args(lastInput + 1 : end)] ;
 
-        % modify argument positions according to the new empty slot
+        % modify argument positions according to the new empty slots
         next = layer.inputArgPos > lastInput ;
-        layer.inputArgPos(next) = layer.inputArgPos(next) + 1 ;
+        layer.inputArgPos(next) = layer.inputArgPos(next) + numOutputDer ;
 
-        % position of der arg
-        layer.inputArgPos(end+1) = lastInput + 1 ;
+        % positions of der args
+        layer.inputArgPos = [layer.inputArgPos, lastInput + 1 : lastInput + numOutputDer] ;
 
-        % its var index: it's the output derivative for the current layer
-        layer.inputVars(end+1) = obj.outputVar + 1 ;
+        % corresponding var indexes: the output derivatives of the layer
+        % (recall that vars come in pairs, even-numbered are derivatives).
+        layer.inputVars = [layer.inputVars, obj.outputVar + 1] ;
       end
       layer = orderfields(layer);
       net.backward(numel(idx) - k + 1) = layer ;
@@ -223,7 +229,7 @@ function build(net, varargin)
   net.diagnostics = Net.initStruct(numel(net.vars), 'var', 'name') ;
   for k = 1 : numel(objs)
     if isequal(objs{k}.diagnostics, true)
-      var = objs{k}.outputVar ;
+      var = objs{k}.outputVar(1) ;
       net.diagnostics(var).var = var ;
       net.diagnostics(var).name = objs{k}.name ;
       net.diagnostics(var + 1).var = var + 1 ;

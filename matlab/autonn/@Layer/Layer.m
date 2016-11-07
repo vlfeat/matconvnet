@@ -69,8 +69,8 @@ classdef Layer < matlab.mixin.Copyable
     function obj = Layer(func, varargin)  % wrap a function call
       obj.saveStack() ;  % record source file and line number, for debugging
       
-      if nargin == 0 && (isa(obj, 'Input') || isa(obj, 'Param'))
-        return  % called during Input or Param construction, nothing to do
+      if nargin == 0 && (isa(obj, 'Input') || isa(obj, 'Param') || isa(obj, 'Selector'))
+        return  % called during Input, Param or Selector construction, nothing to do
       end
       
       % convert from SimpleNN to DagNN
@@ -450,6 +450,19 @@ classdef Layer < matlab.mixin.Copyable
   end
   
   methods (Static)
+    function generator = fromFunction(func)
+      assert(isa(func, 'function_handle'), 'Argument must be a valid function handle.') ;
+      generator = @(varargin) Layer.multiOutput(func, varargin{:}) ;
+    end
+    
+    function varargout = multiOutput(varargin)
+      varargout = cell(1, nargout) ;
+      varargout{1} = Layer(varargin{:}) ;
+      for i = 2:nargout
+        varargout{i} = Selector(varargout{1}, i) ;
+      end
+    end
+    
     function workspaceNames(modifier)
       % LAYER.WORKSPACENAMES()
       % Sets layer names based on the name of the corresponding variables

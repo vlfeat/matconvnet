@@ -185,7 +185,7 @@ classdef Net < handle
           end
         end
       elseif isa(var, 'Layer')
-        idx = var.outputVar ;
+        idx = var.outputVar(1) ;
       else
         assert(isnumeric(var), 'VAR must either be a layer name, a Layer object, or var indexes.') ;
         idx = var ;
@@ -246,7 +246,9 @@ classdef Net < handle
       inputArgPos = [] ;
       for a = 1:numel(args)
         if isa(args{a}, 'Layer')
-          inputVars(end+1) = args{a}.outputVar ;  %#ok<*AGROW>
+          % note only the first output is taken if there's more than one;
+          % other outputs are reached using Selectors
+          inputVars(end+1) = args{a}.outputVar(1) ;  %#ok<*AGROW>
           inputArgPos(end+1) = a ;
           args{a} = [] ;
         end
