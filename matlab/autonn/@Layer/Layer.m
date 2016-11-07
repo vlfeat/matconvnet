@@ -246,6 +246,9 @@ classdef Layer < matlab.mixin.Copyable
     function y = vl_nnloss(obj, varargin)
       y = Layer(@vl_nnloss, obj, varargin{:}) ;
     end
+    function [hn, cn] = vl_nnlstm(obj, varargin)
+      [hn, cn] = Layer.createLayer(@vl_nnlstm, [{obj}, varargin]) ;
+    end
     
     
     % overloaded native Matlab functions
