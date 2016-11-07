@@ -572,6 +572,12 @@ classdef Layer < matlab.mixin.Copyable
     function y = ones(obj, varargin)
       y = Layer(@ones, obj, varargin{:}) ;
     end
+    function y = inf(obj, varargin)
+      y = Layer(@inf, obj, varargin{:}) ;
+    end
+    function y = nan(obj, varargin)
+      y = Layer(@nan, obj, varargin{:}) ;
+    end
     function y = eye(obj, varargin)
       y = Layer(@eye, obj, varargin{:}) ;
     end
