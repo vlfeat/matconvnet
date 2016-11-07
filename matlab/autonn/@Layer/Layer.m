@@ -450,14 +450,31 @@ classdef Layer < matlab.mixin.Copyable
   end
   
   methods (Static)
-    function generator = fromFunction(func)
+    function generator = fromFunction(func, varargin)
+      % Returns a layer generator, based on a custom function FUNC.
+      % May set additional properties as name-value pairs (numInputDer).
       assert(isa(func, 'function_handle'), 'Argument must be a valid function handle.') ;
-      generator = @(varargin) Layer.multiOutput(func, varargin{:}) ;
+      
+      opts = varargin ;
+      generator = @(varargin) Layer.createLayer(func, varargin, opts{:}) ;
     end
     
-    function varargout = multiOutput(varargin)
+    function varargout = createLayer(func, args, varargin)
+      % Create a layer with given function handle FUNC and arguments
+      % cell array ARGS, optionally setting additional properties as
+      % name-value pairs (numInputDer).
+      % Supports multiple outputs.
+      assert(isa(func, 'function_handle'), 'Argument must be a valid function handle.') ;
+      
+      opts.numInputDer = [] ;
+      opts = vl_argparse(opts, varargin) ;
+      
+      % main output
       varargout = cell(1, nargout) ;
-      varargout{1} = Layer(varargin{:}) ;
+      varargout{1} = Layer(func, args{:}) ;
+      varargout{1}.numInputDer = opts.numInputDer ;
+      
+      % selectors for any additional outputs
       for i = 2:nargout
         varargout{i} = Selector(varargout{1}, i) ;
       end
