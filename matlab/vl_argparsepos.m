@@ -1,4 +1,4 @@
-function [opts, args] = vl_argparsepos(opts, args)
+function [opts, args] = vl_argparsepos(opts, args, varargin)
 %VL_ARGPARSEPOS
 %   Same as VL_ARGPARSE, but allows arbitrary positional arguments before
 %   the name-value pairs.
@@ -39,10 +39,10 @@ function [opts, args] = vl_argparsepos(opts, args)
 
   % call vl_argparse
   if nargout == 2
-    [opts, namedArgs] = vl_argparse(opts, namedArgs) ;
+    [opts, namedArgs] = vl_argparse(opts, namedArgs, varargin{:}) ;
     args = [posArgs, namedArgs] ;  % back together
   else
-    opts = vl_argparse(opts, namedArgs) ;
+    opts = vl_argparse(opts, namedArgs, varargin{:}) ;
   end
   
 end
