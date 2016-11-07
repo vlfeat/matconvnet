@@ -19,6 +19,39 @@ classdef Layer < matlab.mixin.Copyable
 %   overloaded to return Layer objects that contain the function call
 %   information.
 %
+%   Math operators are also overloaded, making it possible to mix layers
+%   with arbitrary mathematical formulas and differentiate through them.
+%   See the EXAMPLES/AUTONN/ directory for example usage.
+%
+%
+%   ### Custom Layers ###
+%   To create custom layers from a user function FUNC, create a generator:
+%
+%      customLoss = Layer.fromFunction(@func) ;
+%
+%   Then compose it normally, like other overloaded MatConvNet functions:
+%
+%      loss = customLoss(prediction, labels) ;
+%
+%   FUNC must accept extra output derivative arguments, which will be
+%   supplied when in backward mode. In the above example, it will be called
+%   as:
+%   * Forward mode:   Y = FUNC(X, L)
+%   * Backward mode:  DZDX = FUNC(X, L, DZDY)
+%   Where DZDY is the output derivative and DZDX is the input derivative.
+%
+%   Further notes:
+%
+%   * If your custom function is called with any name-value pairs, the
+%     output derivative arguments appear *before* the name-value pairs.
+%
+%   * The function can return multiple values.
+%
+%   * If you do not wish to return the derivative for some inputs (e.g.
+%     labels), restrict the number of returned derivatives:
+%       customLoss = Layer.fromFunction(@func, 'numInputDer', 1) ;
+%
+%
 %   See also NET.
 
 % Copyright (C) 2016 Joao F. Henriques.
