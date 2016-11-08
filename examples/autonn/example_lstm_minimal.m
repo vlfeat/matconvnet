@@ -14,8 +14,9 @@ d = 16 ;  % dimensionality of the LSTM state
 x = Input() ;
 y = Input() ;
 
-% initialize the shared parameters for an LSTM with d units
-[W, b] = vl_nnlstm_params(d) ;
+% initialize the shared parameters for an LSTM with d hidden units and
+% two inputs
+[W, b] = vl_nnlstm_params(d, 2) ;
 
 % initial state
 h = cell(T+1, 1);
@@ -31,7 +32,7 @@ end
 % concatenate output into m x T matrix, ignoring initial state (h{1})
 H = [h{2:end}] ;
 
-% final projection
+% final projection (note the same projection is applied at all time steps)
 prediction = vl_nnconv(reshape(H, 1, 1, d, T), 'size', [1, 1, d, 1]) ;
 
 

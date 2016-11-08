@@ -1,7 +1,8 @@
-function [W, b] = vl_nnlstm_params(d, varargin)
+function [W, b] = vl_nnlstm_params(d, m, varargin)
 %VL_NNLSTM_PARAMS
-%   [W, B] = VL_NNLSTM_PARAMS(D) initializes parameter matrix W and vector
-%   B with appropriate randomized values, for an LSTM with D units.
+%   [W, B] = VL_NNLSTM_PARAMS(D, M) initializes parameter matrix W and
+%   vector B with appropriate randomized values, for an LSTM with D hidden
+%   units and a M-dimensional input.
 %   
 %   VL_NNLSTM_PARAMS(..., 'option', value, ...) accepts the following
 %   options:
@@ -36,7 +37,7 @@ function [W, b] = vl_nnlstm_params(d, varargin)
   
   % create parameters
   noise = opts.noise ;
-  W = Param('value', -noise + 2 * noise * rand(4 * d, 2 + d, 'single')) ;
+  W = Param('value', -noise + 2 * noise * rand(4 * d, d + m, 'single')) ;
   b = Param('value', -noise + 2 * noise * rand(4 * d, 1, 'single'));
   b.value(d+1 : 2*d, :) = opts.forgetBias;
 

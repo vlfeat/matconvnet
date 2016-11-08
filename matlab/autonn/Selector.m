@@ -22,8 +22,10 @@ classdef Selector < Layer
       assert(isempty(input.numOutputs) || index <= input.numOutputs, ...
         sprintf('Attempting to get %ith output of a layer with only %i outputs.', index, input.numOutputs)) ;
       
+      obj.enableCycleChecks = false ;
       obj.inputs = {input} ;
       obj.index = index ;
+      obj.enableCycleChecks = true ;
     end
   end
 end
