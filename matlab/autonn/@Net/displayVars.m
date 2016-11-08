@@ -41,21 +41,25 @@ info = net.getVarsInfo() ;
 assert(numel(info) == numel(vars)) ;
 
 
-% function of each layer, as a string. empty for params and inputs.
-funcs = cell(1, numel(info)) ;
-funcs([net.forward.outputVar]) = cellfun(@func2str, {net.forward.func}, 'UniformOutput', false) ;
-
-% fill in remaining slots with 'param' or 'input', depending on the type
-idx = ~strcmp({info.type}, 'layer') ;
-funcs(idx) = {info(idx).type} ;
-
 % print information for each variable
+funcs = cell(numel(vars), 1) ;
 values = cell(numel(vars), 1) ;
 flags = cell(numel(vars), 1) ;
 mins = zeros(numel(vars), 1) ;
 maxs = zeros(numel(vars), 1) ;
 validRange = true(numel(vars), 1) ;
 for i = 1:numel(vars)
+  % function of each layer, as a string
+  if strcmp(info(i).type, 'layer')
+    funcs{i} = func2str(net.forward(info(i).index).func) ;
+    if info(i).outputArgPos > 1
+      funcs{i} = sprintf('%s (output #%i)', funcs{i}, info(i).outputArgPos) ;
+    end
+  else
+    % other var types like 'param' or 'input' will be displayed as such
+    funcs{i} = info(i).type ;
+  end
+  
   % size and underlying type (e.g. single 50x3x2)
   v = gather(vars{i}) ;
   if isa(v, 'gpuArray')
@@ -122,7 +126,7 @@ idx = arrayfun(@(i) {num2str(i)}, 1:2:numel(info)-1) ;
 str = repmat(' ', numel(info) / 2 + 1, 1) ;
 str = [str, char('Idx', idx{:})] ;
 str(:,end+1:end+2) = ' ' ;
-str = [str, char('Type/function', funcs{1:2:end-1})] ;
+str = [str, char('Function', funcs{1:2:end-1})] ;
 str(:,end+1:end+2) = ' ' ;
 str = [str, char('Name', info(1:2:end-1).name)] ;
 

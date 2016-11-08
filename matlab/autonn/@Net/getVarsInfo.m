@@ -1,6 +1,7 @@
 function info = getVarsInfo(net)
 %GETVARSINFO
-%   Returns a struct with information on each var. Fields:
+%   INFO = NET.GETVARSINFO()
+%   Returns a struct INFO with information on each variable. Fields:
 %
 %   `type`::
 %     Type of layer that outputs this var ('input', 'param', or 'layer').
@@ -13,6 +14,11 @@ function info = getVarsInfo(net)
 %     If type is 'layer', contains its index in NET.FORWARD.
 %     If type is 'param', contains its index in NET.PARAMS.
 %     If type is 'input', this is 0 (use name for struct NET.INPUTS).
+%
+%   `outputArgPos`::
+%     For layers with multiple outputs, this is the index (argument
+%     position) of the output. E.g. info(1).outputArgPos=2 means var 1 is
+%     the second output of a layer.
 %
 %   `isDer`::
 %     Whether the var is a derivative (all vars come in pairs, the main
@@ -36,7 +42,7 @@ function info = getVarsInfo(net)
     numVars = numVars + 1 ;
   end
 
-  info = Net.initStruct(numVars, 'type', 'name', 'index', 'isDer', 'fanOutCount') ;
+  info = Net.initStruct(numVars, 'type', 'name', 'index', 'outputArgPos', 'isDer', 'fanOutCount') ;
   [info.isDer] = deal(false) ;
 
   % vars that correspond to inputs
@@ -56,12 +62,25 @@ function info = getVarsInfo(net)
   [info(var).name] = deal(net.params.name) ;
 
   % vars that correspond to layer outputs
-  var = [net.forward.outputVar] ;
-  idx = num2cell(1:numel(var)) ;
-  [info(var).type] = deal('layer') ;
-  [info(var).index] = deal(idx{:}) ;
-  [info(var).name] = deal(net.forward.name) ;
-
+  [info([net.forward.outputVar]).type] = deal('layer') ;
+  
+%   % optimized path for layers with a single output, which are more common
+%   mask = (cellfun('length', {net.forward.outputVar}) == 1) ;
+%   var = [net.forward(mask).outputVar] ;
+%   [info(var).name] = deal(net.forward(mask).name) ;
+%   idx = num2cell(find(mask)) ;
+%   [info(var).index] = deal(idx{:}) ;
+  
+  for k = 1:numel(net.forward)
+    var = net.forward(k).outputVar ;
+    name = net.forward(k).name ;
+    for v = 1:numel(var)
+      info(var(v)).name = name ;
+      info(var(v)).index = k ;
+      info(var(v)).outputArgPos = v ;
+    end
+  end
+  
   % vars that correspond to derivatives (every even-numbered var)
   info(2:2:end) = info(1:2:end-1) ;
   [info(2:2:end).isDer] = deal(true) ;
