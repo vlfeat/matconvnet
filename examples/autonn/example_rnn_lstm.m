@@ -1,20 +1,28 @@
-function [net, info] = example_rnn(varargin)
-% EXAMPLE_RNN  Demonstrates MatConNet RNN trained on Shakespeare text.
+function [net, info] = example_rnn_lstm(varargin)
+% EXAMPLE_RNN_LSTM
+% Demonstrates MatConNet RNN/LSTM trained on Shakespeare text.
 
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
+opts.model = 'lstm' ;
 opts.expDir = fullfile(vl_rootnn, 'data', 'rnn') ;
 [opts, varargin] = vl_argparse(opts, varargin) ;
 
 opts.dataDir = fullfile(vl_rootnn, 'data', 'text') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 
+opts.numUnits = 100 ;
+
 opts.train.batchSize = 100 ;
 opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
-opts.train.learningRate = 0.001 ;
+if strcmp(opts.model, 'lstm')
+  opts.train.learningRate = 0.1 ;
+else
+  opts.train.learningRate = 0.001 ;
+end
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts = vl_argparse(opts, varargin) ;
@@ -36,41 +44,75 @@ rng('default') ;
 rng(0) ;
 
 vocabSize = numel(imdb.vocabulary) ;  % number of characters in vocabulary
-d = 100 ;  % number of hidden units
+d = opts.numUnits ;  % number of hidden units
+T = imdb.phraseSize ;
 
-text = Input() ;  % size = [vocabulary size, batch size, phrase size]
+text = Input() ;  % size = [phrase size, 1, vocabulary size, batch size]
 
-Wi = Param('value', xavier(d, vocabSize)) ;  % input weights
-Wh = Param('value', xavier(d, d)) ;          % hidden weights
-bh = Param('value', zeros(1, d, 'single')) ; % hidden biases
-Wo = Param('value', xavier(vocabSize, d)) ;  % output weights
-bo = Param('value', zeros(1, d, 'single')) ; % output biases
+idx = Input() ;
+nextChar = idx(2:T,1,1,:) ;
 
-h = zeros(d, 1, 'single') ;  % initial state
-i = text(:,:,1) ;  % initial input
-
-loss = 0 ;
-error = 0 ;
-
-for k = 1 : imdb.phraseSize - 1
-  % new hidden state
-  h = vl_nnsigmoid(Wi * i + Wh * h + bh) ;
+switch opts.model
+case 'lstm'
+  % initialize the shared parameters for an LSTM with d units
+  [W, b] = vl_nnlstm_params(d, vocabSize) ;
   
-  % unnormalized log-likelihood of next characters
-  o = Wo * h + bo ;
+  % initial state
+  h = cell(T, 1);
+  c = cell(T, 1);
+  h{1} = Layer.zeros(d, size(text,4), 'single');
+  c{1} = Layer.zeros(d, size(text,4), 'single');
+
+  % run LSTM over all time steps
+  for t = 1 : T - 1
+    [h{t+1}, c{t+1}] = vl_nnlstm(text(t,1,:,:), h{t}, c{t}, W, b, 'debug',true);
+  end
+
+  % concatenate hidden states along 3rd dimension, ignoring initial state.
+  % H will have size [d, batch size, T - 2]
+  H = cat(3, h{2:end}) ;
+
+  % final projection (note same projection is applied at all time steps)
+  prediction = vl_nnconv(permute(H, [3 4 1 2]), 'size', [1, 1, d, vocabSize]) ;
+
+  loss = vl_nnloss(prediction, nextChar, 'loss', 'softmaxlog') ;
+  err = vl_nnloss(prediction, nextChar, 'loss', 'classerror') ;
   
-  % get next input and compute prediction loss
-  i = text(:,:,k+1) ;
-  loss = loss + vl_nnloss(o, i, 'loss', 'softmaxlog') ;
-  
-  % classification error
-  error = error + vl_nnloss(o, i, 'loss', 'classerror') ;
+
+case 'rnn'
+  Wi = Param('value', xavier(d, vocabSize)) ;  % input weights
+  Wh = Param('value', xavier(d, d)) ;          % hidden weights
+  bh = Param('value', zeros(1, d, 'single')) ; % hidden biases
+  Wo = Param('value', xavier(vocabSize, d)) ;  % output weights
+  bo = Param('value', zeros(1, d, 'single')) ; % output biases
+
+  h = zeros(d, 1, 'single') ;  % initial state
+  i = text(:,:,1) ;  % initial input
+
+  loss = 0 ;
+  err = 0 ;
+
+  for k = 1 : imdb.phraseSize - 1
+    % new hidden state
+    h = vl_nnsigmoid(Wi * i + Wh * h + bh) ;
+
+    % unnormalized log-likelihood of next characters
+    o = Wo * h + bo ;
+
+    % get next input and compute prediction loss
+    i = text(:,:,k+1) ;
+    loss = loss + vl_nnloss(o, i, 'loss', 'softmaxlog') ;
+
+    % classification error
+    err = err + vl_nnloss(o, i, 'loss', 'classerror') ;
+  end
+
+otherwise
+  error('Unknown model.') ;
 end
 
 Layer.workspaceNames() ;
-net = Net(loss, error) ;
-
-opts.train.stats = {loss, error} ;  % plot these quantities
+net = Net(loss, err) ;
 
 % --------------------------------------------------------------------
 %                                                                Train
@@ -89,16 +131,19 @@ x = randn(varargin{:}, 'single') / sqrt(2 * prod([varargin{1:end-1}])) ;
 % --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
 % --------------------------------------------------------------------
-% one-hot encoding of characters. returned data shape is:
-% [encoding size, batch size, phrase size].
+% one-hot encoding of characters. returned data size is:
+% [phrase size, 1, vocabulary size, batch size].
 
-idx = permute(imdb.images.data(:,batch), [3 2 1]) ;
-text = single(bsxfun(@eq, idx, (1:numel(imdb.vocabulary))')) ;
+% reshape to [phrase size, 1, 1, batch size] tensor of character indexes
+idx = reshape(imdb.images.data(:,batch), imdb.phraseSize, 1, 1, []) ;
+
+% now expand to one-hot encoding of those indexes, along third dimension
+text = single(bsxfun(@eq, idx, reshape(1:numel(imdb.vocabulary), 1, 1, []))) ;
 
 if opts.useGpu > 0
   text = gpuArray(text) ;
 end
-inputs = {'text', text} ;
+inputs = {'text', text, 'idx', single(idx)} ;
 
 % --------------------------------------------------------------------
 function imdb = getImdb(opts)
