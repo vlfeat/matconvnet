@@ -6,27 +6,22 @@
 run(fullfile(fileparts(mfilename('fullpath')),...
   '..', '..', 'matlab', 'vl_setupnn.m')) ;
 
-
 T = 8 ;  % number of bits / time steps
-m = 16 ;  % number of states
-noise = 0.08 ;  % noise scale
+d = 16 ;  % dimensionality of the LSTM state
 
 
 % inputs
 x = Input() ;
 y = Input() ;
 
-% initialize parameters
-W = Param('value', -noise + 2 * noise * randn(4 * m, 2 + m)) ;
-b = Param('value', -noise + 2 * noise * rand(4 * m, 1, 'single'));
-b.value(m+1 : 2*m, :) = 1;
+% initialize the shared parameters for an LSTM with d units
+[W, b] = vl_nnlstm_params(d) ;
 
 % initial state
 h = cell(T+1, 1);
 c = cell(T+1, 1);
-h{1} = zeros(m, 1, 'single');
-c{1} = zeros(m, 1, 'single');
-
+h{1} = zeros(d, 1, 'single');
+c{1} = zeros(d, 1, 'single');
 
 % run LSTM over all time steps
 for t = 1:T
@@ -37,7 +32,7 @@ end
 H = [h{2:end}] ;
 
 % final projection
-prediction = vl_nnconv(reshape(H, 1, 1, m, T), 'size', [1, 1, m, 1]) ;
+prediction = vl_nnconv(reshape(H, 1, 1, d, T), 'size', [1, 1, d, 1]) ;
 
 
 % define loss, and classification error

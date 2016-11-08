@@ -49,6 +49,8 @@ function varargout = vl_nnlstm(x, hp, cp, W, b, varargin)
 %   apply a different value to each of the 5 output gradient matrices.
 %
 %
+%   See also: VL_NNLSTM_PARAMS.
+%
 %   Reference:
 %   [1] Donahue et al., "Long-term Recurrent Convolutional Networks for
 %   for Visual Recognition and Description", CVPR 2015. (pg. 3)
@@ -60,7 +62,7 @@ function varargout = vl_nnlstm(x, hp, cp, W, b, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.debug = false ;
-opts.clipGrad = 10 ;
+opts.clipGrad = 100 ;
 [opts, grad] = vl_argparsepos(opts, varargin, 'nonrecursive') ;
 
 x_size = size(x) ;
