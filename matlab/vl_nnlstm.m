@@ -1,45 +1,57 @@
 function varargout = vl_nnlstm(x, hp, cp, W, b, varargin)
-%VL_NNLSTM
-%   Implements one time-step (forward and backward) of an LSTM cell.
+%VL_NNLSTM Long Short-Term Memory cell.
+%   [HN, CN] = VL_NNLSTM(X, HP, CP, W, B)
+%   Implements one time-step of an LSTM cell.
 %
-%   Reference: pg. #3 of Donahue et al.'s -- "Long-term Recurrent
-%   Convolutional Networks for Visual Recognition and Description".
+%   Note that there is no output projection step, which if necessary should
+%   be done externally by VL_NNCONV. VL_NNLSTM returns the so-called
+%   "hidden" state directly [1].
 %
-%   Note that there is no output projection step (from hn to y), which if
-%   necessary should be done externally.
+%   Inputs
+%   x:  The current input tensor (m x N), input dimension M, batch size N.
+%   hp: The previous hidden-state (d x N), hidden/cell state dimension d.
+%   cp: The previous cell-state (d x N).
 %
-%   Inputs:
-%      x:  The current input tensor of size m x N
-%          m: input dimension, N: batch-size
-%      hp: The previous hidden-state of size d x N
-%          d: hidden/cell state dimension
-%      cp: The previous cell-state of size d x N
+%   W: Linear parameters matrix ((4*d) x (m+d)) = [Wxi   Whi
+%      See Donahue et al. [1] for a detailed       Wxf   Whf
+%      description.                                Wxo   Who
+%                                                  Wxc   Whc]
+%   b: Bias parameters vector ((4*d) x 1).
 %
 %   The inputs (x, hp, cp) may also be 4D tensors with the first two
 %   dimensions of size 1 (i.e., 1 x 1 x m x N). This is for added
 %   compatibility with other MatConvNet layers that take 4D tensors.
 %
-%   Parameters:
-%      W: A matrix of size: (4*d) x (m+d) = [Wxi   Whi
-%         see Donahue et al. for the details of           Wxf   Whf
-%         these matrices.                                 Wxo   Who
-%                                                         Wxc   Whc]
-%      b: Bias, a vector of size (4*d)x1
+%   Outputs
+%   hn: The next hidden-state, the LSTM output (d x N).
+%   cn: The next cell-state (d x N).
 %
-%   Outputs in forward-pass:
-%      hn: The next hidden-state, the LSTM output (size: d x N)
-%      cn: The next cell-state (size: d x N)
 %
-%   Input gradients, specified only in backward pass:
-%      DzDhn: Gradients of loss w.r.t hn (size: d x N)
-%      DzDcn: Gradients of loss w.r.t cn (size: d x N)
+%   [DZDX,DZDHP,DZDCP,DZDW,DZDB] = VL_NNLSTM(X, HP, CP, W, B, DZDHN, DZDCN)
+%   Gradients of one time-step of an LSTM cell.
 %
-%   Outputs in backward-pass: Gradients of loss with respect to...
-%      DzDx:  ...the input x (size: m x N)
-%      DzDhp: ...the previous hidden state hp (size: d x N)
-%      DzDcp: ...the previous cell state cp (size d x N)
-%      DzDW:  ...the weight matrix W (size (4*d) x (m+d))
-%      DzDb:  ...the bias vector b (size d x N)
+%   Inputs
+%     DzDhn: Gradients of loss with respect to hn (d x N).
+%     DzDcn: Gradients of loss with respect to cn (d x N).
+%
+%   Outputs -- gradients of loss with respect to...
+%     DzDx:  ...the input x (m x N).
+%     DzDhp: ...the previous hidden state hp (d x N).
+%     DzDcp: ...the previous cell state cp (d x N).
+%     DzDW:  ...the weight matrix W ((4*d) x (m+d)).
+%     DzDb:  ...the bias vector b (d x N).
+%
+%
+%   [...] = VL_NNLSTM(..., 'clipGrad', CLIP)
+%   Applies hard gradient clipping, i.e. any gradient elements with a
+%   magnitude larger than CLIP will be clamped. This only affects the
+%   gradient (backward) pass. CLIP can also be a 5-elements vector, to
+%   apply a different value to each of the 5 output gradient matrices.
+%
+%
+%   Reference:
+%   [1] Donahue et al., "Long-term Recurrent Convolutional Networks for
+%   for Visual Recognition and Description", CVPR 2015. (pg. 3)
 
 % Copyright (C) 2016 Ankush Gupta and Joao F. Henriques.
 % All rights reserved.
@@ -48,6 +60,7 @@ function varargout = vl_nnlstm(x, hp, cp, W, b, varargin)
 % the terms of the BSD license (see the COPYING file).
 
 opts.debug = false ;
+opts.clipGrad = 10 ;
 [opts, grad] = vl_argparsepos(opts, varargin, 'nonrecursive') ;
 
 x_size = size(x) ;
@@ -137,4 +150,15 @@ else % backward-pass
   Dcp = reshape(Dcp, h_size) ;
 
   varargout = {Dx, Dhp, Dcp, DW, Db} ;
+  
+  if ~isempty(opts.clipGrad)
+    % clip gradients if necessary
+    clip = opts.clipGrad ;
+    if isscalar(clip)  % same clip value for all gradients
+      clip = clip(ones(1, 5)) ;
+    end
+    for i = 1:numel(varargout)
+      varargout{i} = min(clip(i), max(-clip(i), varargout{i})) ;
+    end
+  end
 end
