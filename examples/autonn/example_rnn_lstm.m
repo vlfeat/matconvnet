@@ -14,15 +14,11 @@ opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 
 opts.numUnits = 100 ;
 
-opts.train.batchSize = 100 ;
+opts.train.batchSize = 200 ;
 opts.train.numEpochs = 20 ;
 opts.train.continue = true ;
 opts.train.gpus = [] ;
-if strcmp(opts.model, 'lstm')
-  opts.train.learningRate = 0.1 ;
-else
-  opts.train.learningRate = 0.001 ;
-end
+opts.train.learningRate = 0.01 ;
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts = vl_argparse(opts, varargin) ;
@@ -43,74 +39,67 @@ end
 rng('default') ;
 rng(0) ;
 
-vocabSize = numel(imdb.vocabulary) ;  % number of characters in vocabulary
+numChars = numel(imdb.vocabulary) ;  % number of characters in vocabulary
 d = opts.numUnits ;  % number of hidden units
-T = imdb.phraseSize ;
+T = imdb.phraseLength ;
 
-text = Input() ;  % size = [phrase size, 1, vocabulary size, batch size]
+text = Input() ;  % size = [numChars, batchSize, T]
 
-idx = Input() ;
-nextChar = idx(2:T,1,1,:) ;
 
 switch opts.model
 case 'lstm'
   % initialize the shared parameters for an LSTM with d units
-  [W, b] = vl_nnlstm_params(d, vocabSize) ;
+  [W, b] = vl_nnlstm_params(d, numChars) ;
   
   % initial state
   h = cell(T, 1);
   c = cell(T, 1);
-  h{1} = Layer.zeros(d, size(text,4), 'single');
-  c{1} = Layer.zeros(d, size(text,4), 'single');
+  h{1} = Layer.zeros(d, size(text,2), 'single');
+  c{1} = Layer.zeros(d, size(text,2), 'single');
 
-  % run LSTM over all time steps
+  % compute LSTM hidden states for all time steps
   for t = 1 : T - 1
-    [h{t+1}, c{t+1}] = vl_nnlstm(text(t,1,:,:), h{t}, c{t}, W, b, 'debug',true);
+    [h{t+1}, c{t+1}] = vl_nnlstm(text(:,:,t), h{t}, c{t}, W, b, 'debug',true) ;
   end
-
-  % concatenate hidden states along 3rd dimension, ignoring initial state.
-  % H will have size [d, batch size, T - 2]
-  H = cat(3, h{2:end}) ;
-
-  % final projection (note same projection is applied at all time steps)
-  prediction = vl_nnconv(permute(H, [3 4 1 2]), 'size', [1, 1, d, vocabSize]) ;
-
-  loss = vl_nnloss(prediction, nextChar, 'loss', 'softmaxlog') ;
-  err = vl_nnloss(prediction, nextChar, 'loss', 'classerror') ;
   
 
 case 'rnn'
-  Wi = Param('value', xavier(d, vocabSize)) ;  % input weights
-  Wh = Param('value', xavier(d, d)) ;          % hidden weights
-  bh = Param('value', zeros(1, d, 'single')) ; % hidden biases
-  Wo = Param('value', xavier(vocabSize, d)) ;  % output weights
-  bo = Param('value', zeros(1, d, 'single')) ; % output biases
-
-  h = zeros(d, 1, 'single') ;  % initial state
-  i = text(:,:,1) ;  % initial input
-
-  loss = 0 ;
-  err = 0 ;
-
-  for k = 1 : imdb.phraseSize - 1
-    % new hidden state
-    h = vl_nnsigmoid(Wi * i + Wh * h + bh) ;
-
-    % unnormalized log-likelihood of next characters
-    o = Wo * h + bo ;
-
-    % get next input and compute prediction loss
-    i = text(:,:,k+1) ;
-    loss = loss + vl_nnloss(o, i, 'loss', 'softmaxlog') ;
-
-    % classification error
-    err = err + vl_nnloss(o, i, 'loss', 'classerror') ;
+  Wi = Param('value', 0.1 * randn(d, numChars, 'single')) ;  % input weights
+  Wh = Param('value', 0.1 * randn(d, d, 'single')) ;         % hidden weights
+  bh = Param('value', zeros(d, 1, 'single')) ;               % hidden biases
+  
+  % initial state
+  h = cell(T, 1);
+  h{1} = Layer.zeros(d, size(text,2), 'single');
+  
+  % compute RNN hidden states for all time steps
+  for t = 1 : T - 1
+    h{t+1} = vl_nnsigmoid(Wi * text(:,:,t) + Wh * h{t} + bh) ;
   end
 
 otherwise
   error('Unknown model.') ;
 end
 
+
+% concatenate hidden states along 3rd dimension, ignoring initial state.
+% H will have size [d, batchSize, T - 2]
+H = cat(3, h{2:end}) ;
+
+% final projection (note same projection is applied at all time steps)
+prediction = vl_nnconv(permute(H, [3 4 1 2]), 'size', [1, 1, d, numChars]) ;
+
+
+% the ground truth "next" char for each of the T-1 input chars
+idx = Input() ;  % as indexes, not one-hot encodings
+nextChar = permute(idx(1,:,2:T), [3 1 4 2]) ;
+
+% compute loss and error
+loss = vl_nnloss(prediction, nextChar, 'loss', 'softmaxlog') ;
+err = vl_nnloss(prediction, nextChar, 'loss', 'classerror') ;
+
+
+% assign names and compile network
 Layer.workspaceNames() ;
 net = Net(loss, err) ;
 
@@ -123,22 +112,16 @@ bopts.useGpu = numel(opts.train.gpus) > 0 ;
 info = cnn_train_autonn(net, imdb, @(varargin) getBatch(bopts,varargin{:}), opts.train) ;
 
 % --------------------------------------------------------------------
-function x = xavier(varargin)
-% --------------------------------------------------------------------
-% xavier initialization for weights
-x = randn(varargin{:}, 'single') / sqrt(2 * prod([varargin{1:end-1}])) ;
-
-% --------------------------------------------------------------------
 function inputs = getBatch(opts, imdb, batch)
 % --------------------------------------------------------------------
 % one-hot encoding of characters. returned data size is:
-% [phrase size, 1, vocabulary size, batch size].
+% [vocabSize, batchSize, phraseLength].
 
-% reshape to [phrase size, 1, 1, batch size] tensor of character indexes
-idx = reshape(imdb.images.data(:,batch), imdb.phraseSize, 1, 1, []) ;
+% permute to size [1, batchSize, phraseLength] tensor of character indexes
+idx = permute(imdb.images.data(:,batch), [3 2 1]) ;
 
-% now expand to one-hot encoding of those indexes, along third dimension
-text = single(bsxfun(@eq, idx, reshape(1:numel(imdb.vocabulary), 1, 1, []))) ;
+% now expand to one-hot encoding of those indexes, along the 1st dimension
+text = single(bsxfun(@eq, idx, (1:numel(imdb.vocabulary))')) ;
 
 if opts.useGpu > 0
   text = gpuArray(text) ;
@@ -175,6 +158,6 @@ set(randperm(numel(set), ceil(numel(set) * 0.2))) = 2;  % random 20% as val set
 imdb.images.data = data ;
 imdb.images.set = set ;
 imdb.vocabulary = vocabulary ;
-imdb.phraseSize = sz(1) ;
+imdb.phraseLength = sz(1) ;
 imdb.meta.sets = {'train', 'val'} ;
 
