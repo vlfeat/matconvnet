@@ -59,7 +59,7 @@ case 'lstm'
 
   % compute LSTM hidden states for all time steps
   for t = 1 : T - 1
-    [h{t+1}, c{t+1}] = vl_nnlstm(text(:,:,t), h{t}, c{t}, W, b, 'debug',true) ;
+    [h{t+1}, c{t+1}] = vl_nnlstm(text(:,:,t), h{t}, c{t}, W, b) ;
   end
   
 

@@ -61,7 +61,6 @@ function varargout = vl_nnlstm(x, hp, cp, W, b, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-opts.debug = false ;
 opts.clipGrad = 100 ;
 [opts, grad] = vl_argparsepos(opts, varargin, 'nonrecursive') ;
 
@@ -79,16 +78,12 @@ assert(ismatrix(x)) ;
 
 % check/get sizes of W/b:
 d4 = size(W,1) ;
-if opts.debug
-  assert(N==size(hp,2) && N==size(cp,2), 'inputs batch-size mistmatch.') ;  
-  assert(mod(d4,4)==0, 'the first dimension of W should be a multiple of 4') ;
-  assert(d4==size(b,1), 'size of W and b do not match.') ;
-end
+assert(N==size(hp,2) && N==size(cp,2), 'Inputs/batch-size mistmatch.') ;  
+assert(mod(d4,4)==0, 'The first dimension of W should be a multiple of 4') ;
+assert(d4==size(b,1), 'Size of W and b do not match.') ;
 D = int32(d4/4) ;
 
-if opts.debug
-  assert(size(W,2)==(D+m), 'the second dimension of W should be %d.',D+m) ;
-end
+assert(size(W,2)==(D+m), 'The second dimension of W should be %d.',D+m) ;
 
 xh = [x; hp] ;
 
