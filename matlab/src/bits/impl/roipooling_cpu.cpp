@@ -23,6 +23,13 @@ the terms of the BSD license (see the COPYING file).
 using std::max ;
 using std::min ;
 
+/* For C++ 99 and 03 round() support, compilation with Visual Studio 2010 */
+template <typename NumberType>
+NumberType round(NumberType number){
+	return (NumberType) floor( (double) (number + 0.5));
+}
+
+
 /* ---------------------------------------------------------------- */
 /*                                            max roipooling helper */
 /* ---------------------------------------------------------------- */
