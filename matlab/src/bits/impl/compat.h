@@ -1,18 +1,18 @@
 #ifndef COMPAT_H
 #define COMPAT_H
 
-#ifdef  _WIN64
-typedef signed __int64 ssize_t;
-#else
-typedef signed int ssize_t;
-#endif // _WIN64
-
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #define __func__ __FUNCTION__
 #undef max
 #undef min
+
+#ifdef  _WIN64
+typedef signed __int64 ssize_t;
+#else
+typedef signed int ssize_t;
+#endif // _WIN64
 
 #if _MSC_VER < 1700
 #define false 0
