@@ -61,7 +61,7 @@ function varargout = vl_nnlstm(x, hp, cp, W, b, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-opts.clipGrad = 100 ;
+opts.clipGrad = 10 ;
 [opts, grad] = vl_argparsepos(opts, varargin, 'nonrecursive') ;
 
 x_size = size(x) ;

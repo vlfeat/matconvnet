@@ -13,6 +13,7 @@ opts.dataDir = fullfile(vl_rootnn, 'data', 'text') ;
 opts.imdbPath = fullfile(opts.expDir, 'imdb.mat');
 
 opts.numUnits = 100 ;
+opts.clipGrad = 10 ;
 
 opts.train.batchSize = 200 ;
 opts.train.numEpochs = 20 ;
@@ -59,7 +60,7 @@ case 'lstm'
 
   % compute LSTM hidden states for all time steps
   for t = 1 : T - 1
-    [h{t+1}, c{t+1}] = vl_nnlstm(text(:,:,t), h{t}, c{t}, W, b) ;
+    [h{t+1}, c{t+1}] = vl_nnlstm(text(:,:,t), h{t}, c{t}, W, b, 'clipGrad', opts.clipGrad) ;
   end
   
 
