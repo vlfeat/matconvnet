@@ -32,6 +32,7 @@ compiling MatConvNet using the MATLAB function
 method,
 [the command line or an IDE can be used as well](install-alt.md).
 
+
 <a name='cpu'></a>
 ### Compiling for CPU
 
@@ -42,6 +43,21 @@ library:
 
 1.  Make sure that MATLAB is
     [configured to use your compiler](http://www.mathworks.com/help/matlab/matlab_external/changing-default-compiler.html).
+
+    For Ubuntu/Debian like distributions this means to install
+    the following packages:
+    ```
+    sudo apt-get install build-essential libjpeg-turbo8-dev
+    ```
+    And for Fedora/Centos/RedHat distributions to install the following packages:
+    ```
+    sudo yum install gcc gcc-c++ libjpeg-turbo-devel
+    ```
+
+    For Windows platform, you need to install Visual Studio (at least 2010).
+
+    Before running `vl_compilenn`, **don't forget to run `mex -setup` in MATLAB**.
+
 2.  Open MATLAB and issue the commands:
 
         > cd <MatConvNet>
@@ -216,5 +232,3 @@ Using MATLAB 2015b, CUDA 7.5, and cuDNN R4:
                    'cudaRoot', '/opt/local/cuda-7.5', ...
                    'enableCudnn', true, ...
                    'cudnnRoot', 'local/cudnn-rc4') ;
-
-
