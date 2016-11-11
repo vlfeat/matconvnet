@@ -16,14 +16,12 @@ the terms of the BSD license (see the COPYING file).
 #include <cstddef>
 #include <string>
 
+#include "impl/compat.h"
+
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 #define STRINGIZE_HELPER(x) #x
 #define FILELINE STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__)
 #define divides(a,b) ((b) == (b)/(a)*(a))
-
-#ifdef _MSC_VER
-#define __func__ __FUNCTION__
-#endif
 
 #if ENABLE_DOUBLE
 #define IF_DOUBLE(x) x
