@@ -7,6 +7,12 @@ for t=1:6
 end
 ims = vl_imreadjpeg(files) ;
 
+% Test reading a CMYK image
+ims_cmyk = vl_imreadjpeg({which('cmyk.jpg')}) ;
+
+ims = vl_imreadjpeg(files) ;
+assert(all(~cellfun(@isempty, ims)), 'Imagae Files not loaded.');
+
 % Test inserting a non-image file
 files_ = files ;
 files_{3} = [mfilename('fullpath') '.m'];
@@ -35,3 +41,5 @@ for n = 1:4
   ims___ = vl_imreadjpeg(files, 'numThreads', n) ;
   assert(isequal(ims,ims___)) ;
 end
+
+ims = vl_imreadjpeg(files) ;
