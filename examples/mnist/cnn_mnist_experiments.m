@@ -8,19 +8,23 @@
 
 figure(1) ; clf ;
 subplot(1,2,1) ;
-semilogy(info_fc.val.objective', 'o-') ; hold all ;
-semilogy(info_bn.val.objective', '+--') ;
+fc_obj = arrayfun(@(i) info_fc.val(i).objective, (1:20)'); semilogy(fc_obj', 'o-') ; hold all ;
+bn_obj = arrayfun(@(i) info_bn.val(i).objective, (1:20)'); semilogy(bn_obj', '+--') ;
 xlabel('Training samples [x 10^3]'); ylabel('energy') ;
 grid on ;
 h=legend('BSLN', 'BNORM') ;
 set(h,'color','none');
 title('objective') ;
+
 subplot(1,2,2) ;
-plot(info_fc.val.error', 'o-') ; hold all ;
-plot(info_bn.val.error', '+--') ;
+fc_top1err = arrayfun(@(i) info_fc.val(i).top1err, (1:20)'); plot(fc_top1err', 'o-') ; hold all ;
+bn_top1err = arrayfun(@(i) info_bn.val(i).top1err, (1:20)'); plot(bn_top1err', '*-') ;
+fc_top5err = arrayfun(@(i) info_fc.val(i).top5err, (1:20)'); plot(fc_top5err', '+-') ;
+bn_top5err = arrayfun(@(i) info_bn.val(i).top5err, (1:20)'); plot(bn_top5err', 'x-') ;
 h=legend('BSLN-val','BSLN-val-5','BNORM-val','BNORM-val-5') ;
 grid on ;
 xlabel('Training samples [x 10^3]'); ylabel('error') ;
 set(h,'color','none') ;
-title('error') ;
+title('top1err') ;
+
 drawnow ;
