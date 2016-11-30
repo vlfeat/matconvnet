@@ -23,12 +23,12 @@ function [w, state] = adadelta(w, state, grad, opts, ~)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-if nargin == 0 % Return the default solver options
-  w = struct('epsilon', 1e-6, 'rho', 0.9);
-  return;
+if nargin == 0  % Return the default solver options
+  w = struct('epsilon', 1e-6, 'rho', 0.9) ;
+  return ;
 end
 
-if isequal(state, 0)  % first iteration, initialize state
+if isequal(state, 0)  % First iteration, initialize state struct
   state = struct('g_sqr', 0, 'delta_sqr', 0) ;
 end
 

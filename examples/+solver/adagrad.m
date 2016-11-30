@@ -33,9 +33,9 @@ function [w, g_sqr] = adagrad(w, g_sqr, grad, opts, lr)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-if nargin == 0 % Return the default solver options
-  w = struct('epsilon', 1e-10, 'rho', 1);
-  return;
+if nargin == 0  % Return the default solver options
+  w = struct('epsilon', 1e-10, 'rho', 1) ;
+  return ;
 end
 
 g_sqr = g_sqr * opts.rho + grad.^2 ;
