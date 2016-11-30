@@ -32,15 +32,14 @@ opts.weightDecay = 0.0005 ;
 
 opts.solver = []; % Empty array - optimised SGD solver
 [opts, varargin] = vl_argparse(opts, varargin);
-if isempty(opts.solver)
-  opts.solverOpts.momentum = 0.9;
-else
+if ~isempty(opts.solver)
   assert(isa(opts.solver, 'function_handle') && nargout(opts.solver) == 2,...
     'Invalid solver - a function handle with two outputs expected.');
   % A call without any input arg - def opts
   opts.solverOpts = opts.solver();
 end
 
+opts.momentum = 0.9 ;
 opts.saveSolverState = true ;
 opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
@@ -255,8 +254,9 @@ function [net, state] = processEpoch(net, state, params, mode)
 % initialize with momentum 0
 if isempty(state) || isempty(state.solverState)
   for i = 1:numel(net.layers)
-    for j = 1:numel(net.layers{i}.weights)
-      state.solverState{i}{j} = [] ;
+    state.solverState{i} = cell(1, numel(net.layers{i}.weights)) ;
+    if isempty(params.solver)  % initialize momentum to 0 for SGD (default solver)
+      state.solverState{i}(:) = {0} ;
     end
   end
 end
@@ -265,6 +265,11 @@ end
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net = vl_simplenn_move(net, 'gpu') ;
+  for i = 1:numel(state.solverState)
+    for j = 1:numel(state.solverState{i})
+      state.solverState{i}{j} = gpuArray(state.solverState{i}{j}) ;
+    end
+  end
 end
 if numGpus > 1
   parserv = ParameterServer(params.parameterServer) ;

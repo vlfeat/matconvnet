@@ -24,15 +24,14 @@ opts.weightDecay = 0.0005 ;
 
 opts.solver = []; % Empty array - optimised SGD solver
 [opts, varargin] = vl_argparse(opts, varargin);
-if isempty(opts.solver)
-  opts.solverOpts.momentum = 0.9;
-else
+if ~isempty(opts.solver)
   assert(isa(opts.solver, 'function_handle') && nargout(opts.solver) == 2,...
     'Invalid solver - a function handle with two outputs expected.');
   % A call without any input arg - def opts
   opts.solverOpts = opts.solver();
 end
 
+opts.momentum = 0.9 ;
 opts.saveSolverState = true ;
 opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
@@ -173,6 +172,9 @@ function [net, state] = processEpoch(net, state, params, mode)
 % initialize with momentum 0
 if isempty(state) || isempty(state.solverState)
   state.solverState = cell(1, numel(net.params)) ;
+  if isempty(params.solver)  % initialize momentum to 0 for SGD (default solver)
+    state.solverState(:) = {0} ;
+  end
 end
 
 % move CNN  to GPU as needed
