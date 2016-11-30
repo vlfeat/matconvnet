@@ -509,7 +509,9 @@ for l=numel(net.layers):-1:1
       label = '' ;
       switch net.layers{l}.type
         case {'conv','convt'}
-          variation = thisLR * mean(abs(state.solverState{l}{j}(:))) ;
+          if isnumeric(state.solverState{l}{j})
+            variation = thisLR * mean(abs(state.solverState{l}{j}(:))) ;
+          end
           power = mean(res(l+1).x(:).^2) ;
           if j == 1 % fiters
             base = mean(net.layers{l}.weights{j}(:).^2) ;
