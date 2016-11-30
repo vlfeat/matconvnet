@@ -12,6 +12,7 @@ classdef nnsolvers < nntest
   methods (TestClassSetup)
     function data(test, dataType)
       % synthetic data, 2 classes of gaussian samples with different means
+      rng(0) ;
       sz = [15, 10, 5] ;  % input size
       x1 = 2 * randn([sz, 100], dataType) ;  % place mean at the origin
       x2 = bsxfun(@plus, 2 * randn(sz, dataType), 2 * randn([sz, 100], dataType)) ;  % place mean randomly
