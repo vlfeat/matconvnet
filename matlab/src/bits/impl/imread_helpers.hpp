@@ -13,10 +13,13 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <iostream>
 
 #ifdef __SSSE3__
 #include <tmmintrin.h>
 #endif
+
+#include "../data.hpp"
 
 namespace vl { namespace impl {
 
@@ -398,7 +401,7 @@ namespace vl { namespace impl {
     float * weights ;
     int * starts ;
     int filterSize ;
-    enum FilterType { kBilinear, kBicubic, kLancoz } ;
+    enum FilterType { kBox, kBilinear, kBicubic, kLanczos2, kLanczos3 } ;
 
     ~ImageResizeFilter() {
       free(weights) ;
@@ -409,15 +412,11 @@ namespace vl { namespace impl {
     {
       filterSize = 0 ;
       switch (filterType) {
-        case kBilinear :
-          filterSize = 2 ;
-          break ;
-        case kBicubic :
-          filterSize = 3 ;
-          break ;
-        case kLancoz :
-          filterSize = 4 ;
-          break ;
+        case kBox      : filterSize = 1 ; break ;
+        case kBilinear : filterSize = 2 ; break ;
+        case kBicubic  : filterSize = 4 ; break ;
+        case kLanczos2 : filterSize = 4 ; break ;
+        case kLanczos3 : filterSize = 6 ; break ;
       }
 
       /* 
@@ -436,10 +435,10 @@ namespace vl { namespace impl {
        */
       if (alpha > 1) {
         filterSupport *= alpha ;
-        filterSize = (int)floorf(filterSupport) ;
+        filterSize = (int)ceilf(filterSupport) ;
       }
 
-      weights = (float*)malloc(sizeof(float) * filterSize * outputWidth) ;
+      weights = (float*)calloc(filterSize * outputWidth, sizeof(float)) ;
       starts = (int*)malloc(sizeof(int) * outputWidth) ;
       float * filter = weights ;
 
@@ -453,7 +452,9 @@ namespace vl { namespace impl {
          so that there are always filerWidth elements to sum on */
         float u = alpha * v + beta ;
         float mass = 0 ;
-        starts[v] = (int)std::ceil(u - 0.5f * filterSupport) ;
+        int skip = filterSize ;
+
+        starts[v] = (int)std::ceil(u - filterSupport / 2) ;
 
         for (int r = 0 ; r < filterSize ; ++r) {
           int k = r + starts[v] ;
@@ -463,22 +464,77 @@ namespace vl { namespace impl {
             delta /= alpha ;
           }
           switch (filterType) {
+            case kBox:
+              h = (float)((-0.5f <= delta) & (delta < 0.5f)) ;
+              break ;
             case kBilinear:
               h = (std::max)(0.0f, 1.0f - fabsf(delta)) ;
+              break ;
+            case kBicubic: {
+              float adelta = fabsf(delta) ;
+              float adelta2 = adelta*adelta ;
+              float adelta3 = adelta*adelta2 ;
+              if (adelta <= 1.0f) {
+                h = 1.5f * adelta3 - 2.5f * adelta2 + 1.f ;
+              } else if (adelta <= 2.0f) {
+                h = -0.5f * adelta3 + 2.5f * adelta2 - 4.f * adelta + 2.f ;
+              } else {
+                h = 0.f ;
+              }
+              break ;
+            }
+            case kLanczos2: {
+              if (fabsf(delta) < 2) {
+                const float eps = 1e-5f ;
+                h = (sin(VL_M_PI_F * delta) *
+                     sin(VL_M_PI_F * delta / 2.f) + eps) /
+                ((VL_M_PI_F*VL_M_PI_F * delta*delta / 2.f) + eps);
+              } else {
+                h = 0.f ;
+              }
+              break ;
+            }
+            case kLanczos3:
+              if (fabsf(delta) < 3) {
+                const float eps = 1e-5f ;
+                h = (sin(VL_M_PI_F * delta) *
+                     sin(VL_M_PI_F * delta / 3.f) + eps) /
+                ((VL_M_PI_F*VL_M_PI_F * delta*delta / 3.f) + eps);
+              } else {
+                h = 0.f ;
+              }
               break ;
             default:
               assert(false) ;
               break ;
           }
-          if (k >= 0 && k < inputWidth) {
-            filter[r] = h ;
+          {
+            // MATLAB uses a slightly different method for resizing
+            // the borders: it mirrors-pad them. This is a bit more
+            // difficult to obtain with our data structure. Instead,
+            // we repeat the first/last pixel.
+            int q = r ;
+            if (k < 0) {
+              q = r - k ;
+            } else if (k >= (signed)inputWidth) {
+              q = r - (k - (signed)inputWidth + 1) ;
+            }
+            filter[q] += h ;
             mass += h ;
-          } else {
-            filter[r] = 0.0f ;
+            if (h) {
+              skip = (std::min)(skip, q) ;
+            }
           }
         }
-        for (int r = 0 ; r < filterSize ; ++r) {
-          filter[r] /= mass ;
+        {
+          int r = 0 ;
+          starts[v] += skip ;
+          for (r = 0 ; r < filterSize - skip ; ++r) {
+            filter[r] = filter[r + skip] / mass ;
+          }
+          for ( ;  r < filterSize ; ++r) {
+            filter[r] = 0.f ;
+          }
         }
       }
     }
@@ -489,9 +545,10 @@ namespace vl { namespace impl {
                                   size_t height, size_t width, size_t depth,
                                   size_t cropHeight,
                                   size_t cropOffset,
-                                  bool flip = false)
+                                  bool flip = false,
+                                  vl::impl::ImageResizeFilter::FilterType filterType = vl::impl::ImageResizeFilter::kBilinear)
   {
-    ImageResizeFilter filters(outputHeight, height, cropHeight, cropOffset) ;
+    ImageResizeFilter filters(outputHeight, height, cropHeight, cropOffset, filterType) ;
     int filterSize = filters.filterSize ;
     for (int d = 0 ; d < (int)depth ; ++d) {
       for (int x = 0 ; x < (int)width ; ++x) {
@@ -501,9 +558,10 @@ namespace vl { namespace impl {
           float const * weights = filters.weights + filterSize * y ;
           for (int k = begin ; k < begin + filterSize ; ++k) {
             float w = *weights++ ;
-            if ((0 <= k) & (k < (int)height)) {
+            if (w == 0.f) break ;
+            //if ((0 <= k) & (k < (signed)height)) {
               z += input[k] * w ;
-            }
+            //}
           }
           if (!flip) {
             output[x + y * width] = z ; // transpose

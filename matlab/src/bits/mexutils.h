@@ -14,32 +14,17 @@ the terms of the BSD license (see the COPYING file).
 #ifndef MEXUTILS_H
 #define MEXUTILS_H
 
-#include"mex.h"
+#include "mex.h"
 
-#include<stdbool.h>
-#include<stdint.h>
-#include<stdio.h>
-#include<stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
 
-#include<ctype.h>
-#include<string.h>
-#include<assert.h>
+#include <ctype.h>
+#include <string.h>
+#include <assert.h>
 
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
-#ifdef  _WIN64
-typedef unsigned __int64 ssize_t;
-#else
-typedef unsigned int ssize_t;
-#endif
-#if _MSC_VER < 1800
-// Add some missing functions from C99
-#define isnan(x) _isnan(x)
-#define isinf(x) (!_finite(x))
-#define roundf(x) (float)(int)(x+0.5f)
-#endif
-#endif
+#include "impl/compat.h"
 
 #define VL_INLINE static __inline
 

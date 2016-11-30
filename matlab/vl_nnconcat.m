@@ -24,7 +24,7 @@ if isempty(dzdy)
   y = cat(dim, inputs{:});
 else
   if isempty(opts.inputSizes)
-    opts.inputSizes = cellfun(@size, inputs, 'UniformOutput', false) ;
+    opts.inputSizes = cellfun(@(inp) [size(inp,1),size(inp,2),size(inp,3),size(inp,4)], inputs, 'UniformOutput', false) ;
   end
   start = 1 ;
   y = cell(1, numel(opts.inputSizes)) ;
@@ -32,7 +32,7 @@ else
   s.subs = {':', ':', ':', ':'} ;
   for i = 1:numel(opts.inputSizes)
     stop = start + opts.inputSizes{i}(dim) ;
-    s.subs{dim} = start:stop-1 ; ;
+    s.subs{dim} = start:stop-1 ;
     y{i} = subsref(dzdy,s) ;
     start = stop ;
   end

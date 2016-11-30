@@ -5,7 +5,7 @@
 
 /*
 Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -40,7 +40,8 @@ data, dataMult, \
 filters, biases, \
 strideY, strideX, \
 padTop, padBottom, \
-padLeft, padRight) ;
+padLeft, padRight, \
+dilateY, dilateX) ;
 
 #define DISPATCH2(deviceType) \
 switch (dataType) { \
@@ -57,7 +58,8 @@ error = vl::impl::nnconv_cudnn<dataType>::forward \
  filters, biases, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
 #define DISPATCHCUDNN2() \
 switch (dataType) { \
@@ -74,7 +76,8 @@ vl::nnconv_forward(Context& context,
                    Tensor biases,
                    int strideY, int strideX,
                    int padTop, int padBottom,
-                   int padLeft, int padRight)
+                   int padLeft, int padRight,
+                   int dilateY, int dilateX)
 {
   vl::ErrorCode error = VLE_Success ;
   vl::DataType dataType = output.getDataType() ;
@@ -128,7 +131,8 @@ error = vl::impl::nnconv_backward_blas<deviceType, dataType> \
  data, filters, derOutput, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
 #undef DISPATCHCUDNN
 #define DISPATCHCUDNN(dataType) \
@@ -138,7 +142,8 @@ error = vl::impl::nnconv_cudnn<dataType>::backward \
  data, filters, derOutput, \
  strideY, strideX, \
  padTop, padBottom, \
- padLeft, padRight) ;
+ padLeft, padRight, \
+ dilateY, dilateX) ;
 
 vl::ErrorCode
 vl::nnconv_backward(Context& context,
@@ -150,7 +155,8 @@ vl::nnconv_backward(Context& context,
                     Tensor derOutput,
                     int strideY, int strideX,
                     int padTop, int padBottom,
-                    int padLeft, int padRight)
+                    int padLeft, int padRight,
+                    int dilateY, int dilateX)
 {
   vl::ErrorCode error = vl::VLE_Success ;
   vl::DataType dataType = derOutput.getDataType() ;
@@ -230,7 +236,8 @@ vl::nnconvt_forward(Context& context,
                                 Tensor(), filters, dataSlice,
                                 upsampleY, upsampleX,
                                 cropTop, cropBottom,
-                                cropLeft, cropRight) ;
+                                cropLeft, cropRight,
+                                1, 1) ;
     if (error != VLE_Success) { goto done ; }
   }
   if (biases) {
@@ -263,30 +270,32 @@ vl::nnconvt_backward(Context& context,
 
   if (derData) {
     error = vl::nnconv_forward(context,
-                                derData, 0,
-                                derOutput, 1,
-                                filters, Tensor(),
-                                upsampleY, upsampleX,
-                                cropTop, cropBottom,
-                                cropLeft, cropRight) ;
+                               derData, 0,
+                               derOutput, 1,
+                               filters, Tensor(),
+                               upsampleY, upsampleX,
+                               cropTop, cropBottom,
+                               cropLeft, cropRight,
+                               1, 1) ;
     if (error != VLE_Success) { goto done ; }
   }
 
   if (derFilters) {
     error = vl::nnconv_backward(context,
-                                 Tensor(), derFilters, Tensor(),
-                                 derOutput, Tensor(), data,
-                                 upsampleY, upsampleX,
-                                 cropTop, cropBottom,
-                                 cropLeft, cropRight) ;
+                                Tensor(), derFilters, Tensor(),
+                                derOutput, Tensor(), data,
+                                upsampleY, upsampleX,
+                                cropTop, cropBottom,
+                                cropLeft, cropRight,
+                                1, 1) ;
     if (error != VLE_Success) { goto done ; }
   }
 
   if (derBiases) {
     error = vl::nnbias_backward(context,
-                                 Tensor(), 0,
-                                 derBiases, 0,
-                                 derOutput, 1) ;
+                                Tensor(), 0,
+                                derBiases, 0,
+                                derOutput, 1) ;
   }
 
 done:

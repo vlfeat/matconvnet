@@ -28,6 +28,7 @@ vl_nnnormalizelp.m \
 vl_nnpdist.m \
 vl_nnpool.m \
 vl_nnrelu.m \
+vl_nnroipool.m \
 vl_nnsigmoid.m \
 vl_nnsoftmax.m \
 vl_nnsoftmaxloss.m \
@@ -37,7 +38,7 @@ vl_setupnn.m \
 vl_imreadjpeg.m \
 vl_imreadjpeg.m \
 vl_taccum.m \
-vl_tflow.m \
+vl_tmove.m \
 simplenn/vl_simplenn.m \
 simplenn/vl_simplenn_diagnose.m \
 simplenn/vl_simplenn_tidy.m \

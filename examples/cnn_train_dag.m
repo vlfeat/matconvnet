@@ -22,7 +22,7 @@ opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
 
-opts.solver = @solver.sgd; % Empty array - optimised SGD solver
+opts.solver = []; % Empty array - optimised SGD solver
 [opts, varargin] = vl_argparse(opts, varargin);
 if isempty(opts.solver)
   opts.solverOpts.momentum = 0.9;
@@ -34,6 +34,7 @@ else
 end
 
 opts.saveSolverState = true ;
+opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
 opts.parameterServer.method = 'mmap' ;
@@ -42,6 +43,7 @@ opts.parameterServer.prefix = 'mcn' ;
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts.plotStatistics = true;
+opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
@@ -146,6 +148,16 @@ for epoch=start+1:opts.numEpochs
     drawnow ;
     print(1, modelFigPath, '-dpdf') ;
   end
+  
+  if ~isempty(opts.postEpochFn)
+    if nargout(opts.postEpochFn) == 0
+      opts.postEpochFn(net, params, state) ;
+    else
+      lr = opts.postEpochFn(net, params, state) ;
+      if ~isempty(lr), opts.learningRate = lr; end
+      if opts.learningRate == 0, break; end
+    end
+  end
 end
 
 % With multiple GPUs, return one copy
@@ -167,7 +179,7 @@ end
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
-  state.momentum = cellfun(@gpuArray, state.momentum, 'uniformoutput', false) ;
+  state.solverState = cellfun(@gpuArray, state.solverState, 'uniformoutput', false) ;
 end
 if numGpus > 1
   parserv = ParameterServer(params.parameterServer) ;
@@ -305,27 +317,39 @@ for p=1:numel(net.params)
     case 'gradient'
       thisDecay = params.weightDecay * net.params(p).weightDecay ;
       thisLR = params.learningRate * net.params(p).learningRate ;
-      
-      if isempty(params.solver)
-        if isempty(state.solverState{p})
-          state.solverState{p} = zeros(size(parDer), 'like', parDer);
-        end
-        
-        state.solverState{p} = vl_taccum(...
-          params.solverOpts.momentum,  state.solverState{p}, ...
-          - (1 / batchSize), parDer) ;
-        net.params(p).value = vl_taccum(...
-          (1 - thisLR * thisDecay / (1 - params.solverOpts.momentum)),  ...
-          net.params(p).value, ...
-          thisLR, state.solverState{p}) ;
-      else
-        grad = (1 / batchSize) * parDer + thisDecay * net.params(p).value;
-        % call solver function to update weights
-        [net.params(p).value, state.solverState{p}] = ...
-          params.solver(net.params(p).value, state.solverState{p}, ...
-          grad, params.solverOpts, thisLR) ;
-      end
 
+      if thisLR>0 || thisDecay>0
+        % Normalize gradient and incorporate weight decay.
+        parDer = vl_taccum(1/batchSize, parDer, ...
+                           thisDecay, net.params(p).value) ;
+
+        if isempty(params.solver)
+          % Default solver is the optimised SGD.
+          % Update momentum.
+          state.solverState{p} = vl_taccum(...
+            params.momentum, state.solverState{p}, ...
+            -1, parDer) ;
+
+          % Nesterov update (aka one step ahead).
+          if params.nesterovUpdate
+            delta = vl_taccum(...
+              params.momentum, state.solverState{p}, ...
+              -1, parDer) ;
+          else
+            delta = state.solverState{p} ;
+          end
+
+          % Update parameters.
+          net.params(p).value = vl_taccum(...
+            1,  net.params(p).value, thisLR, delta) ;
+
+        else
+          % call solver function to update weights
+          [net.params(p).value, state.solverState{p}] = ...
+            params.solver(net.params(p).value, state.solverState{p}, ...
+            parDer, params.solverOpts, thisLR) ;
+        end
+      end
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
         net.params(p).trainMethod, ...
@@ -421,7 +445,7 @@ end
 % -------------------------------------------------------------------------
 function clearMex()
 % -------------------------------------------------------------------------
-clear vl_tflow vl_imreadjpeg ;
+clear vl_tmove vl_imreadjpeg ;
 
 % -------------------------------------------------------------------------
 function prepareGPUs(opts, cold)

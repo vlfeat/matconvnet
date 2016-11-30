@@ -98,7 +98,7 @@ end
 
 if ~obj.computingDerivative, return ; end
 
-net.holdOn = opts.holdOn ;
+obj.holdOn = opts.holdOn ;
 
 % set output derivatives
 derOutputsNames = derOutputs(1:2:end);

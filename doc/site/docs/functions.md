@@ -33,6 +33,7 @@ showing how to train CNNs.
 - [`vl_nnpdist`](mfiles/vl_nnpdist.md) Pairwise distances.
 - [`vl_nnpool`](mfiles/vl_nnpool.md) Max and sum pooling.
 - [`vl_nnrelu`](mfiles/vl_nnrelu.md) Rectified Linear Unit.
+- [`vl_nnroipool`](mfiles/vl_nnroipool.md) Reegion of interest pooling.
 - [`vl_nnsigmoid`](mfiles/vl_nnsigmoid.md) Sigmoid.
 - [`vl_nnsoftmax`](mfiles/vl_nnsoftmax.md) Channel soft-max.
 - [`vl_nnsoftmaxloss`](mfiles/vl_nnsoftmaxloss.md) *Deprecated*
@@ -69,4 +70,4 @@ showing how to train CNNs.
 - [`vl_setpunn`](mfiles/vl_setupnn.md) Setup MatConvNet for use in MATLAB.
 - [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) Quickly load a batch of JPEG images.
 - [`vl_taccum`](mfiles/vl_taccum.md) Accumulate tensors operating in-place when possible.
-- [`vl_tflow`](mfiles/vl_tflow.md) Exchange tensors between MATLAB processes and GPUs.
+- [`vl_tmove`](mfiles/vl_tmove.md) Exchange tensors between MATLAB processes and GPUs.

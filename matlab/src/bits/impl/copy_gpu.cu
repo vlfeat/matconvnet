@@ -43,7 +43,7 @@ namespace vl { namespace impl {
          data_type value)
     {
       fill_kernel <data_type>
-      <<<divideAndRoundUp(numElements, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+      <<<divideAndRoundUp(numElements, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
       (dest, numElements, value) ;
 
       cudaError_t error = cudaGetLastError() ;

@@ -16,20 +16,21 @@ the terms of the BSD license (see the COPYING file).
 #include <cstddef>
 #include <string>
 
+#include "impl/compat.h"
+
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 #define STRINGIZE_HELPER(x) #x
 #define FILELINE STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__)
 #define divides(a,b) ((b) == (b)/(a)*(a))
-
-#ifdef _MSC_VER
-#define __func__ __FUNCTION__
-#endif
 
 #if ENABLE_DOUBLE
 #define IF_DOUBLE(x) x
 #else
 #define IF_DOUBLE(x)
 #endif
+
+#define VL_M_PI 3.14159265358979323846
+#define VL_M_PI_F 3.14159265358979323846f
 
 namespace vl {
 
@@ -97,6 +98,16 @@ namespace vl {
   {
     return (a + b - 1) / b ;
   }
+
+  inline size_t divideAndRoundUp(size_t a, size_t b)
+  {
+    return (a + b - 1) / b ;
+  }
+
+  /// Compute the greatest common divisor g of non-negative integers
+  /// @a a and @a b as well as two integers @a u and @a v such that
+  /// $au + bv = g$ (Bezout's coefficients).
+  int gcd(int a, int b, int &u, int& v) ;
 
   /// Draw a Normally-distributed scalar
   double randn() ;

@@ -22,7 +22,7 @@ end
 
 [obj.vars.fanin] = tolist(num2cell(varFanIn)) ;
 [obj.vars.fanout] = tolist(num2cell(varFanOut)) ;
-if ~isempty(parFanOut), 
+if ~isempty(parFanOut)
   [obj.params.fanout] = tolist(num2cell(parFanOut)) ;
 end
 
@@ -91,5 +91,7 @@ for o = obj.layers(layer).outputIndexes ;
 end
 order(layer) = n + 1 ;
 
+% --------------------------------------------------------------------
 function varargout = tolist(x)
+% --------------------------------------------------------------------
 [varargout{1:numel(x)}] = x{:} ;

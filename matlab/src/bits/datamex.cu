@@ -96,24 +96,24 @@ vl::MexContext::initGpu()
 /*
  The MexTensor class helps handling MATLAB CPU and GPU arrays.
 
- The design is somewhat ackward to match MATLAB assumpitons.
+ The design is somewhat awkward to match MATLAB assumptions.
 
  The class can either:
 
  - wrap an existing mxArray (or mxArray + mxGPUArray)
  - or create a new mxArray (or mxArray + mxGPUArray)
 
- In the last case, the array is released when the destructor is
+ In the second case, the array is released when the destructor is
  called. However, this would normally interfere with MATLAB
  automatic garbage collection upon raising an exception (which
  can happen using mexErrMsgTxt() or, implicitly, when an array
  creation function cannot complete, for example due to a memory error).
 
  Therefore the constructors make the allocated memory persistent. C++
- guarantees that the arrays are freeed upon error in the destructors.
+ guarantees that the arrays are freed upon error in the destructors.
 
- Note that, upon cerating an array, errors such as running out of
- CPU/GPU memory can occurr. In this case, MATLAB throws an error
+ Note that, upon creating an array, errors such as running out of
+ CPU/GPU memory can occur. In this case, MATLAB throws an error
  and quits the MEX file (either implicitly or because we call
  mexErrMsgTxt()). Hence constructors always complete with a well
  defined object.

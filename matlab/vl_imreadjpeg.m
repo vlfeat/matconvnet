@@ -1,6 +1,6 @@
 %VL_IMREADJPEG Load and transform images asynchronously
 %   IMAGES = VL_IMREADJPEG(FILES) reads the specified cell array
-%   FILES of JPEG files into the cell array of images IMAGES.
+%   FILES of JPEG files and returns at cell array of images IMAGES.
 %
 %   IMAGES = VL_IMREADJPEG(FILES, 'NumThreads', T) uses T parallel
 %   threads to accelerate the operation. Note that this is independent
@@ -13,6 +13,37 @@
 %   the same files in the same order* will then return the loaded
 %   images. This can be sued to quickly load a batch of JPEG images as
 %   MATLAB is busy doing something else.
+%
+%   The function can transforms the images on the fly in various
+%   ways. Transformatiosn are applied as follows:
+%
+%   1) An (H,W) image is loaded from disk.
+%
+%   2) A rectangular subset of the image is cropped and resized. The
+%      geometry of the crop is determined as follows:
+%
+%      1) First, the shape (Ho,Wo) of the output image (i.e. the
+%         resized crop) is determined. This, as determined by the
+%         `Resize` option, can be either the same as the input image
+%         (H,W) or one or both of height and witdth can be set to an
+%         arbitrary value.
+%
+
+%      2) Given the output shape (Ho,Wo) of the crop, the shape
+%         (Hi,Wi) and location of the crop in the input image is
+%         determined.  First, an anisotropy ratio (change in aspect
+%         ratio) is selected according to `CropAnisotropy`. Given
+%         that, the input crop rectangle is scaled to fill a certain
+%         percentage of the input image according to `CropSize`.
+%         Finally, the crop is extracted either from the middle of the
+%         input image or at a random location according to
+%         `CropLocation`.
+%
+%   3) The cropedd and resized image undergoes color post
+%      post-processing, including mean subtraction
+%      (`SubtractAverage`), random color shift (`Brightness`), and
+%      random changes in saturation (`Saturation`), and contrats
+%      (`Contrast`).
 %
 %   The function takes the following options:
 %
@@ -94,6 +125,11 @@
 %
 %   `Saturation`:: `0`
 %     The same as `Contrast`, but for saturation.
+%
+%   `Interpolation`:: `'bilinear'`
+%     The interpolation method; one of `box`, `bilinear`, `bicubic`,
+%     `lanczos2`, and `lanczos3`. The function uses interpolators
+%     equivalent to MATLAB's `imresize`.
 %
 %   Further details on the processing performed by the function can be
 %   found in the PDF manual.

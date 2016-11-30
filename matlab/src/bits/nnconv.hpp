@@ -5,7 +5,7 @@
 
 /*
 Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-16 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -28,7 +28,8 @@ namespace vl {
                  vl::Tensor biases,
                  int strideY, int strideX,
                  int padTop, int padBottom,
-                 int padLeft, int padRight) ;
+                 int padLeft, int padRight,
+                 int dilateY, int dilateX) ;
 
   vl::ErrorCode
   nnconv_backward(vl::Context& context,
@@ -40,7 +41,8 @@ namespace vl {
                   vl::Tensor derOutput,
                   int strideY, int strideX,
                   int padTop, int padBottom,
-                  int padLeft, int padRight) ;
+                  int padLeft, int padRight,
+                  int dilateY, int dilateX) ;
 
   vl::ErrorCode
   nnconvt_forward(vl::Context& context,

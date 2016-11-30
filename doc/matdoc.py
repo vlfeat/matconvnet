@@ -139,7 +139,7 @@ def render_S(tree, context):
     for n in tree.children: render_SL(n, context)
 
 def render_DH(tree, context):
-    if len(tree.inner_text.strip()) > 1:
+    if len(tree.inner_text.strip()) > 0:
         print "%s**%s** [*%s*]" % (context, tree.description.strip(), tree.inner_text.strip())
     else:
         print "%s**%s**" % (context, tree.description.strip())
