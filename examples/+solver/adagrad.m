@@ -38,10 +38,6 @@ if nargin == 0 % Return the default solver options
   return;
 end
 
-if isempty(g_sqr)
-  g_sqr = 0 ;
-end
-
 g_sqr = g_sqr * opts.rho + grad.^2 ;
 
 w = w - lr * grad ./ (sqrt(g_sqr) + opts.epsilon) ;

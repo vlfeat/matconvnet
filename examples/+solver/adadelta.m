@@ -28,9 +28,8 @@ if nargin == 0 % Return the default solver options
   return;
 end
 
-if isempty(state)
-  state.g_sqr = 0 ;
-  state.delta_sqr = 0 ;
+if isequal(state, 0)  % first iteration, initialize state
+  state = struct('g_sqr', 0, 'delta_sqr', 0) ;
 end
 
 rho = opts.rho ;

@@ -172,16 +172,21 @@ function [net, state] = processEpoch(net, state, params, mode)
 % initialize with momentum 0
 if isempty(state) || isempty(state.solverState)
   state.solverState = cell(1, numel(net.params)) ;
-  if isempty(params.solver)  % initialize momentum to 0 for SGD (default solver)
-    state.solverState(:) = {0} ;
-  end
+  state.solverState(:) = {0} ;
 end
 
 % move CNN  to GPU as needed
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
-  state.solverState = cellfun(@gpuArray, state.solverState, 'uniformoutput', false) ;
+  for i = 1:numel(state.solverState)
+    s = state.solverState{i} ;
+    if isnumeric(s)
+      state.solverState{i} = gpuArray(s) ;
+    elseif isstruct(s)
+      state.solverState{i} = structfun(@gpuArray, s, 'UniformOutput', false) ;
+    end
+  end
 end
 if numGpus > 1
   parserv = ParameterServer(params.parameterServer) ;
@@ -288,7 +293,14 @@ end
 if ~params.saveSolverState
   state.solverState = [] ;
 else
-  state.solverState = cellfun(@gather, state.solverState, 'uniformoutput', false) ;
+  for i = 1:numel(state.solverState)
+    s = state.solverState{i} ;
+    if isnumeric(s)
+      state.solverState{i} = gather(s) ;
+    elseif isstruct(s)
+      state.solverState{i} = structfun(@gather, s, 'UniformOutput', false) ;
+    end
+  end
 end
 
 net.reset() ;

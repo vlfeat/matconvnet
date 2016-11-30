@@ -255,9 +255,7 @@ function [net, state] = processEpoch(net, state, params, mode)
 if isempty(state) || isempty(state.solverState)
   for i = 1:numel(net.layers)
     state.solverState{i} = cell(1, numel(net.layers{i}.weights)) ;
-    if isempty(params.solver)  % initialize momentum to 0 for SGD (default solver)
-      state.solverState{i}(:) = {0} ;
-    end
+    state.solverState{i}(:) = {0} ;
   end
 end
 
@@ -267,7 +265,12 @@ if numGpus >= 1
   net = vl_simplenn_move(net, 'gpu') ;
   for i = 1:numel(state.solverState)
     for j = 1:numel(state.solverState{i})
-      state.solverState{i}{j} = gpuArray(state.solverState{i}{j}) ;
+      s = state.solverState{i}{j} ;
+      if isnumeric(s)
+        state.solverState{i}{j} = gpuArray(s) ;
+      elseif isstruct(s)
+        state.solverState{i}{j} = structfun(@gpuArray, s, 'UniformOutput', false) ;
+      end
     end
   end
 end
@@ -424,7 +427,12 @@ if ~params.saveSolverState
 else
   for i = 1:numel(state.solverState)
     for j = 1:numel(state.solverState{i})
-      state.solverState{i}{j} = gather(state.solverState{i}{j}) ;
+      s = state.solverState{i}{j} ;
+      if isnumeric(s)
+        state.solverState{i}{j} = gather(s) ;
+      elseif isstruct(s)
+        state.solverState{i}{j} = structfun(@gather, s, 'UniformOutput', false) ;
+      end
     end
   end
 end

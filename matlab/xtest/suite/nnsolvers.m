@@ -1,7 +1,7 @@
 classdef nnsolvers < nntest
   properties (TestParameter)
     networkType = {'simplenn', 'dagnn'}
-    solver = {@solver.sgd, @solver.adagrad, @solver.adadelta, @solver.rmsprop}
+    solver = {[], @solver.adagrad, @solver.adadelta, @solver.rmsprop}
   end
   properties
     imdb
