@@ -460,9 +460,7 @@ for l=numel(net.layers):-1:1
 
         % Nesterov update (aka one step ahead).
         if params.nesterovUpdate
-          delta = vl_taccum(...
-            params.momentum, state.momentum{l}{j}, ...
-            -1, parDer) ;
+          delta = params.momentum * state.momentum{l}{j} - parDer ;
         else
           delta = state.momentum{l}{j} ;
         end
