@@ -346,9 +346,7 @@ for p=1:numel(net.params)
 
           % Nesterov update (aka one step ahead).
           if params.nesterovUpdate
-            delta = vl_taccum(...
-              params.momentum, state.solverState{p}, ...
-              -1, parDer) ;
+            delta = params.momentum * state.solverState{p} - parDer ;
           else
             delta = state.solverState{p} ;
           end
