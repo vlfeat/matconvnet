@@ -24,29 +24,7 @@ the terms of the BSD license (see the COPYING file).
 #include <string.h>
 #include <assert.h>
 
-#if defined(_MSC_VER) && _MSC_VER < 1700
-#define false 0
-#define true 1
-#elif _MSC_VER > 1700
-#include <stdbool.h>
-#endif
-
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
-#ifdef  _WIN64
-typedef signed __int64 ssize_t;
-#else
-typedef signed int ssize_t;
-#endif
-#if _MSC_VER < 1800
-// Add some missing functions from C99
-#define isnan(x) _isnan(x)
-#define isinf(x) (!_finite(x))
-#define round(x) x >= 0.0 ? (double)(int)(x + 0.5f) : (double)(int)(x - 0.5f)
-#define roundf(x) x >= 0.0f ? (float)(int)(x + 0.5f) : (float)(int)(x - 0.5f)
-#endif
-#endif
+#include "impl/compat.h"
 
 #define VL_INLINE static __inline
 
