@@ -34,6 +34,7 @@ opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
 opts.profile = false ;
+opts.topKerror = 5;
 opts.parameterServer.method = 'mmap' ;
 opts.parameterServer.prefix = 'mcn' ;
 
@@ -83,7 +84,7 @@ if isstr(opts.errorFunction)
       hasError = false ;
     case 'multiclass'
       opts.errorFunction = @error_multiclass ;
-      if isempty(opts.errorLabels), opts.errorLabels = {'top1err', 'top5err'} ; end
+      if isempty(opts.errorLabels), opts.errorLabels = {'top1err', sprintf('top%derr',opts.topKerror)} ; end
     case 'binary'
       opts.errorFunction = @error_binary ;
       if isempty(opts.errorLabels), opts.errorLabels = {'binerr'} ; end
@@ -100,7 +101,8 @@ stats = [] ;
 % -------------------------------------------------------------------------
 
 modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
-modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
+modelPdfPath = fullfile(opts.expDir, 'net-train.pdf') ;
+modelFigPath = fullfile(opts.expDir, 'net-train.fig') ;
 
 start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
@@ -178,7 +180,8 @@ for epoch=start+1:opts.numEpochs
       grid on ;
     end
     drawnow ;
-    print(1, modelFigPath, '-dpdf') ;
+    print(1, modelPdfPath, '-dpdf') ;
+    saveas(1, modelFigPath) ;
   end
 end
 
@@ -204,7 +207,7 @@ if size(labels,3) == 2
   labels(:,:,2,:) = [] ;
 end
 
-m = min(5, size(predictions,3)) ;
+m = min(opts.topKerror, size(predictions,3)) ;
 
 error = ~bsxfun(@eq, predictions, labels) ;
 err(1,1) = sum(sum(sum(mass .* error(:,:,1,:)))) ;

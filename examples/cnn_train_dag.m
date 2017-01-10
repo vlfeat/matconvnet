@@ -8,7 +8,7 @@ function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
-
+opts.useGpu = false ;
 opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
 opts.batchSize = 256 ;
@@ -25,6 +25,7 @@ opts.saveMomentum = true ;
 opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
+opts.hardNegMining = [];
 opts.parameterServer.method = 'mmap' ;
 opts.parameterServer.prefix = 'mcn' ;
 
@@ -55,7 +56,8 @@ end
 % -------------------------------------------------------------------------
 
 modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
-modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
+modelFigPath = fullfile(opts.expDir, 'net-train.fig') ;
+modelPdfPath = fullfile(opts.expDir, 'net-train.pdf') ;
 
 start = opts.continue * findLastCheckpoint(opts.expDir) ;
 if start >= 1
@@ -109,10 +111,14 @@ for epoch=start+1:opts.numEpochs
 
   if opts.plotStatistics
     switchFigure(1) ; clf ;
+%     maximize(1);
     plots = setdiff(...
       cat(2,...
       fieldnames(stats.train)', ...
       fieldnames(stats.val)'), {'num', 'time'}) ;
+    n = ceil(sqrt(numel(plots)));
+    m = ceil(numel(plots)/n);
+        
     for p = plots
       p = char(p) ;
       values = zeros(0, epoch) ;
@@ -125,15 +131,32 @@ for epoch=start+1:opts.numEpochs
           leg{end+1} = f ;
         end
       end
-      subplot(1,numel(plots),find(strcmp(p,plots))) ;
+      subplot(n,m,find(strcmp(p,plots))) ;
       plot(1:epoch, values','o-') ;
       xlabel('epoch') ;
-      title(p) ;
-      legend(leg{:}) ;
+      title(p,'Interpreter','none') ;
+      legend(leg,'Interpreter','none') ;
       grid on ;
+      w = linspace(0.3,1,size(values,2));
+      valm = sum(bsxfun(@times,values,w),2) ./ sum(w);
+      vals = std(values,[],2);
+      ylim([min(valm) - max(vals), max(valm) + max(vals)])
+    
+      if ~isempty(opts.hardNegMining) && opts.hardNegMining.rate > 0 && mod(epoch,opts.hardNegMining.rate) == 0
+        pause(0.5);
+        imdb = opts.hardNegMining.hFunc(net,imdb,opts.hardNegMining);
+        if isfield(opts.hardNegMining,'saveImdbPath') && ~isempty(opts.hardNegMining.saveImdbPath)
+            disp('Saving IMDB...');
+            save(opts.hardNegMining.saveImdbPath, '-struct', 'imdb','-v7.3') ;
+        else
+            pause(0.5);
+        end
+
+      end
     end
     drawnow ;
-    print(1, modelFigPath, '-dpdf') ;
+    print(1, modelPdfPath, '-dpdf', '-bestfit') ;
+    savefig(1, modelFigPath);
   end
 end
 
@@ -313,11 +336,54 @@ for p=1:numel(net.params)
         else
           delta = state.momentum{p} ;
         end
-
         % Update parameters.
         net.params(p).value = vl_taccum(...
           1,  net.params(p).value, thisLR, delta) ;
       end
+      
+    case 'RMSprop' %http://cs231n.github.io/neural-networks-3/#ada
+            
+            thisLR = params.learningRate * net.params(p).learningRate ;           
+            eps=1e-8;
+            decayRate = 0.99;
+            if (isfield(net.params(p),'decayRate'))
+               decayRate=net.params(p).decayRate;
+            end    
+            if (~isfield(net.params(p),'cacheRMSprop') || isempty(net.params(p).cacheRMSprop))
+                net.params(p).cacheRMSprop=0;
+            end
+            
+            net.params(p).cacheRMSprop=decayRate*net.params(p).cacheRMSprop+(1-decayRate)*(((1 / batchSize) * net.params(p).der).^2);
+            thisWeightDecay = params.weightDecay * net.params(p).weightDecay* net.params(p).value ;
+            thisGrad=(1 / batchSize) * net.params(p).der./(sqrt( net.params(p).cacheRMSprop)+eps);
+            
+            net.params(p).value = net.params(p).value- thisLR*thisGrad-thisLR*thisWeightDecay;
+    case 'Adam' %http://cs231n.github.io/neural-networks-3/#ada           
+           thisLR = params.learningRate * net.params(p).learningRate ;            
+           beta1=0.9;
+           if (isfield(net.params(p),'beta1'))
+               beta1=net.params(p).beta1;
+           end
+           beta2=0.999;
+           if (isfield(net.params(p),'beta2'))
+               beta1=net.params(p).beta2;
+           end           
+           eps=1e-8;
+
+            if (~isfield(net.params(p),'m') || isempty(net.params(p).m))
+                net.params(p).m=0;
+            end
+            if (~isfield(net.params(p),'v') || isempty(net.params(p).v))
+                net.params(p).v=0;
+            end
+            
+           net.params(p).m=beta1*net.params(p).m+(1-beta1)*((1 / batchSize) * net.params(p).der);
+           net.params(p).v=beta2*net.params(p).v+(1-beta2)*(((1 / batchSize) * net.params(p).der).^2);
+           
+           thisGrad=net.params(p).m./(sqrt(net.params(p).v)+eps);
+           thisWeightDecay = params.weightDecay * net.params(p).weightDecay* net.params(p).value ;           
+           net.params(p).value = net.params(p).value- thisLR*thisGrad -thisLR*thisWeightDecay;
+           
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
         net.params(p).trainMethod, ...
@@ -361,7 +427,7 @@ end
 % -------------------------------------------------------------------------
 function stats = extractStats(stats, net)
 % -------------------------------------------------------------------------
-sel = find(cellfun(@(x) isa(x,'dagnn.Loss'), {net.layers.block})) ;
+sel = find(cellfun(@(x) isa(x,'dagnn.Loss') || isa(x,'dagnn.PDist'), {net.layers.block})) ;
 for i = 1:numel(sel)
   stats.(net.layers(sel(i)).outputs{1}) = net.layers(sel(i)).block.average ;
 end
@@ -386,6 +452,9 @@ function [net, state, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'state', 'stats') ;
 net = dagnn.DagNN.loadobj(net) ;
+if ~exist('state','var')
+    state = [];
+end
 if isempty(whos('stats'))
   error('Epoch ''%s'' was only partially saved. Delete this file and try again.', ...
         fileName) ;
@@ -396,6 +465,7 @@ function epoch = findLastCheckpoint(modelDir)
 % -------------------------------------------------------------------------
 list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
 tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
+tokens( cellfun(@isempty,tokens) ) = [];
 epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
 epoch = max([epoch 0]) ;
 
@@ -436,7 +506,7 @@ if numGpus >= 1 && cold
   fprintf('%s: resetting GPU\n', mfilename)
   clearMex() ;
   if numGpus == 1
-    gpuDevice(opts.gpus)
+%     gpuDevice(opts.gpus)
   else
     spmd
       clearMex() ;

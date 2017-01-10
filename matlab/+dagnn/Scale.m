@@ -36,5 +36,19 @@ classdef Scale < dagnn.ElementWise
     function obj = Scale(varargin)
       obj.load(varargin) ;
     end
+    
+    function set.size(obj, ksize)
+      % make sure that ksize has 4 dimensions
+      ksize = [ksize(:)' 1 1 1 1] ;
+      obj.size = ksize(1:4) ;
+    end
+    
+    function params = initParams(obj)
+      sc = sqrt(2 / prod(obj.size(1:3))) ;
+      params{1} = randn(obj.size,'single') * sc ;
+      if obj.hasBias
+        params{2} = zeros(obj.size(4),1,'single') * sc ;
+      end
+    end
   end
 end

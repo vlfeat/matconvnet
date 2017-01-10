@@ -1,6 +1,6 @@
-classdef Sum < dagnn.ElementWise
-    %SUM DagNN sum layer
-    %   The SUM layer takes the sum of all its inputs and store the result
+classdef Mult < dagnn.ElementWise
+    %MULT DagNN mult layer
+    %   The MULT layer takes the multiplication of all its inputs and store the result
     %   as its only output.
     
     properties (Transient)
@@ -12,13 +12,16 @@ classdef Sum < dagnn.ElementWise
             obj.numInputs = numel(inputs) ;
             outputs{1} = inputs{1} ;
             for k = 2:obj.numInputs
-                outputs{1} = outputs{1} + inputs{k} ;
+                outputs{1} = outputs{1} .* inputs{k} ;
             end
         end
         
         function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
             for k = 1:obj.numInputs
                 derInputs{k} = derOutputs{1} ;
+                for j = setdiff(1:obj.numInputs,k)
+                    derInputs{k} = derInputs{k} .* inputs{j};
+                end
             end
             derParams = {} ;
         end
@@ -28,7 +31,7 @@ classdef Sum < dagnn.ElementWise
             for k = 2:numel(inputSizes)
                 if all(~isnan(inputSizes{k})) && all(~isnan(outputSizes{1}))
                     if ~isequal(inputSizes{k}, outputSizes{1})
-                        warning('Sum layer: the dimensions of the input variables is not the same.') ;
+                        warning('Mult layer: the dimensions of the input variables is not the same.') ;
                     end
                 end
             end
@@ -42,7 +45,7 @@ classdef Sum < dagnn.ElementWise
             rfs = repmat(rfs, numInputs, 1) ;
         end
         
-        function obj = Sum(varargin)
+        function obj = Mult(varargin)
             obj.load(varargin) ;
         end
     end
