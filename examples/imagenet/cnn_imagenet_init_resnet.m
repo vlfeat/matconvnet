@@ -32,7 +32,7 @@ function Conv(name, ksize, depth, varargin)
                [name '_conv'], ...
                pars) ;
   net.addLayer([name '_bn'], ...
-               dagnn.BatchNorm('numChannels', depth), ...
+               dagnn.BatchNorm('numChannels', depth, 'epsilon', 1e-5), ...
                [name '_conv'], ...
                [name '_bn'], ...
                {[name '_bn_w'], [name '_bn_b'], [name '_bn_m']}) ;
@@ -53,7 +53,7 @@ end
 
 Conv('conv1', 7, 64, ...
      'relu', true, ...
-     'bias', true, ...
+     'bias', false, ...
      'downsample', true) ;
 
 net.addLayer(...
@@ -95,8 +95,10 @@ for s = 2:5
     % ABC: 1x1, 3x3, 1x1; downsample if first segment in section from
     % section 2 onwards.
     lastAdded = sectionInput ;
-    Conv([name 'a'], 1, 2^(s+4), 'downsample', (s >= 3) & l == 1) ;
-    Conv([name 'b'], 3, 2^(s+4)) ;
+    %Conv([name 'a'], 1, 2^(s+4), 'downsample', (s >= 3) & l == 1) ;
+    %Conv([name 'b'], 3, 2^(s+4)) ;
+    Conv([name 'a'], 1, 2^(s+4)) ;
+    Conv([name 'b'], 3, 2^(s+4), 'downsample', (s >= 3) & l == 1) ;
     Conv([name 'c'], 1, 2^(s+6), 'relu', false) ;
 
     % Sum layer
@@ -154,7 +156,7 @@ net.meta.augmentation.jitterLocation = true ;
 net.meta.augmentation.jitterFlip = true ;
 net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
 net.meta.augmentation.jitterAspect = [3/4, 4/3] ;
-net.meta.augmentation.jitterScale  = [0.5, 1.1] ;
+net.meta.augmentation.jitterScale  = [0.4, 1.1] ;
 %net.meta.augmentation.jitterSaturation = 0.4 ;
 %net.meta.augmentation.jitterContrast = 0.4 ;
 
@@ -180,14 +182,13 @@ net.initParams() ;
 %
 % This simple change improves performance almost +1% top 1 error.
 p = net.getParamIndex('conv1_f') ;
-net.params(p).value = net.params(p).value / 60 ;
-net.params(p).learningRate = net.params(p).learningRate / 60^2 ;
+net.params(p).value = net.params(p).value / 100 ;
+net.params(p).learningRate = net.params(p).learningRate / 100^2 ;
 
 for l = 1:numel(net.layers)
   if isa(net.layers(l).block, 'dagnn.BatchNorm')
     k = net.getParamIndex(net.layers(l).params{3}) ;
     net.params(k).learningRate = 0.3 ;
-    net.params(k).epsilon = 1e-5 ;
   end
 end
 

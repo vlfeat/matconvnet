@@ -1,5 +1,5 @@
 site_name: MatConvNet
-markdown_extensions: ['extra', 'mathjax', 'toc']
+markdown_extensions: ['extra', 'math', 'toc']
 theme_dir: theme
 
 extra_css: ['css/fixes.css']
@@ -37,6 +37,7 @@ pages:
   - vl_nnnormalize: 'mfiles/vl_nnnormalize.md'
   - vl_nnpool: 'mfiles/vl_nnpool.md'
   - vl_nnrelu: 'mfiles/vl_nnrelu.md'
+  - vl_nnroipool: 'mfiles/vl_nnroipool.md'
   - vl_nnsigmoid: 'mfiles/vl_nnsigmoid.md'
   - vl_nnsoftmax: 'mfiles/vl_nnsoftmax.md'
   - vl_nnsoftmaxloss: 'mfiles/vl_nnsoftmaxloss.md'

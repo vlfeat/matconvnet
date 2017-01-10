@@ -4,6 +4,7 @@
 
 from collections import OrderedDict
 from math import floor, ceil
+from operator import mul
 import numpy as np
 from numpy import array
 import scipy
@@ -108,6 +109,9 @@ mparamdt = [('name', object),
             ('value', object)]
 
 
+minputdt = [('name',object),
+            ('size',object)]
+
 # --------------------------------------------------------------------
 #                                                      Vars and params
 # --------------------------------------------------------------------
@@ -118,6 +122,7 @@ class CaffeBlob(object):
         self.shape = None
         self.value = np.zeros(shape=(0, 0), dtype='float32')
         self.bgrInput = False
+        self.transposable = True # first two dimensions are spatial
 
     def transpose(self):
         if self.shape: self.shape = [self.shape[k] for k in [1, 0, 2, 3]]
@@ -131,6 +136,8 @@ class CaffeBlob(object):
     def toMatlabSimpleNN(self):
         return self.value
 
+    def hasValue(self):
+        return reduce(mul, self.value.shape, 1) > 0
 
 class CaffeTransform(object):
     def __init__(self, size, stride, offset):
@@ -439,10 +446,10 @@ class CaffeConv(CaffeLayer):
         model.params[self.params[i]].shape = blob.shape
 
     def transpose(self, model):
-        self.kernel_size = reorder(self.kernel_size, [1, 0])
-        self.stride = reorder(self.stride, [1, 0])
-        self.pad = reorder(self.pad, [2, 3, 0, 1])
-        if model.params[self.params[0]].value.shape > 0:
+        self.kernel_size = reorder(self.kernel_size, [1,0])
+        self.stride = reorder(self.stride, [1,0])
+        self.pad = reorder(self.pad, [2,3,0,1])
+        if model.params[self.params[0]].hasValue():
             print "Layer %s: transposing filters" % self.name
             param = model.params[self.params[0]]
             if len(param.value) > 0:
@@ -511,9 +518,8 @@ class CaffeInnerProduct(CaffeConv):
         print "Layer %s: inner product converted to filter bank of shape %s" \
               % (self.name, self.kernel_size)
         param = model.params[self.params[0]]
-        if param.value.shape > 0:
-            print "Layer %s: reshaping inner product paramters of shape %s into a filter bank" % (
-                self.name, param.value.shape)
+        if param.hasValue():
+            print "Layer %s: reshaping inner product paramters of shape %s into a filter bank" % (self.name, param.value.shape)
             param.value = param.value.reshape(self.kernel_size, order='F')
         super(CaffeInnerProduct, self).reshape(model)
 
@@ -567,10 +573,10 @@ class CaffeDeconvolution(CaffeConv):
         return [[t]]
 
     def transpose(self, model):
-        self.kernel_size = reorder(self.kernel_size, [1, 0])
-        self.stride = reorder(self.stride, [1, 0])
-        self.pad = reorder(self.pad, [2, 3, 0, 1])
-        if model.params[self.params[0]].value.shape > 0:
+        self.kernel_size = reorder(self.kernel_size, [1,0])
+        self.stride = reorder(self.stride, [1,0])
+        self.pad = reorder(self.pad, [2,3,0,1])
+        if model.params[self.params[0]].hasValue():
             print "Layer %s transposing filters" % self.name
             param = model.params[self.params[0]]
             param.value = param.value.transpose([1, 0, 2, 3])
@@ -688,6 +694,73 @@ class CaffePooling(CaffeLayer):
                 self.name)
         return mlayer
 
+
+# --------------------------------------------------------------------
+#                                                           ROIPooling
+# --------------------------------------------------------------------
+
+class CaffeROIPooling(CaffeLayer):
+    def __init__(self, name, inputs, outputs,
+                 pooled_w,
+                 pooled_h,
+                 spatial_scale):
+        super(CaffeROIPooling, self).__init__(name, inputs, outputs)
+        self.pooled_w = pooled_w
+        self.pooled_h = pooled_h
+        self.spatial_scale = spatial_scale
+        self.flatten = True
+
+    def display(self):
+        super(CaffeROIPooling, self).display()
+        print "  c- pooled_w: %s" % (self.pooled_w,)
+        print "  c- pooled_h: %s" % (self.pooled_h,)
+        print "  c- spatial_scale: %s" % (self.spatial_scale,)
+        print "  c- flatten: %s" % (self.flatten,)
+
+    def reshape(self, model):
+        shape1 = model.vars[self.inputs[0]].shape
+        shape2 = model.vars[self.inputs[1]].shape
+        if not shape1 or not shape2: return
+        numChannels = shape1[2]
+        numROIs = reduce(mul, shape2, 1) / 5
+        if self.flatten:
+            oshape =  [1,
+                       1,
+                       self.pooled_w * self.pooled_h * numChannels,
+                       numROIs]
+        else:
+            oshape =  [self.pooled_w,
+                       self.pooled_h,
+                       numChannels,
+                       numROIs]
+        model.vars[self.outputs[0]].shape = oshape
+
+    def getTransforms(self, model):
+        # no transform
+        return [[CaffeTransform([1.,1.], [1.,1.], [1.,1.])]]
+
+    def transpose(self, model):
+        assert(not self.flatten)
+        tmp = self.pooled_w
+        self.pooled_w = self.pooled_h
+        self.pooled_h = tmp
+
+    def toMatlab(self):
+        mlayer = super(CaffeROIPooling, self).toMatlab()
+        mlayer['type'][0] = u'dagnn.ROIPooling'
+        mlayer['block'][0] = dictToMatlabStruct(
+            {'subdivisions':row([self.pooled_w, self.pooled_h]),
+             'transform':self.spatial_scale,
+             'flatten':self.flatten})
+        return mlayer
+
+    def toMatlabSimpleNN(self):
+        mlayer = super(CaffeROIPooling, self).toMatlabSimpleNN()
+        mlayer['type'] = u'roipool'
+        mlayer['subdivisions'] = row([self.pooled_w, self.pooled_h])
+        mlayer['transform'] = self.spatial_scale
+        mlayer['flatten'] = self.flatten
+        return mlayer
 
 # --------------------------------------------------------------------
 #                                                                Scale
@@ -1141,7 +1214,7 @@ class CaffeModel(object):
 
     def transpose(self):
         for var in self.vars.itervalues():
-            var.transpose()
+            if var.transposable: var.transpose()
         for layer in self.layers.itervalues():
             layer.transpose(self)
 

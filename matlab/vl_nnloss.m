@@ -89,7 +89,7 @@ function y = vl_nnloss(x,c,dzdy,varargin)
 %     a number in the range [0,1]. This is the binary version of the
 %     `log` loss.
 %
-%   Logistic log loss:: `logisticlog`
+%   Logistic log loss:: `logistic`
 %     L(x,c) = log(1 + exp(- cx)). This is the same as the `binarylog`
 %     loss, but implicitly normalizes the score x into a probability
 %     using the logistic (sigmoid) function: p = sigmoid(x) = 1 / (1 +

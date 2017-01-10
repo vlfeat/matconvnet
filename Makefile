@@ -38,7 +38,7 @@ CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta22
+VER = 1.0-beta23
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync
@@ -82,7 +82,7 @@ LDFLAGS =
 LDOPTIMFLAGS =
 LINKLIBS = -lmwblas
 
-NVCCFLAGS_PASS = -gencode=arch=compute_30,code=\"sm_30,compute_30\"
+NVCCFLAGS_PASS = -D_FORCE_INLINES -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 NVCCVER = $(shell $(NVCC) --version | \
 sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
 xargs printf '%02d%02d%02d')
@@ -159,12 +159,14 @@ cpp_src+=matlab/src/bits/nnpooling.$(ext)
 cpp_src+=matlab/src/bits/nnnormalize.$(ext)
 cpp_src+=matlab/src/bits/nnbnorm.$(ext)
 cpp_src+=matlab/src/bits/nnbilinearsampler.$(ext)
+cpp_src+=matlab/src/bits/nnroipooling.$(ext)
 mex_src+=matlab/src/vl_nnconv.$(ext)
 mex_src+=matlab/src/vl_nnconvt.$(ext)
 mex_src+=matlab/src/vl_nnpool.$(ext)
 mex_src+=matlab/src/vl_nnnormalize.$(ext)
 mex_src+=matlab/src/vl_nnbnorm.$(ext)
 mex_src+=matlab/src/vl_nnbilinearsampler.$(ext)
+mex_src+=matlab/src/vl_nnroipool.$(ext)
 mex_src+=matlab/src/vl_taccummex.$(ext)
 mex_src+=matlab/src/vl_tmove.$(ext)
 ifdef ENABLE_IMREADJPEG
@@ -180,6 +182,7 @@ cpp_src+=matlab/src/bits/impl/pooling_cpu.cpp
 cpp_src+=matlab/src/bits/impl/normalize_cpu.cpp
 cpp_src+=matlab/src/bits/impl/bnorm_cpu.cpp
 cpp_src+=matlab/src/bits/impl/bilinearsampler_cpu.cpp
+cpp_src+=matlab/src/bits/impl/roipooling_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
@@ -195,6 +198,7 @@ cpp_src+=matlab/src/bits/impl/pooling_gpu.cu
 cpp_src+=matlab/src/bits/impl/normalize_gpu.cu
 cpp_src+=matlab/src/bits/impl/bnorm_gpu.cu
 cpp_src+=matlab/src/bits/impl/bilinearsampler_gpu.cu
+cpp_src+=matlab/src/bits/impl/roipooling_gpu.cu
 cpp_src+=matlab/src/bits/datacu.cu
 mex_src+=matlab/src/vl_cudatool.cu
 ifdef ENABLE_CUDNN
@@ -255,7 +259,7 @@ CXXOPTIMFLAGS='$$CXXOPTIMFLAGS $(call nvcc-quote,$(CXXOPTIMFLAGS))'
 MEXFLAGS_LD := $(MEXFLAGS) \
 LDFLAGS='$$LDFLAGS $(LDFLAGS)' \
 LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)' \
-LINKLIBS='$$LINKLIBS $(LINKLIBS)' \
+LINKLIBS='$(LINKLIBS) $$LINKLIBS' \
 
 NVCCFLAGS = $(CXXFLAGS) $(NVCCFLAGS_PASS) \
 -I"$(MATLABROOT)/extern/include" \

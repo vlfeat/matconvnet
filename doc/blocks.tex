@@ -215,6 +215,46 @@ where, for each feature channel $c$, the output $y_{i''j''c}$ at the location $(
 See \cref{s:impl-sampler} for implementation details.
 
 % ------------------------------------------------------------------
+\section{Region of interest pooling}\label{s:roi-pooling}
+% ------------------------------------------------------------------
+
+The \emph{region of interest (ROI) pooling} block applies max or average pooling to specified subwindows of a tensor. A region is a rectangular region $R = (u_-,v_-,u_+,v_+)$. The region itself is partitioned into $(H',W')$ tiles along the vertical and horizontal directions. The edges of the tiles have coordinates
+\begin{align*}
+   v_{i'} &= v_- + (v_+ - v_- + 1) (i' - 1), \quad i' = 1,\dots,H',\\
+   u_{j'} &= u_- + (u_+ - u_- + 1) (j' - 1), \quad j' = 1,\dots,W'.
+\end{align*}
+Following the implementation of~\cite{girshick15fast}, the $H'\times W'$ pooling tiles are given by
+\[
+   \Omega_{i'j'} =
+   \{\lfloor v_{i'} \rfloor + 1, \dots, \lceil v_{i'+1} \rceil\}
+   \times
+   \{\lfloor u_{i'} \rfloor + 1, \dots, \lceil u_{i'+1} \rceil\}.
+\]
+Then the input and output tensors are as follows:
+\[
+  \bx \in \mathbb{R}^{H \times W \times C},
+  \qquad
+  \by \in \mathbb{R}^{H' \times W' \times C},
+\]
+where
+\[
+   y_{i'j'c} = \operatornamewithlimits{max}_{(i,j) \in \Omega_{i'j'}} x_{ijc}.
+\]
+Alternatively, $\max$ can be replaced by the averaging operator.
+
+The extent of each region is defined by four coordinates as specified above; however, differently from tensor indexes, these use $(0,0)$ as the coordinate of the top-left pixel. In fact, if there is a single tile ($H'=W'=1$), then the region $(0,0,H-1,W-1)$ covers the whole input image:
+\[
+   \Omega_{11} =
+   \{1, \dots, W\}
+   \times
+   \{1, \dots, H\}.
+\]
+
+In more details, the input of the block is a sequence of $K$ regions. Each region pools one of the $T$ images in the batch stored in $\bx \in \mathbb{R}^{H\times W\times C\times T}$. Regions are therefore specified as a tensor $R \in \mathbb{R}^{5 \times K}$, where the first coordinate is the index of the pooled image in the batch. The output is a $\by \in \mathbb{R}^{H' \times W' \times C \times K}$ tensor.
+
+For compatibility with~\cite{girshick15fast}, furthermore, the region coordinates are rounded to the nearest integer before the definitions above are used. Note also that, due to the discretization details, 1) tiles always contain at least one pixel, 2) there can be a pixel of overlap between them and 3) the discretization has a slight bias towards left-top pixels.
+
+% ------------------------------------------------------------------
 \section{Normalization}\label{s:normalization}
 % ------------------------------------------------------------------
 

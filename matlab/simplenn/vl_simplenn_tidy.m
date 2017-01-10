@@ -49,6 +49,14 @@ for l = 1:numel(net.layers)
   defaults = {'name', sprintf('layer%d', l), 'precious', false};
   layer = net.layers{l} ;
 
+  % Ignore custom layers (e.g. for classes the `isfield` does not work)
+  % The only interface requirement for custom layers is forward and
+  % backward function.
+  if strcmp(layer.type, 'custom')
+    tnet.layers{l} = layer ;
+    continue;
+  end
+
   % check weights format
   switch layer.type
     case {'conv', 'convt', 'bnorm'}

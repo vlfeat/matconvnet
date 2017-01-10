@@ -27,11 +27,6 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datamex.hpp"
 #include "bits/mexutils.h"
 
-#ifdef _MSC_VER
-#undef max
-#undef min
-#endif
-
 static int verbosity = 0 ;
 
 /* option codes */
