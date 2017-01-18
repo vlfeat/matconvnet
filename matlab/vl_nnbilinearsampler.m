@@ -27,7 +27,7 @@
 %      MatConvNet (as these could be interpreted as 'channels' in
 %      GRID).
 %
-%   Furthre, No can be a multiple of N; in this case, it is assumed
+%   Further, No can be a multiple of N; in this case, it is assumed
 %   that there are No/N transforms per input image, hence, the
 %   transforms [1 ... No/N] are applied to the first image, [No/N+1
 %   ... 2*No/N] are applied to the second image, etc.

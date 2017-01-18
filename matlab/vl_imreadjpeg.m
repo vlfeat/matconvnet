@@ -28,7 +28,6 @@
 %         (H,W) or one or both of height and witdth can be set to an
 %         arbitrary value.
 %
-
 %      2) Given the output shape (Ho,Wo) of the crop, the shape
 %         (Hi,Wi) and location of the crop in the input image is
 %         determined.  First, an anisotropy ratio (change in aspect

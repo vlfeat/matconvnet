@@ -31,6 +31,15 @@ if isfield(net, 'normalization')
   tnet.meta.normalization = net.normalization ;
 end
 
+% Adjust for the new version of vl_imreadjpeg
+if ~isfield(tnet.meta.normalization, 'cropSize') && ...
+    isfield(tnet.meta.normalization, 'border') && ...
+    isfield(tnet.meta.normalization, 'imageSize')
+  insz = tnet.meta.normalization.imageSize(1:2);
+  bigimSz = insz + tnet.meta.normalization.border;
+  tnet.meta.normalization.cropSize = insz ./ bigimSz;
+end
+
 % copy layers
 for l = 1:numel(net.layers)
   defaults = {'name', sprintf('layer%d', l), 'precious', false};
