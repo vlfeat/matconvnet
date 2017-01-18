@@ -24,12 +24,12 @@ opts.train.gpus = [] ;
 if opts.batchNormalization
   opts.train.learningRate = 0.01 ;
 else
-  opts.train.learningRate = 0.0001 ;
+  opts.train.learningRate = 0.001 ;
 end
 opts.train.expDir = opts.expDir ;
 opts.train.numSubBatches = 1 ;
 opts.train.plotStatistics = true ;
-opts.train.plotDiagnostics = false ;
+% opts.train.plotDiagnostics = false ;
 opts = vl_argparse(opts, varargin) ;
 
 % --------------------------------------------------------------------
@@ -65,17 +65,18 @@ case 'autonn'
     x = vl_nnconv(x, 'size', [1, 1, 100, 10]) ;
     
   case 'lenet'  % LeNet
-    x = vl_nnconv(images, 'size', [5, 5, 1, 20]) ;
+    x = vl_nnconv(images, 'size', [5, 5, 1, 20], 'weightScale', 0.01) ;
     if bn, x = vl_nnbnorm(x) ; end
     x = vl_nnpool(x, 2, 'stride', 2) ;
-    x = vl_nnconv(x, 'size', [5, 5, 20, 50]) ;
+    x = vl_nnconv(x, 'size', [5, 5, 20, 50], 'weightScale', 0.01) ;
     if bn, x = vl_nnbnorm(x) ; end
     x = vl_nnpool(x, 2, 'stride', 2) ;
-    x = vl_nnconv(x, 'size', [4, 4, 50, 500]) ;
+    x = vl_nnconv(x, 'size', [4, 4, 50, 500], 'weightScale', 0.01) ;
     if bn, x = vl_nnbnorm(x) ; end
     x = vl_nnrelu(x) ;
-    x = vl_nnconv(x, 'size', [1, 1, 500, 10]) ;
+    x = vl_nnconv(x, 'size', [1, 1, 500, 10], 'weightScale', 0.01) ;
   end
+  
   
 %   % diagnose outputs of conv layers
 %   Layer.setDiagnostics(x.find(@vl_nnconv), true) ;
