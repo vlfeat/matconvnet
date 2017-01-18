@@ -40,7 +40,8 @@ opts.parameterServer.method = 'mmap' ;
 opts.parameterServer.prefix = 'mcn' ;
 
 opts.derOutputs = {'objective', 1} ;
-opts.extractStatsFn = @extractStats ;
+opts.stats = 'auto' ;  % list of layers to aggregate stats from (e.g. loss, error), or 'auto' for automatic
+opts.extractStatsFn = [] ;
 opts.plotStatistics = true;
 opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts.solver = [] ;
@@ -62,6 +63,41 @@ if ~evaluateMode
     error('DEROUTPUTS must be specified when training.\n') ;
   end
 end
+
+% find loss layers now instead of at every extractStatsFn call
+if isa(net, 'dagnn.DagNN')
+  if isempty(opts.extractStatsFn)
+    opts.extractStatsFn = @extractStats ;
+  end
+  
+  if isequal(opts.stats, 'auto')  % all losses
+    sel = find(cellfun(@(x) isa(x,'dagnn.Loss'), {net.layers.block})) ;
+  else
+    sel = zeros(size(opts.stats)) ;
+    for i = 1:numel(sel)  % find layers with the given names
+      sel(i) = net.getLayerIndex(opts.stats{i}) ;
+    end
+  end
+else  % autonn
+  if isempty(opts.extractStatsFn)
+    opts.extractStatsFn = @extractStatsAutoNN ;
+  end
+  if isequal(opts.derOutputs, {'objective', 1})
+    opts.derOutputs = 1 ;
+  end
+  
+  if isequal(opts.stats, 'auto')  % all losses
+    sel = find(cellfun(@(f) isequal(f, @vl_nnloss) || ...
+      isequal(f, @vl_nnsoftmaxloss), {net.forward.func})) ;
+  else
+    sel = zeros(size(opts.stats)) ;
+    for i = 1:numel(sel)  % find layers with the given names
+      sel(i) = find(strcmp({net.forward.name}, opts.stats{i})) ;
+    end
+  end
+end
+fn = opts.extractStatsFn ;
+opts.extractStatsFn = @(stats, net, batchSize) fn(stats, net, sel, batchSize) ;
 
 % -------------------------------------------------------------------------
 %                                                        Train and validate
@@ -242,20 +278,33 @@ for t=1:params.batchSize:numel(subset)
       params.getBatch(params.imdb, nextBatch) ;
     end
 
-    if strcmp(mode, 'train')
-      net.mode = 'normal' ;
-      net.accumulateParamDers = (s ~= 1) ;
-      net.eval(inputs, params.derOutputs, 'holdOn', s < params.numSubBatches) ;
-    else
-      net.mode = 'test' ;
-      net.eval(inputs) ;
+    if isa(net, 'dagnn.DagNN')
+      if strcmp(mode, 'train')
+        net.mode = 'normal' ;
+        net.accumulateParamDers = (s ~= 1) ;
+        net.eval(inputs, params.derOutputs, 'holdOn', s < params.numSubBatches) ;
+      else
+        net.mode = 'test' ;
+        net.eval(inputs) ;
+      end
+    else  % autonn
+      net.setInputs(inputs{:}) ;
+      if strcmp(mode, 'train')
+        net.eval('normal', params.derOutputs, s ~= 1) ;
+      else
+        net.eval('test') ;
+      end
     end
   end
 
   % Accumulate gradient.
   if strcmp(mode, 'train')
     if ~isempty(parserv), parserv.sync() ; end
-    state = accumulateGradients(net, state, params, batchSize, parserv) ;
+    if isa(net, 'dagnn.DagNN')
+      state = accumulateGradients(net, state, params, batchSize, parserv) ;
+    else
+      state = accumulateGradientsAutoNN(net, state, params, batchSize, parserv) ;
+    end
   end
 
   % Get statistics.
@@ -263,7 +312,7 @@ for t=1:params.batchSize:numel(subset)
   batchTime = time - stats.time ;
   stats.num = num ;
   stats.time = time ;
-  stats = params.extractStatsFn(stats,net) ;
+  stats = params.extractStatsFn(stats, net, batchSize) ;
   currentSpeed = batchSize / batchTime ;
   averageSpeed = (t + batchSize - 1) / time ;
   if t == 3*params.batchSize + 1
@@ -304,7 +353,9 @@ else
   end
 end
 
-net.reset() ;
+if isa(net, 'dagnn.DagNN')
+  net.reset() ;
+end
 net.move('cpu') ;
 
 % -------------------------------------------------------------------------
@@ -371,6 +422,79 @@ for p=1:numel(net.params)
 end
 
 % -------------------------------------------------------------------------
+function state = accumulateGradientsAutoNN(net, state, params, batchSize, parserv)
+% -------------------------------------------------------------------------
+
+% ensure supported training methods are ordered as expected
+assert(isequal(Param.trainMethods, {'gradient', 'average', 'none'})) ;
+
+paramVars = [net.params.var] ;
+w = net.getValue(paramVars) ;
+dw = net.getDer(paramVars) ;
+if isscalar(paramVars), w = {w} ; dw = {dw} ; end
+
+net.setValue(paramVars, cell(size(paramVars))) ;  % save memory
+
+for p=1:numel(net.params)
+  if ~isempty(parserv)
+    parDer = parserv.pullWithIndex(p) ;
+  else
+    parDer = dw{p} ;
+  end
+
+  switch net.params(p).trainMethod
+    case 1
+      thisDecay = params.weightDecay * net.params(p).weightDecay ;
+      thisLR = params.learningRate * net.params(p).learningRate ;
+
+      if thisLR>0 || thisDecay>0
+        % Normalize gradient and incorporate weight decay.
+        parDer = vl_taccum(1/batchSize, parDer, ...
+                           thisDecay, w{p}) ;
+
+        if isempty(params.solver)
+          % Default solver is the optimised SGD.
+          % Update momentum.
+          state.solverState{p} = vl_taccum(...
+            params.momentum, state.solverState{p}, ...
+            -1, parDer) ;
+
+          % Nesterov update (aka one step ahead).
+          if params.nesterovUpdate
+            delta = params.momentum * state.solverState{p} - parDer ;
+          else
+            delta = state.solverState{p} ;
+          end
+
+          % Update parameters.
+          w{p} = vl_taccum(1, w{p}, thisLR, delta) ;
+
+        else
+          % call solver function to update weights
+          [w{p}, state.solverState{p}] = ...
+            params.solver(w{p}, state.solverState{p}, ...
+            parDer, params.solverOpts, thisLR) ;
+        end
+      end
+
+    case 2 % mainly for batch normalization
+      thisLR = net.params(p).learningRate ;
+      w{p} = vl_taccum(...
+          1 - thisLR, w{p}, ...
+          (thisLR/batchSize/net.params(p).fanout),  parDer) ;
+
+    case 3  % none
+    otherwise
+      error('Unknown training method ''%i'' for parameter ''%s''.', ...
+        net.params(p).trainMethod, ...
+        net.params(p).name) ;
+  end
+end
+
+if isscalar(paramVars), w = w{1} ; end
+net.setValue(paramVars, w) ;
+
+% -------------------------------------------------------------------------
 function stats = accumulateStats(stats_)
 % -------------------------------------------------------------------------
 
@@ -404,11 +528,23 @@ for s = {'train', 'val'}
 end
 
 % -------------------------------------------------------------------------
-function stats = extractStats(stats, net)
+function stats = extractStats(stats, net, sel, ~)
 % -------------------------------------------------------------------------
-sel = find(cellfun(@(x) isa(x,'dagnn.Loss'), {net.layers.block})) ;
 for i = 1:numel(sel)
   stats.(net.layers(sel(i)).outputs{1}) = net.layers(sel(i)).block.average ;
+end
+
+% -------------------------------------------------------------------------
+function stats = extractStatsAutoNN(stats, net, sel, batchSize)
+% -------------------------------------------------------------------------
+for i = 1:numel(sel)
+  name = net.forward(sel(i)).name ;
+  if ~isfield(stats, name)
+    stats.(name) = 0 ;
+  end
+  newValue = gather(sum(net.vars{net.forward(sel(i)).outputVar(1)}(:))) ;
+  % Update running average (same work as dagnn.Loss)
+  stats.(name) = ((stats.num - batchSize) * stats.(name) + newValue) / stats.num ;
 end
 
 % -------------------------------------------------------------------------
