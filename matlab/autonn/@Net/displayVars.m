@@ -155,6 +155,9 @@ for i = 1:2
   table = [table, t] ;
 end
 
+% ensure all cells contain strings
+table(cellfun('isempty', table)) = {''};
+
 % align column contents
 for i = 1:size(table,2)
   table(:,i) = leftAlign(table(:,i)) ;
