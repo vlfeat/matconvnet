@@ -43,6 +43,7 @@ opts.derOutputs = {'objective', 1} ;
 opts.stats = 'auto' ;  % list of layers to aggregate stats from (e.g. loss, error), or 'auto' for automatic
 opts.extractStatsFn = [] ;
 opts.plotStatistics = true;
+opts.plotDiagnostics = false ;
 opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts.solver = [] ;
 opts = vl_argparse(opts, varargin) ;
@@ -327,6 +328,10 @@ for t=1:params.batchSize:numel(subset)
     fprintf(' %s: %.3f', f, stats.(f)) ;
   end
   fprintf('\n') ;
+
+  if params.plotDiagnostics && ~isa(net, 'dagnn.DagNN') && mod(t-1, params.batchSize * 5) == 0
+    net.plotDiagnostics(200) ;
+  end
 end
 
 % Save back to state.
