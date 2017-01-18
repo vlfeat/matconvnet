@@ -69,7 +69,7 @@ function build(net, varargin)
 
   numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
   net.params = Net.initStruct(numParams, 'name', 'var', ...
-      'weightDecay', 'learningRate', 'source', 'trainMethod') ;
+      'weightDecay', 'learningRate', 'source', 'trainMethod', 'fanout') ;
   net.inputs = struct() ;
 
   
@@ -238,6 +238,17 @@ function build(net, varargin)
     end
   end
 
+  
+  
+  % compute fan-out of parameters
+  inputVars = [net.forward.inputVars] ;  % all indexes of input vars, possibly repeated
+%   counts = accumarray(inputVars(:), ones(numel(inputVars), 1), [numVars, 1]) ;  % histogram them
+%   counts = num2cell(counts) ;
+%   [info.fanOutCount] = counts{:} ;
+  for k = 1:numel(net.params)
+    net.params(k).fanout = nnz(inputVars == net.params(k).var) ;
+  end
+  
   
   % store diagnostics info for vars
   valid = false(numel(net.vars), 1) ;
