@@ -1,9 +1,13 @@
 function inputs = vl_nnconv_setup(layer)
 %VL_NNCONV_SETUP
 %   Setup a conv or convt layer: if there is a 'size' argument,
-%   automatically initialize randomized Params for the filters. Also
-%   handles 'hasBias' (initialize biases), 'learningRate' and 'weightDecay'
-%   arguments for the Params.
+%   automatically initializes randomized Params for the filters.
+%
+%   The 'weightScale' argument specifies the initialization scale (or
+%   'xavier' for Xavier initialization, which is the default).
+%
+%   Also handles 'hasBias' (initialize biases), 'learningRate' and
+%   'weightDecay' arguments for the Params.
 %   Called by AUTONN_SETUP.
 
 % Copyright (C) 2016 Joao F. Henriques.
@@ -18,13 +22,18 @@ function inputs = vl_nnconv_setup(layer)
   
   % parse options. other options such as 'stride' will be maintained in the
   % inputs list.
-  opts = struct('size', [], 'hasBias', true, 'learningRate', 1, 'weightDecay', 1) ;
+  opts = struct('size', [], 'weightScale', 'xavier', 'hasBias', true, 'learningRate', 1, 'weightDecay', 1) ;
   
   [opts, inputs] = vl_argparsepos(opts, inputs) ;
   
   if ~isempty(opts.size)
     % a size was specified, create Params
-    scale = sqrt(2 / prod(opts.size(1:3))) ;
+    if isequal(opts.weightScale, 'xavier')
+      scale = sqrt(2 / prod(opts.size(1:3))) ;
+    else
+      scale = opts.weightScale ;
+    end
+
     filters = Param('value', randn(opts.size, 'single') * scale, ...
                     'learningRate', opts.learningRate(1), ...
                     'weightDecay', opts.weightDecay(1)) ;
