@@ -48,8 +48,7 @@ function objs = find(obj, varargin)
   end
 
   % do the work
-  [visited, selected] = obj.findRecursive(what, n, opts.depth, cell(1, 500), false(1, 500), 0) ;
-  objs = visited(selected) ;
+  objs = obj.findRecursive(what, n, opts.depth, Layer.initializeRecursion(), {}) ;
 
   % choose the Nth object
   if n ~= 0

@@ -1,9 +1,8 @@
-function [visited, selected, numVisited] = findRecursive(obj, what, n, depth, visited, selected, numVisited)
+function selected = findRecursive(obj, what, n, depth, visited, selected)
 % FINDRECURSIVE Recursion on layers, used by FIND.
 % WHAT, N, DEPTH: Search criteria (see FIND).
-% VISITED: List of objects seen during recursion (which must be skipped).
-% SELECTED: Boolean array (whether an object was selected or not).
-% NUMSEEN: Number of valid entries in VISITED/SELECTED (for preallocation).
+% VISITED: Dictionary of objects seen during recursion so far.
+% SELECTED: Cell array of selected objects.
 
 % Copyright (C) 2016 Joao F. Henriques.
 % All rights reserved.
@@ -11,39 +10,36 @@ function [visited, selected, numVisited] = findRecursive(obj, what, n, depth, vi
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-
-  if n > 0 && nnz(selected) >= n
-    return  % early break, already found the object we're after
-  end
   
   if depth > 0
     % get indexes of inputs that have not been visited yet
-    idx = obj.getNextRecursion(visited, numVisited) ;
+    idx = obj.getNextRecursion(visited) ;
     
     % recurse on them (forward order)
     for i = idx
-      [visited, selected, numVisited] = obj.inputs{i}.findRecursive( ...
-        what, n, depth - 1, visited, selected, numVisited) ;
+      selected = obj.inputs{i}.findRecursive(what, n, depth - 1, visited, selected) ;
     end
   end
   
-  % mark this object as recursed (so it's not visited again)
-  [visited, numVisited] = obj.markRecursed(visited, numVisited) ;
+  % mark as seen
+  visited(obj.id) = true ;
   
-  if numVisited > numel(selected)  % pre-allocate selected list
-    selected(end + 500) = false ;
-  end
-
   % mark self as selected, if it matches the pattern
+  sel = false ;
   if ischar(what)
     if any(what == '*') || any(what == '?')  % wildcards
       if ~isempty(regexp(obj.name, regexptranslate('wildcard', what), 'once'))
-        selected(numVisited) = true ;
+        sel = true ;
       end
     elseif isequal(obj.name, what) || isa(obj, what)
-      selected(numVisited) = true ;
+      sel = true ;
     end
   elseif isempty(what) || isequal(obj.func, what)
-    selected(numVisited) = true ;
+    sel = true ;
   end
+  
+  if sel
+    selected{end+1} = obj ;
+  end
+  
 end

@@ -1,4 +1,4 @@
-function [other, visited, numVisited] = deepCopyRecursive(obj, shared, rename, visited, numVisited)
+function other = deepCopyRecursive(original, rename, visited)
 % FINDRECURSIVE Recursion on layers, used by DEEPCOPY.
 
 % Copyright (C) 2016 Joao F. Henriques.
@@ -7,33 +7,31 @@ function [other, visited, numVisited] = deepCopyRecursive(obj, shared, rename, v
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-
   % create a shallow copy first
-  other = obj.copy() ;
+  other = original.copy() ;
   
   % rename if necessary
   other.name = rename(other.name) ;
 
   % pointer to the copied object, to be reused by any subsequent deep
-  % copied layer that happens to share the same input
-  obj.copied = other ;
+  % copied layer that refers to the original object. this also marks it
+  % as seen during the recursion.
+  visited(original.id) = other ;
 
 
   % recurse on inputs
-  idx = other.getNextRecursion(visited, numVisited) ;
-  for i = idx
-    if ~any(cellfun(@(o) isequal(other.inputs{i}, o), shared))  % don't copy if shared
+  for i = 1:numel(other.inputs)
+    in = other.inputs{i} ;
+    if isa(in, 'Layer')
+      in.enableCycleChecks = false ;  % prevent cycle check when modifying a layer's input
       
-      other.inputs{i}.enableCycleChecks = false ;  % prevent cycle check when modifying a layer's input
-      
-      if ~isempty(other.inputs{i}.copied)  % reuse same deep copy
-        other.inputs{i} = other.inputs{i}.copied ;
-      else  % create a new one
-        [other.inputs{i}, visited, numVisited] = ...
-          other.inputs{i}.deepCopyRecursive(shared, rename, visited, numVisited) ;
+      if visited.isKey(in.id)  % already seen/copied this original object
+        other.inputs{i} = visited(in.id) ;  % use the copy
+      else  % unseen/uncopied object, recurse on it and use the new copy
+        other.inputs{i} = in.deepCopyRecursive(rename, visited) ;
       end
       
-      other.inputs{i}.enableCycleChecks = true ;
+      in.enableCycleChecks = true ;
     end
   end
   
@@ -41,19 +39,19 @@ function [other, visited, numVisited] = deepCopyRecursive(obj, shared, rename, v
   % repeat for test-mode inputs
   if ~isequal(other.testInputs, 'same')
     for i = 1:numel(other.testInputs)
-      if isa(other.testInputs{i}, 'Layer') && ...
-       ~any(cellfun(@(o) isequal(other.testInputs{i}, o), shared))
+      in = other.testInputs{i} ;
+      if isa(in, 'Layer')
+        in.enableCycleChecks = false ;  % prevent cycle check when modifying a layer's input
 
-        if ~isempty(other.testInputs{i}.copied)  % reuse same deep copy
-          other.testInputs{i} = other.testInputs{i}.copied ;
-        else  % create a new one
-          [other.testInputs{i}, visited, numVisited] = ...
-            other.testInputs{i}.deepCopyRecursive(shared, rename, visited, numVisited) ;
+        if visited.isKey(in.id)  % already seen/copied this original object
+          other.testInputs{i} = visited(in.id) ;  % use the copy
+        else  % unseen/uncopied object, recurse on it and use the new copy
+          other.testInputs{i} = in.deepCopyRecursive(rename, visited) ;
         end
+
+        in.enableCycleChecks = true ;
       end
     end
   end
   
-  
-  [visited, numVisited] = other.markRecursed(visited, numVisited) ;
 end

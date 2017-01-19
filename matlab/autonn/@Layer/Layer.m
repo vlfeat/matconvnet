@@ -80,6 +80,7 @@ classdef Layer < matlab.mixin.Copyable
   
   properties (SetAccess = {?Net}, GetAccess = public)
     outputVar = 0  % index of the output var in a Net, used during its construction
+    id = []  % unique ID assigned on creation; does not have to persist, just be different from all other Layers in memory
   end
   
   properties (Access = protected)
@@ -95,13 +96,15 @@ classdef Layer < matlab.mixin.Copyable
     print(obj)
   end
   methods (Access = {?Net, ?Layer})
-    [visited, selected, numVisited] = findRecursive(obj, what, n, depth, visited, selected, numVisited)
-    [other, visited, numVisited] = deepCopyRecursive(obj, shared, rename, visited, numVisited)
+    selected = findRecursive(obj, what, n, depth, visited, selected)
+    other = deepCopyRecursive(obj, rename, visited)
   end
   
   methods
     function obj = Layer(func, varargin)  % wrap a function call
       obj.saveStack() ;  % record source file and line number, for debugging
+      
+      obj.id = Layer.uniqueId() ;  % set unique ID, needed for some operations
       
       if nargin == 0 && (isa(obj, 'Input') || isa(obj, 'Param') || isa(obj, 'Selector'))
         return  % called during Input, Param or Selector construction, nothing to do
@@ -143,11 +146,10 @@ classdef Layer < matlab.mixin.Copyable
         % must check for cycles, to ensure DAG structure.
         % to do: should also do the same for testInputs; that property will
         % be removed in the new test-mode implementation though.
-        visited = {} ;
-        numVisited = 0 ;
+        visited = Layer.initializeRecursion() ;
         for i = 1:numel(newInputs)
           if isa(newInputs{i}, 'Layer')
-            [visited, numVisited] = newInputs{i}.cycleCheckRecursive(obj, visited, numVisited) ;
+            newInputs{i}.cycleCheckRecursive(obj, visited) ;
           end
         end
       end
@@ -171,23 +173,31 @@ classdef Layer < matlab.mixin.Copyable
       %
       % To create a shallow copy, use OTHER = OBJ.COPY().
       
+      shared = varargin ;  % list of shared layers
       rename = @deal ;  % no renaming by default
-      if ~isempty(varargin)
-        if isa(varargin{end}, 'function_handle')
-          rename = varargin{end} ;  % specified rename function
-          varargin(end) = [] ;
-        elseif ischar(varargin{end})
-          assert(strcmp(varargin{end}, 'noName'), 'Invalid option.') ;
+      if ~isempty(shared)
+        if isa(shared{end}, 'function_handle')
+          rename = shared{end} ;  % specified rename function
+          shared(end) = [] ;
+        elseif ischar(shared{end})
+          assert(strcmp(shared{end}, 'noName'), 'Invalid option.') ;
           rename = @(~) [] ;  % assign empty to name
-          varargin(end) = [] ;
+          shared(end) = [] ;
         end
       end
       
-      if isscalar(varargin) && iscell(varargin{1})  % passed in cell array
-        varargin = varargin{1} ;
+      if isscalar(shared) && iscell(shared{1})  % passed in cell array
+        shared = shared{1} ;
       end
-      obj.deepCopyReset({}, 0) ;
-      other = obj.deepCopyRecursive(varargin, rename, {}, 0) ;
+      
+      % shared layers are just considered visited/copied, pointing to
+      % themselves as the new copy
+      visited = Layer.initializeRecursion() ;
+      for i = 1:numel(shared)
+        visited(shared{i}.id) = shared{i} ;
+      end
+      
+      other = obj.deepCopyRecursive(rename, visited) ;
     end
     
     
@@ -412,59 +422,31 @@ classdef Layer < matlab.mixin.Copyable
   end
   
   methods (Access = {?Net, ?Layer})
-    function [visited, numVisited] = deepCopyReset(obj, visited, numVisited)
-      obj.copied = [] ;
-      
-      % recurse on inputs
-      idx = obj.getNextRecursion(visited, numVisited) ;
-      for i = idx
-        [visited, numVisited] = obj.inputs{i}.deepCopyReset(visited, numVisited) ;
-      end
-      [visited, numVisited] = obj.markRecursed(visited, numVisited) ;
-    end
-    
-    function [visited, numVisited] = cycleCheckRecursive(obj, root, visited, numVisited)
+    function cycleCheckRecursive(obj, root, visited)
       assert(obj ~= root, 'Input assignment creates a cycle in the network.') ;
       
       % recurse on inputs
-      idx = obj.getNextRecursion(visited, numVisited) ;
+      idx = obj.getNextRecursion(visited) ;
       for i = idx
-        [visited, numVisited] = obj.inputs{i}.cycleCheckRecursive(root, visited, numVisited) ;
+        obj.inputs{i}.cycleCheckRecursive(root, visited) ;
       end
-      [visited, numVisited] = obj.markRecursed(visited, numVisited) ;
+      visited(obj.id) = true ;
     end
     
-    function idx = getNextRecursion(obj, visited, numVisited)
+    function idx = getNextRecursion(obj, visited)
       % Used by findRecursive, cycleCheckRecursive, deepCopyRecursive, etc,
       % to avoid redundant recursions in very large networks.
       % Returns indexes of inputs to recurse on, that have not been visited
       % yet during this operation. The list of layers seen so far is
-      % managed efficiently with a preallocated cell array (VISITED).
+      % managed efficiently with the dictionary VISITED.
       
       valid = false(1, numel(obj.inputs)) ;
       for i = 1:numel(obj.inputs)
-        in = obj.inputs{i} ;
-        if isa(in, 'Layer')
-          valid(i) = true ;
-          for j = 1:numVisited
-            if in == visited{j}  % already visited this object
-              valid(i) = false ;
-              break ;
-            end
-          end
+        if isa(obj.inputs{i}, 'Layer')
+          valid(i) = ~visited.isKey(obj.inputs{i}.id) ;
         end
       end
       idx = find(valid) ;
-    end
-    
-    function [visited, numVisited] = markRecursed(obj, visited, numVisited)
-      % Add self to visited list, and manage its size (used after
-      % getNextRecursion; see findRecursive for an example).
-      numVisited = numVisited + 1 ;
-      if numVisited > numel(visited)  % pre-allocate
-        visited{end + 500} = [] ;
-      end
-      visited{numVisited} = obj ;
     end
     
     function saveStack(obj)
@@ -586,6 +568,22 @@ classdef Layer < matlab.mixin.Copyable
     end
     function y = eye(obj, varargin)
       y = Layer(@eye, obj, varargin{:}) ;
+    end
+  end
+  
+  methods (Static, Access = 'private')
+    function id = uniqueId()
+      persistent nextId
+      if isempty(nextId)
+        nextId = uint32(1) ;
+      end
+      id = nextId ;
+      nextId = nextId + 1 ;
+    end
+    
+    function visited = initializeRecursion()
+      % See getNextRecursion
+      visited = containers.Map('KeyType','uint32', 'ValueType','any') ;
     end
   end
 end
