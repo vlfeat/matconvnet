@@ -5,7 +5,7 @@ classdef nnautonn < nntest
 
   methods (Test)
     function testEval(test, topology)
-      if strcmp(test.dataType, 'double'), return ; end
+      if strcmp(test.currentDataType, 'double'), return ; end
       
       x = Input() ;
       
