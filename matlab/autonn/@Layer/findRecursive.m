@@ -21,25 +21,22 @@ function selected = findRecursive(obj, what, n, depth, visited, selected)
     end
   end
   
+  % add self to selected list, if it matches the pattern
+  if ~visited.isKey(obj.id)  % not in the list yet
+    if ischar(what)
+      if any(what == '*') || any(what == '?')  % wildcards
+        if ~isempty(regexp(obj.name, regexptranslate('wildcard', what), 'once'))
+          selected{end+1} = obj ;
+        end
+      elseif isequal(obj.name, what) || isa(obj, what)
+        selected{end+1} = obj ;
+      end
+    elseif isempty(what) || isequal(obj.func, what)
+      selected{end+1} = obj ;
+    end
+  end
+  
   % mark as seen
   visited(obj.id) = true ;
-  
-  % mark self as selected, if it matches the pattern
-  sel = false ;
-  if ischar(what)
-    if any(what == '*') || any(what == '?')  % wildcards
-      if ~isempty(regexp(obj.name, regexptranslate('wildcard', what), 'once'))
-        sel = true ;
-      end
-    elseif isequal(obj.name, what) || isa(obj, what)
-      sel = true ;
-    end
-  elseif isempty(what) || isequal(obj.func, what)
-    sel = true ;
-  end
-  
-  if sel
-    selected{end+1} = obj ;
-  end
   
 end

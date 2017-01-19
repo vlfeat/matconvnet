@@ -33,8 +33,7 @@ function info = getVarsInfo(net)
 
   % number of vars, independent of net.vars (which is empty during eval).
   % just go through var references and find the highest index
-  numVars = max([net.forward.outputVar, net.test.outputVar, ...
-    net.params.var, structfun(@deal, net.inputs)']) ;
+  numVars = max([net.forward.outputVar, net.params.var, structfun(@deal, net.inputs)']) ;
   if mod(numVars, 2) == 1  % odd-valued count; should be even to account for last var's derivative
     numVars = numVars + 1 ;
   end

@@ -32,6 +32,26 @@ function build(net, varargin)
   % list all layer objects, in forward order
   objs = rootLayer.find() ;
   
+  % merge redundant Input objects with the same name into one.
+  % this is safe because an Input has no info other than the name string,
+  % and allows special inputs like Input('testMode') to be used anywhere.
+  lookup = struct() ;  % lookup table of input name to respective object
+  for k = 1:numel(objs)
+    in = objs{k}.inputs ;
+    for i = 1:numel(in)
+      if isa(in{i}, 'Input')
+        if ~isfield(lookup, in{i}.name)  % add this Input object to lookup table
+          lookup.(in{i}.name) = in{i} ;
+        else  % an Input with that name exists, reuse it
+          objs{k}.inputs{i} = lookup.(in{i}.name) ;
+        end
+      end
+    end
+  end
+  
+  % list objects again, now that redundant Inputs are merged
+  objs = rootLayer.find() ;
+  
   % allocate an output variable to each one, sequentially
   for k = 1:numel(objs)
     objs{k}.outputVar = 2 * k - 1 ;
@@ -54,12 +74,10 @@ function build(net, varargin)
   % allocate memory
   net.forward = Net.initStruct(numel(idx), 'func', 'name', ...
       'source', 'args', 'inputVars', 'inputArgPos', 'outputVar', 'outputArgPos') ;
-  net.test = net.forward ;
   net.backward = Net.initStruct(numel(idx), 'func', 'name', ...
       'source', 'args', 'inputVars', 'inputArgPos', 'numInputDer', 'accumDer') ;
 
-  if opts.forwardOnly  % empty structs in this case, but with appropriate fields
-    net.test = net.test([]);
+  if opts.forwardOnly  % empty struct in this case, but with appropriate fields
     net.backward = net.backward([]);
   end
   
@@ -79,10 +97,7 @@ function build(net, varargin)
     obj = objs{i} ;
     if isa(obj, 'Input')
       % an input, store its var index by name
-      if isempty(obj.name)  % assign a name automatically
-        obj.name = sprintf('input%i', numel(fieldnames(net.inputs)) + 1) ;
-      end
-      assert(~isfield(net.inputs, obj.name), 'An input with the same name already exists.') ;
+      assert(~isempty(obj.name) && ~isfield(net.inputs, obj.name)) ;  % sanity check
       net.inputs.(obj.name) = obj.outputVar ;
 
     elseif isa(obj, 'Param')
@@ -191,45 +206,8 @@ function build(net, varargin)
       layer = orderfields(layer);
       net.backward(numel(idx) - k + 1) = layer ;
     end
-
-
-    % store functions for test mode
-    layer = [] ;
-    for k = 1:numel(idx)
-      obj = objs{idx(k)} ;
-
-      % add to execution order
-      layer.name = obj.name ;
-      layer.source = obj.source ;
-      layer.outputArgPos = find(obj.outputVar ~= 0) ;  % skip unused outputs
-      layer.outputVar = obj.outputVar(layer.outputArgPos) ;
-
-      % default is to use the same arguments
-      if isequal(obj.testInputs, 'same')
-        args = obj.inputs ;
-      else
-        args = obj.testInputs ;
-      end
-
-      if isempty(obj.testFunc)
-        % default is to call the same function as in normal mode
-        layer.func = obj.func ;
-
-      elseif isequal(obj.testFunc, 'none')
-        % layer is pass-through in test mode (e.g. dropout).
-        % we don't fully eliminate the layer in test mode because that
-        % would require special handling of in/out var indexes.
-        layer.func = @deal ;
-        args = args(1) ;  % only deal first input
-
-      else
-        % some other function
-        layer.func = obj.testFunc ;
-      end
-
-      net.test(k) = Net.parseArgs(layer, args) ;
-    end
   end
+  
   
   % network outputs, activate diagnostics automatically if empty
   for k = 1:numel(varargin)
@@ -238,7 +216,6 @@ function build(net, varargin)
     end
   end
 
-  
   
   % compute fan-out of parameters
   inputVars = [net.forward.inputVars] ;  % all indexes of input vars, possibly repeated

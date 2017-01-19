@@ -62,12 +62,10 @@ classdef Layer < matlab.mixin.Copyable
 
   properties (Access = public)
     inputs = {}  % list of inputs, either constants or other Layers
-    testInputs = 'same'  % list of inputs used in test mode, may be different
   end
   
   properties (SetAccess = public, GetAccess = public)
     func = []  % main function being called
-    testFunc = []  % function called in test mode (empty to use the same as in normal mode; 'none' to disable, e.g. dropout)
     name = ''  % optional name (for debugging mostly; a layer is a unique handle object that can be passed around)
     numOutputs = []  % to manually specify the number of outputs returned in fwd mode
     numInputDer = []  % to manually specify the number of input derivatives returned in bwd mode
@@ -137,15 +135,13 @@ classdef Layer < matlab.mixin.Copyable
       
       % call setup function if defined. it can change the inputs list (not
       % allowed for outside functions, to preserve call graph structure).
-      [obj.inputs, obj.testInputs] = autonn_setup(obj) ;
+      obj.inputs = autonn_setup(obj) ;
       obj.enableCycleChecks = true ;
     end
     
     function set.inputs(obj, newInputs)
       if obj.enableCycleChecks
         % must check for cycles, to ensure DAG structure.
-        % to do: should also do the same for testInputs; that property will
-        % be removed in the new test-mode implementation though.
         visited = Layer.initializeRecursion() ;
         for i = 1:numel(newInputs)
           if isa(newInputs{i}, 'Layer')

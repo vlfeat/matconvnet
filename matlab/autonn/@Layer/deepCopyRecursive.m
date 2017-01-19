@@ -35,23 +35,4 @@ function other = deepCopyRecursive(original, rename, visited)
     end
   end
   
-  
-  % repeat for test-mode inputs
-  if ~isequal(other.testInputs, 'same')
-    for i = 1:numel(other.testInputs)
-      in = other.testInputs{i} ;
-      if isa(in, 'Layer')
-        in.enableCycleChecks = false ;  % prevent cycle check when modifying a layer's input
-
-        if visited.isKey(in.id)  % already seen/copied this original object
-          other.testInputs{i} = visited(in.id) ;  % use the copy
-        else  % unseen/uncopied object, recurse on it and use the new copy
-          other.testInputs{i} = in.deepCopyRecursive(rename, visited) ;
-        end
-
-        in.enableCycleChecks = true ;
-      end
-    end
-  end
-  
 end

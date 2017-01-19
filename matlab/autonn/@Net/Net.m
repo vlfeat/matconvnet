@@ -41,7 +41,6 @@ classdef Net < handle
   properties (SetAccess = protected, GetAccess = public)
     forward = []  % forward pass function calls
     backward = []  % backward pass function calls
-    test = []  % test mode function calls
     vars = {}  % cell array of variables and their derivatives
     inputs = []  % struct of network's Inputs, indexed by name
     params = []  % list of Params
@@ -212,7 +211,6 @@ classdef Net < handle
     function s = saveobj(net)
       s.forward = net.forward ;
       s.backward = net.backward ;
-      s.test = net.test ;
       s.inputs = net.inputs ;
       s.params = net.params ;
       s.meta = net.meta ;
@@ -230,7 +228,6 @@ classdef Net < handle
       net = Net() ;
       net.forward = s.forward ;
       net.backward = s.backward ;
-      net.test = s.test ;
       net.vars = s.vars ;
       net.inputs = s.inputs ;
       net.params = s.params ;

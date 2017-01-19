@@ -1,4 +1,4 @@
-function [inputs, testInputs] = vl_nnbnorm_setup(layer)
+function inputs = vl_nnbnorm_setup(layer)
 %VL_NNBNORM_SETUP
 %   Create parameters if needed, and use VL_NNBNORM_WRAPPER for proper
 %   handling of test mode. Also handles 'learningRate' and 'weightDecay'
@@ -65,13 +65,10 @@ function [inputs, testInputs] = vl_nnbnorm_setup(layer)
     end
   end
   
-  % in normal mode, pass in moments so its derivatives are expected
-  inputs = [inputs(1:3), {moments, false}, inputs(4:end)] ;
+  % in normal mode, pass in moments so its derivatives are expected.
+  % create Input('testMode') to know when in test mode.
+  inputs = [inputs(1:3), {moments, Input('testMode')}, inputs(4:end)] ;
   layer.numInputDer = 4 ;
   
-  % let the wrapper know when it's in test mode
-  testInputs = inputs ;
-  testInputs{5} = true ;
-
 end
 

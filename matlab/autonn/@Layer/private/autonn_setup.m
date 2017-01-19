@@ -1,4 +1,4 @@
-function [inputs, testInputs] = autonn_setup(obj)
+function inputs = autonn_setup(obj)
 %AUTONN_SETUP
 %   AUTONN_SETUP is only called by Layer during construction.
 %
@@ -14,9 +14,8 @@ function [inputs, testInputs] = autonn_setup(obj)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-  % do not modify inputs or test-mode inputs by default
+  % do not modify inputs by default
   inputs = obj.inputs ;
-  testInputs = obj.testInputs ;
   
   % several native functions have a very simple setup: just specify that
   % their inputs are not differentiable.
@@ -30,17 +29,12 @@ function [inputs, testInputs] = autonn_setup(obj)
     info = functions(setupFunc) ;
 
     if ~isempty(info.file)
-      % accept between 0 and 2 return values: the inputs list, and the
-      % test-time inputs list. both are optional.
+      % optional return value (an updated inputs list)
       out = cell(1, nargout(setupFunc)) ;
       [out{:}] = setupFunc(obj) ;
 
       if numel(out) >= 1  % changed inputs
         inputs = out{1} ;
-      end
-
-      if numel(out) >= 2  % changed test mode inputs
-        testInputs = out{2} ;
       end
     end
   end
@@ -75,11 +69,6 @@ function inputs = vl_nnmatrixop_setup(layer)
   if isequal(inputs{3}, @mldivide)
     inputs = [inputs([2,1]), {@mrdivide}] ;
   end
-end
-
-function vl_nnmask_setup(layer)
-  % remove layer in test mode
-  layer.testFunc = 'none' ;
 end
 
 function repmat_setup(layer)

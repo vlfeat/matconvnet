@@ -18,18 +18,23 @@ function eval(net, mode, derOutput, accumulateParamDers)
     accumulateParamDers = false ;
   end
 
-  % use local variables for efficiency
-  vars = net.vars ;
-  net.vars = {} ;  % allows Matlab to release memory when needed
-
   switch mode
   case {'normal', 'forward'}  % forward and backward
-    forward = net.forward ;   %#ok<*PROPLC> % disable MLint's complaints
+    if isfield(net.inputs, 'testMode')
+      net.setInputs('testMode', false) ;
+    end
   case 'test'  % test mode
-    forward = net.test ;
+    if isfield(net.inputs, 'testMode')
+      net.setInputs('testMode', true) ;
+    end
   otherwise
     error('Unknown mode ''%s''.', mode) ;
   end
+
+  % use local variables for efficiency
+  forward = net.forward ;
+  vars = net.vars ;
+  net.vars = {} ;  % allows Matlab to release memory when needed
 
   % forward pass
   for k = 1:numel(forward)
