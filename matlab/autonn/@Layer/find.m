@@ -48,7 +48,7 @@ function objs = find(obj, varargin)
   end
 
   % do the work
-  objs = obj.findRecursive(what, n, opts.depth, Layer.initializeRecursion(), {}) ;
+  objs = findRecursive(obj, what, n, opts.depth, Layer.initializeRecursion(), {}) ;
 
   % choose the Nth object
   if n ~= 0
@@ -60,3 +60,46 @@ function objs = find(obj, varargin)
     end
   end
 end
+
+function selected = findRecursive(obj, what, n, depth, visited, selected)
+% WHAT, N, DEPTH: Search criteria (see FIND).
+% VISITED: Dictionary of objects seen during recursion so far.
+% SELECTED: Cell array of selected objects.
+
+% Copyright (C) 2016 Joao F. Henriques.
+% All rights reserved.
+%
+% This file is part of the VLFeat library and is made available under
+% the terms of the BSD license (see the COPYING file).
+
+  
+  if depth > 0
+    % get indexes of inputs that have not been visited yet
+    idx = obj.getNextRecursion(visited) ;
+    
+    % recurse on them (forward order)
+    for i = idx
+      selected = findRecursive(obj.inputs{i}, what, n, depth - 1, visited, selected) ;
+    end
+  end
+  
+  % add self to selected list, if it matches the pattern
+  if ~visited.isKey(obj.id)  % not in the list yet
+    if ischar(what)
+      if any(what == '*') || any(what == '?')  % wildcards
+        if ~isempty(regexp(obj.name, regexptranslate('wildcard', what), 'once'))
+          selected{end+1} = obj ;
+        end
+      elseif isequal(obj.name, what) || isa(obj, what)
+        selected{end+1} = obj ;
+      end
+    elseif isempty(what) || isequal(obj.func, what)
+      selected{end+1} = obj ;
+    end
+  end
+  
+  % mark as seen
+  visited(obj.id) = true ;
+  
+end
+
