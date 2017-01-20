@@ -364,7 +364,9 @@ classdef Layer < matlab.mixin.Copyable
   
   methods (Access = {?Net, ?Layer})
     function cycleCheckRecursive(obj, root, visited)
-      assert(obj ~= root, 'Input assignment creates a cycle in the network.') ;
+      if obj ~= root
+        error('MatConvNet:CycleCheckFailed', 'Input assignment creates a cycle in the network.') ;
+      end
       
       % recurse on inputs
       idx = obj.getNextRecursion(visited) ;
