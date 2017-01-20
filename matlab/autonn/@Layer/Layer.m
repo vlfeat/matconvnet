@@ -86,18 +86,6 @@ classdef Layer < matlab.mixin.Copyable
     enableCycleChecks = true  % to avoid redundant cycle checks when implicitly calling set.inputs()
   end
   
-  methods  % methods defined in their own files
-    objs = find(obj, varargin)
-    sz = evalOutputSize(obj, varargin)
-    sequentialNames(varargin)
-    display(obj, name)
-    print(obj)
-  end
-  methods (Access = {?Net, ?Layer})
-    selected = findRecursive(obj, what, n, depth, visited, selected)
-    other = deepCopyRecursive(obj, rename, visited)
-  end
-  
   methods
     function obj = Layer(func, varargin)  % wrap a function call
       obj.saveStack() ;  % record source file and line number, for debugging
@@ -151,49 +139,6 @@ classdef Layer < matlab.mixin.Copyable
       end
       
       obj.inputs = newInputs;
-    end
-    
-    function other = deepCopy(obj, varargin)
-      % OTHER = OBJ.DEEPCOPY(SHAREDLAYER1, SHAREDLAYER2, ...)
-      % OTHER = OBJ.DEEPCOPY({SHAREDLAYER1, SHAREDLAYER2, ...})
-      % Returns a deep copy of a layer, excluding SHAREDLAYER1,
-      % SHAREDLAYER2, etc, which are optional. This can be used to
-      % implement shared Params, or define the boundaries of the deep copy.
-      %
-      % OTHER = OBJ.DEEPCOPY(..., RENAME)
-      % Specifies a function handle to be evaluated on each name, possibly
-      % modifying it (e.g. append a prefix or suffix).
-      %
-      % OTHER = OBJ.DEEPCOPY(..., 'noName')
-      % Does not copy object names (they are left empty).
-      %
-      % To create a shallow copy, use OTHER = OBJ.COPY().
-      
-      shared = varargin ;  % list of shared layers
-      rename = @deal ;  % no renaming by default
-      if ~isempty(shared)
-        if isa(shared{end}, 'function_handle')
-          rename = shared{end} ;  % specified rename function
-          shared(end) = [] ;
-        elseif ischar(shared{end})
-          assert(strcmp(shared{end}, 'noName'), 'Invalid option.') ;
-          rename = @(~) [] ;  % assign empty to name
-          shared(end) = [] ;
-        end
-      end
-      
-      if isscalar(shared) && iscell(shared{1})  % passed in cell array
-        shared = shared{1} ;
-      end
-      
-      % shared layers are just considered visited/copied, pointing to
-      % themselves as the new copy
-      visited = Layer.initializeRecursion() ;
-      for i = 1:numel(shared)
-        visited(shared{i}.id) = shared{i} ;
-      end
-      
-      other = obj.deepCopyRecursive(rename, visited) ;
     end
     
     
