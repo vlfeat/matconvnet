@@ -5,8 +5,7 @@ classdef nnautonnfind < nntest
     criteria = {'index', 'name', 'function'}
   end
   properties
-    nets
-    sequences
+    layers
   end
   
   methods (TestClassSetup)
@@ -18,8 +17,7 @@ classdef nnautonnfind < nntest
       d = c + 1 ;
       
       Layer.workspaceNames() ;
-      test.sequences.sequential = {a, b, c, d} ;
-      test.nets.sequential = d ;
+      test.layers.sequential = {a, b, c, d} ;
 
       % diamond topology
       a = Input() ;
@@ -28,8 +26,7 @@ classdef nnautonnfind < nntest
       d = b + c ;
 
       Layer.workspaceNames() ;
-      test.sequences.diamond = {a, b, c, d} ;
-      test.nets.diamond = d ;
+      test.layers.diamond = {a, b, c, d} ;
     end
   end
   
@@ -37,9 +34,9 @@ classdef nnautonnfind < nntest
     function testFind(test, topology, criteria, index)
       if strcmp(test.currentDataType, 'double') || strcmp(test.currentDevice, 'gpu'), return ; end
       
-      % get network and correct sequence
-      net = test.nets.(topology) ;
-      sequence = test.sequences.(topology) ;
+      % get network and correct sequence of layers
+      sequence = test.layers.(topology) ;
+      net = sequence{end} ;
       
       if isnumeric(index)
         % get one layer, and check it's the right one.
