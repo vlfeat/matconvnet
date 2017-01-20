@@ -8,9 +8,16 @@ classdef nnautonncycle < nntest
       d = b + c ;
       e = exp(d) ;
       
-      % introduce a cycle in the DAG
+      % introduce cycles in the DAG
       try
         b.inputs{1} = e ;
+      catch err
+        assert(strcmp(err.identifier, 'MatConvNet:CycleCheckFailed'), ...
+          'Failed to catch cycle in DAG.') ;
+      end
+      
+      try
+        d.inputs{2} = d ;
       catch err
         assert(strcmp(err.identifier, 'MatConvNet:CycleCheckFailed'), ...
           'Failed to catch cycle in DAG.') ;
