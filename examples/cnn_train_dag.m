@@ -571,7 +571,11 @@ end
 function [net, state, stats] = loadState(fileName)
 % -------------------------------------------------------------------------
 load(fileName, 'net', 'state', 'stats') ;
-net = dagnn.DagNN.loadobj(net) ;
+if ~isfield(net, 'vars')
+  net = dagnn.DagNN.loadobj(net) ;
+else
+  net = Net(net) ;
+end
 if isempty(whos('stats'))
   error('Epoch ''%s'' was only partially saved. Delete this file and try again.', ...
         fileName) ;
