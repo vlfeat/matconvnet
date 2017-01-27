@@ -20,6 +20,7 @@ function sz = evalOutputSize(obj, varargin)
   assert(iscellstr(varargin(1:2:end)), 'Expected a list of input names and their sizes.') ;
 
   inputNames = cellfun(@(o) o.name, obj.find('Input'), 'UniformOutput',false) ;
+  inputNames(strcmp(inputNames, 'testMode')) = [] ;  % these inputs are set automatically and are not needed
   inputs = cell(1, 2 * numel(inputNames)) ;
 
   for i = 1:numel(inputNames)
