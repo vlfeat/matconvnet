@@ -25,6 +25,7 @@ opts.numSubBatches = 1 ;
 opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
+opts.epochSize = inf;
 opts.prefetch = false ;
 opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
@@ -136,6 +137,7 @@ for epoch=start+1:opts.numEpochs
   params.epoch = epoch ;
   params.learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   params.train = opts.train(randperm(numel(opts.train))) ; % shuffle
+  params.train = params.train(1:min(opts.epochSize, numel(opts.train)));
   params.val = opts.val(randperm(numel(opts.val))) ;
   params.imdb = imdb ;
   params.getBatch = getBatch ;
@@ -162,7 +164,9 @@ for epoch=start+1:opts.numEpochs
   stats.train(epoch) = lastStats.train ;
   stats.val(epoch) = lastStats.val ;
   clear lastStats ;
-  saveStats(modelPath(epoch), stats) ;
+  if ~evaluateMode
+    saveStats(modelPath(epoch), stats) ;
+  end
 
   if params.plotStatistics
     switchFigure(1) ; clf ;
@@ -396,7 +400,7 @@ for t=1:params.batchSize:numel(subset)
       'XScale', 'log', ...
       'XLim', [1e-5 1], ...
       'XTick', 10.^(-5:1)) ;
-    grid on ;
+    grid on ; title('Variation');
     subplot(2,2,2) ; barh(sqrt(diagnpow)) ;
     set(gca,'TickLabelInterpreter', 'none', ...
       'YTick', 1:numel(diagnpow), ...
@@ -405,7 +409,7 @@ for t=1:params.batchSize:numel(subset)
       'XScale', 'log', ...
       'XLim', [1e-5 1e5], ...
       'XTick', 10.^(-5:5)) ;
-    grid on ;
+    grid on ; title('Power');
     subplot(2,2,3); plot(squeeze(res(end-1).x)) ;
     drawnow ;
   end
