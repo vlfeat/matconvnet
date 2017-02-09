@@ -94,11 +94,32 @@ function eval(net, mode, derOutput, accumulateParamDers)
         % special case, indexing. the derivative update is sparse.
         % args = {X, I1, I2, ..., DYDZ}, derivative of X(I1, I2, ...).
         inputDer = layer.inputVars(1) + 1 ;  % index of input derivative var
-        if isequal(vars{inputDer}, 0)  % must initialize with the right size
-          vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
+        subs = args(2:end-1) ;  % indexing subscripts
+        
+        % there's a fast sparse update that doesn't handle repeated
+        % indexes, and a slow one that does. to do: MEX file.
+        repeats = false ;  % check for repeated indexes
+        for i = 1:numel(subs)
+          if ~ischar(subs{i}) && numel(unique(subs{i})) < numel(subs{i})
+            repeats = true ;
+            break
+          end
         end
-        % note: very efficient, but doesn't handle repeated indexes
-        vars{inputDer}(args{2:end-1}) = vars{inputDer}(args{2:end-1}) + args{end} ;
+        if ~repeats
+          % very efficient, but doesn't handle repeated indexes
+          if isequal(vars{inputDer}, 0)  % must initialize with the right size
+            vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
+          end
+          vars{inputDer}(subs{:}) = vars{inputDer}(subs{:}) + args{end} ;
+        else
+          % enumerate all indexed elements explicitly to accumulate, slower
+          subs_ = cell(size(subs));
+          [subs_{:}] = ndgrid(subs{:});  % enumerate subscripts of all indexed elements
+          ii = sub2ind(size(args{1}), subs_{:});  % convert to linear indexes
+          der = accumarray(ii(:), args{end}(:), [numel(args{1}), 1]);  % accumulate gradients
+          der = reshape(der, size(A));  % reshape back to tensor
+          vars{inputDer} = vars{inputDer} + der ;
+        end
       end
     end
   end
