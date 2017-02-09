@@ -115,7 +115,12 @@ function eval(net, mode, derOutput, accumulateParamDers)
           % enumerate all indexed elements explicitly to accumulate, slower
           for i = 1:numel(subs)  % replace colon keyword with actual subscripts
             if isequal(subs{i}, ':')
-              subs{i} = 1:size(args{1},i) ;
+              if i < numel(subs)
+                subs{i} = 1:size(args{1},i) ;
+              else  % special case, last subscripted dimension contains all trailing dimensions
+                sz = size(args{1}) ;
+                subs{i} = 1:prod(sz(i:end)) ;
+              end
             end
           end
           subs_ = cell(size(subs));
