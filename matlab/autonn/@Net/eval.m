@@ -100,7 +100,7 @@ function eval(net, mode, derOutput, accumulateParamDers)
         % indexes, and a slow one that does. to do: MEX file.
         repeats = false ;  % check for repeated indexes
         for i = 1:numel(subs)
-          if ~ischar(subs{i}) && numel(unique(subs{i})) < numel(subs{i})
+          if ~ischar(subs{i}) && any(diff(sort(subs{i})) == 0)  % faster than unique()
             repeats = true ;
             break
           end
