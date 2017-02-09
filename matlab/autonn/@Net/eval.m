@@ -113,11 +113,16 @@ function eval(net, mode, derOutput, accumulateParamDers)
           vars{inputDer}(subs{:}) = vars{inputDer}(subs{:}) + args{end} ;
         else
           % enumerate all indexed elements explicitly to accumulate, slower
+          for i = 1:numel(subs)  % replace colon keyword with actual subscripts
+            if isequal(subs{i}, ':')
+              subs{i} = 1:size(args{1},i) ;
+            end
+          end
           subs_ = cell(size(subs));
           [subs_{:}] = ndgrid(subs{:});  % enumerate subscripts of all indexed elements
           ii = sub2ind(size(args{1}), subs_{:});  % convert to linear indexes
           der = accumarray(ii(:), args{end}(:), [numel(args{1}), 1]);  % accumulate gradients
-          der = reshape(der, size(A));  % reshape back to tensor
+          der = reshape(der, size(args{1}));  % reshape back to tensor
           vars{inputDer} = vars{inputDer} + der ;
         end
       end
