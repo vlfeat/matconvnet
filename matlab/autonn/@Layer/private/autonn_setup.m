@@ -20,7 +20,9 @@ function inputs = autonn_setup(obj)
   % several native functions have a very simple setup: just specify that
   % their inputs are not differentiable.
   non_differentiable = {'size', 'colon', 'rand', 'randn', 'randi', ...
-    'randperm', 'ones', 'zeros', 'inf', 'nan', 'eye'} ;
+    'randperm', 'ones', 'zeros', 'inf', 'nan', 'eye', ...
+    'eq', 'ne', 'lt', 'gt', 'le', 'ge', 'and', 'or', 'not', 'xor', ...
+    'any', 'all'} ;
   if any(strcmp(func2str(obj.func), non_differentiable))
     obj.numInputDer = 0 ;
   else

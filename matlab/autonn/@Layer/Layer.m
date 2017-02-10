@@ -252,6 +252,59 @@ classdef Layer < matlab.mixin.Copyable
       y = Layer(@cat, obj, varargin{:}) ;
     end
     
+    % overloaded relational and logical operators (no derivative).
+    % note: short-circuited scalar operators (&&, ||) cannot be overloaded,
+    % use other logical operators instead (&, |).
+    
+    function y = eq(a, b, same)
+      % EQ(A, B), A == B
+      % Returns a Layer that tests equality of the outputs of two Layers
+      % (one of them may be constant).
+      % EQ(A, B, 'sameInstance')
+      % Checks if two variables refer to the same Layer instance (i.e.,
+      % calls the == operator for handle classes).
+      if nargin <= 2
+        y = Layer(@eq, a, b) ;
+      else
+        assert(isequal(same, 'sameInstance'), 'The only accepted extra flag for EQ is ''sameInstance''.') ;
+        y = eq@handle(a, b) ;
+      end
+    end
+    function y = ne(a, b)
+      y = Layer(@ne, a, b) ;
+    end
+    function y = lt(a, b)
+      y = Layer(@lt, a, b) ;
+    end
+    function y = gt(a, b)
+      y = Layer(@gt, a, b) ;
+    end
+    function y = le(a, b)
+      y = Layer(@le, a, b) ;
+    end
+    function y = ge(a, b)
+      y = Layer(@ge, a, b) ;
+    end
+    
+    function y = and(a, b)
+      y = Layer(@and, a, b) ;
+    end
+    function y = or(a, b)
+      y = Layer(@or, a, b) ;
+    end
+    function y = not(a)
+      y = Layer(@not, a) ;
+    end
+    function y = xor(a, b)
+      y = Layer(@xor, a, b) ;
+    end
+    function y = any(obj, varargin)
+      y = Layer(@any, obj, varargin{:}) ;
+    end
+    function y = all(obj, varargin)
+      y = Layer(@all, obj, varargin{:}) ;
+    end
+    
     % overloaded math operators. any additions, negative signs and scalar
     % factors are merged into a single vl_nnwsum by the Layer constructor.
     % vl_nnbinaryop does singleton expansion, vl_nnmatrixop does not.
@@ -364,7 +417,7 @@ classdef Layer < matlab.mixin.Copyable
   
   methods (Access = {?Net, ?Layer})
     function cycleCheckRecursive(obj, root, visited)
-      if obj == root
+      if eq(obj, root, 'sameInstance')
         error('MatConvNet:CycleCheckFailed', 'Input assignment creates a cycle in the network.') ;
       end
       
