@@ -112,8 +112,9 @@ function eval(net, mode, derOutput, accumulateParamDers)
           end
           vars{inputDer}(subs{:}) = vars{inputDer}(subs{:}) + args{end} ;
         else
-          % enumerate all indexed elements explicitly to accumulate, slower
-          for i = 1:numel(subs)  % replace colon keyword with actual subscripts
+          % enumerate all indexed elements explicitly to accumulate.
+          % replace colon keyword/logical indexing with actual subscripts
+          for i = 1:numel(subs)
             if isequal(subs{i}, ':')
               if i < numel(subs)
                 subs{i} = 1:size(args{1},i) ;
@@ -121,6 +122,8 @@ function eval(net, mode, derOutput, accumulateParamDers)
                 sz = size(args{1}) ;
                 subs{i} = 1:prod(sz(i:end)) ;
               end
+            elseif islogical(subs{i})
+              subs{i} = find(subs{i}) ;
             end
           end
           subs_ = cell(size(subs));
