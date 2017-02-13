@@ -45,7 +45,6 @@ opts.extractStatsFn = [] ;
 opts.plotStatistics = true;
 opts.plotDiagnostics = false ;
 opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
-opts.solver = [] ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end

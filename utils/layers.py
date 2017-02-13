@@ -425,6 +425,7 @@ class CaffeConv(CaffeLayer):
         self.kernel_size = reorder(self.kernel_size, [1,0])
         self.stride = reorder(self.stride, [1,0])
         self.pad = reorder(self.pad, [2,3,0,1])
+        self.dilation = reorder(self.dilation, [1,0])
         if model.params[self.params[0]].hasValue():
             print "Layer %s: transposing filters" % self.name
             param = model.params[self.params[0]]
@@ -441,7 +442,8 @@ class CaffeConv(CaffeLayer):
             {'hasBias': self.bias_term,
              'size': row(size),
              'pad': row(self.pad),
-             'stride': row(self.stride)})
+             'stride': row(self.stride),
+             'dilate': row(self.dilation)})
         return mlayer
 
     def toMatlabSimpleNN(self):
@@ -452,6 +454,7 @@ class CaffeConv(CaffeLayer):
         mlayer['size'] = row(size)
         mlayer['pad'] = row(self.pad)
         mlayer['stride'] = row(self.stride)
+        mlayer['dilate'] = row(self.dilation)
         for p, name in enumerate(self.params):
             mlayer['weights'][0,p] = self.model.params[name].toMatlabSimpleNN()
         return mlayer
