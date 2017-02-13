@@ -36,7 +36,7 @@ function other = deepCopy(obj, varargin)
   visited = Layer.initializeRecursion() ;
   
   for i = 1:numel(shared)
-    assert(shared{i} ~= obj, 'The root layer of a deep copy cannot be a shared layer.') ;
+    assert(~eq(shared{i}, obj, 'sameInstance'), 'The root layer of a deep copy cannot be a shared layer.') ;
     
     % propagate shared status (see below)
     shareRecursive(shared{i}, visited) ;
