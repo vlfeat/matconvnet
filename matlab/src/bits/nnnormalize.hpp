@@ -22,7 +22,7 @@ namespace vl {
   nnlrn_forward(vl::Context& context,
                       vl::Tensor output,
                       vl::Tensor data,
-                      size_t normDetph,
+                      size_t normDepth,
                       double kappa, double alpha, double beta) ;
 
   vl::ErrorCode
@@ -30,7 +30,7 @@ namespace vl {
                        vl::Tensor derData,
                        vl::Tensor data,
                        vl::Tensor derOutput,
-                       size_t normDetph,
+                       size_t normDepth,
                        double kappa, double alpha, double beta) ;
 }
 

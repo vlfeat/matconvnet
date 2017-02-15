@@ -167,7 +167,7 @@ $
 \frac{d z}{d (\vv \by)^\top}
 S(\bx),
 $
-for all but a null set of points, where the operator is not differentiable (this usually does not pose problems in optimization by stochastic gradient). For max-pooling, similar relations exists with two differences: $S$ does not depend on the input $\bx$ and it is not binary, in order to account for the normalization factors. In summary, we have the expressions:
+for all but a null set of points, where the operator is not differentiable (this usually does not pose problems in optimization by stochastic gradient). For average pooling, similar relations exists with two differences: $S$ does not depend on the input $\bx$ and it is not binary, in order to account for the normalization factors. In summary, we have the expressions:
 \begin{equation}\label{e:max-mat}
 \boxed{
 \vv\by = S(\bx) \vv \bx,
@@ -429,12 +429,12 @@ The neighbourhood norm $n^2_{i''j''d}$ can be computed by applying average pooli
 The derivative of spatial normalization can be obtained as follows:
 \begin{align*}
 \frac{dz}{dx_{ijd}} 
-&= \sum_{i''j''d}
+&= \sum_{i''j''}
 \frac{dz}{d y_{i''j''d}} 
 \frac{d y_{i''j''d}}{d x_{ijd}}
 \\
 &=
-\sum_{i''j''d}
+\sum_{i''j''}
 \frac{dz}{d y_{i''j''d}} 
 (1 + \alpha n_{i''j''d}^2)^{-\beta}
 \frac{dx_{i''j''d}}{d x_{ijd}} 
@@ -450,7 +450,7 @@ x_{i''j''d}
 (1 + \alpha n_{ijd}^2)^{-\beta}
 -2\alpha\beta x_{ijd}
 \left[
-\sum_{i''j''d}
+\sum_{i''j''}
 \frac{dz}{d y_{i''j''d}} 
 (1 + \alpha n_{i''j''d}^2)^{-\beta-1}
 x_{i''j''d}
@@ -462,7 +462,7 @@ x_{i''j''d}
 (1 + \alpha n_{ijd}^2)^{-\beta}
 -2\alpha\beta x_{ijd}
 \left[
-\sum_{i''j''d}
+\sum_{i''j''}
 \eta_{i''j''d}
 \frac{dn_{i''j''d}^2}{d (x_{ijd}^2)}
 \right],
