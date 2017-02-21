@@ -24,7 +24,19 @@ function [y, dzdg, dzdb, moments] = vl_nnbnorm_wrapper(x, g, b, moments, test, v
     b(1:size(x,3),1) = b ;
   end
   if isscalar(moments)
-    moments(1:size(x,3),1:2) = moments;
+    moments(1:size(x,3),1:2) = moments ;
+  end
+
+  if isempty(x)
+    % vl_nnbnorm throws an error on empty inputs. however, these can happen
+    % in some dynamic architectures, so handle this case.
+    y = zeros(size(x), 'like', x) ;
+    if nargout > 1
+      dzdg = zeros(size(g), 'like', g) ;
+      dzdb = zeros(size(b), 'like', b) ;
+      moments = zeros(size(moments), 'like', moments) ;
+    end
+    return
   end
 
   if ~test
