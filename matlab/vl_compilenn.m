@@ -66,6 +66,13 @@ function vl_compilenn(varargin)
 %      Directory containing the unpacked binaries and header files of
 %      the CuDNN library.
 %
+%   `preCompileFn`:: none
+%      Applies a custom modifier function just before compilation. The
+%      function's signature is: 
+%      [opts, mex_src, lib_src, flags] = f(opts, mex_src, lib_src, flags) ;
+%      where the arguments are a struct with the present options, a list of
+%      MEX files, a list of LIB files, and compilation flags, respectively.
+%
 %   ## Compiling the CPU code
 %
 %   By default, the `EnableGpu` option is switched to off, such that
@@ -164,6 +171,7 @@ opts.defCudaArch      = [...
   '-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
   '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
 opts.cudnnRoot        = 'local/cudnn' ;
+opts.preCompileFn       = @deal ;
 opts = vl_argparse(opts, varargin);
 
 % --------------------------------------------------------------------
@@ -474,6 +482,9 @@ end
 % --------------------------------------------------------------------
 %                                                              Compile
 % --------------------------------------------------------------------
+
+% Apply pre-compilation modifier function (e.g. to add custom files)
+[opts, mex_src, lib_src, flags] = opts.preCompileFn(opts, mex_src, lib_src, flags) ;
 
 % Intermediate object files
 srcs = horzcat(lib_src,mex_src) ;
