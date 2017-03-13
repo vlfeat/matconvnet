@@ -44,14 +44,17 @@ opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts.plotStatistics = true;
 opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
-opts.solver = [] ;
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
-if isnan(opts.train), opts.train = [] ; end
-if isnan(opts.val), opts.val = [] ; end
+if isscalar(opts.train) && isnumeric(opts.train) && isnan(opts.train)
+  opts.train = [] ;
+end
+if isscalar(opts.val) && isnumeric(opts.val) && isnan(opts.val)
+  opts.val = [] ;
+end
 
 % -------------------------------------------------------------------------
 %                                                            Initialization

@@ -15,7 +15,7 @@
 %   MATLAB is busy doing something else.
 %
 %   The function can transforms the images on the fly in various
-%   ways. Transformatiosn are applied as follows:
+%   ways. Transformations are applied as follows:
 %
 %   1) An (H,W) image is loaded from disk.
 %
@@ -25,7 +25,7 @@
 %      1) First, the shape (Ho,Wo) of the output image (i.e. the
 %         resized crop) is determined. This, as determined by the
 %         `Resize` option, can be either the same as the input image
-%         (H,W) or one or both of height and witdth can be set to an
+%         (H,W) or one or both of height and width can be set to an
 %         arbitrary value.
 %
 %      2) Given the output shape (Ho,Wo) of the crop, the shape
@@ -38,10 +38,10 @@
 %         input image or at a random location according to
 %         `CropLocation`.
 %
-%   3) The cropedd and resized image undergoes color post
+%   3) The cropped and resized image undergoes color post
 %      post-processing, including mean subtraction
 %      (`SubtractAverage`), random color shift (`Brightness`), and
-%      random changes in saturation (`Saturation`), and contrats
+%      random changes in saturation (`Saturation`), and contrast
 %      (`Contrast`).
 %
 %   The function takes the following options:

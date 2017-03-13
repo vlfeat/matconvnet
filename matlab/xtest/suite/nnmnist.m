@@ -14,6 +14,7 @@ classdef nnmnist < nntest
       clear mex ; % will reset GPU, remove MCN to avoid crashing
                   % MATLAB on exit (BLAS issues?)
       if strcmp(test.dataType, 'double'), return ; end
+      rng(0);  % fix random seed, for reproducible tests
       switch test.currentDevice
         case 'cpu'
           gpus = [];

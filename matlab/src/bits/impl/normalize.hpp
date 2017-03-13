@@ -25,7 +25,7 @@ namespace vl { namespace impl {
     forward(type* output,
             type const* data,
             size_t height, size_t width, size_t depth, size_t size,
-            size_t normDetph,
+            size_t normDepth,
             type  kappa, type  alpha, type  beta) ;
 
     static vl::ErrorCode
@@ -33,7 +33,7 @@ namespace vl { namespace impl {
              type const* data,
              type const* derOutput,
              size_t height, size_t width, size_t depth, size_t size,
-             size_t normDetph,
+             size_t normDepth,
              type  kappa, type  alpha, type  beta) ;
   } ;
 
