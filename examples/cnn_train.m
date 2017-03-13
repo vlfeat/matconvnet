@@ -63,8 +63,12 @@ opts = vl_argparse(opts, varargin) ;
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
-if isequal(opts.train, NaN), opts.train = [] ; end
-if isequal(opts.val, NaN), opts.val = [] ; end
+if isscalar(opts.train) && isnumeric(opts.train) && isnan(opts.train)
+  opts.train = [] ;
+end
+if isscalar(opts.val) && isnumeric(opts.val) && isnan(opts.val)
+  opts.val = [] ;
+end
 
 % -------------------------------------------------------------------------
 %                                                            Initialization
