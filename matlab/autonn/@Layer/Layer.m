@@ -251,6 +251,12 @@ classdef Layer < matlab.mixin.Copyable
     function y = cat(obj, varargin)
       y = Layer(@cat, obj, varargin{:}) ;
     end
+    function y = gpuArray(obj)
+      y = Layer(@gpuArray, obj) ;
+    end
+    function y = gather(obj)
+      y = Layer(@gather, obj) ;
+    end
     
     % overloaded relational and logical operators (no derivative).
     % note: short-circuited scalar operators (&&, ||) cannot be overloaded,

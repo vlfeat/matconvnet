@@ -89,6 +89,14 @@ function dx = mean_der(x, dim, dy)
   dx = repmat(dy, reps) / size(x, dim) ;
 end
 
+function dx = gpuArray_der(~, dy)
+  dx = gather(dy) ;
+end
+
+function dx = gather_der(~, dy)
+  dx = gpuArray(dy) ;
+end
+
 function varargout = root_der(varargin)
   % copy the output derivative to all input derivatives (see ROOT).
   varargout = cell(1, numel(varargin) - 1) ;
