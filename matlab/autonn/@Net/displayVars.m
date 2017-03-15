@@ -13,7 +13,11 @@ function displayVars(net, varargin)
 %      If set to true, shows columns with the minimum and maximum for each
 %      variable.
 %
-%   `showLinks`:: `true`
+%   `showMemory`:: `true`
+%      If set to true, shows columns with the memory taken by each
+%      variable.
+%
+%   `showLinks`:: `true` if not running Matlab in a terminal
 %      If set to true, shows hyperlinks that print the syntax to access
 %      the value of each variable (e.g. 'net.vars{INDEX}').
 
@@ -32,6 +36,7 @@ else
   vars = net.vars ;
 end
 opts.showRange = true ;
+opts.showMemory = true ;
 opts.showLinks = usejava('desktop') ;
 opts = vl_argparse(opts, varargin) ;
 
@@ -58,9 +63,9 @@ end
 funcs = cell(numel(vars), 1) ;
 values = cell(numel(vars), 1) ;
 flags = cell(numel(vars), 1) ;
-mins = zeros(numel(vars), 1) ;
-maxs = zeros(numel(vars), 1) ;
-validRange = true(numel(vars), 1) ;
+mins = NaN(numel(vars), 1) ;
+maxs = NaN(numel(vars), 1) ;
+mem = zeros(numel(vars), 1) ;
 for i = 1:numel(vars)
   % function of each layer, as a string
   if strcmp(info(i).type, 'layer')
@@ -123,19 +128,54 @@ for i = 1:numel(vars)
     if isnumeric(v) && ~isempty(v)
       mins(i) = gather(min(v(:))) ;
       maxs(i) = gather(max(v(:))) ;
-    else
-      validRange(i) = false ;
     end
+  end
+  
+  % memory
+  if opts.showMemory
+    type = class(v) ;
+    if strcmp(type, 'gpuArray')
+      type = classUnderlying(v) ;
+    end
+    switch type
+    case 'double'
+      bytes = 8 ;
+    case 'single'
+      bytes = 4 ;
+    case 'logical'
+      bytes = 1 ;
+    otherwise  % e.g. 'uint32', get the '32'. otherwise bytes will be NaN.
+      bytes = str2double(regexprep(type, '[a-z]', '')) / 8 ;
+    end
+    if ~isreal(v)
+      bytes = 2 * bytes ;
+    end
+    mem(i) = bytes * numel(v) ;
   end
 end
 
-if opts.showRange  % convert to string, filling invalid values with spaces
-  minStr(validRange,:) = num2str(mins(validRange), '%.2g') ;
-  minStr(~validRange,:) = ' ' ;
+if opts.showRange  % convert to string, filling NaNs with spaces
+  minStr = num2str(mins, '%.2g') ;
+  minStr(isnan(mins),:) = ' ' ;
   minStr = num2cell(minStr, 2) ;
-  maxStr(validRange,:) = num2str(maxs(validRange), '%.2g') ;
-  maxStr(~validRange,:) = ' ' ;
+  
+  maxStr = num2str(maxs, '%.2g') ;
+  maxStr(isnan(maxs),:) = ' ' ;
   maxStr = num2cell(maxStr, 2) ;
+end
+
+if opts.showMemory
+  suffixes = {'B ', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'} ;
+  place = floor(log(mem) / log(1024)) ;  % 0-based index into 'suffixes'
+  place(mem == 0) = 0 ;  % 0 bytes needs special handling
+  num = mem ./ (1024 .^ place) ;
+  
+  memStr = num2str(num, '%.0f')  ;
+  memStr(:,end+1) = ' ' ;
+  memStr = [memStr, char(suffixes{max(1, place + 1)})] ;  % concatenate number and suffix
+  
+  memStr(isnan(mem),:) = ' ' ;  % leave invalid values blank
+  memStr = num2cell(memStr, 2) ;
 end
 
 
@@ -150,9 +190,16 @@ headers = {'Value', 'Derivative'} ;
 
 for i = 1:2
   idx = i : 2 : numel(values) - 2 + i ;  % odd or even elements, respectively
-  t = [{headers{i}, 'Flags', 'Min', 'Max'};
-    values(idx), flags(idx), minStr(idx), maxStr(idx)] ;
-  table = [table, t] ;
+  
+  table = [table, [{headers{i}, 'Flags'}; values(idx), flags(idx)]] ;
+  
+  if opts.showRange
+    table = [table, [{'Min', 'Max'}; minStr(idx), maxStr(idx)]] ;
+  end
+  
+  if opts.showMemory
+    table = [table, [{'Memory'}; memStr(idx)]] ;
+  end
 end
 
 % ensure all cells contain strings
