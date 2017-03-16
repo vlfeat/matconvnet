@@ -1,6 +1,7 @@
 classdef Loss < dagnn.ElementWise
   properties
     loss = 'softmaxlog'
+    display = true
     opts = {}
   end
 
@@ -12,6 +13,11 @@ classdef Loss < dagnn.ElementWise
   methods
     function outputs = forward(obj, inputs, params)
       outputs{1} = vl_nnloss(inputs{1}, inputs{2}, [], 'loss', obj.loss, obj.opts{:}) ;
+      obj.account(inputs, outputs);
+    end
+
+    function account(obj, inputs, outputs)
+      if ~obj.display, return; end;
       n = obj.numAveraged ;
       m = n + size(inputs{1},4) ;
       obj.average = (n * obj.average + gather(outputs{1})) / m ;
