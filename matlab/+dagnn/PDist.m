@@ -19,7 +19,7 @@ classdef PDist < dagnn.Loss
         otherwise
           error('Invalid number of inputs');
       end
-      obj.account(inputs, outputs);
+      obj.accumulateAverage(inputs, outputs);
     end
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
@@ -39,7 +39,7 @@ classdef PDist < dagnn.Loss
 
     function obj = PDist(varargin)
       obj.load(varargin) ;
-      obj.loss = '';
+      obj.loss = 'pdist';
     end
   end
 end
