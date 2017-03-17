@@ -34,6 +34,7 @@ classdef LossSmoothL1 < dagnn.Loss
       outputs{1} = inputs{3}(:)' * absDelta(:) ;
 
       % Accumulate loss statistics.
+      if obj.ignoreAverage, return; end;
       n = obj.numAveraged ;
       m = n + gather(sum(inputs{3}(:))) + 1e-9 ;
       obj.average = (n * obj.average + gather(outputs{1})) / m ;
