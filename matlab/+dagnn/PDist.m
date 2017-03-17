@@ -2,9 +2,11 @@
 %  Accepts 2 or 3 inputs, where third input is used as variable
 %  'instanceWeights' parameter. Derivatives for the 3rd input are not
 %  computed.
+%  By default aggregates the element-wise loss.
 classdef PDist < dagnn.Loss
   properties
     p = 2;
+    aggregate = true;
   end
 
   methods
@@ -12,10 +14,11 @@ classdef PDist < dagnn.Loss
       switch numel(inputs)
         case 2
           outputs{1} = vl_nnpdist(inputs{1}, inputs{2}, obj.p, [], ...
-            obj.opts{:}) ;
+            'aggregate', obj.aggregate, obj.opts{:}) ;
         case 3
           outputs{1} = vl_nnpdist(inputs{1}, inputs{2}, obj.p, [], ...
-            'instanceWeights', inputs{3}, obj.opts{:}) ;
+            'aggregate', obj.aggregate, 'instanceWeights', inputs{3}, ...
+            obj.opts{:}) ;
         otherwise
           error('Invalid number of inputs');
       end
@@ -27,10 +30,11 @@ classdef PDist < dagnn.Loss
       switch numel(inputs)
         case 2
           [derInputs{1}, derInputs{2}] = vl_nnpdist(inputs{1}, inputs{2}, ...
-            obj.p, derOutputs{1}, obj.opts{:}) ;
+            obj.p, derOutputs{1}, 'aggregate', obj.aggregate, obj.opts{:}) ;
         case 3
           [derInputs{1}, derInputs{2}] = vl_nnpdist(inputs{1}, inputs{2}, ...
-            obj.p, derOutputs{1}, 'instanceWeights', inputs{3}, obj.opts{:}) ;
+            obj.p, derOutputs{1}, 'aggregate', obj.aggregate, ...
+            'instanceWeights', inputs{3}, obj.opts{:}) ;
         otherwise
           error('Invalid number of inputs');
       end
