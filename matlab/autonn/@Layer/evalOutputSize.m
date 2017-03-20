@@ -4,6 +4,11 @@ function sz = evalOutputSize(obj, varargin)
 % sizes. Note that the size is computed by compiling and evaluating a
 % network, which always outputs reliable sizes but can be computationally
 % expensive.
+%
+% SZ = OBJ.EVALOUTPUTSIZE(LAYERS, 'INPUT1', SZ1, 'INPUT2', SZ2, ...)
+% Evaluates output sizes of multiple Layers, given in cell array LAYERS.
+% The corresponding outputs sizes are also returned in a cell array.
+% Note that they must be part of the computational graph of OBJ.
 
 % NOTE: The upside of compiling a dummy network is that there's no need to
 % specify size calculations for all layers by hand. This is especially
@@ -16,6 +21,12 @@ function sz = evalOutputSize(obj, varargin)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+  if ~isempty(varargin) && iscell(varargin{1})
+    layers = varargin{1} ;  % multiple layers given
+    varargin(1) = [] ;
+  else
+    layers = {obj} ;  % single layer
+  end
 
   assert(iscellstr(varargin(1:2:end)), 'Expected a list of input names and their sizes.') ;
 
@@ -43,8 +54,15 @@ function sz = evalOutputSize(obj, varargin)
   net.setInputs(inputs{:}) ;
   net.eval('forward') ;
   
-  % retrieve value of last variable, which must correspond to this layer
-  sz = size(net.getValue(numel(net.vars) - 1)) ;
+  % retrieve values of given layers, and return their sizes
+  sz = cell(size(layers)) ;
+  for i = 1:numel(layers)
+    sz{i} = size(net.getValue(layers{i})) ;
+  end
+  
+  if isscalar(sz)
+    sz = sz{1} ;
+  end
 
 end
 
