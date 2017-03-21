@@ -91,7 +91,7 @@ for i = 1:numel(vars)
   end
   
   % size and underlying type (e.g. single 50x3x2)
-  v = gather(vars{i}) ;
+  v = vars{i} ;
   if isa(v, 'gpuArray')
     str = classUnderlying(v) ;
   else
