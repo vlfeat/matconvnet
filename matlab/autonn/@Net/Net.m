@@ -44,6 +44,8 @@ classdef Net < handle
     vars = {}  % cell array of variables and their derivatives
     inputs = []  % struct of network's Inputs, indexed by name
     params = []  % list of Params
+    gpu = false  % whether the network is in GPU or CPU mode
+    isGpuVar = []  % whether each variable or derivative can be on the GPU
   end
   properties (SetAccess = public, GetAccess = public)
     meta = []  % optional meta properties
@@ -93,12 +95,25 @@ classdef Net < handle
     %  MOVE(DESTINATION) moves the data associated to the net object OBJ
     %  to either the 'gpu' or the 'cpu'.
       switch device
-        case 'gpu', moveOp = @gpuArray ;
-        case 'cpu', moveOp = @gather ;
-        otherwise, error('Unknown device ''%s''.', device) ;
+        case 'gpu'
+          moveOp = @gpuArray ;
+        case 'cpu'
+          moveOp = @gather ;
+          
+           % by moving to the CPU we lose the knowledge of which vars are
+           % supposed to be on the GPU, so store that. once on the GPU,
+           % always on the GPU.
+          net.isGpuVar = net.isGpuVar | cellfun('isclass', net.vars, 'gpuArray') ;
+        otherwise
+          error('Unknown device ''%s''.', device) ;
       end
       
-      net.vars = cellfun(moveOp, net.vars, 'UniformOutput',false) ;
+      net.vars(net.isGpuVar) = cellfun(moveOp, net.vars(net.isGpuVar), 'UniformOutput',false) ;
+      
+      net.gpu = strcmp(device, 'gpu') ;
+      if isfield(net.inputs, 'gpuMode')
+        net.setInputs('gpuMode', net.gpu) ;
+      end
     end
     
     function value = getValue(net, var)
@@ -155,7 +170,12 @@ classdef Net < handle
         'Arguments must be in the form INPUT1, VALUE1, INPUT2, VALUE2,...'),
       
       for i = 1 : 2 : numel(varargin) - 1
-        net.vars{net.inputs.(varargin{i})} = varargin{i+1} ;
+        var = net.inputs.(varargin{i}) ;
+        value = varargin{i+1} ;
+        if net.gpu && net.isGpuVar(var)  % move to GPU if needed
+          value = gpuArray(value) ;
+        end
+        net.vars{var} = value ;
       end
     end
     
@@ -213,6 +233,8 @@ classdef Net < handle
       s.backward = net.backward ;
       s.inputs = net.inputs ;
       s.params = net.params ;
+      s.gpu = net.gpu ;
+      s.isGpuVar = net.isGpuVar ;
       s.meta = net.meta ;
       s.diagnostics = net.diagnostics ;
       
@@ -231,6 +253,8 @@ classdef Net < handle
       net.vars = s.vars ;
       net.inputs = s.inputs ;
       net.params = s.params ;
+      net.gpu = s.gpu ;
+      net.isGpuVar = s.isGpuVar ;
       net.meta = s.meta ;
       net.diagnostics = s.diagnostics ;
     end

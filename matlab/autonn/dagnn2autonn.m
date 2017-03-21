@@ -47,7 +47,7 @@ function netOutputs = dagnn2autonn(dag)
   netInputsIdx = find([dag.vars.fanin] == 0) ;
   netInputs = cell(1, numel(netInputsIdx));
   for k = 1:numel(netInputsIdx)
-    netInputs{k} = Input(dag.vars(netInputsIdx(k)).name) ;
+    netInputs{k} = Input('name', dag.vars(netInputsIdx(k)).name) ;
     var2layer(netInputsIdx(k)) = numel(layers) + k ;  % Inputs are at the end of the layers list
   end
   layers = [layers, netInputs] ;

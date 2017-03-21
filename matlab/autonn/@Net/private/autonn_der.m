@@ -89,12 +89,12 @@ function dx = mean_der(x, dim, dy)
   dx = repmat(dy, reps) / size(x, dim) ;
 end
 
-function dx = gpuArray_der(~, dy)
-  dx = gather(dy) ;
-end
-
-function dx = gather_der(~, dy)
-  dx = gpuArray(dy) ;
+function dx = gather_der(x, dy)
+  if isa(x, 'gpuArray')
+    dx = gpuArray(dy) ;  % convert derivative to same type as input
+  else
+    dx = dy ;  % keep same type (non-gpuArray)
+  end
 end
 
 function varargout = root_der(varargin)

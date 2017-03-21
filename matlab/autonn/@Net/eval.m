@@ -107,8 +107,8 @@ function eval(net, mode, derOutput, accumulateParamDers)
         end
         if ~repeats
           % very efficient, but doesn't handle repeated indexes
-          if isequal(vars{inputDer}, 0)  % must initialize with the right size
-            vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', vars{inputDer - 1}) ;
+          if isequal(vars{inputDer}, 0)  % must initialize with the right size and class
+            vars{inputDer} = zeros(size(vars{inputDer - 1}), 'like', args{end}) ;
           end
           vars{inputDer}(subs{:}) = vars{inputDer}(subs{:}) + args{end} ;
         else

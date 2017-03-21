@@ -13,10 +13,11 @@ classdef Param < Layer
 % the terms of the BSD license (see the COPYING file).
 
   properties
+    value
     weightDecay
     learningRate
     trainMethod
-    value
+    gpu
   end
   properties (Constant)
     trainMethods = {'gradient', 'average', 'none'}  % list of methods, see CNN_TRAIN_AUTONN
@@ -24,19 +25,22 @@ classdef Param < Layer
   
   methods
     function obj = Param(varargin)
+      opts.name = [] ;
+      opts.value = [] ;
       opts.weightDecay = 1 ;
       opts.learningRate = 1 ;
       opts.trainMethod = 'gradient' ;
-      opts.value = [] ;
-      opts.name = [] ;
+      opts.gpu = true ;
       
-      opts = vl_argparse(opts, varargin) ;
+      opts = vl_argparse(opts, varargin, 'nonrecursive') ;
       
+      obj.name = opts.name ;
+      obj.value = opts.value ;
       obj.weightDecay = opts.weightDecay ;
       obj.learningRate = opts.learningRate ;
       obj.trainMethod = opts.trainMethod ;
-      obj.value = opts.value ;
-      obj.name = opts.name ;
+      obj.gpu = opts.gpu ;
     end
   end
 end
+ 

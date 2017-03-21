@@ -252,7 +252,9 @@ classdef Layer < matlab.mixin.Copyable
       y = Layer(@cat, obj, varargin{:}) ;
     end
     function y = gpuArray(obj)
-      y = Layer(@gpuArray, obj) ;
+      % need to wrap gpuArray so that it is disabled in CPU mode
+      y = Layer(@gpuArray_wrapper, obj, Input('gpuMode')) ;
+      y.numInputDer = 1 ;
     end
     function y = gather(obj)
       y = Layer(@gather, obj) ;

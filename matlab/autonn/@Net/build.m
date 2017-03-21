@@ -84,6 +84,9 @@ function build(net, varargin)
   % there is one var for the output of each Layer in objs; plus another
   % to hold its derivative.
   net.vars = cell(2 * numel(objs), 1) ;
+  
+  % whether a var is supposed to be on the GPU
+  net.isGpuVar = false(size(net.vars)) ;
 
   numParams = nnz(cellfun(@(o) isa(o, 'Param'), objs)) ;
   net.params = Net.initStruct(numParams, 'name', 'var', ...
@@ -100,6 +103,9 @@ function build(net, varargin)
       assert(~isempty(obj.name) && ~isfield(net.inputs, obj.name)) ;  % sanity check
       net.inputs.(obj.name) = obj.outputVar ;
 
+      % set GPU state of corresponding var and derivative
+      net.isGpuVar(obj.outputVar + [0, 1]) = obj.gpu ;
+      
     elseif isa(obj, 'Param')
       % a learnable parameter, store them in a list
       net.params(p).var = obj.outputVar ;
@@ -110,8 +116,11 @@ function build(net, varargin)
 
       % store index of training method (defined in Param.trainMethods)
       net.params(p).trainMethod = find(strcmp(obj.trainMethod, Param.trainMethods)) ;
+      
+      % set GPU state of corresponding var and derivative
+      net.isGpuVar(obj.outputVar + [0, 1]) = obj.gpu ;
 
-      net.vars{net.params(p).var} = obj.value ;  % set initial value
+      net.vars{obj.outputVar} = obj.value ;  % set initial value
       p = p + 1 ;
       
     elseif isa(obj, 'Selector')

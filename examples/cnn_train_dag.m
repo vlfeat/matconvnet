@@ -221,6 +221,9 @@ numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
   for i = 1:numel(state.solverState)
+    if ~isa(net, 'dagnn.DagNN') && ~net.isGpuVar(net.params(i).var)
+      continue
+    end
     s = state.solverState{i} ;
     if isnumeric(s)
       state.solverState{i} = gpuArray(s) ;
