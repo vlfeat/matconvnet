@@ -52,7 +52,7 @@ switch opts.networkType
 case 'autonn'
   bn = opts.batchNormalization ;
 
-  images = Input() ;
+  images = Input('gpu', true) ;
   labels = Input() ;
 
   switch opts.modelType
@@ -116,20 +116,15 @@ end
 %                                                                Train
 % --------------------------------------------------------------------
 
-bopts.useGpu = numel(opts.train.gpus) >  0 ;
-
-[net, info] = cnn_train_autonn(net, imdb, ...
-  @(varargin) getBatch(bopts,varargin{:}), ...
+[net, info] = cnn_train_autonn(net, imdb, @getBatch, ...
   opts.train, 'val', find(imdb.images.set == 3)) ;
 
 % --------------------------------------------------------------------
-function inputs = getBatch(opts, imdb, batch)
+function inputs = getBatch(imdb, batch)
 % --------------------------------------------------------------------
 images = imdb.images.data(:,:,:,batch) ;
-if opts.useGpu > 0
-  images = gpuArray(images) ;
-end
-inputs = {'images', images, 'labels', imdb.images.labels(1,batch)} ;
+labels = imdb.images.labels(1,batch) ;
+inputs = {'images', images, 'labels', labels} ;
 
 % --------------------------------------------------------------------
 function imdb = getMnistImdb(opts)

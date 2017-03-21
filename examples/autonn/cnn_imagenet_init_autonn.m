@@ -2,7 +2,7 @@ function [net, loss, top1err, top5err, prediction] = cnn_imagenet_init_autonn(va
 % CNN_IMAGENET_INIT_AUTONN  Initialize a standard CNN for ImageNet
 
 opts.scale = 1 ;
-opts.initBias = 0.1 ;
+opts.initBias = 0 ;
 opts.weightDecay = 1 ;
 %opts.weightInitMethod = 'xavierimproved' ;
 opts.weightInitMethod = 'gaussian' ;
@@ -10,9 +10,12 @@ opts.model = 'alexnet' ;
 opts.batchNormalization = false ;
 opts.networkType = 'autonn' ;
 opts.cudnnWorkspaceLimit = 1024*1024*1204 ; % 1GB
-opts.normalization = [5 1 0.0001/5 0.75] ; % for vl_nnnormalize layer
-opts.inputLayer = [] ;  % replaces the standard input with the given layer, to easily use this as a subnetwork
-opts.labelLayer = [] ;  % same as above, but replaces the labels
+opts.classNames = {} ;
+opts.classDescriptions = {} ;
+opts.averageImage = zeros(3,1) ;
+opts.colorDeviation = zeros(3) ;
+opts.inputLayer = [] ;
+opts.labelLayer = [] ;
 opts = vl_argparse(opts, varargin) ;
 
 assert(strcmp(opts.networkType, 'autonn')) ;
@@ -68,13 +71,15 @@ net = Net(loss, top1err, top5err) ;
 
 % Meta parameters
 net.meta.normalization.imageSize = imageSize ;
-net.meta.inputSize = net.meta.normalization.imageSize ;
-net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
-net.meta.normalization.interpolation = 'bicubic' ;
-net.meta.normalization.averageImage = [] ;
-net.meta.normalization.keepAspect = true ;
-net.meta.augmentation.rgbVariance = zeros(0,3) ;
-net.meta.augmentation.transformation = 'stretch' ;
+net.meta.inputSize = [net.meta.normalization.imageSize, 32] ;
+net.meta.normalization.cropSize = net.meta.normalization.imageSize(1) / 256 ;
+net.meta.normalization.averageImage = opts.averageImage ;
+net.meta.classes.name = opts.classNames ;
+net.meta.classes.description = opts.classDescriptions;
+net.meta.augmentation.jitterLocation = true ;
+net.meta.augmentation.jitterFlip = true ;
+net.meta.augmentation.jitterBrightness = double(0.1 * opts.colorDeviation) ;
+net.meta.augmentation.jitterAspect = [2/3, 3/2] ;
 
 if ~opts.batchNormalization
   lr = logspace(-2, -4, 60) ;

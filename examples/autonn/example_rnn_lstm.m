@@ -44,7 +44,7 @@ numChars = numel(imdb.vocabulary) ;  % number of characters in vocabulary
 d = opts.numUnits ;  % number of hidden units
 T = imdb.phraseLength ;
 
-text = Input() ;  % size = [numChars, batchSize, T]
+text = Input('gpu', true) ;  % size = [numChars, batchSize, T]
 
 
 switch opts.model
@@ -108,12 +108,10 @@ net = Net(loss, err) ;
 %                                                                Train
 % --------------------------------------------------------------------
 
-bopts.useGpu = numel(opts.train.gpus) > 0 ;
-
-info = cnn_train_autonn(net, imdb, @(varargin) getBatch(bopts,varargin{:}), opts.train) ;
+info = cnn_train_autonn(net, imdb, @getBatch, opts.train) ;
 
 % --------------------------------------------------------------------
-function inputs = getBatch(opts, imdb, batch)
+function inputs = getBatch(imdb, batch)
 % --------------------------------------------------------------------
 % one-hot encoding of characters. returned data size is:
 % [vocabSize, batchSize, phraseLength].
@@ -124,9 +122,6 @@ idx = permute(imdb.images.data(:,batch), [3 2 1]) ;
 % now expand to one-hot encoding of those indexes, along the 1st dimension
 text = single(bsxfun(@eq, idx, (1:numel(imdb.vocabulary))')) ;
 
-if opts.useGpu > 0
-  text = gpuArray(text) ;
-end
 inputs = {'text', text, 'idx', single(idx)} ;
 
 % --------------------------------------------------------------------
