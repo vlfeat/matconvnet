@@ -24,6 +24,11 @@ function vl_testnn(varargin)
 %    Output the test results to a file. If a specified file does 
 %    exist it is overwritten.
 %
+%  `suiteDir`:: ''
+%    Specifies the directory where the test suite files are located. If
+%    left empty, the default suite is used (<MatConvNetRoot>/matlab/xtest/
+%    /suite).
+%
 %  This function uses the Matlab unit testing framework which was
 %  introduced in Matlab R2013a (v8.1).
 
@@ -40,6 +45,7 @@ opts.double = false ;
 opts.command = 'nn' ;
 opts.break = false ;
 opts.tapFile = '';
+opts.suiteDir = '' ;
 opts = vl_argparse(opts, varargin) ;
 
 import matlab.unittest.constraints.* ;
@@ -63,9 +69,15 @@ if ~opts.single
   sel = sel & ~HasName(ContainsSubstring('dataType=single')) ;
 end
 
-% Run tests
 root = fileparts(mfilename('fullpath')) ;
-suite = matlab.unittest.TestSuite.fromFolder(fullfile(root, 'suite'), sel) ;
+if isempty(opts.suiteDir)
+  opts.suiteDir = fullfile(root, 'suite') ;
+else  % any external subclasses of nntest will need it to be on the path
+  addpath(fullfile(root, 'suite')) ;
+end
+
+% Run tests
+suite = matlab.unittest.TestSuite.fromFolder(opts.suiteDir, sel) ;
 runner = matlab.unittest.TestRunner.withTextOutput('Verbosity',3);
 if opts.break
   runner.addPlugin(matlab.unittest.plugins.StopOnFailuresPlugin) ;
