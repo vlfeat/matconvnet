@@ -19,7 +19,7 @@ classdef Loss < dagnn.ElementWise
     function accumulateAverage(obj, inputs, outputs)
       if obj.ignoreAverage, return; end;
       n = obj.numAveraged ;
-      m = n + size(inputs{1}, 4) ;
+      m = n + size(inputs{1}, 1) *  size(inputs{1}, 2) * size(inputs{1}, 4);
       obj.average = bsxfun(@plus, n * obj.average, gather(outputs{1})) / m ;
       obj.numAveraged = m ;
     end
