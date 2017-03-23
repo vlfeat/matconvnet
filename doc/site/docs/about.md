@@ -23,6 +23,19 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta24 (March 2017).
+
+    **New features**
+
+    * New toy example `cnn_toy_data.m` demonstrating using a
+      customized `imdb`.
+    * `vl_argparse.m` now supports dot paths and ignoring missing
+      defaults.
+    * Support for different example solvers (AdaGrad, Adam, AdaDelta,
+      RMSProp) and ability to add new ones.
+    * A new function `vl_tshow.m` to glance at tensors.
+    * Bugfixes.
+
 -   1.0-beta23 (September 2016).
 
     **New features**
