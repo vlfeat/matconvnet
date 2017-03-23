@@ -10,7 +10,7 @@ classdef nnpdist < nntest
       if aggregate
         % make it smaller to avoid numerical derivative issues with
         % float
-        h = 3 ;
+        h = 2 ;
         w = 2 ;
       else
         h = 13 ;
