@@ -71,3 +71,4 @@ showing how to train CNNs.
 - [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) Quickly load a batch of JPEG images.
 - [`vl_taccum`](mfiles/vl_taccum.md) Accumulate tensors operating in-place when possible.
 - [`vl_tmove`](mfiles/vl_tmove.md) Exchange tensors between MATLAB processes and GPUs.
+- [`vl_tshow`](mfiles/vl_tshow.md) Show a tensor on screen.
