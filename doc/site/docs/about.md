@@ -73,7 +73,7 @@ here.
       in `getBatch`.
 
     * The example scripts `cnn_train.m` and `cnn_train_dag.m` have
-      been updated in various way, so that old snaphoot files may not
+      been updated in various way, so that old snapshot files may not
       be compatible.
 
     * The way *batch normalization* accumulates moments during

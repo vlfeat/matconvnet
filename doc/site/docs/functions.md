@@ -21,7 +21,7 @@ showing how to train CNNs.
 ## Building blocks
 
 - [`vl_nnbnorm`](mfiles/vl_nnbnorm.md) Batch normalization.
-- [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) Bilinear Samppler.
+- [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) Bilinear Sampler.
 - [`vl_nnconv`](mfiles/vl_nnconv.md) Linear convolution by a filter.
 - [`vl_nnconcat`](mfiles/vl_nnconcat.md) Concatenation.
 - [`vl_nnconvt`](mfiles/vl_nnconvt.md) Convolution transpose.
@@ -33,7 +33,7 @@ showing how to train CNNs.
 - [`vl_nnpdist`](mfiles/vl_nnpdist.md) Pairwise distances.
 - [`vl_nnpool`](mfiles/vl_nnpool.md) Max and sum pooling.
 - [`vl_nnrelu`](mfiles/vl_nnrelu.md) Rectified Linear Unit.
-- [`vl_nnroipool`](mfiles/vl_nnroipool.md) Reegion of interest pooling.
+- [`vl_nnroipool`](mfiles/vl_nnroipool.md) Region of interest pooling.
 - [`vl_nnsigmoid`](mfiles/vl_nnsigmoid.md) Sigmoid.
 - [`vl_nnsoftmax`](mfiles/vl_nnsoftmax.md) Channel soft-max.
 - [`vl_nnsoftmaxloss`](mfiles/vl_nnsoftmaxloss.md) *Deprecated*

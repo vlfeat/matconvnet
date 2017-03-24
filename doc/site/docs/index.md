@@ -49,7 +49,7 @@ recognition, and text detection are available.
 > on the model). [`vl_nnconv`](mfiles/vl_nnconv) now has a `dilate`
 > option for dilated convolution.
 >
-> **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
+> **New:** [1.0-beta20](about.md#changes) adds the bilinear resampler
 > layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
 > spatial transformer example.
 >
