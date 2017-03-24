@@ -42,7 +42,7 @@ library:
 
 1.  Make sure that MATLAB is
     [configured to use your compiler](http://www.mathworks.com/help/matlab/matlab_external/changing-default-compiler.html).
-    In particular, before running `vl_compilenn` d not forget to setup
+    In particular, before running `vl_compilenn` do not forget to setup
     mex (once is sufficient) as follows:
 
     ```
