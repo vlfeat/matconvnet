@@ -21,7 +21,7 @@ To test GPU support (if you have [compiled it](#gpu)) use instead:
     > vl_testnn('gpu', true)
 
 Note that the second tests runs slower than the CPU version; do not
-worry, this is an artefact of the test procedure.
+worry, this is an artifact of the test procedure.
 
 <a name='compiling'></a>
 ## Compiling
@@ -31,7 +31,6 @@ compiling MatConvNet using the MATLAB function
 [`vl_compilenn`](mfiles/vl_compilenn). While this is the easiest
 method,
 [the command line or an IDE can be used as well](install-alt.md).
-
 
 <a name='cpu'></a>
 ### Compiling for CPU
@@ -43,20 +42,29 @@ library:
 
 1.  Make sure that MATLAB is
     [configured to use your compiler](http://www.mathworks.com/help/matlab/matlab_external/changing-default-compiler.html).
+    In particular, before running `vl_compilenn` do not forget to setup
+    mex (once is sufficient) as follows:
 
-    For Ubuntu/Debian like distributions this means to install
-    the following packages:
     ```
-    sudo apt-get install build-essential libjpeg-turbo8-dev
-    ```
-    And for Fedora/Centos/RedHat distributions to install the following packages:
-    ```
-    sudo yum install gcc gcc-c++ libjpeg-turbo-devel
+    mex -setup
     ```
 
-    For Windows platform, you need to install Visual Studio (at least 2010).
+    The prerequisites are as follows:
 
-    Before running `vl_compilenn`, **don't forget to run `mex -setup` in MATLAB**.
+    * For **macOS**, make sure you have Xcode installed. Note the special
+      requirements for GPU below.
+
+    * For **Linux**, make sure GCC and LibJPEG are installed. To
+      install LibJPEG in and Ubuntu/Debian-like distributions use:
+      ```
+      sudo apt-get install build-essential libjpeg-turbo8-dev
+      ```
+      For Fedora/Centos/RedHat-like distributions use instead:
+      ```
+      sudo yum install gcc gcc-c++ libjpeg-turbo-devel
+      ```
+
+    * For **Windows**, you need to install Visual Studio 2010 or greater.
 
 2.  Open MATLAB and issue the commands:
 
@@ -73,7 +81,7 @@ problem by running the compilation script again in verbose mode:
 Increase the verbosity level to 2 to get even more information.
 
 > **Remark:** The 'vl_imreadjpeg' tool uses an external image library
-> to load images. In Mac OS X and Windows, the default is to use the
+> to load images. In macOS and Windows, the default is to use the
 > system libraries (Quartz and GDI+ respectively), so this dependency
 > is immaterial. In Linux, this tool requires the LibJPEG
 > library and the corresponding development files to be installed in
@@ -88,21 +96,42 @@ Increase the verbosity level to 2 to get even more information.
 
 To use the GPU-accelerated version of the library, you will need a
 NVIDA GPU card with compute capability 2.0 or greater and a copy of
-the NVIDIA CUDA toolkit. Ideally, the version of the CUDA toolkit
-should match your MATLAB version:
+the NVIDIA CUDA toolkit. Officially, MATLAB supports the following
+CUDA versions:
 
 | MATLAB    | CUDA toolkit      |
 |-----------|-------------------|
-| R2013b    | 5.5               |
-| R2014a    | 5.5               |
-| R2014b    | 6.0               |
-| R2015a    | 6.5               |
+| R2017a    | 8.0               |
+| R2016b    | 7.5               |
+| R2016a    | 7.5               |
 | R2015b    | 7.0               |
+| R2015a    | 6.5               |
+| R2014b    | 6.0               |
+| R2014a    | 5.5               |
+| R2013b    | 5.5               |
 
 You can also use the `gpuDevice` MATLAB command to find out MATLAB's
-version of the CUDA toolkit. It is also possible (and often necessary)
-to use a more recent version of CUDA than the one officially supported
-by MATLAB; this is [explained later](#nvcc).
+version of the CUDA toolkit. Nevertheless, it is also possible and
+often useful to use a more recent version of CUDA than the one
+officially supported by MATLAB; this is [explained later](#nvcc).
+
+> **macOS**. CUDA is typically one or two step behind the latest
+> Xcode. For example, CUDA 8.0 requires Xcode 7.3.1 instead of more
+> recent versions. You should:
+>
+> 1. Install Xcode 7.3.1 alongside other versions (e.g. in
+>    `/Applications/Xcode7.3.1.app`).
+
+> 2. Use `xcode-select` in the terminal to change the active version
+>    of Xcode, as in `sudo xcode-select --switch
+>    /Applications/Xcode7.3.1.app/Contents/Developer/`.
+>
+> 3. Use `sudo xcode-select --install` to install the corresponding
+>    (downgraded) version of the command line tools. This is necessary
+>    or CUDA compilation will fail with odd errors.
+>
+> It can be helpful to consult the
+> [CUDA Installation Guide for Mac](http://docs.nvidia.com/cuda/pdf/CUDA_Installation_Guide_Mac.pdf).
 
 Assuming that there is only a single copy of the CUDA toolkit
 installed in your system and that it matches MATLAB's version, compile
@@ -112,9 +141,9 @@ the library with:
 
 If you have multiple versions of the CUDA toolkit, or if the script
 cannot find the toolkit for any reason, specify the path to the CUDA
-toolkit explicitly. For example, on a Mac this may look like:
+toolkit explicitly. For example, on macOS this may look like:
 
-    > vl_compilenn('enableGpu', true, 'cudaRoot', '/Developer/NVIDIA/CUDA-7.0')
+    > vl_compilenn('enableGpu', true, 'cudaRoot', '/Developer/NVIDIA/CUDA-8.0')
 
 Once more, you can use the `verbose` option to obtain more information
 if needed.
@@ -128,7 +157,7 @@ cause unforeseen issues (although none is known so far), it is
 necessary to use [recent libraries such as cuDNN](#cudnn).
 
 Compiling with a newer version of CUDA requires using the
-`cudaMethod,nvcc` option. For example, on a Mac this may look like:
+`cudaMethod,nvcc` option. For example, on macOS this may look like:
 
     > vl_compilenn('enableGpu', true, ...
                    'cudaRoot', '/Developer/NVIDIA/CUDA-7.0', ...
@@ -146,7 +175,7 @@ is to start MATLAB from the command line (terminal) specifying the
 On Windows, chances are that the CUDA libraries are already visible to
 MATLAB so that nothing else needs to be done.
 
-On Mac, this step should not be necessary as the library paths are
+On macOS, this step should not be necessary as the library paths are
 hardcoded during compilation.
 
 <a name='cudnn'></a>
@@ -169,7 +198,7 @@ Unpack the cuDNN library binaries and header files in a place
 assumed that this cuDNN RC4 has been unpacked in `local/cudnn-rc4` in
 the `<MatConvNet>` root directory,
 (i.e. `<Cudnn>`=`<MatConvNet>/local/cudnn-rc4`). For example, the
-directory structure on a Mac should look like:
+directory structure on macOS should look like:
 
      COPYING
      Makefile
@@ -188,7 +217,7 @@ directory structure on a Mac should look like:
 Use `vl_compilenn` with the `cudnnEnable,true` option to compile the
 library; do not forget to use `cudaMethod,nvcc` as, at it is likely,
 the CUDA toolkit version is newer than MATLAB's CUDA toolkit. For
-example, on Mac this may look like:
+example, on macOS this may look like:
 
     > vl_compilenn('enableGpu', true, ...
                    'cudaRoot', '/Developer/NVIDIA/CUDA-7.5', ...
@@ -207,12 +236,12 @@ On Windows, copy the cuDNN DLL file `<Cudnn>/cudnn*dll` (or from
 wherever you unpacked cuDNN) into the `<MatConvNet>/matlab/mex`
 directory.
 
-On Mac, this step should not be necessary as the library paths are
+On macOS, this step should not be necessary as the library paths are
 hardcoded during compilation.
 
 ## Further examples
 
-To compile all the features in MatConvNet on a Mac and MATLAB 2014b,
+To compile all the features in MatConvNet on macOS and MATLAB 2014b,
 CUDA toolkit 6.5 and cuDNN Release Candidate 2, use:
 
     > vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc', ...

@@ -1325,7 +1325,6 @@ void mexFunction(int nout, mxArray *out[],
         } else {
           vlmxError(VLMXE_IllegalArgument, "INTERPOLATION is not a supported method.") ;
         }
-        break;
         break ;
       }
     }
@@ -1405,6 +1404,8 @@ void mexFunction(int nout, mxArray *out[],
                 minCropAnisotropy, maxCropAnisotropy) ;
       mexPrintf("vl_imreadjpeg: crop size: [%.1g, %.1g]\n",
                 minCropSize, maxCropSize) ;
+      mexPrintf("vl_imreadjpeg: num_threads: %d requested %d readers\n",
+                requestedNumThreads, readers.size());
     }
 
 

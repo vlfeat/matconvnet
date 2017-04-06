@@ -54,6 +54,7 @@ pages:
   - vl_imreadjpeg: 'mfiles/vl_imreadjpeg.md'
   - vl_taccum: 'mfiles/vl_taccum.md'
   - vl_tmove: 'mfiles/vl_tmove.md'
+  - vl_tshow: 'mfiles/vl_tshow.md'
 
 - Contributing:
   - Developers notes: 'developers.md'

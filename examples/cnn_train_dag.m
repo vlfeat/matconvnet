@@ -18,6 +18,7 @@ opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
 opts.prefetch = false ;
+opts.epochSize = inf;
 opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
@@ -95,6 +96,7 @@ for epoch=start+1:opts.numEpochs
   params.epoch = epoch ;
   params.learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   params.train = opts.train(randperm(numel(opts.train))) ; % shuffle
+  params.train = params.train(1:min(opts.epochSize, numel(opts.train)));
   params.val = opts.val(randperm(numel(opts.val))) ;
   params.imdb = imdb ;
   params.getBatch = getBatch ;
@@ -411,6 +413,7 @@ function stats = extractStats(stats, net)
 % -------------------------------------------------------------------------
 sel = find(cellfun(@(x) isa(x,'dagnn.Loss'), {net.layers.block})) ;
 for i = 1:numel(sel)
+  if net.layers(sel(i)).block.ignoreAverage, continue; end;
   stats.(net.layers(sel(i)).outputs{1}) = net.layers(sel(i)).block.average ;
 end
 

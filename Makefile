@@ -20,10 +20,10 @@ DEBUG ?=
 ARCH ?= maci64
 
 # Configure MATLAB
-MATLABROOT ?= /Applications/MATLAB_R2015a.app
+MATLABROOT ?= /Applications/MATLAB_R2017a.app
 
 # Configure CUDA and CuDNN. CUDAMETHOD can be either 'nvcc' or 'mex'.
-CUDAROOT ?= /Developer/NVIDIA/CUDA-6.5
+CUDAROOT ?= /Developer/NVIDIA/CUDA-8.0
 CUDNNROOT ?= $(CURDIR)/local/
 CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
@@ -38,7 +38,7 @@ CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
 # Maintenance
 NAME = matconvnet
-VER = 1.0-beta23
+VER = 1.0-beta24
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync
