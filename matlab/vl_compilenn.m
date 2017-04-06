@@ -504,7 +504,7 @@ end
 
 % Link into MEX files
 for i = 1:numel(mex_src)
-  objs = toobj(flags.bld_dir, [lib_src, mex_src(i)]) ;
+  objs = toobj(flags.bld_dir, [mex_src(i), lib_src]) ;
   mex_link(opts, objs, flags.mex_dir, [flags.cc, flags.link, flags.mexlink]) ;
 end
 
