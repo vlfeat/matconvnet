@@ -79,15 +79,15 @@ function list_modules(contribs, opts)
     fprintf('\t%s\n\t\t', module.desc);
     if exist(module.path, 'dir')
       fprintf('<a href="matlab: vl_contrib update %s">[Update]</a> ', module.name);
-      if exist(module.setup_path, 'file')
+      if module_loaded(module)
+        fprintf('<a href="matlab: vl_contrib unload %s">[Unload]</a> ', module.name);
+      elseif exist(module.setup_path, 'file')
         fprintf('<a href="matlab: vl_contrib setup %s">[Setup]</a> ', module.name);
       end
       if exist(module.compile_path, 'file')
         fprintf('<a href="matlab: vl_contrib compile %s">[Compile]</a> ', module.name);
       end
-      if module_loaded(module)
-        fprintf('<a href="matlab: vl_contrib unload %s">[Unload]</a> ', module.name);
-      end
+
       fprintf('(%s)', get_module_type(module));
     else
       fprintf('<a href="matlab: vl_contrib install %s">[Install]</a> ', module.name);
