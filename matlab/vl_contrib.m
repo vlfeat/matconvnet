@@ -60,7 +60,7 @@ switch lower(command)
   case {'install', 'update'}
     module_get(module, opts);
   case 'compile'
-    module_compile(module, varargin);
+    module_compile(module, varargin{:});
   case 'setup'
     module_setup(module);
   case 'unload'
@@ -327,7 +327,7 @@ end
 % --------------------------------------------------------------------
 function contribs = parse_contributions(text)
 % --------------------------------------------------------------------
-pattern = '\*[\s]*\[(?<name>\w+)\][\s]*\((?<url>.*?)\)[\s]*(?<desc>.*?)\n';
+pattern = '\*[\s]*\[(?<name>[\w-]+)\][\s]*\((?<url>.*?)\)[\s]*(?<desc>.*?)\n';
 contribs = regexp(text, pattern, 'lineanchors', 'names');
 end
 
