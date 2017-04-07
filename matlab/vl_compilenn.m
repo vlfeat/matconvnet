@@ -510,8 +510,9 @@ end
 
 % Reset path adding the mex subdirectory just created
 vl_setupnn() ;
+
 % Save the last compile flags to the build dir
-if ~isempty(opts.preCompileFn)
+if isempty(opts.preCompileFn)
   save(fullfile(flags.bld_dir, 'last_compile_opts.mat'), '-struct', 'opts');
 end
 
