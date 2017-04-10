@@ -25,8 +25,8 @@ function y = vl_nnloss(x,c,varargin)
 %
 %   In the third form, C has dimension H x W x D x N and specifies
 %   attributes rather than categories. Here elements in C are either
-%   +1 or -1 and C, where +1 denotes that an attribute is present and
-%   -1 that it is not. The key difference is that multiple attributes
+%   `+1` or `-1` and C, where +1 denotes that an attribute is present and
+%   `-1` that it is not. The key difference is that multiple attributes
 %   can be active at the same time, while categories are mutually
 %   exclusive. By default, the loss is *summed* across attributes
 %   (unless otherwise specified using the `InstanceWeights` option

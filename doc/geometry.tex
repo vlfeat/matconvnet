@@ -25,7 +25,7 @@ where $(\alpha_h,\alpha_v)$ is the \emph{stride}, $(\beta_h,\beta_v)$ the offset
 
 We now compute the receptive field geometry $(\alpha_h,\alpha_v,\beta_h,\beta_v,\Delta_h,\Delta_v)$ for the most common operators, namely filters. We consider in particular \emph{simple filters} that are characterised by an integer size, stride, and padding.
 
-It suffices to reason in 1D.  Let $H'$ bet the vertical filter dimension, $S_h$ the subampling stride, and $P_h^-$ and $P_h^+$ the amount of zero padding applied to the top and the bottom of the input $\bx$. Here the value $y_{i''}$ depends on the samples:
+It suffices to reason in 1D.  Let $H'$ be the vertical filter dimension, $S_h$ the subsampling stride, and $P_h^-$ and $P_h^+$ the amount of zero padding applied to the top and the bottom of the input $\bx$. Here the value $y_{i''}$ depends on the samples:
 \begin{align*}
  x_i : i
  &\in
