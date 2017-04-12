@@ -79,15 +79,15 @@ if nargin > 1
   [module_found, module_id] = ismember(module, {contribs.name});
   if ~module_found, error('Unknown module %s.'); end
   module = module_init(contribs(module_id), opts);
-else
-  if nargout == 1, res = contribs; return; end;
 end
 
 switch lower(command)
   case 'list'
-    fprintf('\nAvailable modules:\n\n');
-    arrayfun(@(s) module_print(s, opts), contribs);
-    fprintf('\n');
+    if nargout > 0, res = {contribs.name}; else
+      fprintf('\nAvailable modules:\n\n');
+      arrayfun(@(s) module_print(s, opts), contribs);
+      fprintf('\n');
+    end
   case {'install', 'update'}
     module_get(module, opts);
   case 'compile'

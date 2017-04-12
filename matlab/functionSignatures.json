@@ -1,0 +1,19 @@
+{
+  "vl_contrib":
+{
+        "inputs":
+        [
+                {"mutuallyExclusiveGroup":
+                        [
+                                [
+                {"name":"ItemType", "kind":"required", "type":"choices={'help','list'}"}
+                                ],
+                                [
+                {"name":"ItemType", "kind":"required", "type":"choices={'install','update','setup','unload','compile','test', 'path'}"},
+                {"name":"desctype", "kind":"optional", "type":[["char", "choices=vl_contrib('list')"]]}
+                                ]
+                        ]
+                }
+        ]
+}
+}
