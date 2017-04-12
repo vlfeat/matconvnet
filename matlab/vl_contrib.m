@@ -1,19 +1,48 @@
 function res = vl_contrib(command, module, varargin)
-%VL_CONTRIB Contribution modules managemenr
-%  VL_CONTRIB LIST
+%VL_CONTRIB Contribution modules management
+%  VL_CONTRIB COMMAND MODULE ...
+%  VL_CONTRIB('COMMAND', ...) is a tool to download, setup and compile
+%  external contribution modules for matconvnet. It downloads the list of
+%  available modules from a dedicated repository and uses GIT (if present)
+%  or ZIP files to install the modules. Additionally can setup, compile and
+%  test the modules.
+%
+%  Module is a repository with a link registered in matconvnet-contrib.
+%  If the reporistory contains a file `setup_MODULENAME.m` and or
+%  `compile_MODULENAME.m`, VL_CONTRIB can run these script for the module.
+%  As a general rule of thumb, the module should have the same structure as
+%  `vl_rootnn()/matlab` directory in order to be able to add additional
+%  dagnn layers, overload existing functions etc.
+%
+%  Supports the following commands:
+%
+%  `VL_CONTRIB LIST`
 %    Prints a list of available modules.
 %
-%  VL_CONTRIB INSTALL MODULE
-%    Downloads a module MODULE.
+%  `VL_CONTRIB INSTALL MODULE`
+%  `VL_CONTRIB UPDATE MODULE`
+%    Downloads or update a module MODULE.
+%    Use `'force', true` to overwrite the existing module.
 %
-%  VL_CONTRIB SETUP MODULE
-%    Setups paths of a MODULE.
+%  `VL_CONTRIB SETUP MODULE`
+%    Setups paths for a MODULE.
+%    Runs `<vl_rootnn()>/contrib/MODULE/setup_MODULE.m`
 %
-%  VL_CONTRIB SETUP MODULE
-%    Setups paths of a MODULE.
+%  `VL_CONTRIB UNLOAD MODULE`
+%    Remove all paths of a module from the MALTAB path.
 %
-%  VL_CONTRIB COMPILE MODULE ...
-%    Compile a MODULE.
+%  `VL_CONTRIB COMPILE MODULE ...`
+%    Compile a MODULE. See the module documentation for additional details
+%    and accepted arguments.
+%    Runs `<vl_rootnn()>/contrib/MODULE/compile_MODULE.m`
+%
+%  `VL_CONTRIB TEST MODULE ...`
+%    Tests a MODULE if a test suite dir exists. Test suite dir is:
+%    `<vl_rootnn()>/contrib/MODULE/xtest/suite/`. See `vl_testnn` for
+%    additional arguments.
+%
+%  `VL_CONTRIB PATH MODULE ...`
+%    Return a MODULE path.
 %
 %   See also: VL_SETUPNN, VL_COMPILENN, VL_TESTNN.
 
@@ -50,6 +79,8 @@ if nargin > 1
   [module_found, module_id] = ismember(module, {contribs.name});
   if ~module_found, error('Unknown module %s.'); end
   module = module_init(contribs(module_id), opts);
+else
+  if nargout == 1, res = contribs; return; end;
 end
 
 switch lower(command)
@@ -65,6 +96,8 @@ switch lower(command)
     module_setup(module);
   case 'unload'
     module_unload(module);
+  case 'test'
+    module_test(module);
   case 'url'
     res = module.repo.url;
   case 'path'
@@ -88,7 +121,8 @@ module.setup_path = fullfile(module.path, ...
   ['setup_', name2path(module.name), '.m']);
 module.compile_path = fullfile(module.path, ...
   ['compile_', name2path(module.name), '.m']);
-module.sha_path = fullfile(module.path, '.sha');
+module.test_dir = fullfile(module.path, 'xtest', 'suite');
+module.sha_path = fullfile(module.path, '.sha'); % For ZIP only
 end
 
 % --------------------------------------------------------------------
@@ -110,6 +144,10 @@ if opts.showlinks
     end
     if exist(module.compile_path, 'file')
       fprintf('<a href="matlab: vl_contrib compile %s">[Compile]</a> ', ...
+        module.name);
+    end
+    if exist(module.test_dir, 'dir')
+      fprintf('<a href="matlab: vl_contrib test %s">[Test]</a> ', ...
         module.name);
     end
     fprintf('(%s)', get_module_type(module));
@@ -150,14 +188,6 @@ end
 end
 
 % --------------------------------------------------------------------
-function module_setup(module)
-% --------------------------------------------------------------------
-if exist(module.setup_path, 'file')
-  run(module.setup_path);
-end
-end
-
-% --------------------------------------------------------------------
 function module_compile(module, varargin)
 % --------------------------------------------------------------------
 if exist(module.compile_path, 'file')
@@ -177,6 +207,14 @@ res = any(is_modpath);
 end
 
 % --------------------------------------------------------------------
+function module_setup(module)
+% --------------------------------------------------------------------
+if exist(module.setup_path, 'file')
+  run(module.setup_path);
+end
+end
+
+% --------------------------------------------------------------------
 function to_unload = module_unload(module)
 % --------------------------------------------------------------------
 paths = strsplit(path(), ':');
@@ -185,6 +223,14 @@ to_unload = any(is_modpath);
 if to_unload
   modpaths = paths(is_modpath);
   rmpath(modpaths{:});
+end
+end
+
+% --------------------------------------------------------------------
+function module_test(module, varargin)
+% --------------------------------------------------------------------
+if exist(module.test_dir, 'dir')
+  vl_testnn('suiteDir', module.test_dir, varargin{:});
 end
 end
 
