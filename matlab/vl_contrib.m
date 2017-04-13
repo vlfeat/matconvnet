@@ -51,8 +51,7 @@ function res = vl_contrib(command, module, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
-root = fileparts(fileparts(mfilename('fullpath'))) ;
-addpath(fullfile(root, 'matlab')) ;
+assert(exist('vl_argparse', 'file')==2, 'MCN not set up, run vl_setupnn.')
 
 opts.contribUrl = 'github.com/lenck/matconvnet-contrib-test/';
 opts.contribDir = fullfile(vl_rootnn(), 'contrib');
