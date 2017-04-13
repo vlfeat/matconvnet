@@ -184,6 +184,20 @@ switch method
   otherwise
     error('Unknown method %s.', opts.method);
 end
+fprintf('Module %s updated.\n', module.name);
+if opts.showlinks
+  pcmd = @(cmd) fprintf('<a href="matlab: vl_contrib %s %s">%s</a>', ...
+    cmd, module.name, cmd);
+else
+  pcmd = @(cmd) fprintf('`vl_contrib %s %s`', cmd, module.name);
+end
+if ~module_loaded(module)
+  fprintf('To set up the module, run: ');
+  if exist(module.compile_path, 'file')
+    pcmd('compile'); fprintf(' and ');
+  end
+  pcmd('setup'); fprintf('\n');
+end
 end
 
 % --------------------------------------------------------------------
