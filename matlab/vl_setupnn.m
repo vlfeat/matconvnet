@@ -8,6 +8,10 @@ function vl_setupnn()
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+warning(sprintf(['AutoNN development has been moved to:\n\n' ...
+  'https://github.com/vlfeat/autonn\n\n' ...
+  '*** The "matconvnet/autodiff" branch will no longer be maintained. ***\n']));  %#ok<SPWRN>
+
 root = vl_rootnn() ;
 addpath(fullfile(root, 'matlab')) ;
 addpath(fullfile(root, 'matlab', 'mex')) ;
