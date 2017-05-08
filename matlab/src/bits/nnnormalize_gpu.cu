@@ -1,19 +1,14 @@
-// @file normalize_gpu.c
+// @file nnnormalize_gpu.c
 // @brief Normalize block implementation (GPU)
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-16 Andrea Vedaldi.
+Copyright (C) 2014-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
-
-#include "normalize.hpp"
-#include "../datacu.hpp"
-#include <assert.h>
-#include <float.h>
 
 /* ---------------------------------------------------------------- */
 /*                                         normalize_forward_kernel */
@@ -126,72 +121,64 @@ normalize_backward_kernel
 }
 
 /* ---------------------------------------------------------------- */
-/*                                                          drivers */
+/*                                                      Forward GPU */
 /* ---------------------------------------------------------------- */
 
-namespace vl { namespace impl {
-
-
-  template<typename type>
-  struct lrn<vl::VLDT_GPU, type>
+template<vl::DataType dataType>
+struct LRNForward<vl::VLDT_GPU, dataType>
+{
+  vl::ErrorCode operator()(vl::nn::LRN &op,
+                           vl::Tensor output,
+                           vl::Tensor input)
   {
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto width = output.getWidth() ;
+    auto height = output.getHeight() ;
+    auto depth = output.getDepth() ;
+    auto size = output.getSize() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto outputData = (type*)output.getMemory() ;
 
-    /* ------------------------------------------------------------ */
-    /*                                                      forward */
-    /* ------------------------------------------------------------ */
+    normalize_forward_kernel<type>
+    <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+    (outputData, inputData, width, height, depth, size,
+     op.normDepth, op.kappa, op.alpha, op.beta) ;
 
-    static vl::ErrorCode
-    forward(type * output,
-            type  const* data,
-            size_t width,
-            size_t height,
-            size_t depth,
-            size_t size,
-            size_t normDepth,
-            type kappa, type alpha, type beta)
-    {
-      normalize_forward_kernel<type >
-      <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (output, data, width, height, depth, size, normDepth, kappa, alpha, beta) ;
+    cudaError_t status = cudaPeekAtLastError() ;
+    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+  }
+} ;
 
-      cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
-    }
+// -------------------------------------------------------------------
+//                                                        Backward GPU
+// -------------------------------------------------------------------
 
+template<vl::DataType dataType>
+struct LRNBackward<vl::VLDT_GPU, dataType>
+{
+  vl::ErrorCode operator()(vl::nn::LRN &op,
+                           vl::Tensor derInput,
+                           vl::Tensor input,
+                           vl::Tensor derOutput)
+  {
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto width = derOutput.getWidth() ;
+    auto height = derOutput.getHeight() ;
+    auto depth = derOutput.getDepth() ;
+    auto size = derOutput.getSize() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto derOutputData = (type const*)derOutput.getMemory() ;
+    auto derInputData = (type*)derInput.getMemory() ;
 
-    /* ------------------------------------------------------------ */
-    /*                                                      forward */
-    /* ------------------------------------------------------------ */
+    normalize_backward_kernel<type >
+    <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+    (derInputData, inputData, derOutputData, width, height, depth, size,
+     op.normDepth, op.kappa, op.alpha, op.beta) ;
 
-    static vl::ErrorCode
-    backward(type * derData,
-             type  const* data,
-             type  const* derOutput,
-             size_t width,
-             size_t height,
-             size_t depth,
-             size_t size,
-             size_t normDepth,
-             type kappa, type alpha, type beta)
-    {
-      normalize_backward_kernel<type >
-      <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derData, data, derOutput, width, height, depth, size, normDepth, kappa, alpha, beta) ;
-
-      cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
-    }
-
-  } ;
-
-} }
-
-// Instantiations
-template struct vl::impl::lrn<vl::VLDT_GPU, float> ;
-
-#ifdef ENABLE_DOUBLE
-template struct vl::impl::lrn<vl::VLDT_GPU, double> ;
-#endif
+    cudaError_t status = cudaPeekAtLastError() ;
+    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+  }
+} ;
 
 
 

@@ -159,16 +159,12 @@ void mexFunction(int nout, mxArray *out[],
 
   vl::ErrorCode error ;
 
+  vl::nn::LRN op(context,normDepth,normKappa,normAlpha,normBeta) ;
+
   if (!backMode) {
-    error = vl::nnlrn_forward(context,
-                                    output, data,
-                                    normDepth,
-                                    normKappa, normAlpha, normBeta) ;
+    error = op.forward(output,data) ;
   } else {
-    error = vl::nnlrn_backward(context,
-                                     derData, data, derOutput,
-                                     normDepth,
-                                     normKappa, normAlpha, normBeta) ;
+    error = op.backward(derData,data,derOutput) ;
   }
 
   /* -------------------------------------------------------------- */
