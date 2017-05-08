@@ -11,8 +11,8 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#ifndef __vl__nnnormalizelp__
-#define __vl__nnnormalizelp__
+#ifndef __nnnormalizelp__
+#define __nnnormalizelp__
 
 #include "data.hpp"
 #include <stdio.h>
@@ -34,8 +34,8 @@ namespace vl { namespace nn {
                           vl::Tensor data) ;
 
     vl::ErrorCode forwardWithNorms(vl::Tensor output,
-                                     vl::Tensor norms,
-                                     vl::Tensor data) ;
+                                   vl::Tensor norms,
+                                   vl::Tensor data) ;
 
     vl::ErrorCode backward(vl::Tensor derData,
                            vl::Tensor moments,
@@ -55,4 +55,4 @@ namespace vl { namespace nn {
 
 } }
 
-#endif /* defined(__vl__nnnormalizelp__) */
+#endif /* defined(__nnnormalizelp__) */

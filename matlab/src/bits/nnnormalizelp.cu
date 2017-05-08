@@ -11,6 +11,7 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "nnnormalizelp.hpp"
+#include "impl/dispatcher.hpp"
 
 #if ENABLE_GPU
 #include "datacu.hpp"
@@ -23,6 +24,11 @@ the terms of the BSD license (see the COPYING file).
 using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
+
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForward ;
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForwardWithNorms ;
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackward ;
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackwardWithNorms ;
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -125,49 +131,6 @@ void computeNorms(NormalizeLp const & op,
     normsData[i] = pow(normsData[i] + op.epsilon, 1.0/op.exponent) ;
   }
 }
-
-// -------------------------------------------------------------------
-//                                                          Dispatcher
-// -------------------------------------------------------------------
-
-template < template <vl::DeviceType deviceType, vl::DataType dataType> class C>
-struct dispatch
-{
-  template <class B, typename ... Types>
-  vl::ErrorCode operator()(B& base, vl::Tensor output, Types ... args)
-  {
-    vl::ErrorCode error ;
-#if ENABLE_GPU
-    if (output.getDeviceType() == vl::VLDT_GPU) {
-      switch (output.getDataType()) {
-        case vl::VLDT_Float:
-          error = C<vl::VLDT_GPU,vl::VLDT_Float>()(base,output,args...) ;
-          break ;
-        case vl::VLDT_Double:
-          error = C<vl::VLDT_GPU,vl::VLDT_Double>()(base,output,args...) ;
-          break ;
-        default: assert(false) ;
-      }
-      return error ;
-    }
-#endif
-    switch (output.getDataType()) {
-      case vl::VLDT_Float:
-        error = C<vl::VLDT_CPU,vl::VLDT_Float>()(base,output,args...) ;
-        break ;
-      case vl::VLDT_Double:
-        error = C<vl::VLDT_CPU,vl::VLDT_Double>()(base,output,args...) ;
-        break ;
-      default: assert(false) ;
-    }
-    return error ;
-  }
-} ;
-
-template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForward ;
-template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForwardWithNorms ;
-template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackward ;
-template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackwardWithNorms ;
 
 // -------------------------------------------------------------------
 //                                                         CPU forward
