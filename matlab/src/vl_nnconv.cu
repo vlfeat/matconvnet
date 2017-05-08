@@ -443,20 +443,12 @@ void mexFunction(int nout, mxArray *out[],
 
   /* special case: no filters = identity filter bank (subsample + bias) */
   if (!hasFilters) {
+    vl::nn::Subsample op(context,strideY,strideX,
+                         padTop,padBottom,padLeft,padRight) ;
     if (!backMode) {
-      error = vl::nnsubsample_forward(context,
-                                      output,
-                                      data,
-                                      biases,
-                                      strideY, strideX,
-                                      padTop, padBottom, padLeft, padRight) ;
+      error = op.forwardWithBias(output,data,biases) ;
     } else {
-      error = vl::nnsubsample_backward(context,
-                                       derData,
-                                       derBiases,
-                                       derOutput,
-                                       strideY, strideX,
-                                       padTop, padBottom, padLeft, padRight) ;
+      error = op.backwardWithBias(derData,derBiases,derOutput) ;
     }
     goto doneok ;
   }
