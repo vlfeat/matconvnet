@@ -1,10 +1,14 @@
-//
-//  dispatcher.hpp
-//  matconvnet
-//
-//  Created by Andrea Vedaldi on 08/05/2017.
-//  Copyright © 2017 Andrea Vedaldi. All rights reserved.
-//
+// @file dispatcher.hpp
+// @brief Dispatcher helper function matconvnet
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2017 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #ifndef __dispatcher_hpp__
 #define __dispatcher_hpp__
@@ -13,10 +17,10 @@
 #include <cassert>
 
 // -------------------------------------------------------------------
-//                                                          Dispatcher
+//                                                            Dispatch
 // -------------------------------------------------------------------
 
-template < template <vl::DeviceType deviceType, vl::DataType dataType> class C>
+template <template <vl::DeviceType deviceType, vl::DataType dataType> class C>
 struct dispatch
 {
   template <class B, typename ... Types>
@@ -34,7 +38,11 @@ struct dispatch
           break ;
         default: assert(false) ;
       }
-      return error ;
+      if (error == vl::VLE_Cuda) {
+        base.context.setError
+        (base.context.getCudaHelper().catchCudaError("GPU")) ;
+      }
+      return base.context.passError(error, __func__) ;
     }
 #endif
     switch (output.getDataType()) {
@@ -46,7 +54,7 @@ struct dispatch
         break ;
       default: assert(false) ;
     }
-    return error ;
+    return base.context.passError(error, __func__) ;
   }
 } ;
 

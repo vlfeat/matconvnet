@@ -38,6 +38,7 @@ namespace vl { namespace nn {
     double beta ;
     int normDepth ;
   } ;
+
 } }
 
 #endif /* defined(__vl__nnnormalize__) */

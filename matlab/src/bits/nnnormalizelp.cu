@@ -12,11 +12,6 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnnormalizelp.hpp"
 #include "impl/dispatcher.hpp"
-
-#if ENABLE_GPU
-#include "datacu.hpp"
-#endif
-
 #include <assert.h>
 #include <iostream>
 #include <cmath>

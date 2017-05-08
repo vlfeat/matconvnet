@@ -10,11 +10,16 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
+#if ENABLE_GPU
+#include "datacu.hpp"
+#endif
+
+#include <vector>
+#include <algorithm>
+
 // -------------------------------------------------------------------
 //                                                             Helpers
 // -------------------------------------------------------------------
-
-#include <algorithm>
 
 struct GPUVisitPattern
 {
