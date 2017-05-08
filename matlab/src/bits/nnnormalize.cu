@@ -11,7 +11,6 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "nnnormalize.hpp"
-#include "impl/normalize.hpp"
 #include "impl/dispatcher.hpp"
 
 #if ENABLE_GPU
@@ -25,9 +24,7 @@ using namespace vl ;
 using namespace vl::nn ;
 
 template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNForward ;
-template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNForwardWithNorms ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNBackward ;
-template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNBackwardWithNorms ;
 
 // -------------------------------------------------------------------
 //                                Fast approximated numerical routines

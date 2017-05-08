@@ -43,9 +43,9 @@ namespace vl { namespace nn {
                            vl::Tensor derOutput) ;
 
     vl::ErrorCode backwardWithNorms(vl::Tensor derData,
-                                      vl::Tensor norms,
-                                      vl::Tensor data,
-                                      vl::Tensor derOutput) ;
+                                    vl::Tensor norms,
+                                    vl::Tensor data,
+                                    vl::Tensor derOutput) ;
 
     vl::Context& context ;
     std::vector<int> selectedDimensions ;
