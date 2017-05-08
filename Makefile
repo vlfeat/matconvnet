@@ -2,7 +2,7 @@
 # author: Andrea Vedaldi
 # brief: matconvnet makefile for mex files
 
-# Copyright (C) 2014-16 Andrea Vedaldi
+# Copyright (C) 2014-17 Andrea Vedaldi
 # All rights reserved.
 #
 # This file is part of the VLFeat library and is made available under
@@ -82,7 +82,7 @@ LDFLAGS =
 LDOPTIMFLAGS =
 LINKLIBS = -lmwblas
 
-NVCCFLAGS_PASS = -D_FORCE_INLINES -gencode=arch=compute_30,code=\"sm_30,compute_30\"
+NVCCFLAGS_PASS = --std=c++11 -D_FORCE_INLINES -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 NVCCVER = $(shell $(NVCC) --version | \
 sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
 xargs printf '%02d%02d%02d')
@@ -157,6 +157,7 @@ cpp_src+=matlab/src/bits/nnfullyconnected.$(ext)
 cpp_src+=matlab/src/bits/nnsubsample.$(ext)
 cpp_src+=matlab/src/bits/nnpooling.$(ext)
 cpp_src+=matlab/src/bits/nnnormalize.$(ext)
+cpp_src+=matlab/src/bits/nnnormalizelp.$(ext)
 cpp_src+=matlab/src/bits/nnbnorm.$(ext)
 cpp_src+=matlab/src/bits/nnbilinearsampler.$(ext)
 cpp_src+=matlab/src/bits/nnroipooling.$(ext)
@@ -164,6 +165,7 @@ mex_src+=matlab/src/vl_nnconv.$(ext)
 mex_src+=matlab/src/vl_nnconvt.$(ext)
 mex_src+=matlab/src/vl_nnpool.$(ext)
 mex_src+=matlab/src/vl_nnnormalize.$(ext)
+mex_src+=matlab/src/vl_nnnormalizelp.$(ext)
 mex_src+=matlab/src/vl_nnbnorm.$(ext)
 mex_src+=matlab/src/vl_nnbilinearsampler.$(ext)
 mex_src+=matlab/src/vl_nnroipool.$(ext)

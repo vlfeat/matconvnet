@@ -1,0 +1,391 @@
+// @file nnnormalizelp.cu
+// @brief Batch normalization block
+// @author Andrea Vedaldi
+
+/*
+Copyright (C) 2017 Andrea Vedaldi.
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
+
+#include "nnnormalizelp.hpp"
+
+#if ENABLE_GPU
+#include "datacu.hpp"
+#endif
+
+#include <assert.h>
+#include <iostream>
+#include <cmath>
+
+using namespace std ;
+using namespace vl ;
+using namespace vl::nn ;
+
+// -------------------------------------------------------------------
+//                                                             Helpers
+// -------------------------------------------------------------------
+
+struct VisitPattern
+{
+  std::vector<ptrdiff_t> steps ;
+  std::vector<ptrdiff_t> stepPeriods ;
+  size_t normsVolume ;
+  size_t inputVolume ;
+} ;
+
+VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
+{
+  // Compute tensor geometry.
+  int n = input.getNumDimensions() ;
+  auto inputDimensions = std::vector<size_t>(input.getDimensions(),
+                                            input.getDimensions() + n) ;
+
+  assert(n <= 4) ; // Todo: relax (just extend the for loops below).
+
+  size_t inputVolume = 1 ;
+  size_t normsVolume = 1 ;
+  auto steps = std::vector<ptrdiff_t>(n+1,0) ;
+  auto stepPeriods = std::vector<ptrdiff_t>(n+1,0) ;
+
+  // Find out how to traverse the reduced results as the input is
+  // scanned from first to last element.
+  for (int d = 0 ; d < n ; ++d) {
+    stepPeriods[d] = inputVolume ;
+
+    bool squashed =
+    (find(op.selectedDimensions.begin(), op.selectedDimensions.end(), d) !=
+     op.selectedDimensions.end()) ;
+
+    if (!squashed)  {
+      steps[d] += normsVolume ;
+      normsVolume *= inputDimensions[d] ;
+      steps[d+1] -= normsVolume ;
+    }
+    inputVolume *= inputDimensions[d] ;
+  }
+  steps[n] = 0 ;
+  stepPeriods[n] = inputVolume ;
+
+  // Simplify traversal.
+  for (int d = 0 ; d < steps.size() - 2 ; ) {
+    if (steps[d] == 0 && steps[d+1] == 0) {
+      steps.erase(steps.begin() + d) ;
+      stepPeriods.erase(stepPeriods.begin() + d+1) ;
+    } else {
+      ++ d ;
+    }
+  }
+
+  // Make it suitable for more efficient loops.
+  for (int d = steps.size()-1 ; d >= 1 ; --d) {
+    stepPeriods[d] /= stepPeriods[d - 1] ;
+  }
+  for (int d = steps.size() ; d < 5 ; ++d) {
+    steps.push_back(0) ;
+    stepPeriods.push_back(1) ;
+  }
+
+  VisitPattern vp ;
+  vp.steps = move(steps) ;
+  vp.stepPeriods = move(stepPeriods) ;
+  vp.inputVolume = inputVolume ;
+  vp.normsVolume = normsVolume ;
+  return vp ;
+}
+
+template<typename type>
+void computeNorms(NormalizeLp const & op,
+                  type * normsData, type const * inputData, VisitPattern vp)
+{
+  // Clear norms.
+  memset(normsData, 0, vp.normsVolume * sizeof(type)) ;
+
+  // Accumulate norm.
+  auto npt = normsData ;
+  auto ipt = inputData ;
+  for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+    for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+      for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+        for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+          *npt += pow(*ipt++, op.exponent) ;
+          npt += vp.steps[0] ;
+        }
+        npt += vp.steps[1] ;
+      }
+      npt += vp.steps[2] ;
+    }
+    npt += vp.steps[3] ;
+  }
+
+  // Root norm.
+  for (ptrdiff_t i = 0 ; i < vp.normsVolume ; ++i) {
+    normsData[i] = pow(normsData[i] + op.epsilon, 1.0/op.exponent) ;
+  }
+}
+
+// -------------------------------------------------------------------
+//                                                          Dispatcher
+// -------------------------------------------------------------------
+
+template < template <vl::DeviceType deviceType, vl::DataType dataType> class C>
+struct dispatch
+{
+  template <class B, typename ... Types>
+  vl::ErrorCode operator()(B& base, vl::Tensor output, Types ... args)
+  {
+    vl::ErrorCode error ;
+#if ENABLE_GPU
+    if (output.getDeviceType() == vl::VLDT_GPU) {
+      switch (output.getDataType()) {
+        case vl::VLDT_Float:
+          error = C<vl::VLDT_GPU,vl::VLDT_Float>()(base,output,args...) ;
+          break ;
+        case vl::VLDT_Double:
+          error = C<vl::VLDT_GPU,vl::VLDT_Double>()(base,output,args...) ;
+          break ;
+        default: assert(false) ;
+      }
+      return error ;
+    }
+#endif
+    switch (output.getDataType()) {
+      case vl::VLDT_Float:
+        error = C<vl::VLDT_CPU,vl::VLDT_Float>()(base,output,args...) ;
+        break ;
+      case vl::VLDT_Double:
+        error = C<vl::VLDT_CPU,vl::VLDT_Double>()(base,output,args...) ;
+        break ;
+      default: assert(false) ;
+    }
+    return error ;
+  }
+} ;
+
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForward ;
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForwardWithNorms ;
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackward ;
+template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackwardWithNorms ;
+
+// -------------------------------------------------------------------
+//                                                         CPU forward
+// -------------------------------------------------------------------
+
+template<vl::DataType dataType>
+struct NormalizeLpForward<vl::VLDT_CPU, dataType>
+{
+  vl::ErrorCode operator()(vl::nn::NormalizeLp & op,
+                           vl::Tensor output, // [output: can pass null to skip]
+                           vl::Tensor norms,  // [output: can pass null]
+                           vl::Tensor input,
+                           bool givenNorms)
+  {
+    assert(norms || !givenNorms) ;
+
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto vp = getVisitPatternForInput(op, input) ;
+
+    type const * inputData = (type const*)input.getMemory() ;
+    type * normsData ;
+    bool normsDataIsOwner = false ;
+    if (norms) { normsData = (type*)norms.getMemory() ; }
+    else { normsData = new type [vp.normsVolume] ; normsDataIsOwner = true ; }
+
+    // Compute norm if needed.
+    if (!givenNorms) {
+      computeNorms(op,normsData,inputData,vp) ;
+    }
+
+    // Divide norm.
+    if (output) {
+      auto npt = normsData ;
+      type * outputData = (type*)output.getMemory() ;
+      for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+        for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+          for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+            for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+              *outputData = *inputData / *npt ;
+              inputData ++ ;
+              outputData ++ ;
+              npt += vp.steps[0] ;
+            }
+            npt += vp.steps[1] ;
+          }
+          npt += vp.steps[2] ;
+        }
+        npt += vp.steps[3] ;
+      }
+    }
+
+    // Finish.
+    if (normsData && normsDataIsOwner) {
+      delete [] normsData ;
+    }
+    return vl::VLE_Success ;
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                                        CPU backward
+// -------------------------------------------------------------------
+
+template<vl::DataType dataType>
+struct NormalizeLpBackward<vl::VLDT_CPU, dataType>
+{
+  vl::ErrorCode operator()(vl::nn::NormalizeLp &op,
+                           vl::Tensor derInput,
+                           vl::Tensor norms, // [output: can pass null]
+                           vl::Tensor input,
+                           vl::Tensor derOutput,
+                           bool givenNorms)
+  {
+    assert(norms || !givenNorms) ;
+
+    // Compute tensor geometry.
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto vp = getVisitPatternForInput(op, input) ;
+
+    auto derInputData = (type*)derInput.getMemory() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto derOutputData = (type const *)derOutput.getMemory() ;
+    type * normsData ;
+    bool normsDataIsOwner = false ;
+    if (norms) { normsData = (type*)norms.getMemory() ; }
+    else { normsData = new type [vp.normsVolume] ; normsDataIsOwner = true ; }
+
+    // Compute norms if given.
+    if (!givenNorms) {
+      computeNorms(op,normsData,inputData,vp) ;
+    }
+
+    // Compute sum(derOutput .* input).
+    type * scratchData = new type [vp.normsVolume] () ; // zeros
+    {
+      auto ipt = inputData ;
+      auto dopt = derOutputData ;
+      auto spt = scratchData ;
+      for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+        for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+          for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+            for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+              *spt += (*ipt) * (*dopt) ;
+              ipt ++ ;
+              dopt ++ ;
+              spt += vp.steps[0] ;
+            }
+            spt += vp.steps[1] ;
+          }
+          spt += vp.steps[2] ;
+        }
+        spt += vp.steps[3] ;
+      }
+    }
+
+    // Compute derInputs.
+    {
+      auto dipt = derInputData ;
+      auto npt = normsData ;
+      auto ipt = inputData ;
+      auto dopt = derOutputData ;
+      auto spt = scratchData ;
+      for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+        for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+          for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+            for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+              auto n = *npt ;
+              *dipt = (*dopt) / n - (*spt) * pow(*ipt, op.exponent-1) / pow(n,op.exponent+1) ;
+
+              dipt ++ ;
+              ipt ++ ;
+              dopt ++ ;
+
+              npt += vp.steps[0] ;
+              spt += vp.steps[0] ;
+            }
+            npt += vp.steps[1] ;
+            spt += vp.steps[1] ;
+          }
+          npt += vp.steps[2] ;
+          spt += vp.steps[2] ;
+        }
+        npt += vp.steps[3] ;
+        spt += vp.steps[3] ;
+      }
+    }
+
+    // Finish.
+    if (normsData && normsDataIsOwner) {
+      delete [] normsData ;
+    }
+    delete [] scratchData ;
+    return vl::VLE_Success ;
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                                             Wrapper
+// -------------------------------------------------------------------
+
+#if ENABLE_GPU
+#include "nnnormalizelp_gpu.cu"
+#endif
+
+NormalizeLp::NormalizeLp(vl::Context &context,
+                         std::vector<int> const& selectedDimensions,
+                         double exponent,
+                         double epsilon) :
+context(context),
+selectedDimensions(selectedDimensions),
+exponent(exponent),
+epsilon(epsilon)
+{ }
+
+vl::TensorShape
+NormalizeLp::getNormsShapeForData(vl::Tensor data)
+{
+  vl::TensorShape shape(data) ;
+  int n = shape.getNumDimensions() ;
+  for (int d = 0 ; d < n ; ++d) {
+    bool squashed =
+    (find(selectedDimensions.begin(), selectedDimensions.end(), d) !=
+     selectedDimensions.end()) ;
+    if (squashed) { shape.setDimension(d, 1) ; }
+  }
+  return shape ;
+}
+
+vl::ErrorCode
+NormalizeLp::forward(vl::Tensor output,
+                     vl::Tensor norms, // [output: can pass null]
+                     vl::Tensor data)
+{
+  return dispatch<NormalizeLpForward>()(*this,output,norms,data,false) ;
+}
+
+vl::ErrorCode
+NormalizeLp::forwardWithNorms(vl::Tensor output,
+                              vl::Tensor norms,
+                              vl::Tensor data)
+{
+  return dispatch<NormalizeLpForward>()(*this,output,norms,data,true) ;
+}
+
+vl::ErrorCode
+NormalizeLp::backward(vl::Tensor derData,
+                      vl::Tensor norms,
+                      vl::Tensor data,
+                      vl::Tensor derOutput)
+{
+  return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput,false) ;
+}
+
+vl::ErrorCode
+NormalizeLp::backwardWithNorms(vl::Tensor derData,
+                                 vl::Tensor norms,
+                                 vl::Tensor data,
+                                 vl::Tensor derOutput)
+{
+  return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput,true) ;
+}

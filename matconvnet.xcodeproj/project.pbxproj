@@ -31,6 +31,7 @@
 		2D7B11421A8BDB4E00A3D8A0 /* normalize.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D7B11401A8BDB4E00A3D8A0 /* normalize.hpp */; };
 		2D8DC38D1A8D76FD00D053E6 /* nnpooling_cudnn.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D8DC38B1A8D76FD00D053E6 /* nnpooling_cudnn.cu */; };
 		2D8DC38E1A8D76FD00D053E6 /* nnpooling_cudnn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D8DC38C1A8D76FD00D053E6 /* nnpooling_cudnn.hpp */; };
+		2D91CFC11EBFA8B600CB064D /* nnnormalizelp_gpu.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D91CFC01EBFA8B600CB064D /* nnnormalizelp_gpu.cu */; };
 		2D9DC1CC1A209EBF0053CB7D /* vl_nnconv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9DC1CA1A209EBF0053CB7D /* vl_nnconv.cpp */; };
 		2D9DC1D01A209EFD0053CB7D /* vl_nnnormalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */; };
 		2D9DC1D11A209EFD0053CB7D /* vl_nnpool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */; };
@@ -254,6 +255,12 @@
 		2D8079311AEF94860040BC14 /* vl_nnbnorm.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnbnorm.cu; path = matlab/src/vl_nnbnorm.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D8DC38B1A8D76FD00D053E6 /* nnpooling_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling_cudnn.cu; path = matlab/src/bits/impl/nnpooling_cudnn.cu; sourceTree = "<group>"; };
 		2D8DC38C1A8D76FD00D053E6 /* nnpooling_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnpooling_cudnn.hpp; path = matlab/src/bits/impl/nnpooling_cudnn.hpp; sourceTree = "<group>"; };
+		2D91CFC01EBFA8B600CB064D /* nnnormalizelp_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalizelp_gpu.cu; path = matlab/src/bits/nnnormalizelp_gpu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D9AFE471EBE3A6D0084B95F /* vl_nnnormalizelp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnnormalizelp.cpp; path = matlab/src/vl_nnnormalizelp.cpp; sourceTree = "<group>"; };
+		2D9AFE481EBE3A6D0084B95F /* vl_nnnormalizelp.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnnormalizelp.cu; path = matlab/src/vl_nnnormalizelp.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D9AFE491EBE3EA90084B95F /* nnnormalizelp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnnormalizelp.cpp; path = matlab/src/bits/nnnormalizelp.cpp; sourceTree = "<group>"; };
+		2D9AFE4A1EBE3EA90084B95F /* nnnormalizelp.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalizelp.cu; path = matlab/src/bits/nnnormalizelp.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D9AFE4B1EBE3EA90084B95F /* nnnormalizelp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnnormalizelp.hpp; path = matlab/src/bits/nnnormalizelp.hpp; sourceTree = "<group>"; };
 		2D9BC77C1D0ECDE400EC9F94 /* vl_taccummex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_taccummex.cpp; path = matlab/src/vl_taccummex.cpp; sourceTree = "<group>"; };
 		2D9BC77D1D0ECDE400EC9F94 /* vl_taccummex.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_taccummex.cu; path = matlab/src/vl_taccummex.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D9BC77E1D0ECDF200EC9F94 /* vl_taccum.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_taccum.m; path = matlab/vl_taccum.m; sourceTree = "<group>"; };
@@ -340,6 +347,8 @@
 				2DA102461B025A8F000BB9FE /* vl_nnconvt.cu */,
 				2D9DC1CE1A209EFD0053CB7D /* vl_nnnormalize.cpp */,
 				2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */,
+				2D9AFE471EBE3A6D0084B95F /* vl_nnnormalizelp.cpp */,
+				2D9AFE481EBE3A6D0084B95F /* vl_nnnormalizelp.cu */,
 				2D9DC1CF1A209EFD0053CB7D /* vl_nnpool.cpp */,
 				2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */,
 				2D7A6F721D8C5377008F8B22 /* vl_nnroipool.cpp */,
@@ -393,6 +402,10 @@
 				2D7B11391A8BDB3C00A3D8A0 /* nnnormalize.cpp */,
 				2D7B113A1A8BDB3C00A3D8A0 /* nnnormalize.cu */,
 				2D7B113B1A8BDB3C00A3D8A0 /* nnnormalize.hpp */,
+				2D9AFE491EBE3EA90084B95F /* nnnormalizelp.cpp */,
+				2D9AFE4A1EBE3EA90084B95F /* nnnormalizelp.cu */,
+				2D91CFC01EBFA8B600CB064D /* nnnormalizelp_gpu.cu */,
+				2D9AFE4B1EBE3EA90084B95F /* nnnormalizelp.hpp */,
 				2D7B11311A88F12000A3D8A0 /* nnpooling.cpp */,
 				2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */,
 				2D7B112E1A88F0FF00A3D8A0 /* nnpooling.hpp */,
@@ -770,7 +783,7 @@
 		2D375DB118A7F064008A97EE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0700;
+				LastUpgradeCheck = 0830;
 				ORGANIZATIONNAME = "Andrea Vedaldi";
 			};
 			buildConfigurationList = 2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconvnet" */;
@@ -817,6 +830,7 @@
 				2DF897C11C4182CE002C7EB9 /* imread.cpp in Sources */,
 				2D14F0091B02AB5700A8F33D /* nnbias.cu in Sources */,
 				2D9DC1D11A209EFD0053CB7D /* vl_nnpool.cpp in Sources */,
+				2D91CFC11EBFA8B600CB064D /* nnnormalizelp_gpu.cu in Sources */,
 				2D9DC1D01A209EFD0053CB7D /* vl_nnnormalize.cpp in Sources */,
 				2D7B11361A8AC85300A3D8A0 /* nnsubsample.cpp in Sources */,
 				2DD1770D1D31762300B0A17E /* nnbnorm_cudnn.cu in Sources */,
@@ -854,20 +868,25 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CUDAROOT = "/Developer/NVIDIA/CUDA-7.5";
+				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
 				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
 				DEBUG = YES;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				EXPORTED_SYMBOLS_FILE = "$(MATLABROOT)/extern/lib/maci64/mexFunction.map";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -881,7 +900,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MATLABROOT = /Applications/MATLAB_R2015b.app;
+				MATLABROOT = /Applications/MATLAB_R2017a.app;
 				MEX = "$(MATLABROOT)/bin/mex";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				ONLY_ACTIVE_ARCH = YES;
@@ -901,20 +920,25 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
-				CUDAROOT = "/Developer/NVIDIA/CUDA-7.5";
+				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
 				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
 				DEBUG = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
 				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				EXPORTED_SYMBOLS_FILE = "$(MATLABROOT)/extern/lib/maci64/mexFunction.map";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -922,7 +946,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MATLABROOT = /Applications/MATLAB_R2015b.app;
+				MATLABROOT = /Applications/MATLAB_R2017a.app;
 				MEX = "$(MATLABROOT)/bin/mex";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				SDKROOT = macosx;
