@@ -175,7 +175,7 @@ struct PoolingBackward
     auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
 
     for (int z = 0; z < depth * size ; ++z) {
-      for (int x = 0; x < outputWidth; ++x) {
+      for (int x = 0; x < outputWidth ; ++x) {
         for (int y = 0; y < outputHeight; ++y) {
           int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
           int y1 = y * (signed)op.strideY - (signed)op.padTop ;
@@ -216,7 +216,7 @@ public PoolingBackward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::t
 // -------------------------------------------------------------------
 
 #if ENABLE_GPU
-#include "nnPooling_gpu.cu"
+#include "nnpooling_gpu.cu"
 #endif
 
 Pooling::Pooling(Context &context,

@@ -161,8 +161,6 @@ pooling_forward_cpu(type* pooled,
  properly initialised: accumulates the derivative
  */
 
-/* Todo: transpose */
-
 template<typename type, typename Accumulator> static inline void
 pooling_backward_cpu(type* derData,
                      type const* data,
