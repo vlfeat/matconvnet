@@ -24,8 +24,8 @@ using namespace vl::nn ;
 
 template<DeviceType deviceType, DataType dataType> struct ROIPoolingMaxForward ;
 template<DeviceType deviceType, DataType dataType> struct ROIPoolingMaxBackward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingMeanForward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingMeanBackward ;
+template<DeviceType deviceType, DataType dataType> struct ROIPoolingAverageForward ;
+template<DeviceType deviceType, DataType dataType> struct ROIPoolingAverageBackward ;
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -200,8 +200,13 @@ public ROIPoolingForward<dataType,acc_max<typename vl::DataTypeTraits<dataType>:
 
 template<DataType dataType>
 struct ROIPoolingAverageForward<VLDT_CPU,dataType> :
-public ROIPoolingForward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+public ROIPoolingForward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
 { } ;
+
+
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
 
 template<DataType dataType, class Accumulator>
 struct ROIPoolingBackward
@@ -298,7 +303,7 @@ public ROIPoolingBackward<dataType,acc_max<typename vl::DataTypeTraits<dataType>
 
 template<DataType dataType>
 struct ROIPoolingAverageBackward<VLDT_CPU,dataType> :
-public ROIPoolingBackward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+public ROIPoolingBackward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
 { } ;
 
 // -------------------------------------------------------------------

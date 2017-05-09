@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-17 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -11,180 +11,250 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "nnpooling.hpp"
-#include "impl/pooling.hpp"
+#include "impl/dispatcher.hpp"
+#include <cassert>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
 
-#if ENABLE_GPU
-#include "datacu.hpp"
-#endif
-
-#if ENABLE_CUDNN
-#include "impl/nnpooling_cudnn.hpp"
-#endif
-
-#include <assert.h>
-
+using namespace std ;
 using namespace vl ;
+using namespace vl::nn ;
 
-/* ---------------------------------------------------------------- */
-/*                                                nnpooling_forward */
-/* ---------------------------------------------------------------- */
+template<DeviceType deviceType, DataType dataType> struct PoolingMaxForward ;
+template<DeviceType deviceType, DataType dataType> struct PoolingMaxBackward ;
+template<DeviceType deviceType, DataType dataType> struct PoolingAverageForward ;
+template<DeviceType deviceType, DataType dataType> struct PoolingAverageBackward ;
 
-#define DISPATCH(deviceType, op, type) \
-status = vl::impl::op<deviceType, type>::forward \
-((type*)output.getMemory(), (type const*)data.getMemory(), \
-data.getHeight(), data.getWidth(), data.getDepth() * data.getSize(), \
-poolHeight, poolWidth, \
-strideY, strideX, \
-padTop, padBottom, \
-padLeft, padRight) ;
+// -------------------------------------------------------------------
+//                                                             Helpers
+// -------------------------------------------------------------------
 
-#define DISPATCH2(deviceType, op) \
-switch (dataType) { \
-case VLDT_Float : DISPATCH(deviceType, op, float) ; break ; \
-IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, op, double) ; break ;) \
-default: assert(false) ; return VLE_Unknown ; \
-}
-
-#define DISPATCH3(deviceType) \
-switch (method) { \
-case vlPoolingAverage : DISPATCH2(deviceType, pooling_average) ; break ; \
-case vlPoolingMax : DISPATCH2(deviceType, pooling_max) ; break ; \
-default: assert(false) ; return VLE_Unknown ; \
-}
-
-#define DISPATCHCUDNN(dataType) \
-status = vl::impl::nnpooling_cudnn<dataType>::forward \
-(context, output, data, \
-method, \
-poolHeight, poolWidth, \
-strideY, strideX, \
-padTop, padBottom, \
-padLeft, padRight) ;
-
-#define DISPATCHCUDNN2() \
-switch (dataType) { \
-case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
-IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
-default: assert(false) ; return VLE_Unknown ; \
-}
-
-vl::ErrorCode
-vl::nnpooling_forward(vl::Context& context,
-                      vl::Tensor output,
-                      vl::Tensor data,
-                      PoolingMethod method,
-                      int poolHeight, int poolWidth,
-                      int strideY, int strideX,
-                      int padTop, int padBottom,
-                      int padLeft, int padRight)
+template <typename type>
+struct acc_max
 {
-  vl::ErrorCode status = VLE_Success ;
-  vl::DeviceType deviceType = output.getDeviceType() ;
-  vl::DataType dataType = output.getDataType() ;
+  inline acc_max(int poolHeight, int poolWidth, type derOutput = 0)
+  :
+  value(-std::numeric_limits<type>::infinity()),
+  derOutput(derOutput),
+  derDataActivePt(NULL)
+  { }
 
-  switch (deviceType) {
-    default:
-      assert(false) ;
-      return vl::VLE_Unknown ;
-
-    case vl::VLDT_CPU:
-      DISPATCH3(vl::VLDT_CPU) ;
-      break ;
-
-#ifdef ENABLE_GPU
-    case vl::VLDT_GPU:
-#if ENABLE_CUDNN
-      if (context.getCudaHelper().getCudnnEnabled()) {
-        DISPATCHCUDNN2() ;
-        if (status == vl::VLE_Success) { return status ; }
-        if (status != vl::VLE_Unsupported) { return status ; }
-        /* this case was not supported by CUDNN -- fallback */
-      }
-#endif
-      DISPATCH3(vl::VLDT_GPU) ;
-      if (status == VLE_Cuda) {
-        context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
-      }
-      break ;
-#endif
+  inline void accumulate_forward(type x) {
+    value = std::max(value, x) ;
   }
-  return context.passError(status, "nnpooling_forward") ;
-}
 
-/* ---------------------------------------------------------------- */
-/*                                               nnpooling_backward */
-/* ---------------------------------------------------------------- */
+  inline void accumulate_backward(type const* data, type* derDataPt) {
+    type x = *data ;
+    if (x > value) {
+      value = x ;
+      derDataActivePt = derDataPt ;
+    }
+  }
 
-#undef DISPATCH
-#undef DISPATCH2
+  inline type done_forward() const {
+    return value ;
+  }
 
-// backward max and average want slightly differet argument lists
+  inline void done_backward() const {
+    if (derDataActivePt) { *derDataActivePt += derOutput ; }
+  }
 
-#define DISPATCH_pooling_average(deviceType, type) \
-status = vl::impl::pooling_average<deviceType, type>::backward \
-((type*)derData.getMemory(), (type const*)derOutput.getMemory(), \
-derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(), \
-poolHeight, poolWidth, \
-strideY, strideX, \
-padTop, padBottom, \
-padLeft, padRight) ;
+  type value ;
+  type derOutput ;
+  type* derDataActivePt ;
+} ;
 
-#define DISPATCH_pooling_max(deviceType, type) \
-status = vl::impl::pooling_max<deviceType, type>::backward \
-((type*)derData.getMemory(), (type const*)data.getMemory(), (type const*)derOutput.getMemory(), \
-derData.getHeight(), derData.getWidth(), derData.getDepth() * derData.getSize(), \
-poolHeight, poolWidth, \
-strideY, strideX, \
-padTop, padBottom, \
-padLeft, padRight) ;
-
-#define DISPATCH2(deviceType, op) \
-switch (dataType) { \
-case VLDT_Float : DISPATCH_ ## op (deviceType, float) ; break ; \
-IF_DOUBLE(case VLDT_Double : DISPATCH_ ## op (deviceType, double) ; break ;) \
-default: assert(false) ; return VLE_Unknown ; \
-}
-
-vl::ErrorCode
-vl::nnpooling_backward(Context& context,
-                       Tensor derData,
-                       Tensor data,
-                       Tensor derOutput,
-                       PoolingMethod method,
-                       int poolHeight, int poolWidth,
-                       int strideY, int strideX,
-                       int padTop, int padBottom,
-                       int padLeft, int padRight)
+template <typename type>
+struct acc_sum
 {
-  vl::ErrorCode status = VLE_Success ;
-  vl::DeviceType deviceType = derOutput.getDeviceType() ;
-  vl::DataType dataType = derOutput.getDataType() ;
+  inline acc_sum(int poolHeight, int poolWidth, type derOutput = 0)
+  :
+  value(0),
+  scale(type(1)/type(poolHeight*poolWidth)),
+  derOutput(derOutput)
+  { }
 
-  switch (deviceType) {
-    default:
-      assert(false) ;
-      return vl::VLE_Unknown ;
+  inline void accumulate_forward(type x) {
+    value += x ;
+  }
 
-    case vl::VLDT_CPU:
-      DISPATCH3(vl::VLDT_CPU) ;
-      break ;
+  /* note: data is unused */
+  inline void accumulate_backward(type const* data, type* derDataPt) {
+    *derDataPt += derOutput * scale ;
+  }
+
+  inline type done_forward() const {
+    return value * scale ;
+  }
+
+  inline void done_backward() const { }
+
+  type value ;
+  type derOutput ;
+  type scale ;
+} ;
+
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
+
+template<DataType dataType, class Accumulator>
+struct PoolingForward
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor output,
+                           Tensor input)
+  {
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto height = input.getHeight() ;
+    auto width = input.getWidth() ;
+    auto depth = input.getDepth() ;
+    auto size = input.getSize() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto outputData = (type*)output.getMemory() ;
+    auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
+    auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
+
+    for (int z = 0; z < depth * size ; ++z) {
+      for (int x = 0; x < outputWidth; ++x) {
+        for (int y = 0; y < outputHeight; ++y) {
+          int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
+          int y1 = y * (signed)op.strideY - (signed)op.padTop ;
+          int x2 = min(x1 + op.poolWidth, (int)width) ;
+          int y2 = min(y1 + op.poolHeight, (int)height) ;
+          x1 = max(x1, 0) ;
+          y1 = max(y1, 0) ;
+          Accumulator acc(y2 - y1, x2 - x1) ;
+          for (int u = x1 ; u < x2 ; ++u) {
+            for (int v = y1 ; v < y2 ; ++v) {
+              acc.accumulate_forward(inputData[u * height + v]) ;
+            }
+          }
+          outputData[x * outputHeight + y] = acc.done_forward() ;
+        }
+      }
+      inputData += width*height ;
+      outputData += outputWidth*outputHeight ;
+    }
+    return VLE_Success ;
+  }
+} ;
+
+template<DataType dataType>
+struct PoolingMaxForward<VLDT_CPU,dataType> :
+public PoolingForward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+{ } ;
+
+template<DataType dataType>
+struct PoolingAverageForward<VLDT_CPU,dataType> :
+public PoolingForward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
+{ } ;
+
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
+
+template<DataType dataType, class Accumulator>
+struct PoolingBackward
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor derInput,
+                           Tensor input,
+                           Tensor derOutput)
+  {
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto height = input.getHeight() ;
+    auto width = input.getWidth() ;
+    auto depth = input.getDepth() ;
+    auto size = input.getSize() ;
+    auto derInputData = (type*)derInput.getMemory() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto derOutputData = (type const*)derOutput.getMemory() ;
+    auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
+    auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
+
+    for (int z = 0; z < depth * size ; ++z) {
+      for (int x = 0; x < outputWidth; ++x) {
+        for (int y = 0; y < outputHeight; ++y) {
+          int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
+          int y1 = y * (signed)op.strideY - (signed)op.padTop ;
+          int x2 = min(x1 + op.poolWidth, (int)width) ;
+          int y2 = min(y1 + op.poolHeight, (int)height) ;
+          x1 = max(x1, 0) ;
+          y1 = max(y1, 0) ;
+          Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * outputHeight + y]) ;
+          for (int u = x1 ; u < x2 ; ++u) {
+            for (int v = y1 ; v < y2 ; ++v) {
+              acc.accumulate_backward(&inputData[u * height + v],
+                                      &derInputData[u * height + v]) ;
+            }
+          }
+          acc.done_backward() ;
+        }
+      }
+      inputData += width*height ;
+      derInputData += width*height ;
+      derOutputData += outputWidth*outputHeight ;
+    }
+    return VLE_Success ;
+  }
+} ;
+
+template<DataType dataType>
+struct PoolingMaxBackward<VLDT_CPU,dataType> :
+public PoolingBackward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+{ } ;
+
+template<DataType dataType>
+struct PoolingAverageBackward<VLDT_CPU,dataType> :
+public PoolingBackward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
+{ } ;
+
+// -------------------------------------------------------------------
+//                                                              Driver
+// -------------------------------------------------------------------
 
 #if ENABLE_GPU
-    case vl::VLDT_GPU:
-#if ENABLE_CUDNN
-      if (context.getCudaHelper().getCudnnEnabled()) {
-        /*
-         Unfortunately CuDNN requires both the input and the output pooling arrays
-         to be available for computing derivatives, whereas MatConvNet only requires the input one.
-         */
-      }
+#include "nnPooling_gpu.cu"
 #endif
-      DISPATCH3(vl::VLDT_GPU) ;
-      if (status == VLE_Cuda) {
-        context.setError(context.getCudaHelper().catchCudaError("pooling_*::backward")) ;
-      }
-      break ;
-#endif
+
+Pooling::Pooling(Context &context,
+                 int poolHeight, int poolWidth,
+                 int strideY, int strideX,
+                 int padTop, int padBottom,
+                 int padLeft, int padRight,
+                 Method method) :
+context(context),
+poolHeight(poolHeight),
+poolWidth(poolWidth),
+strideY(strideY),
+strideX(strideX),
+padTop(padTop),
+padBottom(padBottom),
+padLeft(padLeft),
+padRight(padRight),
+method(method)
+{ }
+
+vl::ErrorCode
+Pooling::forward(vl::Tensor output,vl::Tensor input)
+{
+  switch (method) {
+    case Max: return dispatch<PoolingMaxForward>()(*this,output,input) ;
+    case Average: return dispatch<PoolingAverageForward>()(*this,output,input) ;
+    default: return VLE_IllegalArgument ;
   }
-  return context.passError(status, "nnpooling_backward") ;
+}
+
+vl::ErrorCode
+Pooling::backward(vl::Tensor derInput,
+                  vl::Tensor input,
+                  vl::Tensor derOutput)
+{
+  switch (method) {
+    case Max: return dispatch<PoolingMaxBackward>()(*this,derInput,input,derOutput) ;
+    case Average: return dispatch<PoolingAverageBackward>()(*this,derInput,input,derOutput) ;
+    default: return VLE_IllegalArgument ;
+  }
 }
