@@ -15,7 +15,35 @@ the terms of the BSD license (see the COPYING file).
 #define __vl__nnroipooling__
 
 #include "data.hpp"
-#include <stdio.h>
+#include <array>
+
+namespace vl { namespace nn {
+
+  class ROIPooling {
+  public:
+    enum Method { Max, Average } ;
+
+    ROIPooling(vl::Context &context,
+               std::array<int,2> subdivisions,
+               std::array<double,6> transform,
+               Method method) ;
+
+    vl::ErrorCode forward(vl::Tensor output,
+                          vl::Tensor input,
+                          vl::Tensor rois) ;
+
+    vl::ErrorCode backward(vl::Tensor derInput,
+                           vl::Tensor input,
+                           vl::Tensor rois,
+                           vl::Tensor derOutput) ;
+
+    vl::Context& context ;
+    std::array<int,2> subdivisions ;
+    std::array<double,6> transform ;
+    Method method ;
+  } ;
+  
+} }
 
 namespace vl {
   enum ROIPoolingMethod { vlROIPoolingMax, vlROIPoolingAverage } ;
