@@ -1,5 +1,5 @@
-// @file roipooling_gpu.cu
-// @brief Region of interest pooling block implementation (GPU)
+// @file nnroipooling_gpu.cu
+// @brief ROI pooling block (GPU)
 // @author Hakan Bilen
 // @author Abishek Dutta
 // @author Andrea Vedaldi

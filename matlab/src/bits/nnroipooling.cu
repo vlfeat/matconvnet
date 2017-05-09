@@ -1,11 +1,11 @@
 // @file nnroipooling.cu
-// @brief roipooling block
+// @brief ROI pooling block
 // @author Hakan Bilen
 // @author Abishek Dutta
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2016 Hakan Bilen, Abishek Dutta, and Andrea Vedaldi.
+Copyright (C) 2016-17 Hakan Bilen, Abishek Dutta, and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
