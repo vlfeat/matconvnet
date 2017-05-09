@@ -20,9 +20,9 @@ namespace vl { namespace nn {
   class Subsample {
   public:
     Subsample(vl::Context &context,
-        int strideY, int strideX,
-        int padTop, int padBottom,
-        int padLeft, int padRight) ;
+              int strideY, int strideX,
+              int padTop, int padBottom,
+              int padLeft, int padRight) ;
 
     vl::ErrorCode forwardWithBias(vl::Tensor output,
                                   vl::Tensor input,

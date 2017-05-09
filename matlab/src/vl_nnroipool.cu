@@ -70,9 +70,9 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  int subdivisions [] = {1, 1} ;
-  double transform [] = {1., 0., 0., 1., 0., 0.} ;
-  vl::ROIPoolingMethod method = vl::vlROIPoolingMax ;
+  std::array<int,2> subdivisions {1, 1} ;
+  std::array<double,6> transform {1., 0., 0., 1., 0., 0.} ;
+  vl::nn::ROIPooling::Method method = vl::nn::ROIPooling::Max ;
   bool backMode = false ;
   int verbosity = 0 ;
   int opt ;
@@ -108,9 +108,9 @@ void mexFunction(int nout, mxArray *out[],
           vlmxError(VLMXE_IllegalArgument, "METHOD is not a string.") ;
         }
         if (vlmxIsEqualToStringI(optarg, "max")) {
-          method = vl::vlROIPoolingMax ;
+          method = vl::nn::ROIPooling::Max ;
         } else if (vlmxIsEqualToStringI(optarg, "avg")) {
-          method = vl::vlROIPoolingAverage ;
+          method = vl::nn::ROIPooling::Average ;
         } else {
           vlmxError(VLMXE_IllegalArgument, "METHOD is not a supported method.") ;
         }
@@ -155,7 +155,8 @@ void mexFunction(int nout, mxArray *out[],
             break ;
 
           case 6:
-            memcpy(transform, mxGetPr(optarg), 6 * sizeof(transform[0])) ;
+            std::copy(mxGetPr(optarg), mxGetPr(optarg) + transform.size(),
+                      transform.begin()) ;
             break ;
 
           default:
@@ -247,18 +248,12 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   vl::ErrorCode error ;
+  vl::nn::ROIPooling op(context,subdivisions,transform,method) ;
+
   if (!backMode) {
-    error = vl::nnroipooling_forward(context,
-                                     output, data, rois,
-                                     method,
-                                     subdivisions,
-                                     transform) ;
+    error = op.forward(output, data, rois) ;
   } else {
-    error = vl::nnroipooling_backward(context,
-                                      derData, data, rois, derOutput,
-                                      method,
-                                      subdivisions,
-                                      transform) ;
+    error = op.backward(derData, data, rois, derOutput) ;
   }
 
   /* -------------------------------------------------------------- */

@@ -113,7 +113,7 @@ struct ROIPoolingForward
                            Tensor rois)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto numROIs = rois.getSize() ; // todo: check
+    auto numROIs = rois.getNumElements() / 5 ;
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
     auto depth = input.getDepth() ;
@@ -139,10 +139,10 @@ struct ROIPoolingForward
       // First and last pixel of each ROI (rounded
       // for compatibility with the Caffe definition).
       int roi_image   = (int)roisData[5 * roi + 0];
-      int roi_start_h = (int)round(v1) - 1 ;
-      int roi_start_w = (int)round(u1) - 1 ;
-      int roi_end_h   = (int)round(v2) - 1 ;
-      int roi_end_w   = (int)round(u2) - 1 ;
+      int roi_start_h = (int)::round(v1) - 1 ;
+      int roi_start_w = (int)::round(u1) - 1 ;
+      int roi_end_h   = (int)::round(v2) - 1 ;
+      int roi_end_w   = (int)::round(u2) - 1 ;
       int roi_height  = max(roi_end_h - roi_start_h + 1, 1) ;
       int roi_width   = max(roi_end_w - roi_start_w + 1, 1) ;
 
@@ -213,7 +213,7 @@ struct ROIPoolingBackward
                            Tensor derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto numROIs = rois.getSize() ; // todo: check
+    auto numROIs = rois.getNumElements() / 5 ;
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
     auto depth = input.getDepth() ;
@@ -240,10 +240,10 @@ struct ROIPoolingBackward
       // First and last pixel of each ROI (rounded
       // for compatibility with the Caffe definition).
       int roi_image   = (int)roisData[5 * roi + 0];
-      int roi_start_h = (int)round(v1) - 1 ;
-      int roi_start_w = (int)round(u1) - 1 ;
-      int roi_end_h   = (int)round(v2) - 1 ;
-      int roi_end_w   = (int)round(u2) - 1 ;
+      int roi_start_h = (int)::round(v1) - 1 ;
+      int roi_start_w = (int)::round(u1) - 1 ;
+      int roi_end_h   = (int)::round(v2) - 1 ;
+      int roi_end_w   = (int)::round(u2) - 1 ;
       int roi_height = max(roi_end_h - roi_start_h + 1, 1) ;
       int roi_width = max(roi_end_w - roi_start_w + 1, 1) ;
 
@@ -306,7 +306,7 @@ public ROIPoolingBackward<dataType,acc_max<typename vl::DataTypeTraits<dataType>
 // -------------------------------------------------------------------
 
 #if ENABLE_GPU
-#include "nnnormalizelp_gpu.cu"
+#include "nnroipooling_gpu.cu"
 #endif
 
 ROIPooling::ROIPooling(Context &context,
@@ -327,6 +327,7 @@ ROIPooling::forward(vl::Tensor output,
   switch (method) {
     case Max: return dispatch<ROIPoolingMaxForward>()(*this,output,input,rois) ;
     case Average: return dispatch<ROIPoolingAverageForward>()(*this,output,input,rois) ;
+    default: return VLE_IllegalArgument ;
   }
 }
 
@@ -339,5 +340,6 @@ ROIPooling::backward(vl::Tensor derInput,
   switch (method) {
     case Max: return dispatch<ROIPoolingMaxBackward>()(*this,derInput,input,rois,derOutput) ;
     case Average: return dispatch<ROIPoolingAverageBackward>()(*this,derInput,input,rois,derOutput) ;
+    default: return VLE_IllegalArgument ;
   }
 }
