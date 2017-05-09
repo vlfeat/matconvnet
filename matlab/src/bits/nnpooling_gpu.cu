@@ -283,11 +283,11 @@ struct GPUPoolingForward
     auto outputData = (type*)output.getMemory() ;
     auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
     auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
-    auto outputVolume = outputWidth * outputHeight * depth ;
+    auto outputVolume = outputWidth * outputHeight * depth * size ;
 
     if (method == Pooling::Max) {
       pooling_max_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), (size_t)VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (outputData, inputData,
        outputHeight, outputWidth, outputVolume,
        height, width,
@@ -347,8 +347,8 @@ struct GPUPoolingBackward
     auto derInputData = (type*)derInput.getMemory() ;
     auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
     auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
-    auto outputVolume = outputWidth * outputHeight * depth ;
-    auto dataVolume = width * height * depth ;
+    auto outputVolume = outputWidth * outputHeight * depth * size ;
+    auto inputVolume = width * height * size * depth ;
 
     if (method == Pooling::Max) {
       pooling_max_backward_kernel<type>
@@ -362,10 +362,10 @@ struct GPUPoolingBackward
     }
     else if (method == Pooling::Average) {
       pooling_average_backward_kernel<type>
-      <<< divideAndRoundUp(dataVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derInputData, derOutputData, dataVolume,
+      <<< divideAndRoundUp(inputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derInputData, derOutputData, inputVolume,
        outputHeight, outputWidth,
-       height, width, dataVolume,
+       height, width, size * depth,
        op.poolHeight, op.poolWidth,
        op.strideY, op.strideX,
        op.padTop, op.padLeft) ;
