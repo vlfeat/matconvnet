@@ -24,13 +24,13 @@ namespace vl { namespace nn {
               int padTop, int padBottom,
               int padLeft, int padRight) ;
 
-    vl::ErrorCode forwardWithBias(vl::Tensor output,
-                                  vl::Tensor input,
-                                  vl::Tensor biases) ;
+    vl::ErrorCode forwardWithBias(vl::Tensor &output,
+                                  vl::Tensor const &input,
+                                  vl::Tensor const &biases) ;
 
-    vl::ErrorCode backwardWithBias(vl::Tensor derInput,
-                                   vl::Tensor derBiases,
-                                   vl::Tensor derOutput) ;
+    vl::ErrorCode backwardWithBias(vl::Tensor &derInput,
+                                   vl::Tensor &derBiases,
+                                   vl::Tensor const &derOutput) ;
 
     vl::Context& context ;
     int strideY ;

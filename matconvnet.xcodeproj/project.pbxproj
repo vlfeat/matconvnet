@@ -82,6 +82,7 @@
 		2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = copy_cpu.cpp; path = matlab/src/bits/impl/copy_cpu.cpp; sourceTree = "<group>"; };
 		2D2FBAC11EC309F8001039FA /* nnbnorm_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm_cudnn.cu; path = matlab/src/bits/nnbnorm_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D2FBAC21EC309F8001039FA /* nnbnorm_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm_gpu.cu; path = matlab/src/bits/nnbnorm_gpu.cu; sourceTree = "<group>"; };
+		2D3492D31EC3C5BF00D9ED38 /* nnsubsample_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnsubsample_gpu.cu; path = matlab/src/bits/nnsubsample_gpu.cu; sourceTree = "<group>"; };
 		2D375DBB18A7F790008A97EE /* vl_nnconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnconv.m; path = matlab/vl_nnconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
 		2D375DBE18A7F79E008A97EE /* vl_nnconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnconv.cu; path = matlab/src/vl_nnconv.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -122,9 +123,6 @@
 		2D479D0E1A88AF4300826D48 /* im2row.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = im2row.hpp; path = matlab/src/bits/impl/im2row.hpp; sourceTree = "<group>"; };
 		2D479D0F1A88AF4300826D48 /* nnconv_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnconv_cudnn.cu; path = matlab/src/bits/impl/nnconv_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D479D101A88AF4300826D48 /* nnconv_cudnn.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnconv_cudnn.hpp; path = matlab/src/bits/impl/nnconv_cudnn.hpp; sourceTree = "<group>"; };
-		2D479D111A88AF4300826D48 /* subsample_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = subsample_gpu.cu; path = matlab/src/bits/impl/subsample_gpu.cu; sourceTree = "<group>"; };
-		2D479D121A88AF4300826D48 /* subsample_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = subsample_cpu.cpp; path = matlab/src/bits/impl/subsample_cpu.cpp; sourceTree = "<group>"; };
-		2D479D131A88AF4300826D48 /* subsample.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = subsample.hpp; path = matlab/src/bits/impl/subsample.hpp; sourceTree = "<group>"; };
 		2D47A19C1A88CB0900826D48 /* datacu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datacu.cu; path = matlab/src/bits/datacu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D47A19D1A88CB0900826D48 /* datacu.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = datacu.hpp; path = matlab/src/bits/datacu.hpp; sourceTree = "<group>"; };
 		2D4E88271C37FAB80074DDEE /* sharedmem.cuh */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = sharedmem.cuh; path = matlab/src/bits/impl/sharedmem.cuh; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -406,6 +404,7 @@
 				2D7A6F6F1D8C5377008F8B22 /* nnroipooling.hpp */,
 				2D7B11351A8AC85300A3D8A0 /* nnsubsample.cpp */,
 				2DA349BA1A86C5210073185F /* nnsubsample.cu */,
+				2D3492D31EC3C5BF00D9ED38 /* nnsubsample_gpu.cu */,
 				2DA349BB1A86C5210073185F /* nnsubsample.hpp */,
 			);
 			name = bits;
@@ -451,9 +450,6 @@
 				2D479D0F1A88AF4300826D48 /* nnconv_cudnn.cu */,
 				2D479D101A88AF4300826D48 /* nnconv_cudnn.hpp */,
 				2D4E88271C37FAB80074DDEE /* sharedmem.cuh */,
-				2D479D121A88AF4300826D48 /* subsample_cpu.cpp */,
-				2D479D111A88AF4300826D48 /* subsample_gpu.cu */,
-				2D479D131A88AF4300826D48 /* subsample.hpp */,
 				2D19E6761AB20B2900D4FF0C /* tinythread.cpp */,
 				2D19E6771AB20B2900D4FF0C /* tinythread.h */,
 				2D6541BD1EC09CA6006E856E /* dispatcher.hpp */,

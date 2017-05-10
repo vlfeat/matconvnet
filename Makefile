@@ -183,7 +183,6 @@ endif
 
 # CPU-specific files
 cpp_src+=matlab/src/bits/impl/im2row_cpu.cpp
-cpp_src+=matlab/src/bits/impl/subsample_cpu.cpp
 cpp_src+=matlab/src/bits/impl/copy_cpu.cpp
 cpp_src+=matlab/src/bits/impl/bilinearsampler_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
@@ -195,7 +194,6 @@ endif
 # GPU-specific files
 ifdef ENABLE_GPU
 cpp_src+=matlab/src/bits/impl/im2row_gpu.cu
-cpp_src+=matlab/src/bits/impl/subsample_gpu.cu
 cpp_src+=matlab/src/bits/impl/copy_gpu.cu
 cpp_src+=matlab/src/bits/impl/bilinearsampler_gpu.cu
 cpp_src+=matlab/src/bits/datacu.cu
