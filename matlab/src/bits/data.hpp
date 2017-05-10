@@ -228,6 +228,7 @@ namespace vl {
     Tensor(TensorShape const & shape, DataType dataType,
            DeviceType deviceType, void * memory, size_t memorySize) ;
     void * getMemory() ;
+    void const * getMemory() const ;
     DeviceType getDeviceType() const ;
     TensorShape getShape() const ;
     DataType getDataType() const ;
