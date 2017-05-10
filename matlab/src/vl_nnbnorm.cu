@@ -258,7 +258,7 @@ void mexFunction(int nout, mxArray *out[],
     if (!givenMomentsMode) {
       error = op.forward(output,moments,data,multipliers,biases) ;
     } else {
-      error = op.forwardWithMoments(output,moments,data,multipliers,biases) ;
+      error = op.forwardWithMoment(output,moments,data,multipliers,biases) ;
     }
   } else {
     if (!givenMomentsMode) {
@@ -271,14 +271,14 @@ void mexFunction(int nout, mxArray *out[],
                           biases,
                           derOutput) ;
     } else {
-      error = op.backwardWithMoments(derData,
-                                     derMultipliers,
-                                     derBiases,
-                                     moments,
-                                     data,
-                                     multipliers,
-                                     biases,
-                                     derOutput) ;
+      error = op.backwardWithMoment(derData,
+                                    derMultipliers,
+                                    derBiases,
+                                    moments,
+                                    data,
+                                    multipliers,
+                                    biases,
+                                    derOutput) ;
     }
   }
 

@@ -90,6 +90,8 @@ struct BatchNormForwardWithMomentCudnn
     assert(multiplier) ;
     assert(bias) ;
 
+    if (op.epsilon < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
+
     typedef typename DataTypeTraits<dataType>::type type ;
     size_t workspaceSize ;
     type * workspace ;
@@ -154,7 +156,7 @@ struct BatchNormForwardWithMomentCudnn
              meanMemory, varMemory, CUDNN_BN_MIN_EPSILON)) ;
     }
 
-    // Cleanup.
+    // Finish.
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
@@ -176,6 +178,8 @@ struct BatchNormForwardCudnn
     assert(input) ;
     assert(multiplier) ;
     assert(bias) ;
+
+    if (op.epsilon < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
@@ -212,13 +216,13 @@ struct BatchNormForwardCudnn
                                      cudnnDataType,
                                      1, input.getDepth(), 1, 1)) ;
 
-
     // Run CuDNN batch normalization implementation.
     {
       type alpha = 1.0f ;
       type beta = 0.0f ;
       type * meanMemory = NULL ;
       type * varMemory = NULL ;
+
       if (moment) {
         meanMemory = (type*)moment.getMemory()  ;
         varMemory = meanMemory + input.getDepth() ;
@@ -252,7 +256,7 @@ struct BatchNormForwardCudnn
       }
     }
 
-    // Cleanup.
+    // Finish.
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
@@ -285,6 +289,8 @@ struct BatchNormBackwardWithMomentCudnn
     assert(multiplier) ;
     assert(bias) ;
     assert(derOutput) ;
+
+    if (op.epsilon < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
     size_t workspaceSize ;
@@ -335,7 +341,7 @@ struct BatchNormBackwardWithMomentCudnn
                                      1, input.getDepth(), 1, 1)) ;
 
 
-    // Compute moment using CuDNN.
+    // Scrarch space to provide moments in CuDNN format.
     workspaceSize = derInput.getDepth() ;
     workspace = (type*)op.context.getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
@@ -346,7 +352,7 @@ struct BatchNormBackwardWithMomentCudnn
       type * stdMemory = meanMemory + input.getDepth() ;
       type * istdMemory = workspace ;
 
-      // Note: the CuDNN manual describes the varMemory output above
+      // The CuDNN manual describes the varMemory output above
       // as inverse variance, but it is the inverse standard deviation instead.
       size_t const blockSize = VL_CUDA_NUM_THREADS ;
       inverse<type> <<<divideAndRoundUp(input.getDepth(),blockSize),blockSize>>>
@@ -367,7 +373,7 @@ struct BatchNormBackwardWithMomentCudnn
              meanMemory, istdMemory)) ;
     }
 
-    // Cleanup.
+    // Finish.
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
@@ -383,7 +389,7 @@ struct BatchNormBackwardCudnn
                            Tensor &derInput,
                            Tensor &derMultiplier,
                            Tensor &derBias,
-                           Tensor const &moment,
+                           Tensor &moment,
                            Tensor const &input,
                            Tensor const &multiplier,
                            Tensor const &bias,
@@ -392,11 +398,12 @@ struct BatchNormBackwardCudnn
     assert(derInput) ;
     assert(derMultiplier) ;
     assert(derBias) ;
-    assert(moment) ;
     assert(input) ;
     assert(multiplier) ;
     assert(bias) ;
     assert(derOutput) ;
+
+    if (op.epsilon < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
     size_t workspaceSize ;
@@ -477,14 +484,14 @@ struct BatchNormBackwardCudnn
              op.epsilon,
              meanMemory, varMemory)) ;
 
-      // Note: the CuDNN manual describes the varMemory output above
+      // The CuDNN manual describes the varMemory output above
       // as inverse variance, but it is the inverse standard deviation instead.
       size_t const blockSize = VL_CUDA_NUM_THREADS ;
       inverse<type> <<<divideAndRoundUp(input.getDepth(),blockSize),blockSize>>>
       (varMemory, input.getDepth()) ;
     }
 
-    // Cleanup.
+    // Finish.
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
