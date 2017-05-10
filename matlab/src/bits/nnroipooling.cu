@@ -22,10 +22,8 @@ using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
 
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingMaxForward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingMaxBackward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingAverageForward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingAverageBackward ;
+template<DeviceType deviceType, DataType dataType> struct ROIPoolingForward ;
+template<DeviceType deviceType, DataType dataType> struct ROIPoolingBackward ;
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -95,17 +93,13 @@ struct acc_sum
   type scale;
 } ;
 
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingMaxForward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingMaxBackward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingAverageForward ;
-template<DeviceType deviceType, DataType dataType> struct ROIPoolingAverageBackward ;
 
 // -------------------------------------------------------------------
 //                                                             Forward
 // -------------------------------------------------------------------
 
 template<DataType dataType, class Accumulator>
-struct ROIPoolingForward
+struct ROIPoolingForwardCPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
                            Tensor pooled,
@@ -194,22 +188,33 @@ struct ROIPoolingForward
 } ;
 
 template<DataType dataType>
-struct ROIPoolingMaxForward<VLDT_CPU,dataType> :
-public ROIPoolingForward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
-
-template<DataType dataType>
-struct ROIPoolingAverageForward<VLDT_CPU,dataType> :
-public ROIPoolingForward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
-
+struct ROIPoolingForward<VLDT_CPU,dataType>
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor pooled,
+                           Tensor input,
+                           Tensor rois)
+  {
+    switch (op.method) {
+      case ROIPooling::Max:
+        return
+        ROIPoolingForwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,pooled,input,rois) ;
+      case ROIPooling::Average:
+        return
+        ROIPoolingForwardCPU<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,pooled,input,rois) ;
+      default: return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
 // -------------------------------------------------------------------
 //                                                            Backward
 // -------------------------------------------------------------------
 
 template<DataType dataType, class Accumulator>
-struct ROIPoolingBackward
+struct ROIPoolingBackwardCPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
                            Tensor derInput,
@@ -297,14 +302,25 @@ struct ROIPoolingBackward
 } ;
 
 template<DataType dataType>
-struct ROIPoolingMaxBackward<VLDT_CPU,dataType> :
-public ROIPoolingBackward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
-
-template<DataType dataType>
-struct ROIPoolingAverageBackward<VLDT_CPU,dataType> :
-public ROIPoolingBackward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
+struct ROIPoolingBackward<VLDT_CPU,dataType>
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor derInput,
+                           Tensor input,
+                           Tensor rois,
+                           Tensor derOutput)
+  {
+    switch (op.method) {
+      case ROIPooling::Max: return
+        ROIPoolingBackwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,derInput,input,rois,derOutput) ;
+      case ROIPooling::Average: return
+        ROIPoolingBackwardCPU<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,derInput,input,rois,derOutput) ;
+      default: return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
 // -------------------------------------------------------------------
 //                                                              Driver
@@ -329,11 +345,7 @@ ROIPooling::forward(vl::Tensor output,
                     vl::Tensor input,
                     vl::Tensor rois)
 {
-  switch (method) {
-    case Max: return dispatch<ROIPoolingMaxForward>()(*this,output,input,rois) ;
-    case Average: return dispatch<ROIPoolingAverageForward>()(*this,output,input,rois) ;
-    default: return VLE_IllegalArgument ;
-  }
+  return dispatch<ROIPoolingForward>()(*this,output,input,rois) ;
 }
 
 vl::ErrorCode
@@ -342,9 +354,5 @@ ROIPooling::backward(vl::Tensor derInput,
                      vl::Tensor rois,
                      vl::Tensor derOutput)
 {
-  switch (method) {
-    case Max: return dispatch<ROIPoolingMaxBackward>()(*this,derInput,input,rois,derOutput) ;
-    case Average: return dispatch<ROIPoolingAverageBackward>()(*this,derInput,input,rois,derOutput) ;
-    default: return VLE_IllegalArgument ;
-  }
+  return dispatch<ROIPoolingBackward>()(*this,derInput,input,rois,derOutput) ;
 }

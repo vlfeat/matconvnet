@@ -86,7 +86,7 @@ namespace vl { namespace impl {
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
     outputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
-                                       DataTypeToCudnn<dataType>::id ,
+                                       DataTypeToCudnn<dataType>::dataType ,
                                        output.getSize(), // sizes
                                        numFiltersPerGroup,
                                        output.getWidth(),
@@ -99,7 +99,7 @@ namespace vl { namespace impl {
     CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
     dataDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                       DataTypeToCudnn<dataType>::id,
+                                       DataTypeToCudnn<dataType>::dataType,
                                        data.getSize(),
                                        data.getDepth() / numGroups,
                                        data.getWidth(),
@@ -112,7 +112,7 @@ namespace vl { namespace impl {
     CHECK(cudnnCreateFilterDescriptor(&filtersDesc)) ;
     filtersDescInitialized = true ;
     CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
-                                     DataTypeToCudnn<dataType>::id,
+                                     DataTypeToCudnn<dataType>::dataType,
                                      IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                      numFiltersPerGroup,
                                      filters.getDepth(),
@@ -124,7 +124,7 @@ namespace vl { namespace impl {
       biasesDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(biasesDesc,
                                        CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::id ,
+                                       DataTypeToCudnn<dataType>::dataType ,
                                        1,
                                        biases.getNumElements() / numGroups,
                                        1,
@@ -302,7 +302,7 @@ namespace vl { namespace impl {
       CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
       dataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                         DataTypeToCudnn<dataType>::id ,
+                                         DataTypeToCudnn<dataType>::dataType ,
                                          derData.getSize(),
                                          derData.getDepth() / numGroups,
                                          derData.getWidth(),
@@ -315,7 +315,7 @@ namespace vl { namespace impl {
       CHECK(cudnnCreateFilterDescriptor(&filtersDesc)) ;
       filtersDescInitialized = true ;
       CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
-                                       DataTypeToCudnn<dataType>::id ,
+                                       DataTypeToCudnn<dataType>::dataType ,
                                        IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                        numFiltersPerGroup,
                                        filters.getDepth(),
@@ -330,7 +330,7 @@ namespace vl { namespace impl {
       CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
       dataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                         DataTypeToCudnn<dataType>::id ,
+                                         DataTypeToCudnn<dataType>::dataType ,
                                          data.getSize(),
                                          data.getDepth() / numGroups,
                                          data.getWidth(),
@@ -343,7 +343,7 @@ namespace vl { namespace impl {
       CHECK(cudnnCreateFilterDescriptor(&filtersDesc)) ;
       filtersDescInitialized = true ;
       CHECK(cudnnSetFilter4dDescriptor(filtersDesc,
-                                       DataTypeToCudnn<dataType>::id ,
+                                       DataTypeToCudnn<dataType>::dataType ,
                                        IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
                                        numFiltersPerGroup,
                                        derFilters.getDepth(),
@@ -364,7 +364,7 @@ namespace vl { namespace impl {
     CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
     derOutputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
-                                       DataTypeToCudnn<dataType>::id ,
+                                       DataTypeToCudnn<dataType>::dataType ,
                                        derOutput.getSize(), // sizes
                                        numFiltersPerGroup,
                                        derOutput.getWidth(),
@@ -380,7 +380,7 @@ namespace vl { namespace impl {
       derBiasesDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(derBiasesDesc,
                                        CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::id ,
+                                       DataTypeToCudnn<dataType>::dataType ,
                                        1,
                                        derBiases.getNumElements() / numGroups,
                                        1,

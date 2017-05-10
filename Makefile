@@ -82,6 +82,7 @@ LDFLAGS =
 LDOPTIMFLAGS =
 LINKLIBS = -lmwblas
 
+NVCCFLAGS =
 NVCCFLAGS_PASS = --std=c++11 -D_FORCE_INLINES -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 NVCCVER = $(shell $(NVCC) --version | \
 sed -n 's/.*V\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/p' | \
@@ -93,6 +94,9 @@ ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 IMAGELIB ?= $(if $(ENABLE_IMREADJPEG),quartz,none)
 CXXFLAGS_PASS += -mmacosx-version-min=10.9
 CXXOPTIMFLAGS += -mssse3 -ffast-math
+ifdef DEVELOPER_DIR
+NVCCFLAGS += --compiler-bindir=$(shell DEVELOPER_DIR="$(DEVELOPER_DIR)" xcrun -f clang++)
+endif
 LDFLAGS += \
 -mmacosx-version-min=10.9 \
 $(if $(ENABLE_GPU),-Wl$(comma)-rpath -Wl$(comma)"$(CUDAROOT)/lib") \
@@ -258,7 +262,7 @@ LDFLAGS='$$LDFLAGS $(LDFLAGS)' \
 LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)' \
 LINKLIBS='$(LINKLIBS) $$LINKLIBS' \
 
-NVCCFLAGS = $(CXXFLAGS) $(NVCCFLAGS_PASS) \
+NVCCFLAGS += $(CXXFLAGS) $(NVCCFLAGS_PASS) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 $(call nvcc-quote,-fPIC $(CXXFLAGS_PASS) $(CXXOPTIMFLAGS))

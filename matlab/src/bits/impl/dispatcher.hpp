@@ -58,4 +58,35 @@ struct dispatch
   }
 } ;
 
+
+template <
+template <vl::DeviceType deviceType, vl::DataType dataType> class C,
+template <vl::DataType dataType> class CU >
+struct dispatch_cudnn
+{
+  template <class B, typename ... Types>
+  vl::ErrorCode operator()(B& base, vl::Tensor output, Types ... args)
+  {
+    vl::ErrorCode error ;
+#if ENABLE_GPU
+    if (output.getDeviceType() == vl::VLDT_GPU) {
+      switch (output.getDataType()) {
+        case vl::VLDT_Float:
+          error = CU<vl::VLDT_Float>()(base,output,args...) ;
+          break ;
+        case vl::VLDT_Double:
+          error = CU<vl::VLDT_Double>()(base,output,args...) ;
+          break ;
+        default: assert(false) ;
+      }
+      if (error == vl::VLE_Success) { return error ; }
+      if (error == vl::VLE_Unsupported) { goto fallback ; }
+      return base.context.passError(error, __func__) ;
+    }
+#endif
+  fallback:
+    return dispatch<C>()(base,output,args...) ;
+  }
+} ;
+
 #endif

@@ -1,74 +1,66 @@
-// @file nnpooling_blas.cu
+// @file nnpooling_cudnn.cu
 // @brief Pooling block CuDNN-based implementation.
 // @author Andrea Vedaldi
 
 /*
- Copyright (C) 2015-16 Andrea Vedaldi.
- All rights reserved.
+Copyright (C) 2015-17 Andrea Vedaldi.
+All rights reserved.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
-#if !defined(ENABLE_GPU) | !defined(ENABLE_CUDNN)
-#error "nnpooling_cudnn.hpp cannot be compiled without GPU and CUDNN support."
-#endif
+#include "nnpooling.hpp"
+#include "impl/cudnnhelper.hpp"
+#include "datacu.hpp"
+#include <cassert>
 
-#include "nnpooling_cudnn.hpp"
-#include "cudnnhelper.hpp"
-#include "../datacu.hpp"
-#include <assert.h>
-
+using namespace std ;
 using namespace vl ;
+using namespace vl::nn ;
+using namespace vl::impl ;
 
 #define CHECK(x) \
 { \
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = context.setError(context.getCudaHelper().catchCudnnError(cudnnError, \
+error = op.context.setError(op.context.getCudaHelper().catchCudnnError(cudnnError, \
 STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
 goto done ; \
 } }
 
-/* ---------------------------------------------------------------- */
-/*                                         nnpooling_cudnn::forward */
-/* ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
 
 
-namespace vl { namespace impl {
-
-
-  template<vl::DataType dataType>
-  vl::ErrorCode
-  nnpooling_cudnn<dataType>::forward(Context& context,
-                                     Tensor output,
-                                     Tensor data,
-                                     PoolingMethod method,
-                                     int poolHeight, int poolWidth,
-                                     int strideY, int strideX,
-                                     int padTop, int padBottom,
-                                     int padLeft, int padRight)
+template<DataType dataType>
+struct PoolingForwardCudnn
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor output,
+                           Tensor input)
   {
     assert(output) ;
-    assert(data) ;
+    assert(input) ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    cudnnTensorDescriptor_t outputDesc, dataDesc ;
+    cudnnTensorDescriptor_t outputDesc, inputDesc ;
     cudnnPoolingDescriptor_t poolingDesc ;
     bool outputDescInitialized = false ;
-    bool dataDescInitialized = false ;
+    bool inputDescInitialized = false ;
     bool poolingDescInitialized = false ;
 
-    if (padLeft != padRight) return vl::VLE_Unsupported ;
-    if (padTop != padBottom) return vl::VLE_Unsupported ;
+    if (op.padLeft != op.padRight) return vl::VLE_Unsupported ;
+    if (op.padTop != op.padBottom) return vl::VLE_Unsupported ;
 
-    if (method == vlPoolingAverage && (padLeft > 0 | padRight > 0)) {
-      /* This seems like a bug in CUDNN? */
+    if (op.method == Pooling::Average && (op.padLeft > 0 | op.padRight > 0)) {
+      // CuDNN bug? Skip.
       return vl::VLE_Unsupported ;
     }
 
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
 
@@ -76,168 +68,167 @@ namespace vl { namespace impl {
     vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
-    // Get CuDNN
-    CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+    // Get CuDNN.
+    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
 
-    // Get tensor descripotrs
+    // Get tensor descriptors.
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
     outputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptor(outputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     output.getSize(), // sizes
+                                     output.getSize(),
                                      output.getDepth(),
                                      output.getWidth(),
                                      output.getHeight())) ;
 
-    CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-    dataDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptor(dataDesc,
+    CHECK(cudnnCreateTensorDescriptor(&inputDesc)) ;
+    inputDescInitialized = true ;
+    CHECK(cudnnSetTensor4dDescriptor(inputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     data.getSize(),
-                                     data.getDepth(),
-                                     data.getWidth(),
-                                     data.getHeight())) ;
+                                     input.getSize(),
+                                     input.getDepth(),
+                                     input.getWidth(),
+                                     input.getHeight())) ;
 
     CHECK(cudnnCreatePoolingDescriptor(&poolingDesc)) ;
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
-                                      (method == vl::vlPoolingAverage) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      (op.method == Pooling::Average) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
                                       IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
-                                      poolWidth, poolHeight,
-                                      padLeft, padTop,
-                                      strideX, strideY)) ;
+                                      op.poolWidth, op.poolHeight,
+                                      op.padLeft, op.padTop,
+                                      op.strideX, op.strideY)) ;
 
-    // Perform convolution for each filter group
+    // Apply operator.
     {
       type alpha = 1.0f ;
       type beta = 0.0f ;
       CHECK(cudnnPoolingForward(handle,
                                 poolingDesc,
                                 &alpha,
-                                dataDesc, data.getMemory(),
+                                inputDesc, input.getMemory(),
                                 &beta,
                                 outputDesc, output.getMemory())) ;
     }
 
-    /* cleanup */
+    // Finish.
   done:
     if (poolingDescInitialized) { cudnnDestroyPoolingDescriptor(poolingDesc) ; }
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
+    if (inputDescInitialized) { cudnnDestroyTensorDescriptor(inputDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return context.passError(error, "nnpooling_cudnn::forward") ;
+    return op.context.passError(error, "nnpooling_cudnn::forward") ;
   }
+} ;
 
-  /* ---------------------------------------------------------------- */
-  /*                                        nnpooling_cudnn::backward */
-  /* ---------------------------------------------------------------- */
 
-  template<vl::DataType dataType>
-  vl::ErrorCode
-  nnpooling_cudnn<dataType>::backward(Context& context,
-                                      Tensor derData,
-                                      Tensor data,
-                                      Tensor output,
-                                      Tensor derOutput,
-                                      vl::PoolingMethod method,
-                                      int poolHeight, int poolWidth,
-                                      int strideY, int strideX,
-                                      int padTop, int padBottom,
-                                      int padLeft, int padRight)
+template<DataType dataType>
+struct PoolingBackwardCudnn
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor derInput,
+                           Tensor input,
+                           Tensor derOutput)
   {
-    assert(derData) ;
-    assert(data) ;
-    assert(output) ;
+    assert(derInput) ;
+    assert(input) ;
     assert(derOutput) ;
 
+    vl::ErrorCode error = VLE_Success ;
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    cudnnTensorDescriptor_t outputDesc, dataDesc ;
+    cudnnTensorDescriptor_t derOutputDesc, inputDesc ;
     cudnnPoolingDescriptor_t poolingDesc ;
-    bool outputDescInitialized = false ;
-    bool dataDescInitialized = false ;
+    bool derOutputDescInitialized = false ;
+    bool inputDescInitialized = false ;
     bool poolingDescInitialized = false ;
 
-    if (padLeft != padRight) return vl::VLE_Unsupported ;
-    if (padTop != padBottom) return vl::VLE_Unsupported ;
+    if (op.padLeft != op.padRight) return vl::VLE_Unsupported ;
+    if (op.padTop != op.padBottom) return vl::VLE_Unsupported ;
 
-    if (method == vlPoolingAverage && (padLeft > 0 | padRight > 0)) {
-      /* This seems like a bug in CuDNN? */
+    if (op.method == Pooling::Average && (op.padLeft > 0 | op.padRight > 0)) {
+      // CuDNN bug? Skip.
       return vl::VLE_Unsupported ;
     }
 
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
-    vl::DataType dynDataType = output.getDataType() ;
+    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
+    vl::DataType dynDataType = derInput.getDataType() ;
     assert(dynDataType == dataType) ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
+    Tensor output ;
 
-    // Get CuDNN
-    CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+    // CuDNN requires the output of the layer, so we recompute it here.
+    size_t outputDataSize = derOutput.getNumElements() * sizeof(type) ;
+    type * outputData = (type*)op.context.getWorkspace
+    (vl::VLDT_GPU, outputDataSize) ;
+    if (outputData == NULL) {
+      error = VLE_OutOfMemory ;
+      goto done ;
+    }
+    output = Tensor(derOutput, dataType, VLDT_GPU, outputData, outputDataSize) ;
+    error = PoolingForwardCudnn<dataType>()(op,output,input) ;
+    if (error != VLE_Success) {
+      goto done ;
+    }
 
-    // Get tensor descripotrs
-    CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
-    outputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptor(outputDesc,
+    // Get CuDNN.
+    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+
+    // Get tensor descripotrs.
+    CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
+    derOutputDescInitialized = true ;
+    CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     output.getSize(), // sizes
-                                     output.getDepth(),
-                                     output.getWidth(),
-                                     output.getHeight())) ;
+                                     derOutput.getSize(),
+                                     derOutput.getDepth(),
+                                     derOutput.getWidth(),
+                                     derOutput.getHeight())) ;
 
-    CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-    dataDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptor(dataDesc,
+    CHECK(cudnnCreateTensorDescriptor(&inputDesc)) ;
+    inputDescInitialized = true ;
+    CHECK(cudnnSetTensor4dDescriptor(inputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     data.getSize(),
-                                     data.getDepth(),
-                                     data.getWidth(),
-                                     data.getHeight())) ;
+                                     input.getSize(),
+                                     input.getDepth(),
+                                     input.getWidth(),
+                                     input.getHeight())) ;
 
     CHECK(cudnnCreatePoolingDescriptor(&poolingDesc)) ;
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
-                                      (method == vl::vlPoolingAverage) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      (op.method == Pooling::Average) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
                                       IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
-                                      poolWidth, poolHeight,
-                                      padLeft, padTop,
-                                      strideX, strideY)) ;
+                                      op.poolWidth, op.poolHeight,
+                                      op.padLeft, op.padTop,
+                                      op.strideX, op.strideY)) ;
 
-    // Perform convolution for each filter group
+    // Apply operator.
     {
       type alpha = 1.0f ;
       type beta = 0.0f ;
       CHECK(cudnnPoolingBackward(handle,
                                  poolingDesc,
                                  &alpha,
-                                 outputDesc, (type const*)output.getMemory(),
-                                 outputDesc, (type const*)derOutput.getMemory(),
-                                 dataDesc, (type const*)data.getMemory(),
+                                 derOutputDesc, outputData,
+                                 derOutputDesc, (type const*)derOutput.getMemory(),
+                                 inputDesc, (type const*)input.getMemory(),
                                  &beta,
-                                 dataDesc, (type*)derData.getMemory())) ;
+                                 inputDesc, (type*)derInput.getMemory())) ;
     }
 
-    /* cleanup */
+    // Finish.
   done:
     if (poolingDescInitialized) { cudnnDestroyPoolingDescriptor(poolingDesc) ; }
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return context.passError(error, __func__) ;
+    if (inputDescInitialized) { cudnnDestroyTensorDescriptor(inputDesc) ; }
+    if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
+    return op.context.passError(error, __func__) ;
   }
-  
-} }
-
-// Instantiations
-template struct vl::impl::nnpooling_cudnn<vl::VLDT_Float> ;
-
-#ifdef ENABLE_DOUBLE
-template struct vl::impl::nnpooling_cudnn<vl::VLDT_Double> ;
-#endif
+} ;
 
 
 

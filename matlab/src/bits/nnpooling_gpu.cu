@@ -268,7 +268,7 @@ pooling_average_backward_kernel
 // -------------------------------------------------------------------
 
 template<DataType dataType, Pooling::Method method>
-struct GPUPoolingForward
+struct PoolingForwardGPU
 {
   vl::ErrorCode operator()(Pooling &op,
                            Tensor output,
@@ -314,23 +314,34 @@ struct GPUPoolingForward
   }
 } ;
 
-
 template<DataType dataType>
-struct PoolingMaxForward<VLDT_GPU,dataType> :
-public GPUPoolingForward<dataType,Pooling::Max>
-{ } ;
-
-template<DataType dataType>
-struct PoolingAverageForward<VLDT_GPU,dataType> :
-public GPUPoolingForward<dataType,Pooling::Average>
-{ } ;
+struct PoolingForward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor output,
+                           Tensor input)
+  {
+    switch (op.method) {
+      case Pooling::Max:
+        return
+        PoolingForwardGPU<dataType,Pooling::Max>
+        ()(op,output,input) ;
+      case Pooling::Average:
+        return
+        PoolingForwardGPU<dataType,Pooling::Average>
+        ()(op,output,input) ;
+      default:
+        return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
 // -------------------------------------------------------------------
 //                                                            Backward
 // -------------------------------------------------------------------
 
 template<DataType dataType, Pooling::Method method>
-struct GPUPoolingBackward
+struct PoolingBackwardGPU
 {
   vl::ErrorCode operator()(Pooling &op,
                            Tensor derInput,
@@ -381,11 +392,24 @@ struct GPUPoolingBackward
 
 
 template<DataType dataType>
-struct PoolingMaxBackward<VLDT_GPU,dataType> :
-public GPUPoolingBackward<dataType,Pooling::Max>
-{ } ;
-
-template<DataType dataType>
-struct PoolingAverageBackward<VLDT_GPU,dataType> :
-public GPUPoolingBackward<dataType,Pooling::Average>
-{ } ;
+struct PoolingBackward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor derInput,
+                           Tensor input,
+                           Tensor derOutput)
+  {
+    switch (op.method) {
+      case Pooling::Max:
+        return
+        PoolingBackwardGPU<dataType,Pooling::Max>
+        ()(op,derInput,input,derOutput) ;
+      case Pooling::Average:
+        return
+        PoolingBackwardGPU<dataType,Pooling::Average>
+        ()(op,derInput,input,derOutput) ;
+      default:
+        return VLE_IllegalArgument ;
+    }
+  }
+} ;

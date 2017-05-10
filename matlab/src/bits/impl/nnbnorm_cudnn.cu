@@ -65,7 +65,7 @@ vl::impl::nnbnorm_cudnn<dataType>::forward(vl::Context& context,
   bool dataDescInitialized = false ;
   bool momentDescInitialized = false ;
 
-  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
   vl::DataType dynDataType = output.getDataType() ;
   assert(dynDataType == dataType) ;
 
@@ -174,7 +174,7 @@ vl::impl::nnbnorm_cudnn<dataType>::forward_given_moments(vl::Context& context,
   bool dataDescInitialized = false ;
   bool momentDescInitialized = false ;
 
-  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
   vl::DataType dynDataType = output.getDataType() ;
   assert(dynDataType == dataType) ;
 
@@ -268,7 +268,7 @@ vl::impl::nnbnorm_cudnn<dataType>::backward(Context& context,
   bool derOutputDescInitialized = false ;
   bool momentDescInitialized = false ;
 
-  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
   vl::DataType dynDataType = derOutput.getDataType() ;
   assert(dynDataType == dataType) ;
 
@@ -392,7 +392,7 @@ vl::impl::nnbnorm_cudnn<dataType>::backward_given_moments(Context& context,
   bool dataDescInitialized = false ;
   bool momentDescInitialized = false ;
 
-  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+  cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
   vl::DataType dynDataType = derOutput.getDataType() ;
   assert(dynDataType == dataType) ;
 

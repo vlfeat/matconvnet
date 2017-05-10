@@ -64,7 +64,7 @@ namespace vl { namespace impl {
     outputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptor(outputDesc,
                                      CUDNN_TENSOR_NCHW,
-                                     DataTypeToCudnn<dataType>::id,
+                                     DataTypeToCudnn<dataType>::dataType,
                                      output.getSize(), // sizes
                                      output.getDepth(),
                                      output.getWidth(),
@@ -75,7 +75,7 @@ namespace vl { namespace impl {
       biasesDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(biasesDesc,
                                        CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::id,
+                                       DataTypeToCudnn<dataType>::dataType,
                                        1,
                                        biases.getNumElements(),
                                        1,
@@ -105,7 +105,7 @@ namespace vl { namespace impl {
       dataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                        CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::id,
+                                       DataTypeToCudnn<dataType>::dataType,
                                        data.getSize(),
                                        data.getDepth(),
                                        data.getWidth(),
@@ -169,7 +169,7 @@ namespace vl { namespace impl {
     derOutputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
-                                     DataTypeToCudnn<dataType>::id,
+                                     DataTypeToCudnn<dataType>::dataType,
                                      derOutput.getSize(), // sizes
                                      derOutput.getDepth(),
                                      derOutput.getWidth(),
@@ -181,7 +181,7 @@ namespace vl { namespace impl {
       derBiasesDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(derBiasesDesc,
                                        CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::id,
+                                       DataTypeToCudnn<dataType>::dataType,
                                        1,
                                        derBiases.getNumElements(),
                                        1,
@@ -202,7 +202,7 @@ namespace vl { namespace impl {
       derDataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(derDataDesc,
                                        CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::id,
+                                       DataTypeToCudnn<dataType>::dataType,
                                        derData.getSize(),
                                        derData.getDepth(),
                                        derData.getWidth(),

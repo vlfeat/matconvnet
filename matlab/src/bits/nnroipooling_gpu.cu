@@ -250,7 +250,7 @@ roipooling_max_backward_kernel
 // -------------------------------------------------------------------
 
 template<DataType dataType, ROIPooling::Method method>
-struct GPUROIPoolingForward
+struct ROIPoolingForwardGPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
                            Tensor output,
@@ -294,17 +294,31 @@ struct GPUROIPoolingForward
 } ;
 
 template<DataType dataType>
-struct ROIPoolingMaxForward<VLDT_GPU,dataType> :
-public GPUROIPoolingForward<dataType,ROIPooling::Max>
-{ } ;
+struct ROIPoolingForward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor pooled,
+                           Tensor input,
+                           Tensor rois)
+  {
+    switch (op.method) {
+      case ROIPooling::Max:
+        return ROIPoolingForwardGPU<dataType,ROIPooling::Max>
+        ()(op,pooled,input,rois) ;
+      case ROIPooling::Average:
+        return ROIPoolingForwardGPU<dataType,ROIPooling::Average>
+        ()(op,pooled,input,rois) ;
+      default: return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
-template<DataType dataType>
-struct ROIPoolingAverageForward<VLDT_GPU,dataType> :
-public GPUROIPoolingForward<dataType,ROIPooling::Average>
-{ } ;
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
 
 template<DataType dataType, ROIPooling::Method method>
-struct GPUROIPoolingBackward
+struct ROIPoolingBackwardGPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
                            Tensor derInput,
@@ -351,12 +365,23 @@ struct GPUROIPoolingBackward
 } ;
 
 template<DataType dataType>
-struct ROIPoolingMaxBackward<VLDT_GPU,dataType> :
-public GPUROIPoolingBackward<dataType,ROIPooling::Max>
-{ } ;
-
-template<DataType dataType>
-struct ROIPoolingAverageBackward<VLDT_GPU,dataType> :
-public GPUROIPoolingBackward<dataType,ROIPooling::Average>
-{ } ;
+struct ROIPoolingBackward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor derInput,
+                           Tensor input,
+                           Tensor rois,
+                           Tensor derOutput)
+  {
+    switch (op.method) {
+      case ROIPooling::Max:
+        return ROIPoolingBackwardGPU<dataType,ROIPooling::Max>
+        ()(op,derInput,input,rois,derOutput) ;
+      case ROIPooling::Average:
+        return ROIPoolingBackwardGPU<dataType,ROIPooling::Average>
+        ()(op,derInput,input,rois,derOutput) ;
+      default: return VLE_IllegalArgument ;
+    }
+  }
+} ;
 

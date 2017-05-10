@@ -95,7 +95,7 @@ namespace vl { namespace impl {
     int outWidth = output.getWidth();
     int outHeight = output.getHeight();
 
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
 
@@ -205,7 +205,7 @@ namespace vl { namespace impl {
     int outWidth = derOutput.getWidth();
     int outHeight = derOutput.getHeight();
 
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = derOutput.getDataType() ;
     assert(dynDataType == dataType) ;
 

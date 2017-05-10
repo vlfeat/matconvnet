@@ -21,10 +21,10 @@ using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
 
-template<DeviceType deviceType, DataType dataType> struct PoolingMaxForward ;
-template<DeviceType deviceType, DataType dataType> struct PoolingMaxBackward ;
-template<DeviceType deviceType, DataType dataType> struct PoolingAverageForward ;
-template<DeviceType deviceType, DataType dataType> struct PoolingAverageBackward ;
+template<DeviceType deviceType, DataType dataType> struct PoolingForward ;
+template<DeviceType deviceType, DataType dataType> struct PoolingBackward ;
+template<DataType dataType> struct PoolingForwardCudnn ;
+template<DataType dataType> struct PoolingBackwardCudnn ;
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -100,7 +100,7 @@ struct acc_sum
 // -------------------------------------------------------------------
 
 template<DataType dataType, class Accumulator>
-struct PoolingForward
+struct PoolingForwardCPU
 {
   vl::ErrorCode operator()(Pooling &op,
                            Tensor output,
@@ -142,21 +142,33 @@ struct PoolingForward
 } ;
 
 template<DataType dataType>
-struct PoolingMaxForward<VLDT_CPU,dataType> :
-public PoolingForward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
-
-template<DataType dataType>
-struct PoolingAverageForward<VLDT_CPU,dataType> :
-public PoolingForward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
+struct PoolingForward<VLDT_CPU,dataType>
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor output,
+                           Tensor input)
+  {
+    switch (op.method) {
+      case Pooling::Max:
+        return
+        PoolingForwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,output,input) ;
+      case Pooling::Average:
+        return
+        PoolingForwardCPU<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,output,input) ;
+      default:
+        return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
 // -------------------------------------------------------------------
 //                                                            Backward
 // -------------------------------------------------------------------
 
 template<DataType dataType, class Accumulator>
-struct PoolingBackward
+struct PoolingBackwardCPU
 {
   vl::ErrorCode operator()(Pooling &op,
                            Tensor derInput,
@@ -202,14 +214,27 @@ struct PoolingBackward
 } ;
 
 template<DataType dataType>
-struct PoolingMaxBackward<VLDT_CPU,dataType> :
-public PoolingBackward<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
-
-template<DataType dataType>
-struct PoolingAverageBackward<VLDT_CPU,dataType> :
-public PoolingBackward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
-{ } ;
+struct PoolingBackward<VLDT_CPU,dataType>
+{
+  vl::ErrorCode operator()(Pooling &op,
+                           Tensor derInput,
+                           Tensor input,
+                           Tensor derOutput)
+  {
+    switch (op.method) {
+      case Pooling::Max:
+        return
+        PoolingBackwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,derInput,input,derOutput) ;
+      case Pooling::Average:
+        return
+        PoolingBackwardCPU<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::type> >
+        ()(op,derInput,input,derOutput) ;
+      default:
+        return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
 // -------------------------------------------------------------------
 //                                                              Driver
@@ -217,6 +242,10 @@ public PoolingBackward<dataType,acc_sum<typename vl::DataTypeTraits<dataType>::t
 
 #if ENABLE_GPU
 #include "nnpooling_gpu.cu"
+#endif
+
+#if ENABLE_CUDNN
+#include "nnpooling_cudnn.cu"
 #endif
 
 Pooling::Pooling(Context &context,
@@ -240,11 +269,7 @@ method(method)
 vl::ErrorCode
 Pooling::forward(vl::Tensor output,vl::Tensor input)
 {
-  switch (method) {
-    case Max: return dispatch<PoolingMaxForward>()(*this,output,input) ;
-    case Average: return dispatch<PoolingAverageForward>()(*this,output,input) ;
-    default: return VLE_IllegalArgument ;
-  }
+  return dispatch_cudnn<PoolingForward,PoolingForwardCudnn>()(*this,output,input) ;
 }
 
 vl::ErrorCode
@@ -252,9 +277,5 @@ Pooling::backward(vl::Tensor derInput,
                   vl::Tensor input,
                   vl::Tensor derOutput)
 {
-  switch (method) {
-    case Max: return dispatch<PoolingMaxBackward>()(*this,derInput,input,derOutput) ;
-    case Average: return dispatch<PoolingAverageBackward>()(*this,derInput,input,derOutput) ;
-    default: return VLE_IllegalArgument ;
-  }
+  return dispatch_cudnn<PoolingBackward,PoolingBackwardCudnn>()(*this,derInput,input,derOutput) ;
 }
