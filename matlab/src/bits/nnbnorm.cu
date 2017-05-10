@@ -180,7 +180,7 @@ struct BatchNormForwardWithMoments<VLDT_CPU, dataType>
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
     auto depth = input.getDepth() ;
-    auto num = input.getSize() ;
+    auto size = input.getSize() ;
     auto outputData = (type*)output.getMemory() ;
     auto momentData = (type const*)moment.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -194,7 +194,7 @@ struct BatchNormForwardWithMoments<VLDT_CPU, dataType>
       type bias = biasData[channel];
       type coefficient = multiplierData[channel] / sigma ;
 
-      for(int element = 0; element < num; ++element) {
+      for(int element = 0; element < size; ++element) {
         for(int wh = 0; wh < WH; ++wh){
           int offset = wh + channel*WH + element * (depth*WH) ;
           outputData[offset] = coefficient * (inputData[offset] - mean) + bias ;
@@ -225,7 +225,6 @@ struct BatchNormForward<VLDT_CPU, dataType>
     auto inputData = (type const*)input.getMemory() ;
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto biasData = (type const*)bias.getMemory() ;
-    int WH = height * width ;
 
     // Compute the moments.
     Tensor ownMoment(moment) ;
@@ -274,7 +273,6 @@ struct BatchNormBackwardWithMoments<VLDT_CPU, dataType>
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
-    vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
@@ -302,8 +300,7 @@ struct BatchNormBackwardWithMoments<VLDT_CPU, dataType>
                                    multiplierData,
                                    derMultiplierData, derBiasData, derOutputData,
                                    WH, depth, size);
-  done:;
-    return error ;
+    return VLE_Success ;
   }
 } ;
 
@@ -374,7 +371,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
 // -------------------------------------------------------------------
 
 #if ENABLE_GPU
-#include "nnbnrom_gpu.cu"
+#include "nnbnorm_gpu.cu"
 #endif
 
 #if ENABLE_CUDNN

@@ -1,5 +1,5 @@
 // @file nnpooling.hpp
-// @brief Pooling block
+// @brief Pooling layer.
 // @author Andrea Vedaldi
 
 /*
