@@ -253,9 +253,10 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     int m2 = (int)op.normDepth - m1 - 1 ;
     int offset = (int)width*(int)height ;
     type ab2 = 2*op.alpha*op.beta ;
-    int t, q ;
+    int t ;
 
 #ifndef VL_NNNORMALIZE_FAST
+    int q ;
     for (int k = 0 ; k < num ; ++k) {
       for (int h = 0 ; h < height ; ++h) {
         for (int w = 0 ; w < width ; ++w) {

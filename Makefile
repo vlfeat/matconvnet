@@ -185,7 +185,6 @@ endif
 cpp_src+=matlab/src/bits/impl/im2row_cpu.cpp
 cpp_src+=matlab/src/bits/impl/subsample_cpu.cpp
 cpp_src+=matlab/src/bits/impl/copy_cpu.cpp
-cpp_src+=matlab/src/bits/impl/pooling_cpu.cpp
 cpp_src+=matlab/src/bits/impl/bnorm_cpu.cpp
 cpp_src+=matlab/src/bits/impl/bilinearsampler_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp

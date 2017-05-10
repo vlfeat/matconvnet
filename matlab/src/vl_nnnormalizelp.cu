@@ -129,7 +129,7 @@ void mexFunction(int nout, mxArray *out[],
         givenNormsMode = true ;
         break ;
 
-      case opt_exponent : opt_p :
+      case opt_exponent :
         if (!vlmxIsPlainScalar(optarg)) {
           mexErrMsgTxt("EXPONENT is not a plain scalar.") ;
         }
