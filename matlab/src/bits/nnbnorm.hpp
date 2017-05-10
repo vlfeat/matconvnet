@@ -30,11 +30,11 @@ namespace vl { namespace nn {
                           vl::Tensor const &multiplier,
                           vl::Tensor const &bias) ;
 
-    vl::ErrorCode forwardWithMoments(vl::Tensor &output,
-                                     vl::Tensor const &moment,
-                                     vl::Tensor const &input,
-                                     vl::Tensor const &multiplier,
-                                     vl::Tensor const &bias) ;
+    vl::ErrorCode forwardWithMoment(vl::Tensor &output,
+                                    vl::Tensor const &moment,
+                                    vl::Tensor const &input,
+                                    vl::Tensor const &multiplier,
+                                    vl::Tensor const &bias) ;
 
     vl::ErrorCode backward(vl::Tensor &derInput,
                            vl::Tensor &derMultiplier,
@@ -45,14 +45,14 @@ namespace vl { namespace nn {
                            vl::Tensor const &bias,
                            vl::Tensor const &derOutput) ;
 
-    vl::ErrorCode backwardWithMoments(vl::Tensor &derInput,
-                                      vl::Tensor &derMultiplier,
-                                      vl::Tensor &derBias,
-                                      vl::Tensor const &moment,
-                                      vl::Tensor const &input,
-                                      vl::Tensor const &multiplier,
-                                      vl::Tensor const &bias,
-                                      vl::Tensor const &derOutput) ;
+    vl::ErrorCode backwardWithMoment(vl::Tensor &derInput,
+                                     vl::Tensor &derMultiplier,
+                                     vl::Tensor &derBias,
+                                     vl::Tensor const &moment,
+                                     vl::Tensor const &input,
+                                     vl::Tensor const &multiplier,
+                                     vl::Tensor const &bias,
+                                     vl::Tensor const &derOutput) ;
 
     vl::Context& context ;
     double epsilon ;

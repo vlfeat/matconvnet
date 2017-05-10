@@ -816,7 +816,7 @@ __global__ void batch_normalize_backward(T * derData,
 // -------------------------------------------------------------------
 
 template<DataType dataType>
-struct BatchNormForwardWithMoments<VLDT_GPU, dataType>
+struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
 {
   vl::ErrorCode operator()(BatchNorm &op,
                            Tensor &output,
@@ -965,7 +965,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
 // -------------------------------------------------------------------
 
 template<DataType dataType>
-struct BatchNormBackwardWithMoments<VLDT_GPU, dataType>
+struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
 {
   vl::ErrorCode operator()(BatchNorm &op,
                            Tensor &derInput,

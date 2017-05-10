@@ -1,5 +1,5 @@
 // @file nnpooling_cudnn.cu
-// @brief Pooling block CuDNN-based implementation.
+// @brief Pooling layer CuDNN.
 // @author Andrea Vedaldi
 
 /*
@@ -11,8 +11,8 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "nnpooling.hpp"
-#include "impl/cudnnhelper.hpp"
 #include "datacu.hpp"
+#include "impl/cudnnhelper.hpp"
 #include <cassert>
 
 using namespace std ;
@@ -32,7 +32,6 @@ goto done ; \
 // -------------------------------------------------------------------
 //                                                             Forward
 // -------------------------------------------------------------------
-
 
 template<DataType dataType>
 struct PoolingForwardCudnn

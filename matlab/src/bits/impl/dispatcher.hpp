@@ -67,8 +67,8 @@ struct dispatch_cudnn
   template <class B, typename ... Types>
   vl::ErrorCode operator()(B& base, vl::Tensor output, Types ... args)
   {
+#if ENABLE_CUDNN
     vl::ErrorCode error ;
-#if ENABLE_GPU
     if (output.getDeviceType() == vl::VLDT_GPU) {
       switch (output.getDataType()) {
         case vl::VLDT_Float:
@@ -83,8 +83,8 @@ struct dispatch_cudnn
       if (error == vl::VLE_Unsupported) { goto fallback ; }
       return base.context.passError(error, __func__) ;
     }
-#endif
   fallback:
+#endif
     return dispatch<C>()(base,output,args...) ;
   }
 } ;

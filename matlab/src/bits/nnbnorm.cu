@@ -4,12 +4,12 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-17 Sebastien Ehrhardt and Andrea Vedaldi.
-All rights reserved.
+ Copyright (C) 2015-17 Sebastien Ehrhardt and Andrea Vedaldi.
+ All rights reserved.
 
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
-*/
+ This file is part of the VLFeat library and is made available under
+ the terms of the BSD license (see the COPYING file).
+ */
 
 #include "nnbnorm.hpp"
 #include "impl/dispatcher.hpp"
@@ -25,14 +25,14 @@ using namespace vl ;
 using namespace vl::nn ;
 
 template<DeviceType deviceType, DataType dataType> struct BatchNormForward ;
+template<DeviceType deviceType, DataType dataType> struct BatchNormForwardWithMoment ;
 template<DeviceType deviceType, DataType dataType> struct BatchNormBackward ;
-template<DeviceType deviceType, DataType dataType> struct BatchNormForwardWithMoments ;
-template<DeviceType deviceType, DataType dataType> struct BatchNormBackwardWithMoments ;
+template<DeviceType deviceType, DataType dataType> struct BatchNormBackwardWithMoment ;
 
 template<DataType dataType> struct BatchNormForwardCudnn ;
+template<DataType dataType> struct BatchNormForwardWithMomentCudnn ;
 template<DataType dataType> struct BatchNormBackwardCudnn ;
-template<DataType dataType> struct BatchNormForwardWithMomentsCudnn ;
-template<DataType dataType> struct BatchNormBackwardWithMomentsCudnn ;
+template<DataType dataType> struct BatchNormBackwardWithMomentCudnn ;
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -89,8 +89,6 @@ compute_ders(T * derMultipliers,
       }
     }
   }
-
-  T mass = WH*num;
   for(int i = 0; i < depth; ++i) {
     T mean = moments[i] ;
     T sigma = moments[i + depth] ;
@@ -167,7 +165,7 @@ batch_normalize_backward(T * derData,
 // -------------------------------------------------------------------
 
 template<DataType dataType>
-struct BatchNormForwardWithMoments<VLDT_CPU, dataType>
+struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
 {
   vl::ErrorCode operator()(BatchNorm &op,
                            Tensor &output,
@@ -246,7 +244,7 @@ struct BatchNormForward<VLDT_CPU, dataType>
     }
 
     // Compute output.
-    error = BatchNormForwardWithMoments<vl::VLDT_CPU,dataType>()
+    error = BatchNormForwardWithMoment<vl::VLDT_CPU,dataType>()
     (op,output,ownMoment,input,multiplier,bias) ;
 
     // Finish.
@@ -261,7 +259,7 @@ struct BatchNormForward<VLDT_CPU, dataType>
 // -------------------------------------------------------------------
 
 template<DataType dataType>
-struct BatchNormBackwardWithMoments<VLDT_CPU, dataType>
+struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
 {
   vl::ErrorCode operator()(BatchNorm &op,
                            Tensor &derInput,
@@ -392,18 +390,22 @@ BatchNorm::forward(Tensor &output,
                    Tensor const &multiplier,
                    Tensor const &bias)
 {
-  return dispatch_cudnn<BatchNormForward,BatchNormForwardCudnn>()
+  return dispatch_cudnn<
+  BatchNormForward,
+  BatchNormForwardCudnn>()
   (*this,output,moment,input,multiplier,bias) ;
 }
 
 vl::ErrorCode
-BatchNorm::forwardWithMoments(Tensor &output,
-                              Tensor const &moment,
-                              Tensor const &input,
-                              Tensor const &multiplier,
-                              Tensor const &bias)
+BatchNorm::forwardWithMoment(Tensor &output,
+                             Tensor const &moment,
+                             Tensor const &input,
+                             Tensor const &multiplier,
+                             Tensor const &bias)
 {
-  return dispatch_cudnn<BatchNormForwardWithMoments,BatchNormForwardWithMomentsCudnn>()
+  return dispatch_cudnn<
+  BatchNormForwardWithMoment,
+  BatchNormForwardWithMomentCudnn>()
   (*this,output,moment,input,multiplier,bias) ;
 }
 
@@ -417,20 +419,24 @@ BatchNorm::backward(Tensor &derInput,
                     Tensor const &bias,
                     Tensor const &derOutput)
 {
-  return dispatch_cudnn<BatchNormBackward,BatchNormBackwardCudnn>()
+  return dispatch_cudnn<
+  BatchNormBackward,
+  BatchNormBackwardCudnn>()
   (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput) ;
 }
 
 vl::ErrorCode
-BatchNorm::backwardWithMoments(Tensor &derInput,
-                               Tensor &derMultiplier,
-                               Tensor &derBias,
-                               Tensor const &moment,
-                               Tensor const &input,
-                               Tensor const &multiplier,
-                               Tensor const &bias,
-                               Tensor const &derOutput)
+BatchNorm::backwardWithMoment(Tensor &derInput,
+                              Tensor &derMultiplier,
+                              Tensor &derBias,
+                              Tensor const &moment,
+                              Tensor const &input,
+                              Tensor const &multiplier,
+                              Tensor const &bias,
+                              Tensor const &derOutput)
 {
-  return dispatch_cudnn<BatchNormBackwardWithMoments,BatchNormBackwardWithMomentsCudnn>()
+  return dispatch_cudnn<
+  BatchNormBackwardWithMoment,
+  BatchNormBackwardWithMomentCudnn>()
   (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput) ;
 }

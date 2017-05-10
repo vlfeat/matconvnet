@@ -1,10 +1,10 @@
-// @file pooling_gpu.cu
-// @brief Pooling block implementation (GPU)
+// @file nnpooling_gpu.cu
+// @brief Pooling block GPU.
 // @author Andrea Vedaldi
 // @author Karel Lenc
 
 /*
-Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2014-17 Andrea Vedaldi and Karel Lenc.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
