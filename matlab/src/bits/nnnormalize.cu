@@ -22,6 +22,7 @@ the terms of the BSD license (see the COPYING file).
 
 using namespace vl ;
 using namespace vl::nn ;
+using namespace vl::impl ;
 
 template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNForward ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNBackward ;

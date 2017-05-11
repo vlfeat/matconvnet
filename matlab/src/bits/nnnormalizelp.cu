@@ -20,6 +20,7 @@ the terms of the BSD license (see the COPYING file).
 using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
+using namespace vl::impl ;
 
 template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForward ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpForwardWithNorms ;
@@ -43,7 +44,7 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
   // Compute tensor geometry.
   int n = input.getNumDimensions() ;
   auto inputDimensions = std::vector<size_t>(input.getDimensions(),
-                                            input.getDimensions() + n) ;
+                                             input.getDimensions() + n) ;
 
   assert(n <= 4) ; // Todo: relax (just extend the for loops below).
 
@@ -342,9 +343,9 @@ NormalizeLp::backward(vl::Tensor derData,
 
 vl::ErrorCode
 NormalizeLp::backwardWithNorms(vl::Tensor derData,
-                                 vl::Tensor norms,
-                                 vl::Tensor data,
-                                 vl::Tensor derOutput)
+                               vl::Tensor norms,
+                               vl::Tensor data,
+                               vl::Tensor derOutput)
 {
   return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput,true) ;
 }

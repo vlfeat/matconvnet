@@ -18,6 +18,7 @@ the terms of the BSD license (see the COPYING file).
 using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
+using namespace vl::impl ;
 
 template<vl::DeviceType deviceType, vl::DataType dataType> struct SubsampleForward ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct SubsampleBackward ;

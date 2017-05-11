@@ -23,6 +23,7 @@
 using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
+using namespace vl::impl ;
 
 template<DeviceType deviceType, DataType dataType> struct BatchNormForward ;
 template<DeviceType deviceType, DataType dataType> struct BatchNormForwardWithMoment ;

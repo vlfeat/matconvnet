@@ -21,6 +21,7 @@ the terms of the BSD license (see the COPYING file).
 using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
+using namespace vl::impl ;
 
 template<DeviceType deviceType, DataType dataType> struct ROIPoolingForward ;
 template<DeviceType deviceType, DataType dataType> struct ROIPoolingBackward ;
