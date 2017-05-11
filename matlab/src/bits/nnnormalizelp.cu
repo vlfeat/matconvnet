@@ -12,9 +12,10 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnnormalizelp.hpp"
 #include "impl/dispatcher.hpp"
-#include <assert.h>
 #include <iostream>
+#include <algorithm>
 #include <cmath>
+#include <cassert>
 
 using namespace std ;
 using namespace vl ;

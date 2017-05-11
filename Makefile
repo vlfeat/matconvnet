@@ -106,6 +106,7 @@ endif
 # Linux
 ifeq "$(ARCH)" "$(filter $(ARCH),glnxa64)"
 IMAGELIB ?= $(if $(ENABLE_IMREADJPEG),libjpeg,none)
+CXXFLAGS_PASS += --std=c++11
 CXXOPTIMFLAGS += -mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops
 LDFLAGS += \
 $(if $(ENABLE_GPU),-Wl$(comma)-rpath -Wl$(comma)"$(CUDAROOT)/lib64") \
