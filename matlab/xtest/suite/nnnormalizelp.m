@@ -30,11 +30,11 @@ classdef nnnormalizelp < nntest
                 [1 2 3], [2 3 4], ...
                 [1 2 3 4]} ;
       for dims = dimsr
-        opts = {'p',2,'dimensions',dims{1}} ;
+        opts = {'p',2,'dimensions',dims{1},'epsilon',1e-4} ;
         y = vl_nnnormalizelp(x,opts{:}) ;
         dzdy = test.rand(size(y))-0.5 ;
         dzdx = vl_nnnormalizelp(x,dzdy,opts{:},'verbose') ;
-        test.der(@(x) vl_nnnormalizelp(x,opts{:}), x, dzdy, dzdx, 1e-4, 0.3) ;
+        test.der(@(x) vl_nnnormalizelp(x,opts{:}), x, dzdy, dzdx, .5e-4, 0.5) ;
       end
     end
   end
