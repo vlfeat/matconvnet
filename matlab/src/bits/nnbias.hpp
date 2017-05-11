@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -15,19 +15,25 @@ the terms of the BSD license (see the COPYING file).
 
 #include "data.hpp"
 
-namespace vl {
+namespace vl { namespace nn {
 
-  vl::ErrorCode
-  nnbias_forward(vl::Context& context,
-                 vl::Tensor output, double outputMult,
-                 vl::Tensor data, double dataMult,
-                 vl::Tensor biases, double biasesMult) ;
+  class Bias {
+  public:
+    Bias(vl::Context &context) ;
 
-  vl::ErrorCode
-  nnbias_backward(vl::Context& context,
-                  vl::Tensor derData, double derDataMult,
-                  vl::Tensor derBiases, double derBiasesMult,
-                  vl::Tensor derOutput, double derOutputMult) ;
-}
+    // output <- outputMult * output + inputMult * input + biasMult * bias
+    vl::ErrorCode forward(vl::Tensor &output, double outputMult,
+                          vl::Tensor const &input, double inputMult,
+                          vl::Tensor const &bias, double biasMult) ;
+
+    vl::ErrorCode backward(vl::Tensor &derInput, double derInputMult,
+                           vl::Tensor &derBias, double derBiasMult,
+                           double inputMult, double biasMult,
+                           vl::Tensor const &derOutput) ;
+
+    vl::Context& context ;
+  } ;
+  
+} }
 
 #endif /* defined(__vl__nnbias__) */

@@ -3,52 +3,49 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#if !defined(ENABLE_GPU) | !defined(ENABLE_CUDNN)
-#error "nnbias_cudnn.hpp cannot be compiled without GPU and CUDNN support."
-#endif
+#include "nnbias.hpp"
+#include "datacu.hpp"
+#include "impl/cudnnhelper.hpp"
+#include <cassert>
 
-#include "nnbias_cudnn.hpp"
-#include "cudnnhelper.hpp"
-#include "../datacu.hpp"
-#include <assert.h>
-#include <iostream>
-
+using namespace std ;
 using namespace vl ;
+using namespace vl::nn ;
+using namespace vl::impl ;
 
 #define CHECK(x) \
 { \
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = context.setError(context.getCudaHelper().catchCudnnError(cudnnError, \
+error = op.context.setError(op.context.getCudaHelper().catchCudnnError(cudnnError, \
 STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
 goto done ; \
 } }
 
-namespace vl { namespace impl {
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
 
-  /* -------------------------------------------------------------- */
-  /*                                           nnbias_forward_cudnn */
-  /* -------------------------------------------------------------- */
-
-  template<vl::DataType dataType>
-  vl::ErrorCode
-  vl::impl::nnbias_cudnn<dataType>::forward(vl::Context& context,
-                                            vl::Tensor output, double outputMult,
-                                            vl::Tensor data, double dataMult,
-                                            vl::Tensor biases, double biasesMult)
+template<DataType dataType>
+struct BiasForwardCudnn
+{
+  vl::ErrorCode operator()(Bias & op,
+                           Tensor &output, double outputMult,
+                           Tensor const &input, double inputMult,
+                           Tensor const &bias, double biasMult)
   {
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    cudnnTensorDescriptor_t outputDesc, biasesDesc, dataDesc ;
+    cudnnTensorDescriptor_t outputDesc, biasDesc, dataDesc ;
     bool outputDescInitialized = false ;
-    bool biasesDescInitialized = false ;
+    bool biasDescInitialized = false ;
     bool dataDescInitialized = false ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
@@ -56,7 +53,7 @@ namespace vl { namespace impl {
     cudnnHandle_t handle ;
 
     // Get CuDNN
-    CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get output tensor descripotr
     assert(output) ;
@@ -70,60 +67,60 @@ namespace vl { namespace impl {
                                      output.getWidth(),
                                      output.getHeight())) ;
 
-    if (biases) {
-      CHECK(cudnnCreateTensorDescriptor(&biasesDesc)) ;
-      biasesDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(biasesDesc,
+    if (bias) {
+      CHECK(cudnnCreateTensorDescriptor(&biasDesc)) ;
+      biasDescInitialized = true ;
+      CHECK(cudnnSetTensor4dDescriptor(biasDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
                                        1,
-                                       biases.getNumElements(),
+                                       bias.getNumElements(),
                                        1,
                                        1)) ;
 
-      type alpha = biasesMult ;
+      type alpha = biasMult ;
       type beta = outputMult ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_SAME_C,
                            &alpha,
-                           biasesDesc, biases.getMemory(),
+                           biasDesc, bias.getMemory(),
                            &beta,
                            outputDesc, output.getMemory())) ;
 #else
       CHECK(cudnnAddTensor(handle,
                            &alpha,
-                           biasesDesc, biases.getMemory(),
+                           biasDesc, bias.getMemory(),
                            &beta,
                            outputDesc, output.getMemory())) ;
 #endif
       outputMult = 1 ;
     }
 
-    if (data) {
+    if (input) {
       CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
       dataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
-                                       data.getSize(),
-                                       data.getDepth(),
-                                       data.getWidth(),
-                                       data.getHeight())) ;
+                                       input.getSize(),
+                                       input.getDepth(),
+                                       input.getWidth(),
+                                       input.getHeight())) ;
 
-      type alpha = dataMult ;
+      type alpha = inputMult ;
       type beta = outputMult ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_FULL_TENSOR,
                            &alpha,
-                           dataDesc, data.getMemory(),
+                           dataDesc, input.getMemory(),
                            &beta,
                            outputDesc, output.getMemory()));
 #else
       CHECK(cudnnAddTensor(handle,
                            &alpha,
-                           dataDesc, data.getMemory(),
+                           dataDesc, input.getMemory(),
                            &beta,
                            outputDesc, output.getMemory()));
 #endif
@@ -132,28 +129,32 @@ namespace vl { namespace impl {
     /* cleanup */
   done:
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    if (biasesDescInitialized) { cudnnDestroyTensorDescriptor(biasesDesc) ; }
+    if (biasDescInitialized) { cudnnDestroyTensorDescriptor(biasDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return context.passError(error, __func__) ;
+    return op.context.passError(error, __func__) ;
   }
+} ;
 
-  /* ---------------------------------------------------------------- */
-  /*                                            nnbias_backward_cudnn */
-  /* ---------------------------------------------------------------- */
 
-  template<vl::DataType dataType>
-  vl::ErrorCode
-  vl::impl::nnbias_cudnn<dataType>::backward(vl::Context& context,
-                                             vl::Tensor derData, double derDataMult,
-                                             vl::Tensor derBiases, double derBiasesMult,
-                                             vl::Tensor derOutput, double derOutputMult)
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
+
+template<DataType dataType>
+struct BiasBackwardCudnn
+{
+  vl::ErrorCode operator()(Bias &op,
+                           Tensor &derInput, double derInputMult,
+                           Tensor &derBias, double derBiasMult,
+                           double inputMult, double biasMult,
+                           Tensor const &derOutput)
   {
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    /* no derDataDesc needed as same as dataDesc */
-    cudnnTensorDescriptor_t derDataDesc, derBiasesDesc, derOutputDesc ;
-    bool derDataDescInitialized = false ;
-    bool derBiasesDescInitialized = false ;
+    /* no derInputDesc needed as same as dataDesc */
+    cudnnTensorDescriptor_t derInputDesc, derBiasDesc, derOutputDesc ;
+    bool derInputDescInitialized = false ;
+    bool derBiasDescInitialized = false ;
     bool derOutputDescInitialized = false ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
@@ -161,7 +162,7 @@ namespace vl { namespace impl {
     cudnnHandle_t handle ;
 
     // Get CuDNN
-    CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Must have derOutput for all derivatives
     assert(derOutput) ;
@@ -176,53 +177,59 @@ namespace vl { namespace impl {
                                      derOutput.getHeight())) ;
 
     // for derivatives w.r.t. bias
-    if (derBiases) {
-      CHECK(cudnnCreateTensorDescriptor(&derBiasesDesc)) ;
-      derBiasesDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(derBiasesDesc,
+    if (derBias) {
+      CHECK(cudnnCreateTensorDescriptor(&derBiasDesc)) ;
+      derBiasDescInitialized = true ;
+      CHECK(cudnnSetTensor4dDescriptor(derBiasDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
                                        1,
-                                       derBiases.getNumElements(),
+                                       derBias.getNumElements(),
                                        1,
                                        1)) ;
 
-      type alpha = derOutputMult ;
-      type beta = derBiasesMult ;
+      type alpha = biasMult ;
+      type beta = derBiasMult ;
       CHECK(cudnnConvolutionBackwardBias
             (handle,
              &alpha,
              derOutputDesc, (type const*)derOutput.getMemory(),
              &beta,
-             derBiasesDesc, (type*)derBiases.getMemory())) ;
+             derBiasDesc, (type*)derBias.getMemory())) ;
     }
 
-    if (derData) {
-      CHECK(cudnnCreateTensorDescriptor(&derDataDesc)) ;
-      derDataDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(derDataDesc,
+    if (derInput) {
+      CHECK(cudnnCreateTensorDescriptor(&derInputDesc)) ;
+      derInputDescInitialized = true ;
+      CHECK(cudnnSetTensor4dDescriptor(derInputDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
-                                       derData.getSize(),
-                                       derData.getDepth(),
-                                       derData.getWidth(),
-                                       derData.getHeight())) ;
-      // not implemented
-      assert(false) ;
+                                       derInput.getSize(),
+                                       derInput.getDepth(),
+                                       derInput.getWidth(),
+                                       derInput.getHeight())) ;
+      type alpha = inputMult ;
+      type beta = derInputMult ;
+#if (CUDNN_VERSION < 4000)
+      CHECK(cudnnAddTensor(handle,
+                           CUDNN_ADD_SAME_C,
+                           &alpha,
+                           biasDesc, bias.getMemory(),
+                           &beta,
+                           derInputDesc, derInput.getMemory())) ;
+#else
+      CHECK(cudnnAddTensor(handle,
+                           &alpha,
+                           derOutputDesc, derOutput.getMemory(),
+                           &beta,
+                           derInputDesc, derInput.getMemory())) ;
+#endif
     }
 
   done:
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    if (derBiasesDescInitialized) { cudnnDestroyTensorDescriptor(derBiasesDesc) ; }
-    if (derDataDescInitialized) { cudnnDestroyTensorDescriptor(derDataDesc) ; }
-    return context.passError(error, __func__) ;
+    if (derBiasDescInitialized) { cudnnDestroyTensorDescriptor(derBiasDesc) ; }
+    if (derInputDescInitialized) { cudnnDestroyTensorDescriptor(derInputDesc) ; }
+    return op.context.passError(error, __func__) ;
   }
-
-} }
-
-// Instantiations
-template struct vl::impl::nnbias_cudnn<vl::VLDT_Float> ;
-
-#ifdef ENABLE_DOUBLE
-template struct vl::impl::nnbias_cudnn<vl::VLDT_Double> ;
-#endif
+} ;

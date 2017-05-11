@@ -241,10 +241,7 @@ vl::nnconvt_forward(Context& context,
     if (error != VLE_Success) { goto done ; }
   }
   if (biases) {
-    error = vl::nnbias_forward(context,
-                               output, 1,
-                               Tensor(), 0,
-                               biases, 1) ;
+    error = vl::nn::Bias(context).forward(output,1.0,Tensor(),0,biases,1.0);
   }
 done:
   return error ;
@@ -292,10 +289,8 @@ vl::nnconvt_backward(Context& context,
   }
 
   if (derBiases) {
-    error = vl::nnbias_backward(context,
-                                Tensor(), 0,
-                                derBiases, 0,
-                                derOutput, 1) ;
+    Tensor null ;
+    error = vl::nn::Bias(context).backward(null,0,derBiases,0,0,1,derOutput) ;
   }
 
 done:
