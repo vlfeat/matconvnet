@@ -39,7 +39,7 @@ struct tensor_type {
 } ;
 
 template <typename ... Types>
-tensor_type findTensorType(Types ... args)
+tensor_type findTensorType(Types& ... args)
 {
   holder holders [] = {args...} ;
   tensor_type tt ;
@@ -60,7 +60,7 @@ template <template <vl::DeviceType deviceType, vl::DataType dataType> class C>
 struct dispatch
 {
   template <class B, typename ... Types>
-  vl::ErrorCode operator()(B& base, Types ... args)
+  vl::ErrorCode operator()(B& base, Types& ... args)
   {
     vl::ErrorCode error ;
     tensor_type tt = findTensorType(args...) ;
@@ -97,14 +97,13 @@ struct dispatch
   }
 } ;
 
-
 template <
 template <vl::DeviceType deviceType, vl::DataType dataType> class C,
 template <vl::DataType dataType> class CU >
 struct dispatch_cudnn
 {
   template <class B, typename ... Types>
-  vl::ErrorCode operator()(B& base, Types ... args)
+  vl::ErrorCode operator()(B& base, Types& ... args)
   {
 #if ENABLE_CUDNN
     tensor_type tt = findTensorType(args...) ;
