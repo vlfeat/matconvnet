@@ -10,8 +10,6 @@
 		2D14F0091B02AB5700A8F33D /* nnbias.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D14F0071B02AB5700A8F33D /* nnbias.cu */; };
 		2D14F00A1B02AB5700A8F33D /* nnbias.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D14F0081B02AB5700A8F33D /* nnbias.hpp */; };
 		2D14F00C1B02AB9800A8F33D /* nnbias.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D14F00B1B02AB9800A8F33D /* nnbias.cpp */; };
-		2D14F00E1B03A35700A8F33D /* nnbias_blas.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D14F00D1B03A35700A8F33D /* nnbias_blas.hpp */; };
-		2D14F0101B03A6FA00A8F33D /* nnbias_cudnn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D14F00F1B03A6FA00A8F33D /* nnbias_cudnn.hpp */; };
 		2D16767F1AB5AF6000CC738D /* imread_helpers.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2D16767D1AB5AF6000CC738D /* imread_helpers.hpp */; };
 		2D2A74F71A88D73900C372A4 /* copy_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */; };
 		2D47A19E1A88CB0900826D48 /* datacu.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2D47A19C1A88CB0900826D48 /* datacu.cu */; };
@@ -63,9 +61,6 @@
 		2D14F0071B02AB5700A8F33D /* nnbias.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias.cu; path = matlab/src/bits/nnbias.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D14F0081B02AB5700A8F33D /* nnbias.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbias.hpp; path = matlab/src/bits/nnbias.hpp; sourceTree = "<group>"; };
 		2D14F00B1B02AB9800A8F33D /* nnbias.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbias.cpp; path = matlab/src/bits/nnbias.cpp; sourceTree = "<group>"; };
-		2D14F00D1B03A35700A8F33D /* nnbias_blas.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbias_blas.hpp; path = matlab/src/bits/impl/nnbias_blas.hpp; sourceTree = "<group>"; };
-		2D14F00F1B03A6FA00A8F33D /* nnbias_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbias_cudnn.hpp; path = matlab/src/bits/impl/nnbias_cudnn.hpp; sourceTree = "<group>"; };
-		2D14F0111B03A78A00A8F33D /* nnbias_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias_cudnn.cu; path = matlab/src/bits/impl/nnbias_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D16767D1AB5AF6000CC738D /* imread_helpers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = imread_helpers.hpp; path = matlab/src/bits/impl/imread_helpers.hpp; sourceTree = "<group>"; };
 		2D18CE2F1CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler_cudnn.cu; path = matlab/src/bits/impl/nnbilinearsampler_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D18CE301CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbilinearsampler_cudnn.hpp; path = matlab/src/bits/impl/nnbilinearsampler_cudnn.hpp; sourceTree = "<group>"; };
@@ -443,9 +438,6 @@
 				2D16767D1AB5AF6000CC738D /* imread_helpers.hpp */,
 				2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */,
 				2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */,
-				2D14F00D1B03A35700A8F33D /* nnbias_blas.hpp */,
-				2D14F0111B03A78A00A8F33D /* nnbias_cudnn.cu */,
-				2D14F00F1B03A6FA00A8F33D /* nnbias_cudnn.hpp */,
 				2D18CE2F1CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.cu */,
 				2D18CE301CCE9C3E00A8A270 /* nnbilinearsampler_cudnn.hpp */,
 				2D7B112A1A88E5CC00A3D8A0 /* nnconv_blas.hpp */,
@@ -672,12 +664,10 @@
 				2D47A19F1A88CB0900826D48 /* datacu.hpp in Headers */,
 				2D7B11301A88F0FF00A3D8A0 /* nnpooling.hpp in Headers */,
 				2D528BB41A8284FA006EC40A /* nnconv.hpp in Headers */,
-				2D14F0101B03A6FA00A8F33D /* nnbias_cudnn.hpp in Headers */,
 				2DA349B51A83FC2C0073185F /* nnfullyconnected.hpp in Headers */,
 				2D16767F1AB5AF6000CC738D /* imread_helpers.hpp in Headers */,
 				2D14F00A1B02AB5700A8F33D /* nnbias.hpp in Headers */,
 				2D7B113D1A8BDB3C00A3D8A0 /* nnnormalize.hpp in Headers */,
-				2D14F00E1B03A35700A8F33D /* nnbias_blas.hpp in Headers */,
 				2DA349BD1A86C5210073185F /* nnsubsample.hpp in Headers */,
 				2D7B112C1A88E5CC00A3D8A0 /* nnconv_blas.hpp in Headers */,
 			);
