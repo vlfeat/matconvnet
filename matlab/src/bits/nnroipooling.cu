@@ -145,8 +145,8 @@ struct ROIPoolingForwardCPU
       roi_image = min(max(roi_image - 1,0), (int)size - 1) ;
       type const * data_offset = inputData + (roi_image * depth) * (width*height) ;
 
-      type bin_size_h = (type)roi_height / op.subdivisions[0] ;
-      type bin_size_w = (type)roi_width / op.subdivisions[1] ;
+      type bin_size_h = (double)roi_height / op.subdivisions[0] ;
+      type bin_size_w = (double)roi_width / op.subdivisions[1] ;
 
       // For each feature channel.
       for (int z = 0; z < depth; ++z) {
@@ -193,9 +193,9 @@ template<DataType dataType>
 struct ROIPoolingForward<VLDT_CPU,dataType>
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor pooled,
-                           Tensor input,
-                           Tensor rois)
+                           Tensor &pooled,
+                           Tensor const &input,
+                           Tensor const &rois)
   {
     switch (op.method) {
       case ROIPooling::Max:
@@ -219,10 +219,10 @@ template<DataType dataType, class Accumulator>
 struct ROIPoolingBackwardCPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor rois,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &rois,
+                           Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto numROIs = rois.getNumElements() / 5 ;
@@ -234,6 +234,8 @@ struct ROIPoolingBackwardCPU
     auto roisData = (type const*)rois.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
+
+    memset(derInputData, 0, derInput.getNumElements() * sizeof(type)) ;
 
     // For each ROI R = [t x1 y1 x2 y2].
     for (size_t roi = 0; roi < numROIs ; ++roi) {
@@ -261,7 +263,7 @@ struct ROIPoolingBackwardCPU
 
       roi_image = min(max(roi_image - 1,0), (int)size - 1) ;
       type const * data_offset = inputData + (roi_image * depth) * (width*height);
-      type * derData_offset = derInputData + (roi_image * depth) * (width*height);
+      type * derInputData_offset = derInputData + (roi_image * depth) * (width*height);
 
       const type bin_size_h = (double)roi_height / op.subdivisions[0] ;
       const type bin_size_w = (double)roi_width / op.subdivisions[1] ;
@@ -288,14 +290,14 @@ struct ROIPoolingBackwardCPU
               for (int h = hstart; h < hend; ++h) {
                 const int index = w * height + h ;
                 acc.accumulate_backward(&data_offset[index],
-                                        &derData_offset[index]) ;
+                                        &derInputData_offset[index]) ;
               }
             }
             acc.done_backward() ;
           } // end of pw
         } // end of ph
         data_offset += width*height ;
-        derData_offset += width*height ;
+        derInputData_offset += width*height ;
       } // end of z
     } // end of n
 
@@ -307,10 +309,10 @@ template<DataType dataType>
 struct ROIPoolingBackward<VLDT_CPU,dataType>
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor rois,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &rois,
+                           Tensor const &derOutput)
   {
     switch (op.method) {
       case ROIPooling::Max: return
