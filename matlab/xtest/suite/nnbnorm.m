@@ -14,11 +14,12 @@ classdef nnbnorm < nntest
       x = test.randn(r, c, nd, bs) ;
       g = test.randn(nd, 1) / test.range ;
       b = test.randn(nd, 1) / test.range ;
+      epsilon = 0.001 ;
 
-      [y,m] = vl_nnbnorm(x,g,b,'epsilon',0) ;
+      [y,m] = vl_nnbnorm(x,g,b,'epsilon',epsilon) ;
       n = numel(x) / size(x,3) ;
       mu = sum(sum(sum(x,1),2),4) / n ;
-      sigma2 = sum(sum(sum((x-mu).^2,1),2),4) / n ;
+      sigma2 = sum(sum(sum(bsxfun(@minus,x,mu).^2,1),2),4) / n + epsilon ;
       sigma = sqrt(sigma2) ;
       m_ = [mu(:),sigma(:)] ;
       test.eq(m,m_) ;

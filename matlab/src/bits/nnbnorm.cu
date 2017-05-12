@@ -51,6 +51,7 @@ compute_moment(T * moments,
                int num,
                T epsilon)
 {
+  memset(moments, 0, sizeof(T) * 2*depth) ;
   int mass = WH * num ;
   for(int channel = 0; channel < depth; ++channel) {
     for(int element = 0; element < num; ++element) {
@@ -108,6 +109,7 @@ compute_ders_and_moments(T * derMultipliers,
 {
   memset(derMultipliers, 0, sizeof(T) * depth) ;
   memset(derBiases, 0, sizeof(T) * depth) ;
+  memset(moments, 0, sizeof(T) * 2*depth) ;
   for(int channel = 0; channel < depth; ++channel){
     for(int element = 0; element < num; ++element ){
       for(int wh = 0; wh < WH; ++wh){
@@ -233,7 +235,6 @@ struct BatchNormForward<VLDT_CPU, dataType>
         error = VLE_OutOfMemory ;
         goto done ;
       }
-      memset(buffer, 0, sizeof(type) * 2*depth) ;
       ownMoment.setMemory(buffer) ;
     }
 
@@ -339,13 +340,11 @@ struct BatchNormBackward<VLDT_CPU, dataType>
         error = VLE_OutOfMemory ;
         goto done ;
       }
-      memset(buffer, 0, sizeof(type) * 2*depth) ;
       ownMoment.setMemory(buffer) ;
     }
 
     {
       auto momentData = (type*)ownMoment.getMemory() ;
-      memset(momentData, 0, sizeof(type) * 2*depth) ;
 
       // Compute derMultipliers, derBiases, and moments.
       compute_ders_and_moments<type>(derMultiplierData, derBiasData, momentData,
