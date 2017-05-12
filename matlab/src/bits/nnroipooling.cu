@@ -14,6 +14,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnroipooling.hpp"
 #include "impl/dispatcher.hpp"
+#include <limits>
 #include <cassert>
 #include <cmath>
 #include <iostream>
