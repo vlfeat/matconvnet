@@ -445,26 +445,24 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* regular case */
-  if (!backMode) {
-    error = vl::nnconv_forward(context,
-                               output, 0,
-                               data, 1,
-                               filters,
-                               biases,
-                               strideY, strideX,
-                               padTop, padBottom, padLeft, padRight,
-                               dilateY, dilateX) ;
-  } else {
-    error = vl::nnconv_backward(context,
-                                derData,
-                                derFilters,
-                                derBiases,
-                                data,
-                                filters,
-                                derOutput,
-                                strideY, strideX,
-                                padTop, padBottom, padLeft, padRight,
-                                dilateY, dilateX) ;
+  {
+    vl::nn::Convolution op(context,
+                           strideY, strideX,
+                           padTop, padBottom, padLeft, padRight,
+                           dilateY, dilateX);
+    if (!backMode) {
+      error = op.forward(output, 0,
+                         data, 1,
+                         filters,
+                         biases) ;
+    } else {
+      error = op.backward(derData,
+                          derFilters,
+                          derBiases,
+                          data,
+                          filters,
+                          derOutput) ;
+    }
   }
 
 doneok:

@@ -364,26 +364,20 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   vl::ErrorCode error ;
+  vl::nn::ConvolutionTranspose op(context,
+                                  upsampleY, upsampleX,
+                                  cropTop, cropBottom, cropLeft, cropRight) ;
 
   /* regular case */
   if (!backMode) {
-    error = vl::nnconvt_forward(context,
-                                output,
-                                data,
-                                filters,
-                                biases,
-                                upsampleY, upsampleX,
-                                cropTop, cropBottom, cropLeft, cropRight) ;
+    error = op.forward(output,data,filters,biases) ;
   } else {
-    error = vl::nnconvt_backward(context,
-                                 derData,
-                                 derFilters,
-                                 derBiases,
-                                 data,
-                                 filters,
-                                 derOutput,
-                                 upsampleY, upsampleX,
-                                 cropTop, cropBottom, cropLeft, cropRight) ;
+    error = op.backward(derData,
+                        derFilters,
+                        derBiases,
+                        data,
+                        filters,
+                        derOutput) ;
   }
 
   if (verbosity > 0) {

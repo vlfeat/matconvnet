@@ -63,9 +63,8 @@ struct dispatch
   vl::ErrorCode operator()(B& base, Types ... args)
   {
     vl::ErrorCode error ;
-#if ENABLE_GPU
     tensor_type tt = findTensorType(args...) ;
-
+#if ENABLE_GPU
     if (tt.deviceType == VLDT_GPU) {
       switch (tt.dataType) {
         case vl::VLDT_Float:
