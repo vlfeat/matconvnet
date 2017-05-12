@@ -199,7 +199,6 @@ cpp_src+=matlab/src/bits/impl/bilinearsampler_gpu.cu
 cpp_src+=matlab/src/bits/datacu.cu
 mex_src+=matlab/src/vl_cudatool.cu
 ifdef ENABLE_CUDNN
-cpp_src+=matlab/src/bits/impl/nnconv_cudnn.cu
 cpp_src+=matlab/src/bits/impl/nnbilinearsampler_cudnn.cu
 endif
 endif

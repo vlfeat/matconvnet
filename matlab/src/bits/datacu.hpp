@@ -48,6 +48,9 @@ static __device__ double atomicAdd(double* address, double val)
 }
 #endif
 
+template<vl::DataType dataType> struct ConvolutionForwardCudnn ;
+template<vl::DataType dataType> struct ConvolutionBackwardCudnn ;
+
 namespace vl {
 
 #if ENABLE_CUDNN
@@ -102,7 +105,8 @@ namespace vl {
     vl::ErrorCode catchCudnnError(cudnnStatus_t status,
                               char const* description = NULL) ;
 
-    template<vl::DataType type> friend struct vl::impl::nnconv_cudnn ;
+    template<vl::DataType type> friend struct ::ConvolutionForwardCudnn ;
+    template<vl::DataType type> friend struct ::ConvolutionBackwardCudnn ;
 #endif
 
   protected:

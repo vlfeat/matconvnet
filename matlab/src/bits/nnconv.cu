@@ -424,6 +424,10 @@ struct ConvolutionTransposeBackward
 //                                                             Drivers
 // -------------------------------------------------------------------
 
+#if ENABLE_CUDNN
+#include "nnconv_cudnn.cu"
+#endif
+
 Convolution::Convolution(Context &context,
                          int strideY, int strideX,
                          int padTop, int padBottom,
