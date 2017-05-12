@@ -29,14 +29,14 @@ namespace vl { namespace nn {
                std::array<double,6> transform,
                Method method) ;
 
-    vl::ErrorCode forward(vl::Tensor output,
-                          vl::Tensor input,
-                          vl::Tensor rois) ;
+    vl::ErrorCode forward(vl::Tensor &output,
+                          vl::Tensor const &input,
+                          vl::Tensor const &rois) ;
 
-    vl::ErrorCode backward(vl::Tensor derInput,
-                           vl::Tensor input,
-                           vl::Tensor rois,
-                           vl::Tensor derOutput) ;
+    vl::ErrorCode backward(vl::Tensor &derInput,
+                           vl::Tensor const &input,
+                           vl::Tensor const &rois,
+                           vl::Tensor const &derOutput) ;
 
     vl::Context& context ;
     std::array<int,2> subdivisions ;
@@ -45,28 +45,5 @@ namespace vl { namespace nn {
   } ;
   
 } }
-
-namespace vl {
-  enum ROIPoolingMethod { vlROIPoolingMax, vlROIPoolingAverage } ;
-
-  vl::ErrorCode
-  nnroipooling_forward(vl::Context& context,
-                       vl::Tensor output,
-                       vl::Tensor data,
-                       vl::Tensor rois,
-                       ROIPoolingMethod method,
-                       int const subdivisions[2],
-                       double const transform[6]) ;
-
-  vl::ErrorCode
-  nnroipooling_backward(vl::Context& context,
-                        vl::Tensor derData,
-                        vl::Tensor data,
-                        vl::Tensor rois,
-                        vl::Tensor derOutput,
-                        ROIPoolingMethod method,
-                        int const subdivisions[2],
-                        double const transform[6]) ;
-}
 
 #endif /* defined(__vl__nnroipooling__) */

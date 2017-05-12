@@ -29,12 +29,12 @@ namespace vl { namespace nn {
             int padLeft, int padRight,
             Method method) ;
 
-    vl::ErrorCode forward(vl::Tensor output,
-                          vl::Tensor input) ;
+    vl::ErrorCode forward(vl::Tensor &output,
+                          vl::Tensor const &input) ;
 
-    vl::ErrorCode backward(vl::Tensor derInput,
-                           vl::Tensor input,
-                           vl::Tensor derOutput) ;
+    vl::ErrorCode backward(vl::Tensor &derInput,
+                           vl::Tensor const &input,
+                           vl::Tensor const &derOutput) ;
 
     vl::Context& context ;
     int poolHeight ;

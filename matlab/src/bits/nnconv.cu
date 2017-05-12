@@ -4,7 +4,7 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
 Copyright (C) 2015-17 Andrea Vedaldi.
 
 All rights reserved.
@@ -165,9 +165,9 @@ struct ConvolutionBackward
 {
   vl::ErrorCode operator()
   (Convolution &op,
-   Tensor derInput,
-   Tensor derFilter,
-   Tensor derBias,
+   Tensor &derInput,
+   Tensor &derFilter,
+   Tensor &derBias,
    Tensor const &input,
    Tensor const &filter,
    Tensor const &derOutput)

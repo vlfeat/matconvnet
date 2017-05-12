@@ -103,9 +103,9 @@ template<DataType dataType, class Accumulator>
 struct ROIPoolingForwardCPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor pooled,
-                           Tensor input,
-                           Tensor rois)
+                           Tensor &pooled,
+                           Tensor const &input,
+                           Tensor const &rois)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto numROIs = rois.getNumElements() / 5 ;
@@ -342,18 +342,18 @@ method(method)
 { }
 
 vl::ErrorCode
-ROIPooling::forward(vl::Tensor output,
-                    vl::Tensor input,
-                    vl::Tensor rois)
+ROIPooling::forward(Tensor &output,
+                    Tensor const &input,
+                    Tensor const &rois)
 {
   return dispatch<ROIPoolingForward>()(*this,output,input,rois) ;
 }
 
 vl::ErrorCode
-ROIPooling::backward(vl::Tensor derInput,
-                     vl::Tensor input,
-                     vl::Tensor rois,
-                     vl::Tensor derOutput)
+ROIPooling::backward(Tensor &derInput,
+                     Tensor const &input,
+                     Tensor const &rois,
+                     Tensor const &derOutput)
 {
   return dispatch<ROIPoolingBackward>()(*this,derInput,input,rois,derOutput) ;
 }

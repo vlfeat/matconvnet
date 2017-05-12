@@ -10,9 +10,9 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-/* ---------------------------------------------------------------- */
-/*                                         normalize_forward_kernel */
-/* ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+//                                                             Helpers
+// -------------------------------------------------------------------
 
 #undef xat
 #undef yat
@@ -20,8 +20,6 @@ the terms of the BSD license (see the COPYING file).
 #define xat(t) x[(t) * offset]
 #define yat(t) y[(t) * offset]
 #define zat(t) z[(t) * offset]
-
-#define __powf powf
 
 template<typename T> __global__ void
 normalize_forward_kernel
@@ -56,15 +54,11 @@ normalize_forward_kernel
       if (t+m2 < depth) { ap = xat(t+m2) ; }
       acc += ap*ap - am*am ;
       if (0 <= t && t < depth) {
-        yat(t) = xat(t) * __powf(kappa + alpha * acc, -beta) ;
+        yat(t) = xat(t) * powf(kappa + alpha * acc, -beta) ;
       }
     }
   }
 }
-
-/* ---------------------------------------------------------------- */
-/*                                        normalize_backward_kernel */
-/* ---------------------------------------------------------------- */
 
 template<typename T> __global__ void
 normalize_backward_kernel
@@ -107,7 +101,7 @@ normalize_backward_kernel
       if (t+m2 < depth) { ap = xat(t+m2) ; } else { q2 = depth - 1 ; }
       acc += ap*ap - am*am ;
       T L = kappa + alpha * acc ;
-      T Lbeta = __powf(L, -beta) ;
+      T Lbeta = powf(L, -beta) ;
       T Lbeta1 = Lbeta / L ;
 
       if (0 <= t && t < depth) {
@@ -128,8 +122,8 @@ template<vl::DataType dataType>
 struct LRNForward<vl::VLDT_GPU, dataType>
 {
   vl::ErrorCode operator()(vl::nn::LRN &op,
-                           vl::Tensor output,
-                           vl::Tensor input)
+                           vl::Tensor &output,
+                           vl::Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto width = output.getWidth() ;
@@ -157,9 +151,9 @@ template<vl::DataType dataType>
 struct LRNBackward<vl::VLDT_GPU, dataType>
 {
   vl::ErrorCode operator()(vl::nn::LRN &op,
-                           vl::Tensor derInput,
-                           vl::Tensor input,
-                           vl::Tensor derOutput)
+                           vl::Tensor &derInput,
+                           vl::Tensor const &input,
+                           vl::Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto width = derOutput.getWidth() ;

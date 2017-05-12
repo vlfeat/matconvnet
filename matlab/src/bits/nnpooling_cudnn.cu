@@ -37,8 +37,8 @@ template<DataType dataType>
 struct PoolingForwardCudnn
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor output,
-                           Tensor input)
+                           Tensor &output,
+                           Tensor const &input)
   {
     assert(output) ;
     assert(input) ;
@@ -121,14 +121,17 @@ struct PoolingForwardCudnn
   }
 } ;
 
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
 
 template<DataType dataType>
 struct PoolingBackwardCudnn
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &derOutput)
   {
     assert(derInput) ;
     assert(input) ;

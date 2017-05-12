@@ -70,9 +70,11 @@ struct dispatch
         case vl::VLDT_Float:
           error = C<vl::VLDT_GPU,vl::VLDT_Float>()(base,args...) ;
           break ;
+#if ENABLE_DOUBLE
         case vl::VLDT_Double:
           error = C<vl::VLDT_GPU,vl::VLDT_Double>()(base,args...) ;
           break ;
+#endif
         default: assert(false) ;
       }
       if (error == vl::VLE_Cuda) {
@@ -113,9 +115,11 @@ struct dispatch_cudnn
         case vl::VLDT_Float:
           error = CU<vl::VLDT_Float>()(base,args...) ;
           break ;
+#if ENABLE_DOUBLE
         case vl::VLDT_Double:
           error = CU<vl::VLDT_Double>()(base,args...) ;
           break ;
+#endif
         default: assert(false) ;
       }
       if (error == vl::VLE_Success) { return error ; }

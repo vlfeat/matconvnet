@@ -12,11 +12,6 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnnormalize.hpp"
 #include "impl/dispatcher.hpp"
-
-#if ENABLE_GPU
-#include "datacu.hpp"
-#endif
-
 #include <cmath>
 #include <cassert>
 
@@ -148,8 +143,8 @@ template<vl::DataType dataType>
 struct LRNForward<vl::VLDT_CPU, dataType>
 {
   vl::ErrorCode operator()(vl::nn::LRN &op,
-                           vl::Tensor output,
-                           vl::Tensor input)
+                           vl::Tensor &output,
+                           vl::Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto width = output.getWidth() ;
@@ -237,9 +232,9 @@ template<vl::DataType dataType>
 struct LRNBackward<vl::VLDT_CPU, dataType>
 {
   vl::ErrorCode operator()(vl::nn::LRN &op,
-                           vl::Tensor derInput,
-                           vl::Tensor input,
-                           vl::Tensor derOutput)
+                           vl::Tensor &derInput,
+                           vl::Tensor const &input,
+                           vl::Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto width = derOutput.getWidth() ;
@@ -414,16 +409,16 @@ LRN::LRN(vl::Context &context,
 { }
 
 vl::ErrorCode
-LRN::forward(vl::Tensor output,
-             vl::Tensor input)
+LRN::forward(vl::Tensor &output,
+             vl::Tensor const &input)
 {
   return dispatch<LRNForward>()(*this,output,input) ;
 }
 
 vl::ErrorCode
-LRN::backward(vl::Tensor derInput,
-              vl::Tensor input,
-              vl::Tensor derOutput)
+LRN::backward(vl::Tensor &derInput,
+              vl::Tensor const &input,
+              vl::Tensor const &derOutput)
 {
   return dispatch<LRNBackward>()(*this,derInput,input,derOutput) ;
 }

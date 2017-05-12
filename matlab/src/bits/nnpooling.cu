@@ -104,8 +104,8 @@ template<DataType dataType, class Accumulator>
 struct PoolingForwardCPU
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor output,
-                           Tensor input)
+                           Tensor &output,
+                           Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
@@ -172,9 +172,9 @@ template<DataType dataType, class Accumulator>
 struct PoolingBackwardCPU
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
@@ -218,9 +218,9 @@ template<DataType dataType>
 struct PoolingBackward<VLDT_CPU,dataType>
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &derOutput)
   {
     switch (op.method) {
       case Pooling::Max:
@@ -268,15 +268,16 @@ method(method)
 { }
 
 vl::ErrorCode
-Pooling::forward(vl::Tensor output,vl::Tensor input)
+Pooling::forward(Tensor &output,
+                 Tensor const &input)
 {
   return dispatch_cudnn<PoolingForward,PoolingForwardCudnn>()(*this,output,input) ;
 }
 
 vl::ErrorCode
-Pooling::backward(vl::Tensor derInput,
-                  vl::Tensor input,
-                  vl::Tensor derOutput)
+Pooling::backward(Tensor &derInput,
+                  Tensor const &input,
+                  Tensor const &derOutput)
 {
   return dispatch_cudnn<PoolingBackward,PoolingBackwardCudnn>()(*this,derInput,input,derOutput) ;
 }

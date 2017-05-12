@@ -253,9 +253,9 @@ template<DataType dataType, ROIPooling::Method method>
 struct ROIPoolingForwardGPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor output,
-                           Tensor input,
-                           Tensor rois)
+                           Tensor &output,
+                           Tensor const &input,
+                           Tensor const &rois)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto numROIs = rois.getNumElements() / 5 ;
@@ -321,10 +321,10 @@ template<DataType dataType, ROIPooling::Method method>
 struct ROIPoolingBackwardGPU
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor rois,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &rois,
+                           Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto numROIs = rois.getNumElements() / 5 ;
@@ -368,10 +368,10 @@ template<DataType dataType>
 struct ROIPoolingBackward<VLDT_GPU,dataType>
 {
   vl::ErrorCode operator()(ROIPooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor rois,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &rois,
+                           Tensor const &derOutput)
   {
     switch (op.method) {
       case ROIPooling::Max:

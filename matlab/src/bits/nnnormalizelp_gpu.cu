@@ -277,14 +277,13 @@ computeDerInput(type * derInputData,
 //                                                         GPU forward
 // -------------------------------------------------------------------
 
-template<vl::DataType dataType>
-struct NormalizeLpForward<vl::VLDT_GPU, dataType>
+template<vl::DataType dataType, bool givenNorms>
+struct NormalizeLpForwardGPU
 {
-  vl::ErrorCode operator()(vl::nn::NormalizeLp & op,
-                           vl::Tensor output, // [output: can pass null to skip]
-                           vl::Tensor norms,  // [output: can pass null]
-                           vl::Tensor input,
-                           bool givenNorms)
+  vl::ErrorCode operator()(NormalizeLp & op,
+                           Tensor &output,
+                           typename NormAgrument<givenNorms>::type norms,
+                           Tensor const &input)
   {
     assert(norms || !givenNorms) ;
 
@@ -320,19 +319,28 @@ struct NormalizeLpForward<vl::VLDT_GPU, dataType>
   }
 } ;
 
+template<vl::DataType dataType>
+struct NormalizeLpForward<vl::VLDT_GPU, dataType>
+: public NormalizeLpForwardGPU<dataType,false>
+{ } ;
+
+template<vl::DataType dataType>
+struct NormalizeLpForwardWithNorms<vl::VLDT_GPU, dataType>
+: public NormalizeLpForwardGPU<dataType,true>
+{ } ;
+
 // -------------------------------------------------------------------
 //                                                        GPU backward
 // -------------------------------------------------------------------
 
-template<vl::DataType dataType>
-struct NormalizeLpBackward<vl::VLDT_GPU, dataType>
+template<vl::DataType dataType, bool givenNorms>
+struct NormalizeLpBackwardGPU
 {
-  vl::ErrorCode operator()(vl::nn::NormalizeLp &op,
-                           vl::Tensor derInput,
-                           vl::Tensor norms, // [output: can pass null]
-                           vl::Tensor input,
-                           vl::Tensor derOutput,
-                           bool givenNorms)
+  vl::ErrorCode operator()(NormalizeLp &op,
+                           Tensor &derInput,
+                           typename NormAgrument<givenNorms>::type norms,
+                           Tensor const &input,
+                           Tensor const& derOutput)
   {
     assert(norms || !givenNorms) ;
 
@@ -378,4 +386,12 @@ struct NormalizeLpBackward<vl::VLDT_GPU, dataType>
   }
 } ;
 
+template<vl::DataType dataType>
+struct NormalizeLpBackward<vl::VLDT_GPU, dataType>
+: public NormalizeLpBackwardGPU<dataType,false>
+{ } ;
 
+template<vl::DataType dataType>
+struct NormalizeLpBackwardWithNorms<vl::VLDT_GPU, dataType>
+: public NormalizeLpBackwardGPU<dataType,true>
+{ } ;

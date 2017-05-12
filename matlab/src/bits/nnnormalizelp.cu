@@ -133,14 +133,18 @@ void computeNorms(NormalizeLp const & op,
 //                                                         CPU forward
 // -------------------------------------------------------------------
 
-template<vl::DataType dataType>
-struct NormalizeLpForward<vl::VLDT_CPU, dataType>
+
+template<bool givenNomrs> struct NormAgrument ;
+template<> struct NormAgrument<true> { typedef vl::Tensor const &type ; } ;
+template<> struct NormAgrument<false> { typedef vl::Tensor &type ; } ;
+
+template<vl::DataType dataType, bool givenNorms>
+struct NormalizeLpForwardCPU
 {
   vl::ErrorCode operator()(vl::nn::NormalizeLp & op,
-                           vl::Tensor output, // [output: can pass null to skip]
-                           vl::Tensor norms,  // [output: can pass null]
-                           vl::Tensor input,
-                           bool givenNorms)
+                           vl::Tensor &output,
+                           typename NormAgrument<givenNorms>::type norms,
+                           vl::Tensor const &input)
   {
     assert(norms || !givenNorms) ;
 
@@ -187,19 +191,28 @@ struct NormalizeLpForward<vl::VLDT_CPU, dataType>
   }
 } ;
 
+template<vl::DataType dataType>
+struct NormalizeLpForward<vl::VLDT_CPU, dataType>
+: public NormalizeLpForwardCPU<dataType,false>
+{ } ;
+
+template<vl::DataType dataType>
+struct NormalizeLpForwardWithNorms<vl::VLDT_CPU, dataType>
+: public NormalizeLpForwardCPU<dataType,true>
+{ } ;
+
 // -------------------------------------------------------------------
 //                                                        CPU backward
 // -------------------------------------------------------------------
 
-template<vl::DataType dataType>
-struct NormalizeLpBackward<vl::VLDT_CPU, dataType>
+template<vl::DataType dataType, bool givenNorms>
+struct NormalizeLpBackwardCPU
 {
   vl::ErrorCode operator()(vl::nn::NormalizeLp &op,
-                           vl::Tensor derInput,
-                           vl::Tensor norms, // [output: can pass null]
-                           vl::Tensor input,
-                           vl::Tensor derOutput,
-                           bool givenNorms)
+                           vl::Tensor &derInput,
+                           typename NormAgrument<givenNorms>::type norms,
+                           vl::Tensor const &input,
+                           vl::Tensor const& derOutput)
   {
     assert(norms || !givenNorms) ;
 
@@ -284,8 +297,18 @@ struct NormalizeLpBackward<vl::VLDT_CPU, dataType>
   }
 } ;
 
+template<vl::DataType dataType>
+struct NormalizeLpBackward<vl::VLDT_CPU, dataType>
+: public NormalizeLpBackwardCPU<dataType,false>
+{ } ;
+
+template<vl::DataType dataType>
+struct NormalizeLpBackwardWithNorms<vl::VLDT_CPU, dataType>
+: public NormalizeLpBackwardCPU<dataType,true>
+{ } ;
+
 // -------------------------------------------------------------------
-//                                                             Wrapper
+//                                                              Driver
 // -------------------------------------------------------------------
 
 #if ENABLE_GPU
@@ -303,7 +326,7 @@ epsilon(epsilon)
 { }
 
 vl::TensorShape
-NormalizeLp::getNormsShapeForData(vl::Tensor data)
+NormalizeLp::getNormsShapeForData(vl::Tensor const &data)
 {
   vl::TensorShape shape(data) ;
   int n = shape.getNumDimensions() ;
@@ -317,35 +340,35 @@ NormalizeLp::getNormsShapeForData(vl::Tensor data)
 }
 
 vl::ErrorCode
-NormalizeLp::forward(vl::Tensor output,
-                     vl::Tensor norms, // [output: can pass null]
-                     vl::Tensor data)
+NormalizeLp::forward(vl::Tensor &output,
+                     vl::Tensor &norms,
+                     vl::Tensor const &data)
 {
-  return dispatch<NormalizeLpForward>()(*this,output,norms,data,false) ;
+  return dispatch<NormalizeLpForward>()(*this,output,norms,data) ;
 }
 
 vl::ErrorCode
-NormalizeLp::forwardWithNorms(vl::Tensor output,
-                              vl::Tensor norms,
-                              vl::Tensor data)
+NormalizeLp::forwardWithNorms(vl::Tensor &output,
+                              vl::Tensor const &norms,
+                              vl::Tensor const &data)
 {
-  return dispatch<NormalizeLpForward>()(*this,output,norms,data,true) ;
+  return dispatch<NormalizeLpForwardWithNorms>()(*this,output,norms,data) ;
 }
 
 vl::ErrorCode
-NormalizeLp::backward(vl::Tensor derData,
-                      vl::Tensor norms,
-                      vl::Tensor data,
-                      vl::Tensor derOutput)
+NormalizeLp::backward(vl::Tensor &derData,
+                      vl::Tensor &norms,
+                      vl::Tensor const &data,
+                      vl::Tensor const &derOutput)
 {
-  return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput,false) ;
+  return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput) ;
 }
 
 vl::ErrorCode
-NormalizeLp::backwardWithNorms(vl::Tensor derData,
-                               vl::Tensor norms,
-                               vl::Tensor data,
-                               vl::Tensor derOutput)
+NormalizeLp::backwardWithNorms(vl::Tensor &derData,
+                               vl::Tensor const &norms,
+                               vl::Tensor const &data,
+                               vl::Tensor const &derOutput)
 {
-  return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput,true) ;
+  return dispatch<NormalizeLpBackwardWithNorms>()(*this,derData,norms,data,derOutput) ;
 }

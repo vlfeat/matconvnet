@@ -271,8 +271,8 @@ template<DataType dataType, Pooling::Method method>
 struct PoolingForwardGPU
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor output,
-                           Tensor input)
+                           Tensor &output,
+                           Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
@@ -344,9 +344,9 @@ template<DataType dataType, Pooling::Method method>
 struct PoolingBackwardGPU
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
@@ -395,9 +395,9 @@ template<DataType dataType>
 struct PoolingBackward<VLDT_GPU,dataType>
 {
   vl::ErrorCode operator()(Pooling &op,
-                           Tensor derInput,
-                           Tensor input,
-                           Tensor derOutput)
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &derOutput)
   {
     switch (op.method) {
       case Pooling::Max:

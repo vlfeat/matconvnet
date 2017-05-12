@@ -69,7 +69,7 @@ compute_moment(T * moments,
   }
 }
 
-// This version assumes that moment tensor is precomputed.
+// This version assumes that the moment tensor is precomputed.
 template<typename T> inline void
 compute_ders(T * derMultipliers,
              T * derBiases,

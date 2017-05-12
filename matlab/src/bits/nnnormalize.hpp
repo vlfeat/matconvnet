@@ -26,12 +26,12 @@ namespace vl { namespace nn {
         double alpha = 1e-3,
         double beta = 0.5) ;
 
-    vl::ErrorCode forward(vl::Tensor output,
-                          vl::Tensor data) ;
+    vl::ErrorCode forward(vl::Tensor &output,
+                          vl::Tensor const &data) ;
 
-    vl::ErrorCode backward(vl::Tensor derData,
-                           vl::Tensor data,
-                           vl::Tensor derOutput) ;
+    vl::ErrorCode backward(vl::Tensor &derData,
+                           vl::Tensor const &data,
+                           vl::Tensor const &derOutput) ;
     vl::Context& context ;
     double kappa ;
     double alpha ;

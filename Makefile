@@ -2,7 +2,7 @@
 # author: Andrea Vedaldi
 # brief: matconvnet makefile for mex files
 
-# Copyright (C) 2014-17 Andrea Vedaldi
+# Copyright (C) 2014-17 Andrea Vedaldi.
 # All rights reserved.
 #
 # This file is part of the VLFeat library and is made available under
@@ -184,7 +184,6 @@ endif
 # CPU-specific files
 cpp_src+=matlab/src/bits/impl/im2row_cpu.cpp
 cpp_src+=matlab/src/bits/impl/copy_cpu.cpp
-cpp_src+=matlab/src/bits/impl/bilinearsampler_cpu.cpp
 cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
@@ -195,11 +194,10 @@ endif
 ifdef ENABLE_GPU
 cpp_src+=matlab/src/bits/impl/im2row_gpu.cu
 cpp_src+=matlab/src/bits/impl/copy_gpu.cu
-cpp_src+=matlab/src/bits/impl/bilinearsampler_gpu.cu
 cpp_src+=matlab/src/bits/datacu.cu
 mex_src+=matlab/src/vl_cudatool.cu
 ifdef ENABLE_CUDNN
-cpp_src+=matlab/src/bits/impl/nnbilinearsampler_cudnn.cu
+cpp_src+=
 endif
 endif
 
