@@ -423,20 +423,11 @@ void mexFunction(int nout, mxArray *out[],
    (could be done as a regular case, but it is faster this way)
    */
   if (fullyConnectedMode) {
+    vl::nn::FullyConnected op(context) ;
     if (!backMode) {
-      error = vl::nnfullyconnected_forward(context,
-                                           output,
-                                           data,
-                                           filters,
-                                           biases) ;
+      error = op.forward(output,data,filters,biases) ;
     } else {
-      error = vl::nnfullyconnected_backward(context,
-                                            derData,
-                                            derFilters,
-                                            derBiases,
-                                            data,
-                                            filters,
-                                            derOutput) ;
+      error = op.backward(derData,derFilters,derBiases,data,filters,derOutput) ;
     }
     goto doneok ;
   }
