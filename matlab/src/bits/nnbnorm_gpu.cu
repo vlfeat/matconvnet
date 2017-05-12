@@ -900,10 +900,11 @@ struct BatchNormForward<VLDT_GPU, dataType>
     size_t accumulatorSize = (numBlocksPerChannel == 1) ? 0 : 2 * nextMultipleOf(numBlocks, WARP_SIZE) ;
     size_t workspaceSize = accumulatorSize + (moment.getMemory() ? 0 : 2 * numChannels) ;
     type * workspace = (type*)op.context.getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
-    type * accumulatorData = workspace ;
-    if (workspace == NULL) {
+    if (workspace == NULL && workspaceSize > 0) {
       return VLE_OutOfMemory ;
     }
+    type * accumulatorData = workspace ;
+
 
     Tensor ownMoment(moment) ;
     if (ownMoment.getMemory() == NULL) {
