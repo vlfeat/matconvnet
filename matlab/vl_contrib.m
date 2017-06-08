@@ -205,7 +205,8 @@ function module_compile(module, varargin)
 % --------------------------------------------------------------------
 if exist(module.compile_path, 'file')
   module_setup(module);
-  [~, compile_nm, ~] = fileparts(module.compile_path);
+  [compile_dir, compile_nm, ~] = fileparts(module.compile_path);
+  addpath(compile_dir);  % needed to be able to call the function
   handle = str2func(compile_nm);
   handle(varargin{:});
 end
