@@ -53,7 +53,7 @@ function res = vl_contrib(command, module, varargin)
 % the terms of the BSD license (see the COPYING file).
 assert(exist('vl_argparse', 'file')==2, 'MCN not set up, run vl_setupnn.')
 
-opts.contribUrl = 'github.com/lenck/matconvnet-contrib-test/';
+opts.contribUrl = 'github.com/vlfeat/matconvnet-contrib/';
 opts.contribDir = fullfile(vl_rootnn(), 'contrib');
 if has_git(), opts.method = 'git'; else, opts.method = 'zip'; end
 opts.force = false;
