@@ -1,48 +1,49 @@
 function res = vl_contrib(command, module, varargin)
 %VL_CONTRIB Contribution modules management
-%  VL_CONTRIB COMMAND MODULE ...
-%  VL_CONTRIB('COMMAND', ...) is a tool to download, setup and compile
-%  external contribution modules for matconvnet. It downloads the list of
-%  available modules from a dedicated repository and uses GIT (if present)
-%  or ZIP files to install the modules. Additionally can setup, compile and
-%  test the modules.
+%   VL_CONTRIB is a tool to download, set up and compile external
+%   contribution modules for MatConvNet. It downloads the list of available
+%   modules from a dedicated repository and uses GIT (if present) or ZIP
+%   files to install the modules. Additionally it can setup, compile and
+%   test the modules.
 %
-%  Module is a repository with a link registered in matconvnet-contrib.
-%  If the reporistory contains a file `setup_MODULENAME.m` and or
-%  `compile_MODULENAME.m`, VL_CONTRIB can run these script for the module.
-%  As a general rule of thumb, the module should have the same structure as
-%  `vl_rootnn()/matlab` directory in order to be able to add additional
-%  dagnn layers, overload existing functions etc.
+%   VL_CONTRIB (with no arguments) shows the list of available modules, and
+%   if possible shows hyperlinks with the available commands.
 %
-%  Supports the following commands:
+%   VL_CONTRIB COMMAND MODULE ...
+%   VL_CONTRIB('COMMAND', ...) executes one of the following commands:
 %
-%  `VL_CONTRIB LIST`
-%    Prints a list of available modules.
+%   `VL_CONTRIB LIST`
+%      Prints a list of available modules.
 %
-%  `VL_CONTRIB INSTALL MODULE`
-%  `VL_CONTRIB UPDATE MODULE`
-%    Downloads or update a module MODULE.
-%    Use `'force', true` to overwrite the existing module.
+%   `VL_CONTRIB INSTALL MODULE`
+%   `VL_CONTRIB UPDATE MODULE`
+%      Downloads or updates MODULE.
+%      Use `'force', true` to overwrite the existing module.
 %
-%  `VL_CONTRIB SETUP MODULE`
-%    Setups paths for a MODULE.
-%    Runs `<vl_rootnn()>/contrib/MODULE/setup_MODULE.m`
+%   `VL_CONTRIB SETUP MODULE`
+%      Sets up the Matlab path for a MODULE.
+%      Runs `<vl_rootnn()>/contrib/MODULE/setup_MODULE.m`.
 %
-%  `VL_CONTRIB UNLOAD MODULE`
-%    Remove all paths of a module from the MALTAB path.
+%   `VL_CONTRIB UNLOAD MODULE`
+%      Removes all paths of a module from the Matlab path.
 %
-%  `VL_CONTRIB COMPILE MODULE ...`
-%    Compile a MODULE. See the module documentation for additional details
-%    and accepted arguments.
-%    Runs `<vl_rootnn()>/contrib/MODULE/compile_MODULE.m`
+%   `VL_CONTRIB COMPILE MODULE ...`
+%      Compiles a MODULE. See the module documentation for additional
+%      details and accepted arguments.
+%      Runs `<vl_rootnn()>/contrib/MODULE/compile_MODULE.m`.
 %
-%  `VL_CONTRIB TEST MODULE ...`
-%    Tests a MODULE if a test suite dir exists. Test suite dir is:
-%    `<vl_rootnn()>/contrib/MODULE/xtest/suite/`. See `vl_testnn` for
-%    additional arguments.
+%   `VL_CONTRIB TEST MODULE ...`
+%      Tests a MODULE, if a test suite dir exists. Test suite dir is:
+%      `<vl_rootnn()>/contrib/MODULE/xtest/suite/`. See `vl_testnn` for
+%      additional arguments.
 %
-%  `VL_CONTRIB PATH MODULE ...`
-%    Return a MODULE path.
+%   `VL_CONTRIB PATH MODULE ...`
+%      Returns a MODULE path.
+%
+%   ## Notes
+%
+%   Modules are installed to the directory `<vl_rootnn()>/contrib`.
+%   The official list is hosted at `github.com/vlfeat/matconvnet-contrib`.
 %
 %   See also: VL_SETUPNN, VL_COMPILENN, VL_TESTNN.
 
