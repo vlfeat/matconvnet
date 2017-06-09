@@ -7,7 +7,8 @@ function res = vl_contrib(command, module, varargin)
 %   test the modules.
 %
 %   VL_CONTRIB (with no arguments) shows the list of available modules, and
-%   if possible shows hyperlinks with the available commands.
+%   if possible shows hyperlinks with the available commands for each
+%   module.
 %
 %   VL_CONTRIB COMMAND MODULE ...
 %   VL_CONTRIB('COMMAND', ...) executes one of the following commands:
@@ -33,7 +34,9 @@ function res = vl_contrib(command, module, varargin)
 %      Runs `<vl_rootnn()>/contrib/MODULE/compile_MODULE.m`.
 %
 %   `VL_CONTRIB TEST MODULE ...`
-%      Tests a MODULE, if a test suite dir exists. Test suite dir is:
+%      Tests a MODULE, if a test script or a test suite dir exists.
+%      Test script path is: `<vl_rootnn()>/contrib/MODULE/test_MODULE.m`
+%      Test suite dir is:
 %      `<vl_rootnn()>/contrib/MODULE/xtest/suite/`. See `vl_testnn` for
 %      additional arguments.
 %
@@ -44,6 +47,9 @@ function res = vl_contrib(command, module, varargin)
 %
 %   Modules are installed to the directory `<vl_rootnn()>/contrib`.
 %   The official list is hosted at `github.com/vlfeat/matconvnet-contrib`.
+%
+%   Modules are installed using GIT, if available, otherwise unpacks the
+%   zip distribution of the modules from its repository.
 %
 %   See also: VL_SETUPNN, VL_COMPILENN, VL_TESTNN.
 
@@ -93,11 +99,11 @@ switch lower(command)
   case 'compile'
     module_compile(module, varargin{:});
   case 'setup'
-    module_setup(module);
+    module_setup(module, varargin{:});
   case 'unload'
     module_unload(module);
   case 'test'
-    module_test(module);
+    module_test(module, varargin{:});
   case 'url'
     res = module.repo.url;
   case 'path'
@@ -110,6 +116,7 @@ end
 % --------------------------------------------------------------------
 %                                                     Module functions
 % --------------------------------------------------------------------
+
 % --------------------------------------------------------------------
 function module = module_init(module, opts)
 % --------------------------------------------------------------------
@@ -121,6 +128,8 @@ module.setup_path = fullfile(module.path, ...
   ['setup_', name2path(module.name), '.m']);
 module.compile_path = fullfile(module.path, ...
   ['compile_', name2path(module.name), '.m']);
+module.test_path = fullfile(module.path, ...
+  ['test_', name2path(module.name), '.m']);
 module.test_dir = fullfile(module.path, 'xtest', 'suite');
 module.sha_path = fullfile(module.path, '.sha'); % For ZIP only
 end
@@ -146,7 +155,7 @@ if opts.showlinks
       fprintf('<a href="matlab: vl_contrib compile %s">[Compile]</a> ', ...
         module.name);
     end
-    if exist(module.test_dir, 'dir')
+    if exist(module.test_path, 'file') || exist(module.test_dir, 'dir')
       fprintf('<a href="matlab: vl_contrib test %s">[Test]</a> ', ...
         module.name);
     end
@@ -222,10 +231,10 @@ res = any(is_modpath);
 end
 
 % --------------------------------------------------------------------
-function module_setup(module)
+function module_setup(module, varargin)
 % --------------------------------------------------------------------
 if exist(module.setup_path, 'file')
-  run(module.setup_path);
+  run(module.setup_path, varargin{:});
 end
 end
 
@@ -244,7 +253,9 @@ end
 % --------------------------------------------------------------------
 function module_test(module, varargin)
 % --------------------------------------------------------------------
-if exist(module.test_dir, 'dir')
+if exist(module.test_path, 'file')
+  run(module.test_path, varargin{:});
+elseif exist(module.test_dir, 'dir')
   vl_testnn('suiteDir', module.test_dir, varargin{:});
 end
 end
