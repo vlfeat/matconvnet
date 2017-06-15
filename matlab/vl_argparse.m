@@ -81,6 +81,7 @@ for i = 1:numel(varargin)
   end
 end
 
+opts_ = opts ;  % Remember the original options structure
 optNames = fieldnames(opts)' ;
 
 % convert ARGS into a structure
@@ -137,9 +138,10 @@ while ai <= numel(args)
   if ~recursive
     opts.(field) = value ;
   else
-    if isfield(opts, field) && isstruct(opts.(field)) && numel(fieldnames(opts.(field))) > 0
-      % The parameter has a  non-empty struct value in OPTS:
-      % process recursively.
+    if isfield(opts_, field) && isstruct(opts_.(field)) && numel(fieldnames(opts_.(field))) > 0
+      % The parameter has a non-empty struct value in OPTS: process
+      % recursively. Check the original options (OPTS_), before OPTS gets
+      % modified and possibly changes it from empty to non-empty.
       if ~isstruct(value)
         error('Cannot assign a non-struct value to the struct parameter ''%s''.', ...
           field) ;
@@ -150,8 +152,13 @@ while ai <= numel(args)
         opts.(field) = vl_argparse(opts.(field), value, varargin{:}) ;
       end
     else
-      % The parameter does not have a struct value in OPTS: copy as is.
-      opts.(field) = value ;
+      % The parameter does not have a struct value in OPTS: copy as is, or
+      % merge it, if it contains a struct.
+      if ~isstruct(value)
+        opts.(field) = value ;
+      else
+        opts.(field) = vl_argparse(opts.(field), value, 'merge') ;
+      end
     end
   end
 
