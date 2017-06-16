@@ -66,6 +66,13 @@ function vl_compilenn(varargin)
 %      Directory containing the unpacked binaries and header files of
 %      the CuDNN library.
 %
+%   `preCompileFn`:: none
+%      Applies a custom modifier function just before compilation. The
+%      function's signature is: 
+%      [opts, mex_src, lib_src, flags] = f(opts, mex_src, lib_src, flags) ;
+%      where the arguments are a struct with the present options, a list of
+%      MEX files, a list of LIB files, and compilation flags, respectively.
+%
 %   ## Compiling the CPU code
 %
 %   By default, the `EnableGpu` option is switched to off, such that
@@ -164,6 +171,7 @@ opts.defCudaArch      = [...
   '-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
   '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
 opts.cudnnRoot        = 'local/cudnn' ;
+opts.preCompileFn       = [] ;
 opts = vl_argparse(opts, varargin);
 
 % --------------------------------------------------------------------
@@ -310,10 +318,11 @@ end
 % --------------------------------------------------------------------
 
 % Build directories
-mex_dir = fullfile(root, 'matlab', 'mex') ;
-bld_dir = fullfile(mex_dir, '.build');
-if ~exist(fullfile(bld_dir,'bits','impl'), 'dir')
-  mkdir(fullfile(bld_dir,'bits','impl')) ;
+flags.src_dir = fullfile(root, 'matlab', 'src') ;
+flags.mex_dir = fullfile(root, 'matlab', 'mex') ;
+flags.bld_dir = fullfile(flags.mex_dir, '.build');
+if ~exist(fullfile(flags.bld_dir,'bits','impl'), 'dir')
+  mkdir(fullfile(flags.bld_dir,'bits','impl')) ;
 end
 
 % Compiler flags
@@ -422,28 +431,24 @@ end
 %                                                        Command flags
 % --------------------------------------------------------------------
 
-flags.mexcc = horzcat(flags.cc, ...
-                      {'-largeArrayDims'}, ...
+flags.mexcc = horzcat({'-largeArrayDims'}, ...
                       {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.ccpass)]}, ...
                       {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' strjoin(flags.ccoptim)]}) ;
 if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 
 % mex: compile GPU
 flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
-                     flags.cc, ...
                      {'-largeArrayDims'}, ...
                      {['CXXFLAGS=$CXXFLAGS ' quote_nvcc(flags.ccpass) ' ' strjoin(flags.nvccpass)]}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
 
 % mex: link
-flags.mexlink = horzcat(flags.cc, flags.link, ...
-                        {'-largeArrayDims'}, ...
+flags.mexlink = horzcat({'-largeArrayDims'}, ...
                         {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
                         {['LINKLIBS=', strjoin(flags.linklibs), ' $LINKLIBS']}) ;
 
 % nvcc: compile GPU
-flags.nvcc = horzcat(flags.cc, ...
-                     {opts.cudaArch}, ...
+flags.nvcc = horzcat({opts.cudaArch}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'extern', 'include'))}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include'))}, ...
                      {quote_nvcc(flags.ccpass)}, ...
@@ -452,8 +457,8 @@ flags.nvcc = horzcat(flags.cc, ...
 
 if opts.verbose
   fprintf('%s: * Compiler and linker configurations *\n', mfilename) ;
-  fprintf('%s: \tintermediate build products directory: %s\n', mfilename, bld_dir) ;
-  fprintf('%s: \tMEX files: %s/\n', mfilename, mex_dir) ;
+  fprintf('%s: \tintermediate build products directory: %s\n', mfilename, flags.bld_dir) ;
+  fprintf('%s: \tMEX files: %s/\n', mfilename, flags.mex_dir) ;
   fprintf('%s: \tMEX options [CC CPU]: %s\n', mfilename, strjoin(flags.mexcc)) ;
   fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.mexlink)) ;
 end
@@ -475,40 +480,50 @@ end
 %                                                              Compile
 % --------------------------------------------------------------------
 
+% Apply pre-compilation modifier function (e.g. to add custom files)
+if ~isempty(opts.preCompileFn)
+  [opts, mex_src, lib_src, flags] = opts.preCompileFn(opts, mex_src, lib_src, flags) ;
+end
+
 % Intermediate object files
 srcs = horzcat(lib_src,mex_src) ;
 for i = 1:numel(horzcat(lib_src, mex_src))
   [~,~,ext] = fileparts(srcs{i}) ; ext(1) = [] ;
-  objfile = toobj(bld_dir,srcs{i});
+  objfile = toobj(flags.bld_dir,srcs{i});
   if strcmp(ext,'cu')
     if strcmp(opts.cudaMethod,'nvcc')
-      nvcc_compile(opts, srcs{i}, objfile, flags.nvcc) ;
+      nvcc_compile(opts, srcs{i}, objfile, [flags.cc, flags.nvcc]) ;
     else
-      mex_compile(opts, srcs{i}, objfile, flags.mexcu) ;
+      mex_compile(opts, srcs{i}, objfile, [flags.cc, flags.mexcu]) ;
     end
   else
-    mex_compile(opts, srcs{i}, objfile, flags.mexcc) ;
+    mex_compile(opts, srcs{i}, objfile, [flags.cc, flags.mexcc]) ;
   end
   assert(exist(objfile, 'file') ~= 0, 'Compilation of %s failed.', objfile);
 end
 
 % Link into MEX files
 for i = 1:numel(mex_src)
-  objs = toobj(bld_dir, [mex_src(i), lib_src]) ;
-  mex_link(opts, objs, mex_dir, flags.mexlink) ;
+  objs = toobj(flags.bld_dir, [mex_src(i), lib_src]) ;
+  mex_link(opts, objs, flags.mex_dir, [flags.cc, flags.link, flags.mexlink]) ;
 end
 
 % Reset path adding the mex subdirectory just created
 vl_setupnn() ;
+
+% Save the last compile flags to the build dir
+if isempty(opts.preCompileFn)
+  save(fullfile(flags.bld_dir, 'last_compile_opts.mat'), '-struct', 'opts');
+end
 
 % --------------------------------------------------------------------
 %                                                    Utility functions
 % --------------------------------------------------------------------
 
 % --------------------------------------------------------------------
-function objs = toobj(bld_dir,srcs)
+function objs = toobj(bld_dir, srcs)
 % --------------------------------------------------------------------
-str = fullfile('matlab','src') ;
+str = [filesep, 'src', filesep]; % NASTY
 multiple = iscell(srcs) ;
 if ~multiple, srcs = {srcs} ; end
 objs = cell(1, numel(srcs));
