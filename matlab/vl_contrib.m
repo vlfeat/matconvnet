@@ -235,6 +235,13 @@ function module_setup(module, varargin)
 % --------------------------------------------------------------------
 if exist(module.setup_path, 'file')
   run(module.setup_path, varargin{:});
+else
+  % if no setup function, add the default locations to path: the root
+  % and the matlab subdirectory.
+  addpath(module.path);
+  if exist([module.path '/matlab'], 'dir')
+    addpath([module.path '/matlab']);
+  end
 end
 end
 
