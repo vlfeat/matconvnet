@@ -372,6 +372,9 @@ for i=1:n
 
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
+     
+    case 'tanh'
+      res(i+1).x = vl_nntanh(res(i).x) ;
 
     otherwise
       error('Unknown layer type ''%s''.', l.type) ;
@@ -493,6 +496,9 @@ if doder
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
 
+      case 'tanh'
+        res(i).dzdx = vl_nntanh(res(i).x, res(i+1).dzdx) ;
+        
     end % layers
 
     switch l.type
