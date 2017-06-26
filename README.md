@@ -12,7 +12,7 @@ for domain adaptation.
 
 The deep learning code is based off **MatConvNet** - a MATLAB toolbox 
 implementing *Convolutional Neural Networks* (CNNs) for computer vision 
-applications. [homepage](http://www.vlfeat.org/matconvnet) to know more.
+applications. Check out [homepage](http://www.vlfeat.org/matconvnet) to know more.
 
 The [paper](https://arxiv.org/pdf/1706.07522.pdf) can be cited using
 ```
