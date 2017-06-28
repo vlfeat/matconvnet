@@ -450,7 +450,7 @@ Here $\pi_l$ denotes the index of the layer $f_{\pi_l}$ that computes the value 
 d\bx_{t} \leftarrow d\bx_{t}
 + \frac{d\langle \bp_L, f_{\pi_L}(\bx_0,\dots,\bx_{t-1})\rangle}{d\bx_t}.
 \]
-Here, for uniformity with the other iterations, we use the fact that $d\bx_l$ are initialized to zero an\emph{accumulate} the values instead of storing them. In practice, the update operation needs to be carried out only for the variables $\bx_l$ that are actual inputs to $f_{\pi_L}$, which is often a tiny fraction of all the variables in the DAG.
+Here, for uniformity with the other iterations, we use the fact that $d\bx_l$ are initialized to zero and \emph{accumulate} the values instead of storing them. In practice, the update operation needs to be carried out only for the variables $\bx_l$ that are actual inputs to $f_{\pi_L}$, which is often a tiny fraction of all the variables in the DAG.
 
 After the update, each $d\bx_t$ contains the projected derivative of function $h_L$ with respect to the corresponding variable:
 \[
