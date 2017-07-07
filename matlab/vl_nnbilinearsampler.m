@@ -16,18 +16,18 @@
 %   For output image n, GRID(1,:,:,n) specifies the vertical location
 %   v of a sample in the input image X and GRID(2,:,:,n) the
 %   horizontal location u. The convention follows standard
-%   impelemntations of this operator in the literature. Namely:
+%   impelementations of this operator in the literature. Namely:
 %
 %   1. The grid coordinates are normalized in the range [-1,1]. This
 %      means that (-1,-1) is the center of the upper-left pixel in the
 %      input image and (+1,+1) the center of the bottom-right pixel.
 %
-%   2. The V,U coordiante planes are stacked in the first dimension of
+%   2. The V,U coordinate planes are stacked in the first dimension of
 %      GRID instead of in the third, as it would be more natural in
 %      MatConvNet (as these could be interpreted as 'channels' in
 %      GRID).
 %
-%   Further, No can be a multiple of N; in this case, it is assumed
+%   Further, No shall be a multiple of N; in this case, it is assumed
 %   that there are No/N transforms per input image, hence, the
 %   transforms [1 ... No/N] are applied to the first image, [No/N+1
 %   ... 2*No/N] are applied to the second image, etc.
