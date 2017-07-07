@@ -22,7 +22,7 @@
 %      means that (-1,-1) is the center of the upper-left pixel in the
 %      input image and (+1,+1) the center of the bottom-right pixel.
 %
-%   2. The V,U coordiante planes are stacked in the fisrt dimension of
+%   2. The V,U coordiante planes are stacked in the first dimension of
 %      GRID instead of in the third, as it would be more natural in
 %      MatConvNet (as these could be interpreted as 'channels' in
 %      GRID).
