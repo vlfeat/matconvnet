@@ -42,7 +42,7 @@
 %       format = {'single', [1  1], 'x0' ;
 %                 'double', [10 5], 'x1' }
 %
-%   As ane extension, it is possible to declare all or some of the
+%   As an extension, it is possible to declare all or some of the
 %   tensors as GPU ones, by adding a fourth column to FORMAT:
 %
 %       format = {'single', [1  1], 'x0', 'cpu' ;
