@@ -13,7 +13,7 @@ function [info, str] = vl_simplenn_display(net, varargin)
 %   `inputSize`:: auto
 %      Specifies the size of the input tensor X that will be passed to
 %      the network as input. This information is used in order to
-%      estiamte the memory required to process the network. When this
+%      estimate the memory required to process the network. When this
 %      option is not used, VL_SIMPLENN_DISPLAY() tires to use values
 %      in the NET structure to guess the input size:
 %      NET.META.INPUTSIZE and NET.META.NORMALIZATION.IMAGESIZE
