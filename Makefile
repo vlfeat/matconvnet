@@ -27,6 +27,10 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-8.0
 CUDNNROOT ?= $(CURDIR)/local/
 CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
+# For Mac OS X: Use this to use an old Xcode (for CUDA) after installing
+# the corresponding Xcode Command Line Tools from developer.apple.compile
+# DEVELOPER_DIR=/Library/Developer/CommandLineTools
+
 # Remark: each MATLAB version requires a particular CUDA Toolkit version.
 # Note that multiple CUDA Toolkits can be installed.
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
@@ -93,6 +97,9 @@ ifeq "$(ARCH)" "$(filter $(ARCH),maci64)"
 IMAGELIB ?= $(if $(ENABLE_IMREADJPEG),quartz,none)
 CXXFLAGS_PASS += -mmacosx-version-min=10.9
 CXXOPTIMFLAGS += -mssse3 -ffast-math
+ifdef DEVELOPER_DIR
+NVCCFLAGS += --compiler-bindir=$(shell DEVELOPER_DIR="$(DEVELOPER_DIR)" xcrun -f clang++)
+endif
 LDFLAGS += \
 -mmacosx-version-min=10.9 \
 $(if $(ENABLE_GPU),-Wl$(comma)-rpath -Wl$(comma)"$(CUDAROOT)/lib") \
@@ -261,7 +268,7 @@ LDFLAGS='$$LDFLAGS $(LDFLAGS)' \
 LDOPTIMFLAGS='$$LDOPTIMFLAGS $(LDOPTIMFLAGS)' \
 LINKLIBS='$(LINKLIBS) $$LINKLIBS' \
 
-NVCCFLAGS = $(CXXFLAGS) $(NVCCFLAGS_PASS) \
+NVCCFLAGS += $(CXXFLAGS) $(NVCCFLAGS_PASS) \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 $(call nvcc-quote,-fPIC $(CXXFLAGS_PASS) $(CXXOPTIMFLAGS))
