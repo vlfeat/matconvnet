@@ -83,6 +83,10 @@
 		2D19E67B1AB3031200D4FF0C /* install-alt.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = "install-alt.md"; sourceTree = "<group>"; };
 		2D1ECF5419CDE63200F4A122 /* vl_argparse.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_argparse.m; path = matlab/vl_argparse.m; sourceTree = "<group>"; };
 		2D1ECF5519CDE63200F4A122 /* vl_nnnormalize.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnnormalize.m; path = matlab/vl_nnnormalize.m; sourceTree = "<group>"; };
+		2D1FE19D1F39128400EEFFD0 /* vl_contrib.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_contrib.m; path = matlab/vl_contrib.m; sourceTree = "<group>"; };
+		2D1FE19E1F39128400EEFFD0 /* vl_nnnormalizelp.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnnormalizelp.m; path = matlab/vl_nnnormalizelp.m; sourceTree = "<group>"; };
+		2D1FE19F1F39128400EEFFD0 /* vl_tmove.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_tmove.m; path = matlab/vl_tmove.m; sourceTree = "<group>"; };
+		2D1FE1A01F39128400EEFFD0 /* vl_tshow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_tshow.m; path = matlab/vl_tshow.m; sourceTree = "<group>"; };
 		2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = copy_cpu.cpp; path = matlab/src/bits/impl/copy_cpu.cpp; sourceTree = "<group>"; };
 		2D375DBB18A7F790008A97EE /* vl_nnconv.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnconv.m; path = matlab/vl_nnconv.m; sourceTree = "<group>"; };
 		2D375DBC18A7F790008A97EE /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; fileEncoding = 4; indentWidth = 8; path = Makefile; sourceTree = "<group>"; tabWidth = 8; usesTabs = 1; wrapsLines = 0; };
@@ -638,6 +642,7 @@
 				2D416C781B39E1D00092638E /* simplenn */,
 				2D1ECF5419CDE63200F4A122 /* vl_argparse.m */,
 				2D19E6781AB2171800D4FF0C /* vl_compilenn.m */,
+				2D1FE19D1F39128400EEFFD0 /* vl_contrib.m */,
 				2D19E6791AB2171800D4FF0C /* vl_imreadjpeg.m */,
 				2DF0C6211CB54C3E005BEF89 /* vl_nnbilinearsampler.m */,
 				2D416C731B39E1C60092638E /* vl_nnbnorm.m */,
@@ -649,6 +654,7 @@
 				2DD3FACC18EC0E7B00053032 /* vl_nnloss.m */,
 				2D6D0426196A896300022E96 /* vl_nnnoffset.m */,
 				2D1ECF5519CDE63200F4A122 /* vl_nnnormalize.m */,
+				2D1FE19E1F39128400EEFFD0 /* vl_nnnormalizelp.m */,
 				2D416C751B39E1C60092638E /* vl_nnpdist.m */,
 				2D5C34D519745588002B399E /* vl_nnpool.m */,
 				2DD3FACD18EC0E7B00053032 /* vl_nnrelu.m */,
@@ -660,6 +666,8 @@
 				2DD3FADA18EC118700053032 /* vl_rootnn.m */,
 				2DD3FADB18EC118700053032 /* vl_setupnn.m */,
 				2D9BC77E1D0ECDF200EC9F94 /* vl_taccum.m */,
+				2D1FE19F1F39128400EEFFD0 /* vl_tmove.m */,
+				2D1FE1A01F39128400EEFFD0 /* vl_tshow.m */,
 				2DD3FAD118EC0E8100053032 /* xtest */,
 			);
 			name = matlab;
@@ -858,9 +866,10 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CUDAROOT = "/Developer/NVIDIA/CUDA-7.5";
+				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
 				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
 				DEBUG = YES;
+				DEVELOPER_DIR = /Library/Developer/CommandLineTools;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
 				ENABLE_TESTABILITY = YES;
@@ -905,10 +914,11 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
-				CUDAROOT = "/Developer/NVIDIA/CUDA-7.5";
+				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
 				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
 				DEBUG = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPER_DIR = /Library/Developer/CommandLineTools;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
 				ENABLE_NS_ASSERTIONS = NO;
