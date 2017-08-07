@@ -31,6 +31,8 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta25](about.md#changes) released with a new third-party contribution modular system (modules include autodiff as well as a plethora of object detectors). A partial rewrite of the C++ code is also included.
+>
 > **New:** [1.0-beta24](about.md#changes) released with bugfixes, new
 > examples, and utility functions.
 >
@@ -100,4 +102,3 @@ recognition, and text detection are available.
 ## Other information
 - [Changes](about/#changes)
 - [Developing the library](developers.md)
-
