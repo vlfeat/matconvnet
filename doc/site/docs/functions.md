@@ -66,6 +66,7 @@ showing how to train CNNs.
 - [`vl_argparse`](mfiles/vl_argparse.md) A helper function to parse
   optional arguments.
 - [`vl_compilenn`](mfiles/vl_compilenn.md) Compile the MEX fields in the toolbox.
+- [`vl_contrib`](mfiles/vl_contrib.md) Download, compile, and setup third-party modules.
 - [`vl_rootnn`](mfiles/vl_rootnn.md) Return the path to the MatConvNet toolbox installation.
 - [`vl_setpunn`](mfiles/vl_setupnn.md) Setup MatConvNet for use in MATLAB.
 - [`vl_imreadjpeg`](mfiles/vl_imreadjpeg.md) Quickly load a batch of JPEG images.

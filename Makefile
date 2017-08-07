@@ -27,6 +27,10 @@ CUDAROOT ?= /Developer/NVIDIA/CUDA-8.0
 CUDNNROOT ?= $(CURDIR)/local/
 CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 
+# For Mac OS X: Use this to use an old Xcode (for CUDA) after installing
+# the corresponding Xcode Command Line Tools from developer.apple.compile
+# DEVELOPER_DIR=/Library/Developer/CommandLineTools
+
 # Remark: each MATLAB version requires a particular CUDA Toolkit version.
 # Note that multiple CUDA Toolkits can be installed.
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
