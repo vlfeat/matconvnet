@@ -217,6 +217,7 @@ mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconv.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnconvt.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnpool.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalize.' ext]) ;
+mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnnormalizelp.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbnorm.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnbilinearsampler.' ext]) ;
 mex_src{end+1} = fullfile(root,'matlab','src',['vl_nnroipool.' ext]) ;
