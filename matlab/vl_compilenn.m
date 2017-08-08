@@ -25,7 +25,7 @@ function vl_compilenn(varargin)
 %        `<MatConvNet>/matlab/src/config/mex_CUDA_<arch>.[sh/xml]`
 %        This configuration file is in XML format since MATLAB 8.3
 %        (R2014a) and is a Shell script for earlier versions. This
-%        is, principle, the preferred method as it uses the
+%        is, in principle, the preferred method as it uses the
 %        MATLAB-sanctioned compiler options.
 %
 %      * The **`nvcc`** method calls the NVIDIA CUDA compiler `nvcc`
@@ -142,8 +142,7 @@ function vl_compilenn(varargin)
 %   code](http://mathworks.com/help/distcomp/run-mex-functions-containing-cuda-code.html),
 %   `vl_setup()`, `vl_imreadjpeg()`.
 
-% Copyright (C) 2014-16 Karel Lenc and Andrea Vedaldi.
-% All rights reserved.
+% Copyright (C) 2014-17 Karel Lenc and Andrea Vedaldi.
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
@@ -427,8 +426,7 @@ flags.mexcc = horzcat({'-largeArrayDims'}, ...
 if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 
 % mex: compile GPU
-flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
-                     {'-largeArrayDims'}, ...
+flags.mexcu= horzcat({'-largeArrayDims'}, ...
                      {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.nvccpass)]}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
 
