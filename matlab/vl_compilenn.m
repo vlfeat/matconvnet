@@ -67,8 +67,9 @@ function vl_compilenn(varargin)
 %      the CuDNN library.
 %
 %   `preCompileFn`:: none
-%      Applies a custom modifier function just before compilation. The
-%      function's signature is: 
+%      Applies a custom modifier function just before compilation
+%      to modify various compilation options. The
+%      function's signature is:
 %      [opts, mex_src, lib_src, flags] = f(opts, mex_src, lib_src, flags) ;
 %      where the arguments are a struct with the present options, a list of
 %      MEX files, a list of LIB files, and compilation flags, respectively.
@@ -207,6 +208,7 @@ lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnfullyconnected.' ext]) 
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnsubsample.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnpooling.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnnormalize.' ext]) ;
+lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnnormalizelp.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbnorm.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbias.' ext]) ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits',['nnbilinearsampler.' ext]) ;
@@ -227,37 +229,20 @@ end
 
 % CPU-specific files
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_cpu.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','subsample_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','copy_cpu.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','pooling_cpu.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_cpu.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','tinythread.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_cpu.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','roipooling_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','imread.cpp') ;
 
 % GPU-specific files
 if opts.enableGpu
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_gpu.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','subsample_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','copy_gpu.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','pooling_gpu.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','normalize_gpu.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bnorm_gpu.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','bilinearsampler_gpu.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','roipooling_gpu.cu') ;
   lib_src{end+1} = fullfile(root,'matlab','src','bits','datacu.cu') ;
   mex_src{end+1} = fullfile(root,'matlab','src','vl_cudatool.cu') ;
 end
 
 % cuDNN-specific files
 if opts.enableCudnn
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnconv_cudnn.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbias_cudnn.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnpooling_cudnn.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbilinearsampler_cudnn.cu') ;
-  lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','nnbnorm_cudnn.cu') ;
 end
 
 % Other files
@@ -357,8 +342,12 @@ end
 flags.link{end+1} = '-lmwblas' ;
 switch arch
   case {'maci64'}
+    flags.ccpass{end+1} = '--std=c++11' ;
+    flags.nvccpass{end+1} = '-std=c++11' ;
   case {'glnxa64'}
     flags.linklibs{end+1} = '-lrt' ;
+    flags.ccpass{end+1} = '--std=c++11' ;
+    flags.nvccpass{end+1} = '-std=c++11' ;
   case {'win64'}
     % VisualC does not pass this even if available in the CPU architecture
     flags.cc{end+1} = '-D__SSSE3__' ;
@@ -388,7 +377,7 @@ switch arch
     flags.ccpass{end+1} = '-mmacosx-version-min=10.9' ;
     flags.linkpass{end+1} = '-mmacosx-version-min=10.9' ;
     flags.ccoptim{end+1} = '-mssse3 -ffast-math' ;
-    flags.nvccpass{end+1} = '-Xcompiler -fPIC' ;
+    flags.nvccpass{end+1} = '-Xcompiler -fPIC,-mmacosx-version-min=10.9' ;
 
     if opts.enableGpu
       flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
@@ -412,7 +401,7 @@ switch arch
 
   case {'glnxa64'}
     flags.ccoptim{end+1} = '-mssse3 -ftree-vect-loop-version -ffast-math -funroll-all-loops' ;
-    flags.nvccpass{end+1} = '-Xcompiler -fPIC -D_FORCE_INLINES' ;
+    flags.nvccpass{end+1} = '-D_FORCE_INLINES -Xcompiler -fPIC' ;
 
     if opts.enableGpu
       flags.linkpass{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
@@ -439,7 +428,7 @@ if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 % mex: compile GPU
 flags.mexcu= horzcat({'-f' mex_cuda_config(root)}, ...
                      {'-largeArrayDims'}, ...
-                     {['CXXFLAGS=$CXXFLAGS ' quote_nvcc(flags.ccpass) ' ' strjoin(flags.nvccpass)]}, ...
+                     {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.nvccpass)]}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
 
 % mex: link
@@ -451,7 +440,6 @@ flags.mexlink = horzcat({'-largeArrayDims'}, ...
 flags.nvcc = horzcat({opts.cudaArch}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'extern', 'include'))}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include'))}, ...
-                     {quote_nvcc(flags.ccpass)}, ...
                      {quote_nvcc(flags.ccoptim)}, ...
                      flags.nvccpass) ;
 
