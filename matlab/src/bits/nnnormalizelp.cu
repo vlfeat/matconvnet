@@ -16,6 +16,7 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <cmath>
 #include <cassert>
+#include <cstring>
 
 using namespace std ;
 using namespace vl ;

@@ -14,6 +14,7 @@ the terms of the BSD license (see the COPYING file).
 #include "impl/dispatcher.hpp"
 #include "impl/blashelper.hpp"
 #include <cassert>
+#include <cstring>
 
 using namespace std ;
 using namespace vl ;

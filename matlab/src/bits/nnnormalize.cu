@@ -14,6 +14,7 @@ the terms of the BSD license (see the COPYING file).
 #include "impl/dispatcher.hpp"
 #include <cmath>
 #include <cassert>
+#include <cstring>
 
 using namespace vl ;
 using namespace vl::nn ;

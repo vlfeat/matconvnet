@@ -16,6 +16,7 @@ the terms of the BSD license (see the COPYING file).
 #include "impl/dispatcher.hpp"
 #include <limits>
 #include <cassert>
+#include <cstring>
 #include <cmath>
 #include <iostream>
 

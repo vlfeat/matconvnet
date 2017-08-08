@@ -344,7 +344,7 @@ switch arch
   case {'glnxa64'}
     flags.linklibs{end+1} = '-lrt' ;
     flags.ccpass{end+1} = '--std=c++11' ;
-    flags.nvccpass{end+1} = '-std=c++11' ;
+    %flags.nvccpass{end+1} = '-std=c++11' ;
   case {'win64'}
     % VisualC does not pass this even if available in the CPU architecture
     flags.cc{end+1} = '-D__SSSE3__' ;
@@ -426,6 +426,13 @@ if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 flags.mexcu= horzcat({'-largeArrayDims'}, ...
                      {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.nvccpass)]}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
+switch arch
+  case {'glnxa64'}
+    % mexcuda calls nvcc with --compiler-options=-ansi,... which
+    % nicely breaks c++11 code. We need to override CXXFLAGS
+    % entirely instead of simply appending options.
+    flags.mexcu{end+1} = ['CXXFLAGS=--compiler-options=-fexceptions,-fPIC,-fno-omit-frame-pointer,-pthread ' strjoin(flags.nvccpass)] ;
+end
 
 % mex: link
 flags.mexlink = horzcat({'-largeArrayDims'}, ...

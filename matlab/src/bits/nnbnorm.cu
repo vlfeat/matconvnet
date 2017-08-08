@@ -14,6 +14,7 @@
 #include "nnbnorm.hpp"
 #include "impl/dispatcher.hpp"
 #include <cassert>
+#include <cstring>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
