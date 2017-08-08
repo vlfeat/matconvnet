@@ -119,7 +119,7 @@ computeNorms(type * normsData,
     }
     inputData += vp.strides[3] ;
   }
-  *normsData = pow(value + epsilon, 1.0/exponent) ;
+  *normsData = pow(value + epsilon, static_cast<type>(1.0)/exponent) ;
 }
 
 template<typename type> __global__ void
