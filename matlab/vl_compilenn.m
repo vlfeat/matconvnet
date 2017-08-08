@@ -20,11 +20,7 @@ function vl_compilenn(varargin)
 %      Choose the method used to compile the CUDA code. There are two
 %      methods:
 %
-%      * The **`mex`** method uses the MATLAB MEX command with the
-%        configuration file
-%        `<MatConvNet>/matlab/src/config/mex_CUDA_<arch>.[sh/xml]`
-%        This configuration file is in XML format since MATLAB 8.3
-%        (R2014a) and is a Shell script for earlier versions. This
+%      * The **`mex`** method uses the MATLAB MEXCUDA command. This
 %        is, in principle, the preferred method as it uses the
 %        MATLAB-sanctioned compiler options.
 %
@@ -344,6 +340,7 @@ switch arch
   case {'maci64'}
     flags.ccpass{end+1} = '--std=c++11' ;
     flags.nvccpass{end+1} = '-std=c++11' ;
+    flags.nvccpass{end+1} = '--compiler-bindir="/Applications/Xcode7.3.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"';
   case {'glnxa64'}
     flags.linklibs{end+1} = '-lrt' ;
     flags.ccpass{end+1} = '--std=c++11' ;
@@ -481,7 +478,7 @@ for i = 1:numel(horzcat(lib_src, mex_src))
     if strcmp(opts.cudaMethod,'nvcc')
       nvcc_compile(opts, srcs{i}, objfile, [flags.cc, flags.nvcc]) ;
     else
-      mex_compile(opts, srcs{i}, objfile, [flags.cc, flags.mexcu]) ;
+      mexcuda_compile(opts, srcs{i}, objfile, [flags.cc, flags.mexcu]) ;
     end
   else
     mex_compile(opts, srcs{i}, objfile, [flags.cc, flags.mexcc]) ;
@@ -531,6 +528,13 @@ opts.verbose && fprintf('%s: MEX CC: %s\n', mfilename, strjoin(mopts)) ;
 mex(mopts{:}) ;
 
 % --------------------------------------------------------------------
+function mexcuda_compile(opts, src, tgt, mex_opts)
+% --------------------------------------------------------------------
+mopts = {'-outdir', fileparts(tgt), src, '-c', mex_opts{:}} ;
+opts.verbose && fprintf('%s: MEXCUDA CC: %s\n', mfilename, strjoin(mopts)) ;
+mexcuda(mopts{:}) ;
+
+% --------------------------------------------------------------------
 function nvcc_compile(opts, src, tgt, nvcc_opts)
 % --------------------------------------------------------------------
 nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
@@ -558,24 +562,6 @@ switch computer('arch')
   case {'maci64', 'glnxa64'}, ext = 'o' ;
   otherwise, error('Unsupported architecture %s.', computer) ;
 end
-
-% --------------------------------------------------------------------
-function conf_file = mex_cuda_config(root)
-% --------------------------------------------------------------------
-% Get mex CUDA config file
-mver = [1e4 1e2 1] * sscanf(version, '%d.%d.%d') ;
-if mver <= 80200, ext = 'sh' ; else ext = 'xml' ; end
-arch = computer('arch') ;
-switch arch
-  case {'win64'}
-    config_dir = fullfile(matlabroot, 'toolbox', ...
-                          'distcomp', 'gpu', 'extern', ...
-                          'src', 'mex', arch) ;
-  case {'maci64', 'glnxa64'}
-    config_dir = fullfile(root, 'matlab', 'src', 'config') ;
-end
-conf_file = fullfile(config_dir, ['mex_CUDA_' arch '.' ext]);
-fprintf('%s:\tCUDA: MEX config file: ''%s''\n', mfilename, conf_file);
 
 % --------------------------------------------------------------------
 function cl_path = check_clpath()
