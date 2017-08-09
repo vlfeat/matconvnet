@@ -10,46 +10,53 @@ function res = vl_contrib(command, module, varargin)
 %   if possible shows hyperlinks with the available commands for each
 %   module.
 %
-%   VL_CONTRIB COMMAND MODULE ...
-%   VL_CONTRIB('COMMAND', ...) executes one of the following commands:
+%   VL_CONTRIB('COMMAND', 'MODULE', ...), or
+%   VL_CONTRIB COMMAND MODULE ... if all parameters are strings, executes
+%   one of the following commands:
 %
-%   `VL_CONTRIB LIST`
+%   `VL_CONTRIB LIST`::
 %      Prints a list of available modules.
 %
-%   `VL_CONTRIB INSTALL MODULE`
-%   `VL_CONTRIB UPDATE MODULE`
-%      Downloads or updates MODULE.
-%      Use `'force', true` to overwrite the existing module.
+%   `VL_CONTRIB INSTALL MODULE`::
+%      Install a module. Specify the `'force', true`
+%      to overwrite the existing module. Modules are installed in
+%      ``<vl_rootnn()>/contrib`.
 %
-%   `VL_CONTRIB SETUP MODULE`
-%      Sets up the Matlab path for a MODULE.
-%      Runs `<vl_rootnn()>/contrib/MODULE/setup_MODULE.m`.
+%   `VL_CONTRIB UPDATE MODULE`::
+%      Update a module. Specify the `'force', true`
+%      to overwrite the existing module.
 %
-%   `VL_CONTRIB UNLOAD MODULE`
-%      Removes all paths of a module from the Matlab path.
+%   `VL_CONTRIB SETUP MODULE`::
+%      Sets up the MATLAB path for a MODULE so that it can be used.
+%      This is equivalent to running
+%      `<vl_rootnn()>/contrib/MODULE/setup_MODULE.m`.
 %
-%   `VL_CONTRIB COMPILE MODULE ...`
+%   `VL_CONTRIB UNLOAD MODULE`::
+%      Removes the module from the MATLAB path.
+%
+%   `VL_CONTRIB COMPILE MODULE ...`::
 %      Compiles a MODULE. See the module documentation for additional
 %      details and accepted arguments.
-%      Runs `<vl_rootnn()>/contrib/MODULE/compile_MODULE.m`.
+%      This is equivalent to running
+%      `<vl_rootnn()>/contrib/MODULE/compile_MODULE.m`.
 %
-%   `VL_CONTRIB TEST MODULE ...`
+%   `VL_CONTRIB TEST MODULE ...`::
 %      Tests a MODULE, if a test script or a test suite dir exists.
 %      Test script path is: `<vl_rootnn()>/contrib/MODULE/test_MODULE.m`
 %      Test suite dir is:
 %      `<vl_rootnn()>/contrib/MODULE/xtest/suite/`. See `vl_testnn` for
 %      additional arguments.
 %
-%   `VL_CONTRIB PATH MODULE ...`
+%   `VL_CONTRIB PATH MODULE ...`::
 %      Returns a MODULE path.
 %
 %   ## Notes
 %
 %   Modules are installed to the directory `<vl_rootnn()>/contrib`.
-%   The official list is hosted at `github.com/vlfeat/matconvnet-contrib`.
+%   The list of modules is hosted at `github.com/vlfeat/matconvnet-contrib`.
 %
-%   Modules are installed using GIT, if available, otherwise unpacks the
-%   zip distribution of the modules from its repository.
+%   Modules are installed using GIT, if available; otherwise the function
+%   unpacks the zip distribution of the modules from its repository.
 %
 %   See also: VL_SETUPNN, VL_COMPILENN, VL_TESTNN.
 
