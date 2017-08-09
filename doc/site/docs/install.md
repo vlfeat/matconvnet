@@ -12,7 +12,7 @@ In order to install the library, follows these steps:
     in order to add MatConvNet to MATLAB's search path.
 
 At this point the library is ready to use. You can test it by using
-the command (using MATLAB R2014a or later):
+the command (using MATLAB R2015b or later):
 
     > vl_testnn
 
@@ -43,18 +43,20 @@ library:
 1.  Make sure that MATLAB is
     [configured to use your compiler](http://www.mathworks.com/help/matlab/matlab_external/changing-default-compiler.html).
     In particular, before running `vl_compilenn` do not forget to setup
-    mex (once is sufficient) as follows:
+    `mex` (doing so nce is sufficient) as follows:
 
     ```
     mex -setup
+    mex -setup C++
     ```
 
     The prerequisites are as follows:
 
-    * For **macOS**, make sure you have Xcode installed. Note the special
-      requirements for GPU below.
+    * For **macOS**, make sure you have Xcode installed. A copy can be obtained for
+      free from the Mac App Store. If `mex -setup` returns errors, see
+      [troubleshooting](faq#macos).
 
-    * For **Linux**, make sure GCC and LibJPEG are installed. To
+    * For **Linux**, make sure you have GCC 4.8 and LibJPEG are installed. To
       install LibJPEG in and Ubuntu/Debian-like distributions use:
       ```
       sudo apt-get install build-essential libjpeg-turbo8-dev
@@ -64,7 +66,7 @@ library:
       sudo yum install gcc gcc-c++ libjpeg-turbo-devel
       ```
 
-    * For **Windows**, you need to install Visual Studio 2010 or greater.
+    * For **Windows**, make sure you have Visual Studio 2015 or greater installed.
 
 2.  Open MATLAB and issue the commands:
 
@@ -105,10 +107,6 @@ CUDA versions:
 | R2016b    | 7.5               |
 | R2016a    | 7.5               |
 | R2015b    | 7.0               |
-| R2015a    | 6.5               |
-| R2014b    | 6.0               |
-| R2014a    | 5.5               |
-| R2013b    | 5.5               |
 
 You can also use the `gpuDevice` MATLAB command to find out MATLAB's
 version of the CUDA toolkit. Nevertheless, it is also possible and
@@ -117,18 +115,9 @@ officially supported by MATLAB; this is [explained later](#nvcc).
 
 > **macOS**. CUDA is typically one or two step behind the latest
 > Xcode. For example, CUDA 8.0 requires Xcode 7.3.1 instead of more
-> recent versions. You should:
+> recent versions.
 >
-> 1. Install Xcode 7.3.1 alongside other versions (e.g. in
->    `/Applications/Xcode7.3.1.app`).
-
-> 2. Use `xcode-select` in the terminal to change the active version
->    of Xcode, as in `sudo xcode-select --switch
->    /Applications/Xcode7.3.1.app/Contents/Developer/`.
->
-> 3. Use `sudo xcode-select --install` to install the corresponding
->    (downgraded) version of the command line tools. This is necessary
->    or CUDA compilation will fail with odd errors.
+> Using an older version of Xcode is explained [here](faq#macos).
 >
 > It can be helpful to consult the
 > [CUDA Installation Guide for Mac](http://docs.nvidia.com/cuda/pdf/CUDA_Installation_Guide_Mac.pdf).

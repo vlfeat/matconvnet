@@ -38,12 +38,37 @@ source file) or similar.
 
 ### Why do I get compilation error `error: unrecognized command line option "-std=c++11"` on a Linux machine?
 
-This is caused by an incompatible version of GCC compiler
-([<4.6](https://gcc.gnu.org/projects/cxx-status.html#cxx11)) with your MATLAB.
-You can either install a newer version of GCC (if available), or you
-can force MATLAB not to use the offending compiler option and replace it with
-the previous name of the C++11 standard argument:
- * In MATLAB run: `mex -setup c++`.
- * Run `edit(fullfile(prefdir, 'mex_C++_glnxa64.xml'))` to edit your MATLAB
- compiler options.
- * Replace all occurrences of `-std=c++11` with `-std=c++0x` and save the file.
+Use a GCC that supports C++11; yours is likely too old
+([<4.6](https://gcc.gnu.org/projects/cxx-status.html#cxx11)).
+
+<a name=macos></a>
+
+### I have Xcode on a Mac but compiling MatConvNet still gives me errors. Why?
+
+MATLAB can be picky about the supported version of Xcode, and further restrictions may apply
+when using GPU code (see below). If `mex -setup` complains that no suitable
+Xcode version can be found, the safest option is to download an old version of
+ Xcode (from [developer.apple.com](http://developer.apple.com/download/more), requires a free Developeraccount) and install
+it in a location such as `/Applications/Xcode7.3.1.app`.
+
+You can then:
+
+1. Use `xcode-select` to activate the old version of Xcode and then `xcode-select --install` globally andinstall the corresponding command line tools respectively; for example:
+   ```
+   sudo xcode-select --switch /Applications/Xcode7.3.1.app/Contents/Developer/
+   sudo xcode-select --install
+   ```
+2. Alternatively, start MATLAB form the command line after setting the `DEVELOPER_DIR` environment variable, as in
+   ```
+   DEVELOPER_DIR=/Applications/Xcode7.3.1.app/Contents/Developer \
+      /Applications/MATLAB_R2016a.app/bin/matlab
+   ```
+   where paths need to be adjusted to your situation. The advantage of this method is that it does not require changing your default Xcode selection.
+
+After this, `mex -setup` should be able to find and use the old compiler.
+
+If `mex -setup` still fails, the cause is likely your combination of Xcode and macOS versions: MATLAB expects an old version of the macOS SDK to be installed in Xcode, but this does not show up as macOS is more recent than that.
+
+Sometimes this issue is patched by Mathworks; alternatively, you can edit the [configuration
+ files](https://uk.mathworks.com/matlabcentral/answers/243868-mex-can-t-find-compiler-after-xcode-7-update-r2015b) `/Users/<home>/.matlab/R20???/mex_{C,C++}_maci64.xml`. Look for the `<ISYSROOT>` and `<SDKVER>` sections of the file and add lines such as `<dirExists name="$$/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk" />` as needed for your SDK version. Note that these are overwritten if you call `mex -setup` again (alternatively you can
+ change the corresponding files in MATLAB in `/Applications/MATLAB_R20???.app/bin/maci64/mexopts` for good).

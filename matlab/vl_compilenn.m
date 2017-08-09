@@ -62,6 +62,21 @@ function vl_compilenn(varargin)
 %      Directory containing the unpacked binaries and header files of
 %      the CuDNN library.
 %
+%   `XcodeRoot`:: none
+%      Use this option to use a non-standard Xcode installation on
+%      macOS. This is useful to compile CUDA code as usually the
+%      CUDA devkit does not support the latest Xcode release.
+%
+%      For example, the path could be `'/Applications/Xcode7.3.1.app'`.
+%
+%   `MexConfig`:: none
+%      Use this option to specify a custom `.xml` configuration file
+%      fot the `mex` compiler.
+%
+%   `MexcudaConfig`:: none
+%      Use this option to specify a custom `.xml` configuration file
+%      fot the `mexcuda` compiler.
+%
 %   `preCompileFn`:: none
 %      Applies a custom modifier function just before compilation
 %      to modify various compilation options. The
@@ -103,24 +118,26 @@ function vl_compilenn(varargin)
 %
 %     | MATLAB version | Release | CUDA Devkit  |
 %     |----------------|---------|--------------|
-%     | 8.2            | 2013b   | 5.5          |
-%     | 8.3            | 2014a   | 5.5          |
-%     | 8.4            | 2014b   | 6.0          |
-%     | 8.6            | 2015b   | 7.0          |
+%     | 9.2            | 2017a   | 8.0          |
+%     | 9.1            | 2016b   | 7.5          |
 %     | 9.0            | 2016a   | 7.5          |
+%     | 8.6            | 2015b   | 7.0          |
 %
 %     Different versions of CUDA may work using the hack described
 %     above (i.e. setting the `CudaMethod` to `nvcc`).
 %
-%   The following configurations have been tested successfully:
+%   The following configurations or anything more recent (subject to
+%   versionconstraints between MATLAB, CUDA, and the compiler) should
+%   work:
 %
-%   * Windows 7 x64, MATLAB R2014a, Visual C++ 2010, 2013 and CUDA Toolkit
-%     6.5. VS 2015 CPU version only (not supported by CUDA Toolkit yet).
-%   * Windows 8 x64, MATLAB R2014a, Visual C++ 2013 and CUDA
-%     Toolkit 6.5.
-%   * Mac OS X 10.9, 10.10, 10.11, MATLAB R2013a to R2016a, Xcode, CUDA
-%     Toolkit 5.5 to 7.5.
-%   * GNU/Linux, MATALB R2014a/R2015a/R2015b/R2016a, gcc/g++, CUDA Toolkit 5.5/6.5/7.5.
+%   * Windows 10 x64, MATLAB R2015b, Visual C++ 2015, CUDA
+%     Toolkit 7.5-8.0.
+%   * macOS X 10.12, MATLAB R2016a, Xcode 7.3.1, CUDA
+%     Toolkit 7.5-8.0.
+%   * GNU/Linux, MATALB R2015b, gcc/g++, CUDA Toolkit 7.5-8.0.
+%
+%   Many older versions of these components are also likely to
+%   work.
 %
 %   Compilation on Windows with MinGW compiler (the default mex compiler in
 %   Matlab) is not supported. For Windows, please reconfigure mex to use
@@ -166,6 +183,8 @@ opts.cudaArch         = [] ;
 opts.defCudaArch      = [...
   '-gencode=arch=compute_20,code=\"sm_20,compute_20\" '...
   '-gencode=arch=compute_30,code=\"sm_30,compute_30\"'];
+opts.mexcudaConfig    = '' ;
+opts.mexConfig        = '' ;
 opts.cudnnRoot        = 'local/cudnn' ;
 opts.preCompileFn       = [] ;
 opts = vl_argparse(opts, varargin);
@@ -340,7 +359,7 @@ switch arch
   case {'maci64'}
     flags.ccpass{end+1} = '--std=c++11' ;
     flags.nvccpass{end+1} = '-std=c++11' ;
-    flags.nvccpass{end+1} = '--compiler-bindir="/Applications/Xcode7.3.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"';
+    %flags.nvccpass{end+1} = '--compiler-bindir="/Applications/Xcode7.3.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"';
   case {'glnxa64'}
     flags.linklibs{end+1} = '-lrt' ;
     flags.ccpass{end+1} = '--std=c++11' ;
@@ -417,13 +436,20 @@ end
 %                                                        Command flags
 % --------------------------------------------------------------------
 
-flags.mexcc = horzcat({'-largeArrayDims'}, ...
+% mex: used for compiling CPU files
+flags.mexcc = flags.cc ;
+if ~isempty(opts.mexConfig), flags.mexcc(end+1:end+2) = {'-f', opts.mexConfig} ; end
+flags.mexcc = horzcat(flags.mexcc, ...
+                      {'-largeArrayDims'}, ...
                       {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.ccpass)]}, ...
                       {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' strjoin(flags.ccoptim)]}) ;
 if ~ispc, flags.mexcc{end+1} = '-cxx'; end
 
-% mex: compile GPU
-flags.mexcu= horzcat({'-largeArrayDims'}, ...
+% mexcuda: used for compiling GPU files
+flags.mexcu = flags.cc ;
+if ~isempty(opts.mexcudaConfig), flags.mexcu(end+1:end+2) = {'-f', opts.mexcudaConfig} ; end
+flags.mexcu= horzcat(flags.mexcu, ...
+                     {'-largeArrayDims'}, ...
                      {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.nvccpass)]}, ...
                      {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' quote_nvcc(flags.ccoptim)]}) ;
 switch arch
@@ -434,12 +460,12 @@ switch arch
     flags.mexcu{end+1} = ['CXXFLAGS=--compiler-options=-fexceptions,-fPIC,-fno-omit-frame-pointer,-pthread ' strjoin(flags.nvccpass)] ;
 end
 
-% mex: link
+% mex: used for link
 flags.mexlink = horzcat({'-largeArrayDims'}, ...
                         {['LDFLAGS=$LDFLAGS ', strjoin(flags.linkpass)]}, ...
                         {['LINKLIBS=', strjoin(flags.linklibs), ' $LINKLIBS']}) ;
 
-% nvcc: compile GPU
+% nvcc: alternative method for compiling GPU files
 flags.nvcc = horzcat({opts.cudaArch}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'extern', 'include'))}, ...
                      {sprintf('-I"%s"', fullfile(matlabroot, 'toolbox','distcomp','gpu','extern','include'))}, ...
@@ -454,7 +480,7 @@ if opts.verbose
   fprintf('%s: \tMEX options [LINK]: %s\n', mfilename, strjoin(flags.mexlink)) ;
 end
 if opts.verbose && opts.enableGpu
-  fprintf('%s: \tMEX options [CC GPU]: %s\n', mfilename, strjoin(flags.mexcu)) ;
+  fprintf('%s: \tMEXCUDA options [CC GPU]: %s\n', mfilename, strjoin(flags.mexcu)) ;
 end
 if opts.verbose && opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
   fprintf('%s: \tNVCC options [CC GPU]: %s\n', mfilename, strjoin(flags.nvcc)) ;

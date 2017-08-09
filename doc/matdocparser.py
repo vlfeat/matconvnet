@@ -51,7 +51,7 @@ import os
 import re
 
 __mpname__           = 'MatDocParser'
-__version__          = '1.0-beta24'
+__version__          = '1.0-beta25'
 __date__             = '2015-09-20'
 __description__      = 'MatDoc MATLAB inline function description interpreter.'
 __long_description__ = __doc__

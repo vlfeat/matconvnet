@@ -2,7 +2,7 @@
 
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
-<a href="download/matconvnet-1.0-beta24.tar.gz">
+<a href="download/matconvnet-1.0-beta25.tar.gz">
 <div class="menuicon"><span class="fa fa-download fa-2x"></span></div>
 Download</a>
 </div>
@@ -60,7 +60,7 @@ recognition, and text detection are available.
 > numerous other improvements and bugfixes.
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta24](download/matconvnet-1.0-beta24.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta25](download/matconvnet-1.0-beta25.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>

@@ -232,6 +232,7 @@
 		2D7B11391A8BDB3C00A3D8A0 /* nnnormalize.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnnormalize.cpp; path = matlab/src/bits/nnnormalize.cpp; sourceTree = "<group>"; };
 		2D7B113A1A8BDB3C00A3D8A0 /* nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnnormalize.cu; path = matlab/src/bits/nnnormalize.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D7B113B1A8BDB3C00A3D8A0 /* nnnormalize.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnnormalize.hpp; path = matlab/src/bits/nnnormalize.hpp; sourceTree = "<group>"; };
+		2D7E91AC1F3B3000009B575D /* theme */ = {isa = PBXFileReference; lastKnownFileType = folder; name = theme; path = doc/site/theme; sourceTree = "<group>"; };
 		2D80792D1AEF94650040BC14 /* nnbnorm.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbnorm.cpp; path = matlab/src/bits/nnbnorm.cpp; sourceTree = "<group>"; };
 		2D80792E1AEF94650040BC14 /* nnbnorm.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm.cu; path = matlab/src/bits/nnbnorm.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D80792F1AEF94650040BC14 /* nnbnorm.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbnorm.hpp; path = matlab/src/bits/nnbnorm.hpp; sourceTree = "<group>"; };
@@ -537,6 +538,7 @@
 		2D708AA81A52F60B004E7D42 /* site */ = {
 			isa = PBXGroup;
 			children = (
+				2D7E91AC1F3B3000009B575D /* theme */,
 				2D708AA91A52F61A004E7D42 /* docs */,
 				2D708ACB1A52F65C004E7D42 /* Makefile */,
 				2D708ACC1A52F65C004E7D42 /* matdoc.py */,

@@ -6,7 +6,8 @@ extra_css: ['css/fixes.css']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML', 'js/mathjaxhelper.js', 'js/toggle.js']
 
 repo_url: https://github.com/vlfeat/matconvnet
-copyright: "Copyright &copy; 2014-16 The MatConvNet Team."
+copyright: "Copyright &copy; 2014-17
+The MatConvNet Team."
 
 pages:
 - Home: 'index.md'
@@ -35,6 +36,7 @@ pages:
   - vl_nnloss: 'mfiles/vl_nnloss.md'
   - vl_nnnoffset: 'mfiles/vl_nnnoffset.md'
   - vl_nnnormalize: 'mfiles/vl_nnnormalize.md'
+  - vl_nnnormalizelp: 'mfiles/vl_nnnormalize.md'
   - vl_nnpool: 'mfiles/vl_nnpool.md'
   - vl_nnrelu: 'mfiles/vl_nnrelu.md'
   - vl_nnroipool: 'mfiles/vl_nnroipool.md'
@@ -49,6 +51,7 @@ pages:
   - vl_simplenn_move: 'mfiles/simplenn/vl_simplenn_move.md'
   - vl_argparse: 'mfiles/vl_argparse.md'
   - vl_compilenn: 'mfiles/vl_compilenn.md'
+  - vl_contrib: 'mfiles/vl_contrib.md'
   - vl_rootnn: 'mfiles/vl_rootnn.md'
   - vl_setupnn: 'mfiles/vl_setupnn.md'
   - vl_imreadjpeg: 'mfiles/vl_imreadjpeg.md'

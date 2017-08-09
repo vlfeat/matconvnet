@@ -23,6 +23,20 @@ here.
 <a name='changes'></a>
 # Changes
 
+-   1.0-beta25 (August 2017).
+
+    **New features**
+
+    * Modular system `vl_contrib` giving quick access to many user
+      contributions.
+
+    **Changes affecting backward compatibility**
+
+    The build system was simplified removing special cases for older
+    MATLAB bugs and limitations, and to support C++11 as production
+    language. Recent MATLAB, compilers, and CUDA versions shoudl all
+    still work.
+
 -   1.0-beta24 (March 2017).
 
     **New features**
