@@ -61,8 +61,6 @@ HOST = vlfeat-admin:sites/sandbox-matconvnet
 GIT = git
 SHELL = /bin/bash # sh not good enough
 
-
-$(info ARCH=$(ARCH) MATLABROOT=$(MATLABROOT) CUDAROOT=$(CUDAROOT))
 # --------------------------------------------------------------------
 #                                                        Configuration
 # --------------------------------------------------------------------

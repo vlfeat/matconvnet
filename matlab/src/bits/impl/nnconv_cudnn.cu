@@ -138,7 +138,8 @@ namespace vl { namespace impl {
                                           padLeft, padTop,
                                           strideX, strideY,
                                           1,1, // upscale
-                                          CUDNN_CROSS_CORRELATION)) ;
+                                          CUDNN_CROSS_CORRELATION
+                                          IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::id)));
     // Sanity check
 #if 1
     {
@@ -357,7 +358,8 @@ namespace vl { namespace impl {
                                           padLeft, padTop,
                                           strideX, strideY,
                                           1,1, // upscale
-                                          CUDNN_CROSS_CORRELATION)) ;
+                                          CUDNN_CROSS_CORRELATION
+                                          IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::id))) ;
 
     // Must have derOutput for all derivatives
     assert(derOutput) ;
