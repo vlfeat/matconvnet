@@ -34,7 +34,7 @@ classdef nnnormalizelp < nntest
         y = vl_nnnormalizelp(x,opts{:}) ;
         dzdy = test.rand(size(y))-0.5 ;
         dzdx = vl_nnnormalizelp(x,dzdy,opts{:}) ;
-        test.der(@(x) vl_nnnormalizelp(x,opts{:}), x, dzdy, dzdx, .5e-4, 0.5) ;
+        test.der(@(x) vl_nnnormalizelp(x,opts{:}), x, dzdy, dzdx, .5e-4, 1.0) ;
       end
     end
   end

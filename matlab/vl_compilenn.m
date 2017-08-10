@@ -752,7 +752,10 @@ function cudaArch = get_cuda_arch(opts)
 opts.verbose && fprintf('%s:\tCUDA: determining GPU compute capability (use the ''CudaArch'' option to override)\n', mfilename);
 try
   gpu_device = gpuDevice();
-  arch_code = strrep(gpu_device.ComputeCapability, '.', '');
+  arch = str2double(strrep(gpu_device.ComputeCapability, '.', ''));
+  supparchs = get_nvcc_supported_archs(opts.nvccPath);
+  [~, archi] = max(min(supparchs - arch, 0));
+  arch_code = num2str(supparchs(archi));
   cudaArch = ...
       sprintf('-gencode=arch=compute_%s,code=\\\"sm_%s,compute_%s\\\" ', ...
               arch_code, arch_code, arch_code) ;
@@ -762,3 +765,9 @@ catch
   cudaArch = opts.defCudaArch;
 end
 
+% --------------------------------------------------------------------
+function archs = get_nvcc_supported_archs(nvccPath)
+% --------------------------------------------------------------------
+[~, hstring] = system([nvccPath ' --help']);
+archs = regexp(hstring, '''sm_(\d{2})''', 'tokens');
+archs = cellfun(@(a) str2double(a{1}), archs);
