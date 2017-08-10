@@ -31,26 +31,19 @@ MATLABROOT ?= $(shell readlink -f `which matlab` | rev | cut -d'/' -f3- | rev)
 CUDAROOT ?= /usr/local/cuda
 endif
 
-# MACOS
-ifeq ($(UNAME_S),Darwin)
 ARCH ?= maci64
+# Configure MATLAB
 MATLABROOT ?= /Applications/MATLAB_R2017a.app
+# Remark: each MATLAB version requires a particular CUDA Toolkit version.
 CUDAROOT ?= /Developer/NVIDIA/CUDA-8.0
+# Note that multiple CUDA Toolkits can be installed.
+
 #MATLABROOT ?= /Applications/MATLAB_R2014b.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
 #MATLABROOT ?= /Applications/MATLAB_R2015a.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-7.0
 #MATLABROOT ?= /Applications/MATLAB_R2015b.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-7.5
-endif
-
-# UNSPECIFIED OS
-ARCH ?=
-# Configure MATLAB
-MATLABROOT ?=
-# Remark: each MATLAB version requires a particular CUDA Toolkit version.
-CUDAROOT ?=
-# Note that multiple CUDA Toolkits can be installed.
 
 # Configure CUDA and CuDNN. CUDAMETHOD can be either 'nvcc' or 'mex'.
 CUDNNROOT ?= $(CURDIR)/local/
