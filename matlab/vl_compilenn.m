@@ -756,13 +756,6 @@ if ~valid_ || cuver_ ~= cuver
   end
 end
 
-% -------------------------------------------------------------------------
-function str = quote_nvcc(str)
-% -------------------------------------------------------------------------
-if iscell(str), str = strjoin(str) ; end
-str = strrep(strtrim(str), ' ', ',') ;
-if ~isempty(str), str = ['-Xcompiler ' str] ; end
-
 % --------------------------------------------------------------------
 function cudaArch = get_cuda_arch(opts)
 % --------------------------------------------------------------------
@@ -773,11 +766,12 @@ try
   supparchs = get_nvcc_supported_archs(opts.nvccPath);
   [~, archi] = max(min(supparchs - arch, 0));
   arch_code = num2str(supparchs(archi));
+  assert(~isempty(arch_code));
   cudaArch = ...
       sprintf('-gencode=arch=compute_%s,code=\\\"sm_%s,compute_%s\\\" ', ...
               arch_code, arch_code, arch_code) ;
 catch
-  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU; ' ...
+  opts.verbose && fprintf(['%s:\tCUDA: cannot determine the capabilities of the installed GPU and/or CUDA; ' ...
                       'falling back to default\n'], mfilename);
   cudaArch = opts.defCudaArch;
 end
@@ -785,6 +779,12 @@ end
 % --------------------------------------------------------------------
 function archs = get_nvcc_supported_archs(nvccPath)
 % --------------------------------------------------------------------
-[~, hstring] = system([nvccPath ' --help']);
+switch computer('arch')
+  case {'win64'}
+    [~, hstring] = system([nvccPath ' --help']);
+  otherwise
+    % fix possible output corruption (see manual)
+    [~, hstring] = system([nvccPath ' --help < /dev/null']);
+end
 archs = regexp(hstring, '''sm_(\d{2})''', 'tokens');
 archs = cellfun(@(a) str2double(a{1}), archs);
