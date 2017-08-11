@@ -527,12 +527,13 @@ done = true ;
 % --------------------------------------------------------------------
 function objs = toobj(bld_dir, srcs)
 % --------------------------------------------------------------------
-str = [filesep, 'src', filesep]; % NASTY
+str = [filesep, 'src', filesep]; % NASTY. Do with regexp?
 multiple = iscell(srcs) ;
 if ~multiple, srcs = {srcs} ; end
 objs = cell(1, numel(srcs));
 for t = 1:numel(srcs)
   i = strfind(srcs{t},str);
+  i = i(end); % last occurence of '/src/'
   objs{t} = fullfile(bld_dir, srcs{t}(i+numel(str):end)) ;
 end
 if ~multiple, objs = objs{1} ; end
