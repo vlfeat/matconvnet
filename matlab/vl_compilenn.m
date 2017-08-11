@@ -545,7 +545,7 @@ function mex_compile(opts, src, tgt, flags)
 % --------------------------------------------------------------------
 if check_deps(opts, tgt, src), return ; end
 args = horzcat({'-c', '-outdir', fileparts(tgt), src}, ...
-  flags.base, flags.mex, ...  
+  flags.base, flags.mex, ...
   {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.cxx)]}, ...
   {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' strjoin(flags.cxxoptim)]}) ;
 opts.verbose && fprintf('%s: MEX CC: %s\n', mfilename, strjoin(args)) ;
@@ -555,9 +555,18 @@ mex(args{:}) ;
 function mexcuda_compile(opts, src, tgt, flags)
 % --------------------------------------------------------------------
 if check_deps(opts, tgt, src), return ; end
+% Hacky fix: MATLAB includes the -ansi option by default, which
+% prevents -std=c++11 to work. This could be solved by editing the
+% mex configuration file; for convenience, we take it out here by
+% avoiding to append to the default flags.
+glue = '$CXXFLAGS' ;
+switch computer('arch')
+  case {'glnxa64', 'maci64'}
+    glue = '--compiler-options=-fexceptions,-fPIC,-fno-omit-frame-pointer,-pthread' ;
+end
 args = horzcat({'-c', '-outdir', fileparts(tgt), src}, ...
-  flags.base, flags.mexcuda, ...  
-  {['CXXFLAGS=$CXXFLAGS ' strjoin(flags.mexcuda_cxx)]}, ...
+  flags.base, flags.mexcuda, ...
+  {['CXXFLAGS=' glue ' ' strjoin(flags.mexcuda_cxx)]}, ...
   {['CXXOPTIMFLAGS=$CXXOPTIMFLAGS ' strjoin(flags.mexcuda_cxxoptim)]}) ;
 opts.verbose && fprintf('%s: MEX CUDA: %s\n', mfilename, strjoin(args)) ;
 mexcuda(args{:}) ;
