@@ -71,7 +71,7 @@ $(if $(ENABLE_GPU),-DENABLE_GPU,) \
 $(if $(ENABLE_DOUBLE),-DENABLE_DOUBLE,) \
 $(if $(ENABLE_CUDNN),-DENABLE_CUDNN -I$(CUDNNROOT)/include,) \
 $(if $(VERB),-v,) \
-$(if $(DEBUG),-g,-O)
+$(if $(DEBUG),-g -DDEBUG,-O -DNDEBUG)
 
 # MEXFLAGS: Additional flags passed to `mex` for compiling C++
 # code. The MEX_CXXCFLAGS options are passed directly to the
