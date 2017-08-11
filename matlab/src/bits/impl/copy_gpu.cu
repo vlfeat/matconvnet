@@ -21,30 +21,46 @@ fill_kernel (type * data, type value, size_t size)
   if (index < size) data[index] = value ;
 }
 
+template<typename type> __global__ void
+copy_kernel (type *dst, type const *src, size_t size, type mult)
+{
+  int index = threadIdx.x + blockIdx.x * blockDim.x ;
+  if (index < size) dst[index] = mult * src[index] ;
+}
+
 namespace vl { namespace impl {
 
   template <typename type>
   struct operations<vl::VLDT_GPU, type>
   {
-    typedef type data_type ;
-
     static vl::ErrorCode
-    copy(data_type * dest,
-         data_type const * src,
-         size_t numElements)
+    copy(type * dst,
+         type const * src,
+         size_t numElements,
+         double mult)
     {
-      cudaMemcpy(dest, src, numElements * sizeof(data_type), cudaMemcpyDeviceToDevice) ;
+      if (mult == 1.0) {
+        cudaMemcpy(dst, src, numElements * sizeof(type), cudaMemcpyDeviceToDevice) ;
+      } else {
+        copy_kernel <type>
+        <<<divideAndRoundUp(numElements, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
+        (dst, src, numElements, mult) ;
+        cudaError_t error = cudaGetLastError() ;
+        if (error != cudaSuccess) {
+          return VLE_Cuda ;
+        }
+      }
       return VLE_Success ;
     }
 
     static vl::ErrorCode
-    fill(data_type * dest,
+    fill(type * dst,
          size_t numElements,
-         data_type value)
+         type value)
     {
-      fill_kernel <data_type>
+      fill_kernel <type>
       <<<divideAndRoundUp(numElements, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-      (dest, numElements, value) ;
+      (dst, numElements, value) ;
 
       cudaError_t error = cudaGetLastError() ;
       if (error != cudaSuccess) {

@@ -3,22 +3,23 @@
 // @author Ankush Gupta, Andrea Vedaldi
 
 /*
-Copyright (C) 2016- Ankush Gupta, Andrea Vedaldi.
+Copyright (C) 2016-17 Ankush Gupta and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#if !defined(ENABLE_GPU) || !defined(ENABLE_CUDNN)
-#error "bilinearsampler_cudnn.cu can only be compiled with GPU and CUDNN (v5 or higher) support."
-#endif
-
-#include "nnbilinearsampler_cudnn.hpp"
-#include "cudnnhelper.hpp"
-#include "../datacu.hpp"
+#include "nnbilinearsampler.hpp"
+#include "datacu.hpp"
+#include "impl/cudnnhelper.hpp"
 #include <assert.h>
 #include <algorithm>
+
+using namespace std ;
+using namespace vl ;
+using namespace vl::nn ;
+using namespace vl::impl ;
 
 #if CUDNN_VERSION < 5000
 #warning "bilinearsampler_cudnn.cu will be disabled as it requires CUDNN v5 or higher."
@@ -26,7 +27,7 @@ the terms of the BSD license (see the COPYING file).
 namespace vl { namespace impl {
   template<vl::DataType dataType>
   vl::ErrorCode
-  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& context,
+  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& op.context,
                                                        Tensor output,
                                                        Tensor data,
                                                        Tensor grid)
@@ -36,8 +37,8 @@ namespace vl { namespace impl {
 
   template<vl::DataType dataType>
   vl::ErrorCode
-  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& context,
-                                                        Tensor derData,
+  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& op.context,
+                                                        Tensor derInputData,
                                                         Tensor derGrid,
                                                         Tensor data,
                                                         Tensor grid,
@@ -46,34 +47,32 @@ namespace vl { namespace impl {
     return vl::VLE_Unsupported ;
   }
 }}
-#else
-
-using namespace vl ;
+#else // CUDNN_VERSION
 
 // check if the descriptors, etc. were successfully created:
 #define CHECK(x) \
 { \
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = context.setError(context.getCudaHelper().catchCudnnError(cudnnError, \
+error = op.context.setError(op.context.getCudaHelper().catchCudnnError(cudnnError, \
 STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__))) ; \
 goto done ; \
 } }
 
-/* ---------------------------------------------------------------- */
-/*                                    bilinearsampler_forward_cudnn */
-/* ---------------------------------------------------------------- */
-namespace vl { namespace impl {
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
 
-  template<vl::DataType dataType>
-  vl::ErrorCode
-  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& context,
-                                                       Tensor output,
-                                                       Tensor data,
-                                                       Tensor grid)
+template<DataType dataType>
+struct BilinearSamplerForwardCudnn
+{
+  vl::ErrorCode operator()(BilinearSampler &op,
+                           Tensor &output,
+                           Tensor const &input,
+                           Tensor const &grid)
   {
     assert(output) ;
-    assert(data) ;
+    assert(input) ;
     assert(grid) ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
@@ -85,17 +84,17 @@ namespace vl { namespace impl {
     bool samplerDescInitialized = false ;
 
     // get the sizes:
-    int inCardinality = data.getSize();
-    int inDepth = data.getDepth();
-    int inHeight = data.getHeight();
-    int inWidth = data.getWidth();
+    int inCardinality = input.getSize();
+    int inDepth = input.getDepth();
+    int inHeight = input.getHeight();
+    int inWidth = input.getWidth();
 
     int outCardinality = output.getSize();
     int outDepth = output.getDepth();
     int outWidth = output.getWidth();
     int outHeight = output.getHeight();
 
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
 
@@ -108,7 +107,7 @@ namespace vl { namespace impl {
     int dimOut[4] = { 1, outDepth, outWidth, outHeight } ; // one-image
 
     // Get CuDNN
-    CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descriptors:
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
@@ -146,7 +145,7 @@ namespace vl { namespace impl {
       const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
       const ptrdiff_t gridOffset = 2 * outWidth * outHeight ;
       const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
-      type const* data_ptr = (type const*) data.getMemory() ;
+      type const* data_ptr = (type const*) input.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;
       type * out_ptr = (type *) output.getMemory() ;
 
@@ -170,24 +169,28 @@ namespace vl { namespace impl {
     if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return context.passError(error, __func__) ;
+    return op.context.passError(error, __func__) ;
   }
+};
 
-  /* ---------------------------------------------------------------- */
-  /*                                   bilinearsampler_backward_cudnn */
-  /* ---------------------------------------------------------------- */
-  template<vl::DataType dataType>
-  vl::ErrorCode
-  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& context,
-                                                        Tensor derData,
-                                                        Tensor derGrid,
-                                                        Tensor data,
-                                                        Tensor grid,
-                                                        Tensor derOutput)
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
+
+template<DataType dataType>
+struct BilinearSamplerBackwardCudnn
+{
+  vl::ErrorCode operator()
+  (BilinearSampler &op,
+   Tensor &derInput,
+   Tensor &derGrid,
+   Tensor const &input,
+   Tensor const &grid,
+   Tensor const &derOutput)
   {
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    /* no derDataDesc needed as same as dataDesc <-- nice! */
+    /* no derInputDataDesc needed as same as dataDesc <-- nice! */
     cudnnTensorDescriptor_t dataDesc, derOutputDesc ;
     cudnnSpatialTransformerDescriptor_t samplerDesc ;
     bool dataDescInitialized = false ;
@@ -195,17 +198,17 @@ namespace vl { namespace impl {
     bool samplerDescInitialized = false ;
 
     // get the sizes:
-    int inCardinality = data.getSize();
-    int inDepth = data.getDepth();
-    int inHeight = data.getHeight();
-    int inWidth = data.getWidth();
+    int inCardinality = input.getSize();
+    int inDepth = input.getDepth();
+    int inHeight = input.getHeight();
+    int inWidth = input.getWidth();
 
     int outCardinality = derOutput.getSize();
     int outDepth = derOutput.getDepth();
     int outWidth = derOutput.getWidth();
     int outHeight = derOutput.getHeight();
 
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::id ;
+    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = derOutput.getDataType() ;
     assert(dynDataType == dataType) ;
 
@@ -218,7 +221,7 @@ namespace vl { namespace impl {
     int dimOut[4] = { 1, outDepth, outWidth, outHeight };
 
     // Get CuDNN
-    CHECK(context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
 
 
     // Get tensor descriptors:
@@ -253,13 +256,13 @@ namespace vl { namespace impl {
     /* do the work */
     {
       type alpha = 1.0f ;
-      type dataBeta = 1.0f ; // assuming that the derData has been initialized to zero
+      type dataBeta = 1.0f ; // assuming that the derInputData has been initialized to zero
       type gridBeta = 0.0f ;
       const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
       const ptrdiff_t gridOffset = 2 * outWidth * outHeight ;
       const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
-      type const* data_ptr = (type const*) data.getMemory() ;
-      type * derData_ptr = (type *) derData.getMemory() ;
+      type const* data_ptr = (type const*) input.getMemory() ;
+      type * derInputData_ptr = (type *) derInput.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;
       type * derGrid_ptr = (type *) derGrid.getMemory() ;
       type * derOut_ptr = (type *) derOutput.getMemory() ;
@@ -271,7 +274,7 @@ namespace vl { namespace impl {
                                       &alpha,
                                       dataDesc, data_ptr,
                                       &dataBeta,
-                                      dataDesc, derData_ptr,
+                                      dataDesc, derInputData_ptr,
                                       &alpha,
                                       derOutputDesc, derOut_ptr,
                                       grid_ptr,
@@ -282,7 +285,7 @@ namespace vl { namespace impl {
           derOut_ptr += outOffset ;
         }
         data_ptr += dataOffset ;
-        derData_ptr += dataOffset ;
+        derInputData_ptr += dataOffset ;
       }
     }
 
@@ -291,15 +294,8 @@ namespace vl { namespace impl {
     if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return context.passError(error, __func__) ;
+    return op.context.passError(error, __func__) ;
   }
-}}
+} ;
 
 #endif // CUDNN >= v5.0
-
-// Instantiations
-template struct vl::impl::nnbilinearsampler_cudnn<vl::VLDT_Float> ;
-
-#ifdef ENABLE_DOUBLE
-template struct vl::impl::nnbilinearsampler_cudnn<vl::VLDT_Double> ;
-#endif

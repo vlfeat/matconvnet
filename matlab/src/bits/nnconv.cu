@@ -4,8 +4,8 @@
 // @author Max Jaderberg
 
 /*
-Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2014 Andrea Vedaldi and Max Jaderberg.
+Copyright (C) 2015-17 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -15,289 +15,495 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnconv.hpp"
 #include "nnbias.hpp"
-#include "impl/nnconv_blas.hpp"
-#if ENABLE_CUDNN
-#include "impl/nnconv_cudnn.hpp"
-#endif
-#include <assert.h>
+#include "impl/dispatcher.hpp"
+#include "impl/blashelper.hpp"
+#include "impl/copy.hpp"
+#include "impl/im2row.hpp"
+#include <cassert>
 
 using namespace vl ;
+using namespace vl::nn ;
+using namespace vl::impl ;
 
-/* ---------------------------------------------------------------- */
-/*                                                   nnconv_forward */
-/* ---------------------------------------------------------------- */
+template<DeviceType deviceType, DataType dataType> struct ConvolutionForward ;
+template<DeviceType deviceType, DataType dataType> struct ConvolutionBackward ;
+template<DeviceType deviceType, DataType dataType> struct ConvolutionTransposeForward ;
+template<DeviceType deviceType, DataType dataType> struct ConvolutionTransposeBackward ;
+template<DataType dataType> struct ConvolutionForwardCudnn ;
+template<DataType dataType> struct ConvolutionBackwardCudnn ;
 
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
 /*
- for output: must have data and optional filters or biases
+ One image at a time is processed.
+
+ Filters are (optionally) divided in to groups, one for each group of dimensions.
+
+
+                 patchVolume                  numFilters
+                 +-------------------------+   +-----------------------+
+
+                 filterVolume              numFiltersPerGroup
+                 +------------+------------+   +-----------+-----------+      +--------+--------+
+                 |            |            |   |           |           |      |        |        |
+                 |            |            |   |  filter   |           |      |        |        |
+                 |            |            |   |  group 1  |     0     |  =   |        |        |
+                 |            |            |   |           |           |      |        |        |
+                 |            |            |   |           |           |      |        |        |
+                 |            |            |   +-----------------------+      |        |        |
+ numOutputPixels |   grp. 1   |   grp. 2   |   |           |           |      |        |        |
+                 |            |            |   |           |  filter   |      |        |        |
+                 |            |            |   |     0     |  group 2  |      |        |        |
+                 |            |            |   |           |           |      |        |        |
+                 |            |            |   |           |           |      |        |        |
+                 |            |            |   +-----------+-----------+      |        |        |
+                 |            |            |                                  |        |        |
+                 |            |            |   filters                        |        |        |
+                 |            |            |                                  |        |        |
+                 +------------+------------+                                  +--------+--------+
+
+                 temp                                                         output
+
  */
 
 
-#define DISPATCH(deviceType, dataType) \
-error = vl::impl::nnconv_forward_blas<deviceType, dataType> \
-(context, \
-output, outputMult, \
-data, dataMult, \
-filters, biases, \
-strideY, strideX, \
-padTop, padBottom, \
-padLeft, padRight, \
-dilateY, dilateX) ;
-
-#define DISPATCH2(deviceType) \
-switch (dataType) { \
-case VLDT_Float : DISPATCH(deviceType, VLDT_Float) ; break ; \
-IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, VLDT_Double) ; break ;) \
-default: assert(false) ; return VLE_Unknown ; \
-}
-
-#define DISPATCHCUDNN(dataType) \
-error = vl::impl::nnconv_cudnn<dataType>::forward \
-(context, \
- output, outputMult, \
- data, dataMult, \
- filters, biases, \
- strideY, strideX, \
- padTop, padBottom, \
- padLeft, padRight, \
- dilateY, dilateX) ;
-
-#define DISPATCHCUDNN2() \
-switch (dataType) { \
-case VLDT_Float : DISPATCHCUDNN(VLDT_Float) ; break ; \
-IF_DOUBLE(case VLDT_Double : DISPATCHCUDNN(VLDT_Double) ; break ;) \
-default: assert(false) ; return VLE_Unknown ; \
-}
-
-vl::ErrorCode
-vl::nnconv_forward(Context& context,
-                   Tensor output, double outputMult,
-                   Tensor data, double dataMult,
-                   Tensor filters,
-                   Tensor biases,
-                   int strideY, int strideX,
-                   int padTop, int padBottom,
-                   int padLeft, int padRight,
-                   int dilateY, int dilateX)
+template<DeviceType deviceType, DataType dataType>
+struct ConvolutionForward
 {
-  vl::ErrorCode error = VLE_Success ;
-  vl::DataType dataType = output.getDataType() ;
+  vl::ErrorCode operator()
+  (Convolution &op,
+   Tensor output, double outputMult,
+   Tensor const& input, double inputMult,
+   Tensor const& filter,
+   Tensor const& bias)
+  {
 
-  switch (output.getDeviceType()) {
-    default:
-      assert(false) ;
-      error = vl::VLE_Unknown ;
-      break ;
+    assert(output) ;
+    assert(input) ;
+    assert(filter) ;
 
-    case vl::VLDT_CPU:
-      DISPATCH2(vl::VLDT_CPU) ;
-      break ;
+    vl::ErrorCode error ;
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
 
-#if ENABLE_GPU
-    case vl::VLDT_GPU:
-#if ENABLE_CUDNN
-      if (context.getCudaHelper().getCudnnEnabled()) {
-        DISPATCHCUDNN2() ;
-        if (error == vl::VLE_Success) { return error ; }
-        if (error != vl::VLE_Unsupported) { goto done ; }
-        /* this case was not supported by CUDNN -- fallback */
-      }
-#endif
-      DISPATCH2(vl::VLDT_GPU) ;
-      break ;
-#endif
-  }
-#if ENABLE_CUDNN
-done:
-#endif
-  return error ;
-}
+    ptrdiff_t numGroups = input.getDepth() / filter.getDepth() ;
+    ptrdiff_t numFiltersPerGroup = filter.getSize() / numGroups ;
+    ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
+    ptrdiff_t filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+    ptrdiff_t tempVolume = numOutputPixels * filterVolume * numGroups ;
 
-/* ---------------------------------------------------------------- */
-/*                                                  nnconv_backward */
-/* ---------------------------------------------------------------- */
-
-
-/*
- for derBiases:  must have derOuptut
- for derData:    must have derData, derOutput and filters
- for derFilters: must have derFilters, derOutput and data
- */
-
-#undef DISPATCH
-#define DISPATCH(deviceType, dataType) \
-error = vl::impl::nnconv_backward_blas<deviceType, dataType> \
-(context, \
- derData, derFilters, derBiases, \
- data, filters, derOutput, \
- strideY, strideX, \
- padTop, padBottom, \
- padLeft, padRight, \
- dilateY, dilateX) ;
-
-#undef DISPATCHCUDNN
-#define DISPATCHCUDNN(dataType) \
-error = vl::impl::nnconv_cudnn<dataType>::backward \
-(context, \
- derData, derFilters, derBiases, \
- data, filters, derOutput, \
- strideY, strideX, \
- padTop, padBottom, \
- padLeft, padRight, \
- dilateY, dilateX) ;
-
-vl::ErrorCode
-vl::nnconv_backward(Context& context,
-                    Tensor derData,
-                    Tensor derFilters,
-                    Tensor derBiases,
-                    Tensor data,
-                    Tensor filters,
-                    Tensor derOutput,
-                    int strideY, int strideX,
-                    int padTop, int padBottom,
-                    int padLeft, int padRight,
-                    int dilateY, int dilateX)
-{
-  vl::ErrorCode error = vl::VLE_Success ;
-  vl::DataType dataType = derOutput.getDataType() ;
-
-  switch (derOutput.getDeviceType()) {
-    default:
-      assert(false) ;
-      error = vl::VLE_Unknown ;
-      break ;
-
-    case vl::VLDT_CPU:
-      DISPATCH2(vl::VLDT_CPU) ;
-      break ;
-
-#if ENABLE_GPU
-    case vl::VLDT_GPU:
-#if ENABLE_CUDNN
-      if (context.getCudaHelper().getCudnnEnabled()) {
-        DISPATCHCUDNN2() ;
-        if (error == vl::VLE_Success) { return error ; }
-        if (error != vl::VLE_Unsupported) { goto done ; }
-        /* this case was not supported by CUDNN -- fallback */
-      }
-#endif
-      DISPATCH2(vl::VLDT_GPU) ;
-      break ;
-#endif
-  }
-#if ENABLE_CUDNN
-done:
-#endif
-  return error ;
-}
-
-
-/* ---------------------------------------------------------------- */
-/*                                                  nnconvt_forward */
-/* ---------------------------------------------------------------- */
-
-vl::ErrorCode
-vl::nnconvt_forward(Context& context,
-                    Tensor output,
-                    Tensor data,
-                    Tensor filters,
-                    Tensor biases,
-                    int upsampleY, int upsampleX,
-                    int cropTop, int cropBottom,
-                    int cropLeft, int cropRight)
-{
-  vl::ErrorCode error = VLE_Success ;
-  size_t dataOffset = data.getHeight()*data.getWidth()*data.getDepth() ;
-  size_t outputOffset = output.getHeight()*output.getWidth()*output.getDepth() ;
-
-  // we need to process this down per image as nnconv_backward would otherwise
-  // accumulate everything into a single feature field in the output
-  for (int image = 0 ; image < data.getSize() ; ++image) {
-    Tensor dataSlice(data) ;
-    Tensor outputSlice(output) ;
-
-    switch (data.getDataType()) {
-      case VLDT_Float:
-        dataSlice.setMemory((float*)data.getMemory() + dataOffset * image) ;
-        outputSlice.setMemory((float*)output.getMemory() + outputOffset * image) ;
-        break ;
-      case VLDT_Double:
-        dataSlice.setMemory((double*)data.getMemory() + dataOffset * image) ;
-        outputSlice.setMemory((double*)output.getMemory() + outputOffset * image) ;
-        break ;
-      default:
-        assert(false) ;
+    type* tempMemory = (type*) op.context.getWorkspace(deviceType, tempVolume * sizeof(type)) ;
+    type const* allOnesMemory = (type*) op.context.getAllOnes(deviceType,
+                                                           dataType,
+                                                           numOutputPixels) ;
+    if (tempMemory == NULL || allOnesMemory == NULL) {
+      error = op.context.getLastError() ;
+      goto done ;
     }
-    dataSlice.setSize(1) ;
-    outputSlice.setSize(1) ;
 
-    error = vl::nnconv_backward(context,
-                                outputSlice, Tensor(), Tensor(),
-                                Tensor(), filters, dataSlice,
-                                upsampleY, upsampleX,
-                                cropTop, cropBottom,
-                                cropLeft, cropRight,
-                                1, 1) ;
-    if (error != VLE_Success) { goto done ; }
-  }
-  if (biases) {
-    error = vl::nnbias_forward(context,
-                               output, 1,
-                               Tensor(), 0,
-                               biases, 1) ;
-  }
-done:
-  return error ;
-}
+    for (int image = 0 ; image < input.getSize() ; ++image) {
 
-/* ---------------------------------------------------------------- */
-/*                                                 nnconvt_backward */
-/* ---------------------------------------------------------------- */
+      ptrdiff_t dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
+      ptrdiff_t outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
+
+      error = vl::impl::im2row<deviceType,type>::forward
+      (op.context,
+       tempMemory,
+       (type*)input.getMemory() + dataOffset,
+       input.getHeight(), input.getWidth(), input.getDepth(),
+       filter.getHeight(), filter.getWidth(),
+       op.strideY, op.strideX,
+       op.padTop, op.padBottom, op.padLeft, op.padRight,
+       op.dilateY, op.dilateX) ;
+      if (error != vl::VLE_Success) { goto done ; }
+
+      for (int g = 0 ; g < numGroups ; ++ g) {
+        ptrdiff_t filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
+        ptrdiff_t tempGrpOffset = numOutputPixels * filterVolume * g ;
+        ptrdiff_t outputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
+        type alpha = inputMult ;
+        type beta = outputMult ;
+        error = vl::impl::blas<deviceType,dataType>::gemm
+        (op.context,
+         'n', 'n',
+         numOutputPixels, numFiltersPerGroup, filterVolume,
+         alpha,
+         tempMemory + tempGrpOffset, numOutputPixels,
+         (type*)filter.getMemory() + filterGrpOffset, filterVolume,
+         beta,
+         (type*)output.getMemory() + outputOffset + outputGrpOffset, numOutputPixels) ;
+        if (error != vl::VLE_Success) { goto done ; }
+      }
+
+      if (bias) {
+        type alpha = 1 ;
+        type beta = 1 ;
+        error = vl::impl::blas<deviceType,dataType>::gemm
+        (op.context,
+         'n', 'n',
+         numOutputPixels, bias.getNumElements(), 1,
+         alpha,
+         allOnesMemory, numOutputPixels,
+         (type*)bias.getMemory(), 1,
+         beta,
+         (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+        if (error != vl::VLE_Success) { goto done ; }
+      }
+    }
+
+  done:
+    return op.context.passError(error, __func__) ;
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
+
+template<DeviceType deviceType, DataType dataType>
+struct ConvolutionBackward
+{
+  vl::ErrorCode operator()
+  (Convolution &op,
+   Tensor &derInput,
+   Tensor &derFilter,
+   Tensor &derBias,
+   Tensor const &input,
+   Tensor const &filter,
+   Tensor const &derOutput)
+  {
+
+    vl::ErrorCode error ;
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+
+    ptrdiff_t numGroups = 0 ;
+    ptrdiff_t numFiltersPerGroup = 0 ;
+    ptrdiff_t filterVolume = 0 ;
+    type const* allOnesMemory = NULL ;
+    ptrdiff_t tempVolume = 0 ;
+    type* tempMemory = NULL ;
+
+    // for all derivatives
+    assert(derOutput) ;
+    ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
+
+    if (derBias) {
+      // for derivative w.r.t. bias
+      allOnesMemory = (type*) op.context.getAllOnes(deviceType,
+                                                 dataType,
+                                                 numOutputPixels) ;
+      if (allOnesMemory == NULL) {
+        error = op.context.getLastError() ;
+        goto done ;
+      }
+    }
+
+    if (derInput) {
+      // for derivative w.r.t. data
+      assert(filter) ;
+      numGroups = derInput.getDepth() / filter.getDepth() ;
+      filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+    }
+    else if (derFilter) {
+      // for derivative w.r.t. filter
+      assert(input) ;
+      numGroups = input.getDepth() / derFilter.getDepth() ;
+      filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getDepth() ;
+    }
+    numFiltersPerGroup = derOutput.getDepth() / numGroups ;
+
+    // get scratch space
+    tempVolume = numOutputPixels * filterVolume * numGroups ;
+    if (tempVolume) {
+      tempMemory = (type*) op.context.getWorkspace(deviceType, tempVolume * sizeof(type)) ;
+      if (tempMemory == NULL) {
+        error = op.context.getLastError() ;
+        goto done ;
+      }
+    }
+
+    for (int image = 0 ; image < derOutput.getSize() ; ++image) {
+
+      ptrdiff_t derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+
+      /* compute derInput dz/dbias */
+      if (derBias) {
+        // has derBias, derOutput
+        type alpha = 1 ;
+        type beta = (image > 0) ; /* this saves init. the output array with 0 */
+        error = vl::impl::blas<deviceType,dataType>::gemv
+        (op.context,
+         't',
+         numOutputPixels, derOutput.getDepth(),
+         alpha, /* alpha */
+         (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
+         allOnesMemory, 1,
+         beta, /* beta */
+         (type*)derBias.getMemory(), 1) ;
+        if (error != vl::VLE_Success) { return error ; }
+      }
+
+      /* compute derInpu dz/dx */
+      if (derInput) {
+        // has derInpu, derOutput, filter
+        ptrdiff_t derInpuOffset = (derInput.getHeight()*derInput.getWidth()*derInput.getDepth()) * image ;
+        for (int g = 0 ; g < numGroups ; ++ g) {
+          ptrdiff_t filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
+          ptrdiff_t tempGrpOffset = numOutputPixels * filterVolume * g ;
+          ptrdiff_t derOutputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
+          type alpha = 1 ;
+          type beta = 0 ;
+          error = vl::impl::blas<deviceType,dataType>::gemm
+          (op.context,
+           'n', 't',
+           numOutputPixels, filterVolume, numFiltersPerGroup,
+           alpha,
+           (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
+           (type*)filter.getMemory() + filterGrpOffset, filterVolume,
+           beta,
+           tempMemory + tempGrpOffset, numOutputPixels) ;
+          if (error != vl::VLE_Success) { return error ; }
+        }
+        error = vl::impl::im2row<deviceType,type>::backward
+        (op.context,
+         (type*)derInput.getMemory() + derInpuOffset,
+         tempMemory,
+         derInput.getHeight(), derInput.getWidth(), derInput.getDepth(),
+         filter.getHeight(), filter.getWidth(),
+         op.strideY, op.strideX,
+         op.padTop, op.padBottom, op.padLeft, op.padRight,
+         op.dilateY, op.dilateX) ;
+        if (error != vl::VLE_Success) { return error ; }
+      }
+
+      /* compute derFilter dz/dF */
+      if (derFilter) {
+        // has derFilter, derOutput, data
+        ptrdiff_t dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
+        error = vl::impl::im2row<deviceType,type>::forward
+        (op.context,
+         (type*)tempMemory,
+         (type*)input.getMemory() + dataOffset,
+         input.getHeight(), input.getWidth(), input.getDepth(),
+         derFilter.getHeight(), derFilter.getWidth(),
+         op.strideY, op.strideX,
+         op.padTop, op.padBottom, op.padLeft, op.padRight,
+         op.dilateY, op.dilateX) ;
+        if (error != vl::VLE_Success) { return error ; }
+        for (int g = 0 ; g < numGroups ; ++ g) {
+          ptrdiff_t filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
+          ptrdiff_t tempGrpOffset = numOutputPixels * filterVolume * g ;
+          ptrdiff_t derOutputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
+          /* dzdF = temp' * dzdY */
+          type alpha = 1 ;
+          type beta = (image > 0) ; /* this saves init. the output array with 0 */
+          error = vl::impl::blas<deviceType,dataType>::gemm
+          (op.context,
+           't', 'n',
+           filterVolume, numFiltersPerGroup, numOutputPixels,
+           alpha,
+           tempMemory + tempGrpOffset, numOutputPixels,
+           (type*)derOutput.getMemory() + derOutputOffset + derOutputGrpOffset, numOutputPixels,
+           beta,
+           (type*)derFilter.getMemory() + filterGrpOffset, filterVolume) ;
+          if (error != vl::VLE_Success) { return error ; }
+        }
+      }
+    }
+
+  done:
+    return op.context.passError(error, __func__) ;
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                       Convolution Transpose Forward
+// -------------------------------------------------------------------
+
+template<DeviceType deviceType, DataType dataType>
+struct ConvolutionTransposeForward
+{
+  vl::ErrorCode operator()
+  (ConvolutionTranspose &op,
+   vl::Tensor &output,
+   vl::Tensor const &input,
+   vl::Tensor const &filter,
+   vl::Tensor const &bias)
+  {
+
+    vl::ErrorCode error = VLE_Success ;
+    size_t dataOffset = input.getHeight()*input.getWidth()*input.getDepth() ;
+    size_t outputOffset = output.getHeight()*output.getWidth()*output.getDepth() ;
+
+    // we need to process this down per image as nnconv_backward would otherwise
+    // accumulate everything into a single feature field in the output
+    for (int image = 0 ; image < input.getSize() ; ++image) {
+      Tensor inputSlice(input) ;
+      Tensor outputSlice(output) ;
+
+      switch (input.getDataType()) {
+        case VLDT_Float:
+          inputSlice.setMemory((float*)input.getMemory() + dataOffset * image) ;
+          outputSlice.setMemory((float*)output.getMemory() + outputOffset * image) ;
+          break ;
+        case VLDT_Double:
+          inputSlice.setMemory((double*)input.getMemory() + dataOffset * image) ;
+          outputSlice.setMemory((double*)output.getMemory() + outputOffset * image) ;
+          break ;
+        default:
+          assert(false) ;
+      }
+      inputSlice.setSize(1) ;
+      outputSlice.setSize(1) ;
+
+      Convolution opc(op.context, op.upsampleY, op.upsampleX,
+                      op.cropTop, op.cropBottom,
+                      op.cropLeft, op.cropRight,
+                      1, 1) ;
+      Tensor null ;
+      error = opc.backward(outputSlice, null, null,
+                           null, filter, inputSlice) ;
+      if (error != VLE_Success) { goto done ; }
+    }
+    if (bias) {
+      error = vl::nn::Bias(op.context).forward(output,1.0,Tensor(),0,bias,1.0);
+    }
+  done:
+    return error ;
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                      Convolution Transpose Backward
+// -------------------------------------------------------------------
+
+template<DeviceType deviceType, DataType dataType>
+struct ConvolutionTransposeBackward
+{
+  vl::ErrorCode operator()
+  (ConvolutionTranspose &op,
+   vl::Tensor &derInput,
+   vl::Tensor &derFilter,
+   vl::Tensor &derBias,
+   vl::Tensor const &input,
+   vl::Tensor const &filter,
+   vl::Tensor const &derOutput)
+  {
+    vl::ErrorCode error = vl::VLE_Success ;
+    Convolution opc(op.context,
+                    op.upsampleY, op.upsampleX,
+                    op.cropTop, op.cropBottom,
+                    op.cropLeft, op.cropRight,
+                    1, 1) ;
+    Tensor null ;
+
+    if (derInput) {
+      error = opc.forward(derInput, 0,
+                          derOutput, 1,
+                          filter, null) ;
+      if (error != VLE_Success) { goto done ; }
+    }
+
+    if (derFilter) {
+      error = opc.backward(null, derFilter, null,
+                           derOutput, Tensor(), input) ;
+      if (error != VLE_Success) { goto done ; }
+    }
+
+    if (derBias) {
+      Tensor null ;
+      error = vl::nn::Bias(op.context).backward(null,0,derBias,0,0,1,derOutput) ;
+    }
+
+  done:
+    return error ;
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                                             Drivers
+// -------------------------------------------------------------------
+
+#if ENABLE_CUDNN
+#include "nnconv_cudnn.cu"
+#endif
+
+Convolution::Convolution(Context &context,
+                         int strideY, int strideX,
+                         int padTop, int padBottom,
+                         int padLeft, int padRight,
+                         int dilateY, int dilateX)
+:
+context(context),
+strideY(strideY), strideX(strideX),
+padTop(padTop), padBottom(padBottom),
+padLeft(padLeft), padRight(padRight),
+dilateY(dilateY), dilateX(dilateX)
+{ }
 
 vl::ErrorCode
-vl::nnconvt_backward(Context& context,
-                     Tensor derData,
-                     Tensor derFilters,
-                     Tensor derBiases,
-                     Tensor data,
-                     Tensor filters,
-                     Tensor derOutput,
-                     int upsampleY, int upsampleX,
-                     int cropTop, int cropBottom,
-                     int cropLeft, int cropRight)
+Convolution::forward(Tensor &output, double outputMult,
+                     Tensor const& input, double inputMult,
+                     Tensor const& filter,
+                     Tensor const& bias)
 {
-  vl::ErrorCode error = vl::VLE_Success ;
-
-  if (derData) {
-    error = vl::nnconv_forward(context,
-                               derData, 0,
-                               derOutput, 1,
-                               filters, Tensor(),
-                               upsampleY, upsampleX,
-                               cropTop, cropBottom,
-                               cropLeft, cropRight,
-                               1, 1) ;
-    if (error != VLE_Success) { goto done ; }
-  }
-
-  if (derFilters) {
-    error = vl::nnconv_backward(context,
-                                Tensor(), derFilters, Tensor(),
-                                derOutput, Tensor(), data,
-                                upsampleY, upsampleX,
-                                cropTop, cropBottom,
-                                cropLeft, cropRight,
-                                1, 1) ;
-    if (error != VLE_Success) { goto done ; }
-  }
-
-  if (derBiases) {
-    error = vl::nnbias_backward(context,
-                                Tensor(), 0,
-                                derBiases, 0,
-                                derOutput, 1) ;
-  }
-
-done:
-  return error ;
+  return dispatch_cudnn<
+  ConvolutionForward,
+  ConvolutionForwardCudnn>()
+  (*this,output,outputMult,input,inputMult,filter,bias) ;
 }
+
+vl::ErrorCode
+Convolution::backward(Tensor &derInput,
+                      Tensor &derFilter,
+                      Tensor &derBias,
+                      Tensor const &input,
+                      Tensor const &filter,
+                      Tensor const &derOutput)
+{
+  return dispatch_cudnn<
+  ConvolutionBackward,
+  ConvolutionBackwardCudnn>()
+  (*this,derInput,derFilter,derBias,input,filter,derOutput) ;
+}
+
+ConvolutionTranspose::ConvolutionTranspose(Context &context,
+                                           int upsampleY,
+                                           int upsampleX,
+                                           int cropTop,
+                                           int cropBottom,
+                                           int cropLeft,
+                                           int cropRight)
+:
+context(context),
+upsampleY(upsampleY),
+upsampleX(upsampleX),
+cropTop(cropTop),
+cropBottom(cropBottom),
+cropLeft(cropLeft),
+cropRight(cropRight)
+{ }
+
+vl::ErrorCode
+ConvolutionTranspose::forward(Tensor &output,
+                              Tensor const& input,
+                              Tensor const& filter,
+                              Tensor const& bias)
+{
+  return dispatch<ConvolutionTransposeForward>()
+  (*this,output,input,filter,bias) ;
+}
+
+vl::ErrorCode
+ConvolutionTranspose::backward(Tensor &derInput,
+                               Tensor &derFilter,
+                               Tensor &derBias,
+                               Tensor const &input,
+                               Tensor const &filter,
+                               Tensor const &derOutput)
+{
+  return dispatch<ConvolutionTransposeBackward>()
+  (*this,derInput,derFilter,derBias,input,filter,derOutput) ;
+}
+
+

@@ -2,7 +2,7 @@
 
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
-<a href="download/matconvnet-1.0-beta24.tar.gz">
+<a href="download/matconvnet-1.0-beta25.tar.gz">
 <div class="menuicon"><span class="fa fa-download fa-2x"></span></div>
 Download</a>
 </div>
@@ -31,6 +31,8 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta25](about.md#changes) released with a new modular system [`vl_contrib`](mfiles/vl_contrib.md) for third-party contributions. A partial rewrite of the C++ code and support for recent CuDNN versions is also included.
+>
 > **New:** [1.0-beta24](about.md#changes) released with bugfixes, new
 > examples, and utility functions.
 >
@@ -58,7 +60,7 @@ recognition, and text detection are available.
 > numerous other improvements and bugfixes.
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta24](download/matconvnet-1.0-beta24.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta25](download/matconvnet-1.0-beta25.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>
@@ -80,6 +82,9 @@ recognition, and text detection are available.
 - <span class="fa fa-question-circle"></span> [FAQ](faq.md)
 - <span class="fa fa-comments"></span> [Discussion group](https://groups.google.com/d/forum/matconvnet)
 
+## Extensions
+- [Third party contributions and extensions](https://github.com/vlfeat/matconvnet-contrib), also accessible using [`vl_contrib`](mfiles/vl_contrib.md), third-party contribution including autodiff as well as a plethora of object detectors.
+
 ## Getting started
 - [Quick start guide](quick.md)
 - [Installation instructions](install.md)
@@ -100,4 +105,3 @@ recognition, and text detection are available.
 ## Other information
 - [Changes](about/#changes)
 - [Developing the library](developers.md)
-

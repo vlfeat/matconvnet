@@ -1,27 +1,29 @@
 # About MatConvNet
 
-MatConvNet was born in the Oxford Visual Geometry Group as both an
-educational and research platform for fast prototyping in
-Convolutional Neural Nets. Its main features are:
+MatConvNet was born in the Oxford Visual Geometry Group as an
+educational and research platform for fast prototyping of
+Convolutional Neural Networks.
 
-- *Flexibility.* Neural network layers are implemented in a
-  straightforward manner, often directly in MATLAB code, so that they
-  are easy to modify, extend, or integrate with new ones. Other
-  toolboxes hide the neural network layers behind a wall of compiled
-  code; here the granularity is much finer.
-- *Power.* The implementation can run large models such as Krizhevsky
-  et al., including the DeCAF and Caffe variants. Several pre-trained
-  models are provided.
-- *Efficiency.* The implementation is quite efficient, supporting both
-  CPU and GPU computation.
-
-This library may be merged in the future with
-[VLFeat library](http://www.vlfeat.org/). It uses a very similar
-style, so if you are familiar with VLFeat, you should be right at home
-here.
+MatConvNet is a flexible framework capable of learning large neural networks on one or
+multiple GPUs. Except for low-level building blocks, it is all written in MATLAB,
+which allows easy hacking, including creating new autodiff methods. Many [research papers](https://scholar.google.co.uk/scholar?cites=887098456902972163) have used MatConvNet.
 
 <a name='changes'></a>
 # Changes
+
+-   1.0-beta25 (August 2017).
+
+    **New features**
+
+    * Modular system `vl_contrib` giving quick access to many user
+      contributions.
+
+    **Changes affecting backward compatibility**
+
+    The build system was simplified removing special cases for older
+    MATLAB bugs and limitations, and to support C++11 as production
+    language. Recent MATLAB, compilers, and CUDA versions should all
+    still work.
 
 -   1.0-beta24 (March 2017).
 

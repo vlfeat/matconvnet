@@ -11,32 +11,17 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "bilinearsampler.hpp"
-#include "../datacu.hpp"
-#include <assert.h>
-#include <float.h>
-#include <sm_20_atomic_functions.h>
-#include <cstdio>
+#include "nnbilinearsampler.hpp"
+#include "datacu.hpp"
+#include "impl/dispatcher.hpp"
+#include <cassert>
+
+// -------------------------------------------------------------------
+//                                                             Helpers
+// -------------------------------------------------------------------
 
 // maximum size of each grid dimension:
 #define MAX_GRID_DIM 65535 // this is probably a bad idea..
-
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-#else
-// an implementation of atomicAdd() for double (really slow) for older CC
-static __device__ double atomicAdd(double* address, double val)
-{
-  unsigned long long int* address_as_ull = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-                    __double_as_longlong(val +
-                                         __longlong_as_double(assumed)));
-  } while (assumed != old);
-  return __longlong_as_double(old);
-}
-#endif
 
 /* 2D grid of 1D blocks. */
 __device__ int getGlobalIdx_2D_1D()
@@ -48,12 +33,12 @@ __device__ int getGlobalIdx_2D_1D()
 
 // todo: fix such assumptions either in doc or by clearing memory
 // probably all these functions should have the option to accumulate, so...
-// assumption: derData is cleared before calling this code
+// assumption: derInputData is cleared before calling this code
 
 template<typename type, bool backwardData>
 __global__ void forward_backward_kernel
 (type* output,
- type* derData,
+ type* derInputData,
  type const* data,
  type const* grid,
  type const* derOutput,
@@ -94,15 +79,12 @@ __global__ void forward_backward_kernel
     data += inputOffset ;
   }
   if (backwardData) {
-    derData += inputOffset ;
+    derInputData += inputOffset ;
   }
   if (backward) {
     dy = derOutput[offset] ;
   }
 
-  // todo: check boundary conditions in other frameworks and make
-  // them the same
-  // AG: checked against CUDNN -- works
   if (-1 <= sy && sy < inHeight && -1 <= sx && sx < inWidth) {
     // get the interpolation weights
     const type wx = px - sx ;
@@ -124,7 +106,7 @@ __global__ void forward_backward_kernel
           acc += ww * data[ssy + ssx * inHeight];
         } else {
           if (backwardData) {
-            atomicAdd(derData  + ssy + ssx * inHeight, ww * dy) ;
+            atomicAdd(derInputData  + ssy + ssx * inHeight, ww * dy) ;
           }
         }
       }
@@ -233,10 +215,10 @@ vl::ErrorCode get_launch_params(const int& N, int& nTh, int& nGx, int& nGy)
 // use a template to define both directions as they are nearly identical code-wise
 template<typename type, bool backwardData, bool backwardGrid>
 static vl::ErrorCode
-forward_backward
+forward_backward_gpu
 (vl::Context& context,
  type* output,
- type* derData,
+ type* derInputData,
  type* derGrid,
  type const* data,
  type const* grid,
@@ -255,12 +237,12 @@ forward_backward
 
   // backward conditions
   //assert(!backward || derOutput) ;
-  assert(!backwardData || derData) ;
+  assert(!backwardData || derInputData) ;
   assert(!backwardGrid || derGrid) ;
   assert(!backwardGrid || data) ;
 
   // if (backwardData) {
-  //   //memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
+  //   //memset(derInputData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
   // }
 
   // setup and launch the kernel for DER-DATA:
@@ -272,7 +254,7 @@ forward_backward
   dim3  gridDim(nGx,nGy); // grid-dimensions
   forward_backward_kernel <type, backwardData>
     <<< gridDim, nTh >>> (output,
-                          derData,
+                          derInputData,
                           data,
                           grid,
                           derOutput,
@@ -301,69 +283,85 @@ forward_backward
   return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
 }
 
-namespace vl { namespace impl {
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
 
-  template<typename type>
-  struct bilinearsampler<vl::VLDT_GPU, type>
+template<DataType dataType>
+struct BilinearSamplerForward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()
+  (BilinearSampler &op,
+   Tensor &output,
+   Tensor const &input,
+   Tensor const &grid)
   {
+    typedef typename DataTypeTraits<dataType>::type type ;
+    auto outHeight = output.getHeight() ;
+    auto outWidth = output.getWidth() ;
+    auto outDepth = output.getDepth() ;
+    auto outCardinality = output.getSize() ;
+    auto inHeight = input.getHeight() ;
+    auto inWidth = input.getWidth() ;
+    auto inCardinality = input.getSize() ;
+    auto outputData = (type*)output.getMemory() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto gridData = (type const*)grid.getMemory() ;
 
-    /* ------------------------------------------------------------ */
-    /*                                                      forward */
-    /* ------------------------------------------------------------ */
+    return forward_backward_gpu<type, false, false>
+    (op.context, outputData, NULL, NULL, inputData, gridData, NULL,
+     outHeight, outWidth, outDepth, outCardinality,
+     inHeight, inWidth,inCardinality) ;
+  }
+} ;
 
-    static vl::ErrorCode
-    forward(Context& context,
-            type* output,
-            type const* data,
-            type const* grid,
-            size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
-            size_t inHeight, size_t inWidth, size_t inCardinality)
-    {
-      return forward_backward<type, false, false>
-      (context, output, NULL, NULL, data, grid, NULL,
-       outHeight, outWidth, outDepth, outCardinality,
-       inHeight, inWidth,inCardinality) ;
-    }
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
 
-    /*------------------------------------------------------------- */
-    /*                                                     backward */
-    /* ------------------------------------------------------------ */
-
+#undef DISPATCH
 #define DISPATCH(bwData, bwGrid) \
-error = forward_backward<type, bwData, bwGrid> \
-    (context, NULL, derData, derGrid, data, grid, derOutput, \
+error = forward_backward_gpu<type, bwData, bwGrid> \
+    (op.context, NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
      outHeight, outWidth, outDepth, outCardinality, \
      inHeight, inWidth,inCardinality) ;
 
-    static vl::ErrorCode
-    backward(Context& context,
-             type* derData,
-             type* derGrid,
-             type const* data,
-             type const* grid,
-             type const* derOutput,
-             size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
-             size_t inHeight, size_t inWidth, size_t inCardinality)
-    {
-      vl::ErrorCode error = VLE_Success ;
+template<DataType dataType>
+struct BilinearSamplerBackward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()
+  (BilinearSampler &op,
+   Tensor &derInput,
+   Tensor &derGrid,
+   Tensor const &input,
+   Tensor const &grid,
+   Tensor const &derOutput)
+  {
+    typedef typename DataTypeTraits<dataType>::type type ;
+    auto outHeight = derOutput.getHeight() ;
+    auto outWidth = derOutput.getWidth() ;
+    auto outDepth = derOutput.getDepth() ;
+    auto outCardinality = derOutput.getSize() ;
+    auto inHeight = input.getHeight() ;
+    auto inWidth = input.getWidth() ;
+    auto inCardinality = input.getSize() ;
+    auto derInputData = (type*)derInput.getMemory() ;
+    auto derGridData = (type*)derGrid.getMemory() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto gridData = (type const*)grid.getMemory() ;
+    auto derOutputData = (type const*)derOutput.getMemory() ;
+    vl::ErrorCode error = VLE_Success ;
 
-      // optimized codepaths depending on what needs to be comptued
-      if (derData && derGrid == NULL) {
-        DISPATCH(true, false) ;
-      } else if (derData == NULL && derGrid) {
-        DISPATCH(false, true) ;
-      } else if (derData && derGrid) {
-        DISPATCH(true, true) ;
-      }
-      return error ;
+    // optimized codepaths depending on what needs to be comptued
+    if (derInput && !derGrid) {
+      DISPATCH(true, false) ;
+    } else if (!derInput && derGrid) {
+      DISPATCH(false, true) ;
+    } else if (derInput && derGrid) {
+      DISPATCH(true, true) ;
     }
-  } ;
+    return error ;
+  }
+} ;
 
-} } // namespace vl::impl
-
-template struct vl::impl::bilinearsampler<vl::VLDT_GPU, float> ;
-
-#ifdef ENABLE_DOUBLE
-template struct vl::impl::bilinearsampler<vl::VLDT_GPU, double> ;
-#endif
 

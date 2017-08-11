@@ -1,34 +1,33 @@
-// @file roipooling_gpu.cu
-// @brief Region of interest pooling block implementation (GPU)
+// @file nnroipooling_gpu.cu
+// @brief ROI pooling block (GPU)
 // @author Hakan Bilen
 // @author Abishek Dutta
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2016 Hakan Bilen, Abishek Dutta, and Andrea Vedaldi.
+Copyright (C) 2016-17 Hakan Bilen, Abishek Dutta, and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "roipooling.hpp"
-#include "../datacu.hpp"
+#include "datacu.hpp"
+
 #include <assert.h>
 #include <cfloat>
 #include <algorithm>
 #include <sm_20_atomic_functions.h>
 
-
-/* ---------------------------------------------------------------- */
-/*                                                          Helpers */
-/* ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+//                                                             Helpers
+// -------------------------------------------------------------------
 
 template<typename T>
 struct Geom {
   int subdivisions[2] ;
   T transform[6] ;
-  Geom(int const subdivisions[2], double const transform[6])
+  Geom(array<int,2> const &subdivisions, array<double,6> const &transform)
   {
     this->subdivisions[0] = subdivisions[0] ;
     this->subdivisions[1] = subdivisions[1] ;
@@ -80,10 +79,10 @@ getBounds(int outputIndex,
   // First and last pixel of each ROI (rounded
   // for compatibility with the Caffe definition).
   int roi_image   = (int)rois[0];
-  int roi_start_h = (int)round(v1) - 1 ;
-  int roi_start_w = (int)round(u1) - 1 ;
-  int roi_end_h   = (int)round(v2) - 1 ;
-  int roi_end_w   = (int)round(u2) - 1 ;
+  int roi_start_h = (int)::round(v1) - 1 ;
+  int roi_start_w = (int)::round(u1) - 1 ;
+  int roi_end_h   = (int)::round(v2) - 1 ;
+  int roi_end_w   = (int)::round(u2) - 1 ;
   int roi_height  = max(roi_end_h - roi_start_h + 1, 1) ;
   int roi_width   = max(roi_end_w - roi_start_w + 1, 1) ;
 
@@ -174,27 +173,6 @@ roipooling_max_kernel
 }
 
 /* ---------------------------------------------------------------- */
-/*                                                        atomicAdd */
-/* ---------------------------------------------------------------- */
-
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-#else
-// an implementation of atomicAdd() for double (really slow)
-static __device__ double atomicAdd(double* address, double val)
-{
-  unsigned long long int* address_as_ull = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-                    __double_as_longlong(val +
-                                         __longlong_as_double(assumed)));
-  } while (assumed != old);
-  return __longlong_as_double(old);
-}
-#endif
-
-/* ---------------------------------------------------------------- */
 /*                                      roipooling_average_backward */
 /* ---------------------------------------------------------------- */
 
@@ -267,118 +245,143 @@ roipooling_max_backward_kernel
   }
 }
 
-/* ---------------------------------------------------------------- */
-/*                                                        Interface */
-/* ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
 
-namespace vl { namespace impl {
-
-  template <typename type>
-  struct roipooling_max<vl::VLDT_GPU, type>
+template<DataType dataType, ROIPooling::Method method>
+struct ROIPoolingForwardGPU
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor &output,
+                           Tensor const &input,
+                           Tensor const &rois)
   {
-    static vl::ErrorCode
-    forward(type* output,
-            type const* data,
-            size_t height, size_t width, size_t numChannels, size_t size,
-            type const* rois,
-            size_t numROIs,
-            int const subdivisions[2],
-            double const transform[6])
-    {
-      int outputVolume = subdivisions[0] * subdivisions[1] * numChannels * numROIs ;
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto numROIs = rois.getNumElements() / 5 ;
+    auto outputData = (type*)output.getMemory() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto height = input.getHeight() ;
+    auto width = input.getWidth() ;
+    auto numChannels = input.getDepth() ;
+    auto size = input.getSize() ;
+    auto roisData = (type const*)rois.getMemory() ;
+    size_t outputVolume = op.subdivisions[0] * op.subdivisions[1] * numChannels * numROIs ;
 
+    if (method == ROIPooling::Max) {
       roipooling_max_kernel<type>
-      <<< divideAndRoundUp(outputVolume, VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
-      (output,
-       data, height, width, numChannels, size,
-       rois, numROIs,
-       Geom<type>(subdivisions,transform)) ;
-
-      cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      (outputData,
+       inputData, height, width, numChannels, size,
+       roisData, numROIs,
+       Geom<type>(op.subdivisions,op.transform)) ;
     }
-
-    static vl::ErrorCode
-    backward(type* derData,
-             type const* data,
-             size_t height, size_t width, size_t numChannels, size_t size,
-             type const* rois,
-             size_t numROIs,
-             type const* derOutput,
-             int const subdivisions[2],
-             double const transform[6])
-    {
-      int outputVolume = subdivisions[0] * subdivisions[1] * numChannels * numROIs ;
-
-      roipooling_max_backward_kernel<type>
-      <<< divideAndRoundUp(outputVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derData, data,
-       height, width, numChannels, size,
-       rois, numROIs,
-       derOutput,
-       Geom<type>(subdivisions,transform)) ;
-
-      cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
-    }
-  } ; // roipooling_max
-
-  template <typename type>
-  struct roipooling_average<vl::VLDT_GPU, type>
-  {
-    static vl::ErrorCode
-    forward(type* output,
-            type const* data,
-            size_t height, size_t width, size_t numChannels, size_t size,
-            type const* rois,
-            size_t numROIs,
-            int const subdivisions[2],
-            double const transform[6])
-    {
-      int outputVolume = subdivisions[0] * subdivisions[1] * numChannels * numROIs ;
-
+    else if (method == ROIPooling::Average) {
       roipooling_average_kernel<type>
-      <<< divideAndRoundUp(outputVolume, VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
-      (output, data,
-       height, width, numChannels, size,
-       rois, numROIs,
-       Geom<type>(subdivisions,transform)) ;
-
-      cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      (outputData,
+       inputData, height, width, numChannels, size,
+       roisData, numROIs,
+       Geom<type>(op.subdivisions,op.transform)) ;
+    }
+    else {
+      assert(false) ;
     }
 
-    static vl::ErrorCode
-    backward(type* derData,
-             type const* data, // <- this is not needed for avg pooling
-             size_t height, size_t width, size_t numChannels, size_t size,
-             type const* rois,
-             size_t numROIs,
-             type const* derOutput,
-             int const subdivisions[2],
-             double const transform[6])
-    {
-      int outputVolume = subdivisions[0] * subdivisions[1] * numChannels * numROIs ;
+    cudaError_t status = cudaPeekAtLastError() ;
+    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+  }
+} ;
 
+template<DataType dataType>
+struct ROIPoolingForward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor pooled,
+                           Tensor input,
+                           Tensor rois)
+  {
+    switch (op.method) {
+      case ROIPooling::Max:
+        return ROIPoolingForwardGPU<dataType,ROIPooling::Max>
+        ()(op,pooled,input,rois) ;
+      case ROIPooling::Average:
+        return ROIPoolingForwardGPU<dataType,ROIPooling::Average>
+        ()(op,pooled,input,rois) ;
+      default: return VLE_IllegalArgument ;
+    }
+  }
+} ;
+
+// -------------------------------------------------------------------
+//                                                            Backward
+// -------------------------------------------------------------------
+
+template<DataType dataType, ROIPooling::Method method>
+struct ROIPoolingBackwardGPU
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &rois,
+                           Tensor const &derOutput)
+  {
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    auto numROIs = rois.getNumElements() / 5 ;
+    auto derInputData = (type*)derInput.getMemory() ;
+    auto derOutputData = (type const*)derOutput.getMemory() ;
+    auto inputData = (type const*)input.getMemory() ;
+    auto height = input.getHeight() ;
+    auto width = input.getWidth() ;
+    auto numChannels = input.getDepth() ;
+    auto size = input.getSize() ;
+    auto roisData = (type const*)rois.getMemory() ;
+    size_t outputVolume = op.subdivisions[0] * op.subdivisions[1] * numChannels * numROIs ;
+
+    if (method == ROIPooling::Max) {
+      roipooling_max_backward_kernel<type>
+      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derInputData, inputData,
+       height, width, numChannels, size,
+       roisData, numROIs,
+       derOutputData,
+       Geom<type>(op.subdivisions,op.transform)) ;
+    }
+    else if (method == ROIPooling::Average) {
       roipooling_average_backward_kernel<type>
-      <<< divideAndRoundUp(outputVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derData, data,
+      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      (derInputData, inputData,
        height, width, numChannels, size,
-       rois, numROIs,
-       derOutput,
-       Geom<type>(subdivisions,transform)) ;
-
-      cudaError_t status = cudaPeekAtLastError() ;
-      return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+       roisData, numROIs,
+       derOutputData,
+       Geom<type>(op.subdivisions,op.transform)) ;
     }
-  } ; // roipooling_average
-} } ; // namespace vl::impl
+    else {
+      assert(false) ;
+    }
+    cudaError_t status = cudaPeekAtLastError() ;
+    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+  }
+} ;
 
-// Instantiations
-template struct vl::impl::roipooling_max<vl::VLDT_GPU, float> ;
-template struct vl::impl::roipooling_average<vl::VLDT_GPU, float> ;
+template<DataType dataType>
+struct ROIPoolingBackward<VLDT_GPU,dataType>
+{
+  vl::ErrorCode operator()(ROIPooling &op,
+                           Tensor &derInput,
+                           Tensor const &input,
+                           Tensor const &rois,
+                           Tensor const &derOutput)
+  {
+    switch (op.method) {
+      case ROIPooling::Max:
+        return ROIPoolingBackwardGPU<dataType,ROIPooling::Max>
+        ()(op,derInput,input,rois,derOutput) ;
+      case ROIPooling::Average:
+        return ROIPoolingBackwardGPU<dataType,ROIPooling::Average>
+        ()(op,derInput,input,rois,derOutput) ;
+      default: return VLE_IllegalArgument ;
+    }
+  }
+} ;
 
-#ifdef ENABLE_DOUBLE
-template struct vl::impl::roipooling_max<vl::VLDT_GPU, double> ;
-template struct vl::impl::roipooling_average<vl::VLDT_GPU, double> ;
-#endif

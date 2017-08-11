@@ -252,47 +252,33 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   vl::ErrorCode error ;
+  vl::nn::BatchNorm op(context,epsilon) ;
 
   if (!backMode) {
     if (!givenMomentsMode) {
-      error = vl::nnbnorm_forward(context,
-                                  output,
-                                  moments, // ok if null
-                                  data,
-                                  multipliers,
-                                  biases,
-                                  epsilon) ;
+      error = op.forward(output,moments,data,multipliers,biases) ;
     } else {
-      error = vl::nnbnorm_forward_given_moments(context,
-                                                output,
-                                                moments,
-                                                data,
-                                                multipliers,
-                                                biases) ;
+      error = op.forwardWithMoment(output,moments,data,multipliers,biases) ;
     }
   } else {
     if (!givenMomentsMode) {
-      error = vl::nnbnorm_backward(context,
-                                   derData,
-                                   derMultipliers,
-                                   derBiases,
-                                   moments,
-                                   data,
-                                   multipliers,
-                                   biases,
-                                   derOutput,
-                                   epsilon);
+      error = op.backward(derData,
+                          derMultipliers,
+                          derBiases,
+                          moments,
+                          data,
+                          multipliers,
+                          biases,
+                          derOutput) ;
     } else {
-      error = vl::nnbnorm_backward_given_moments(context,
-                                                 derData,
-                                                 derMultipliers,
-                                                 derBiases,
-                                                 moments,
-                                                 data,
-                                                 multipliers,
-                                                 biases,
-                                                 derOutput,
-                                                 epsilon) ;
+      error = op.backwardWithMoment(derData,
+                                    derMultipliers,
+                                    derBiases,
+                                    moments,
+                                    data,
+                                    multipliers,
+                                    biases,
+                                    derOutput) ;
     }
   }
 

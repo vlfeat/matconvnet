@@ -13,6 +13,7 @@ site=doc/site/docs
 mfiles=\
 vl_argparse.m \
 vl_compilenn.m \
+vl_contrib.m \
 vl_imreadjpeg.m \
 vl_nnbnorm.m \
 vl_nnbilinearsampler.m \

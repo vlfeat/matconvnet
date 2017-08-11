@@ -1073,8 +1073,7 @@ void ProcessPool::mexPush(std::string const & name,
                           bool inplace)
 {
   // Search tensor by name.
-  SharedTensorSpace::tensors_t::iterator T
-  = std::find(sharedSpace->tensors.begin(), sharedSpace->tensors.end(), name) ;
+  auto T = std::find(sharedSpace->tensors.begin(), sharedSpace->tensors.end(), name) ;
   if (T == sharedSpace->tensors.end()) {
     vlmxError(VLMXE_IllegalArgument, "There is no tensor '%s'.", name.c_str()) ;
   }
@@ -1155,8 +1154,7 @@ void ProcessPool::mexPush(std::string const & name,
 mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
 {
   // Search the tensor with the specified name.
-  SharedTensorSpace::tensors_t::const_iterator T
-  = std::find(sharedSpace->tensors.begin(), sharedSpace->tensors.end(), name) ;
+  auto T = std::find(sharedSpace->tensors.begin(), sharedSpace->tensors.end(), name) ;
 
   if (T == sharedSpace->tensors.end()) {
     vlmxError(VLMXE_IllegalArgument, "There is no tensor with the specified name.") ;

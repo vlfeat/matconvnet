@@ -9,6 +9,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
+		DebugGPU|Win32 = DebugGPU|Win32
+		DebugGPU|x64 = DebugGPU|x64
 		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
 	EndGlobalSection
@@ -16,6 +18,9 @@ Global
 		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.Debug|Win32.ActiveCfg = Debug|Win32
 		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.Debug|Win32.Build.0 = Debug|Win32
 		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.Debug|x64.ActiveCfg = Debug|Win32
+		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.DebugGPU|Win32.ActiveCfg = DebugGPU|Win32
+		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.DebugGPU|Win32.Build.0 = DebugGPU|Win32
+		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.DebugGPU|x64.ActiveCfg = DebugGPU|Win32
 		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.Release|Win32.ActiveCfg = Release|Win32
 		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.Release|Win32.Build.0 = Release|Win32
 		{B0BD9132-1D90-4267-A07A-B44DE497A9C7}.Release|x64.ActiveCfg = Release|Win32
