@@ -45,6 +45,9 @@ VER = 1.0-beta25
 DIST = $(NAME)-$(VER)
 LATEST = $(NAME)-latest
 RSYNC = rsync
+HOST = vlfeat-admin:sites/sandbox-matconvnet
+GIT = git
+SHELL = /bin/bash # sh not good enough
 
 # --------------------------------------------------------------------
 #                                                        Configuration
