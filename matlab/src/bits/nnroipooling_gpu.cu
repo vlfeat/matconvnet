@@ -27,7 +27,7 @@ template<typename T>
 struct Geom {
   int subdivisions[2] ;
   T transform[6] ;
-  Geom(std::array<int,2> const &subdivisions, array<double,6> const &transform)
+  Geom(std::array<int,2> const &subdivisions, std::array<double,6> const &transform)
   {
     this->subdivisions[0] = subdivisions[0] ;
     this->subdivisions[1] = subdivisions[1] ;
