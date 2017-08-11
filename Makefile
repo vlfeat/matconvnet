@@ -115,9 +115,9 @@ NVCCFLAGS = -D_FORCE_INLINES --std=c++11 --compiler-options=-fPIC \
 MEX_CXXFLAGS = --std=c++11
 
 ifndef DEBUG
-MEX_CXXOPTIMFLAGS += -msse3 -ffast-math
-MEXCUDA_CXXOPTIMFLAGS += --compiler-options=-msse3,-ffast-math
-NVCCFLAGS += --compiler-options=-msse3,-ffast-math
+MEX_CXXOPTIMFLAGS += -mssse3 -ffast-math
+MEXCUDA_CXXOPTIMFLAGS += --compiler-options=-mssse3,-ffast-math
+NVCCFLAGS += --compiler-options=-mssse3,-ffast-math
 endif
 
 # --------------------------------------------------------------------

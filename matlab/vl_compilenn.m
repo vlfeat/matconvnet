@@ -375,9 +375,9 @@ flags.nvcc = {'-D_FORCE_INLINES', '--std=c++11', '--compiler-options=-fPIC', ...
   opts.cudaArch} ;
 
 if ~opts.debug
-  flags.cxxoptim = horzcat(flags.cxxoptim,'-msse3','-ffast-math') ;
-  flags.mexcuda_cxxoptim{end+1} = '--compiler-options=-msse3,-ffast-math' ;
-  flags.nvcc{end+1} = '--compiler-options=-msse3,-ffast-math' ;
+  flags.cxxoptim = horzcat(flags.cxxoptim,'-mssse3','-ffast-math') ;
+  flags.mexcuda_cxxoptim{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
+  flags.nvcc{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
 end
 
 if opts.enableGpu
