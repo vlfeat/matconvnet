@@ -344,7 +344,7 @@ end
 % MEX: Additional flags passed to `mex` for compiling C++
 % code. CXX and CXXOPTIOM are passed directly to the encapsualted compiler.
 flags.mex = {'-largeArrayDims'} ;
-flags.cxx = {'--std=c++11'} ;
+flags.cxx = {} ;
 flags.cxxoptim = {} ;
 if ~isempty(opts.mexConfig), flags.mex = horzcat(flags.mex, {'-f', opts.mexConfig}) ; end
 
@@ -369,12 +369,15 @@ flags.nvcc = {'-D_FORCE_INLINES', '--std=c++11', ...
 
 switch arch
   case {'maci64','glnxa64'}
+    flags.cxx{end+1} = {'--std=c++11'} ;
     flags.nvcc{end+1} = '--compiler-options=-fPIC' ;
     if ~opts.debug
       flags.cxxoptim = horzcat(flags.cxxoptim,'-mssse3','-ffast-math') ;
       flags.mexcuda_cxxoptim{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
       flags.nvcc{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
     end
+  case 'win64'
+    % Visual Studio 2015 does C++11 without futher switches
 end
 
 if opts.enableGpu
