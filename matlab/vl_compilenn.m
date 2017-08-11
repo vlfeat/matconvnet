@@ -369,15 +369,19 @@ flags.mexlink_ldoptimflags = {} ;
 flags.mexlink_linklibs = {} ;
 
 % NVCC: Additional flags passed to `nvcc` for compiling CUDA code.
-flags.nvcc = {'-D_FORCE_INLINES', '--std=c++11', '--compiler-options=-fPIC', ...
-  ['-I' fullfile(matlabroot,'extern','include')], ...
-  ['-I' fullfile(toolboxdir('distcomp'),'gpu','extern','include')], ...
+flags.nvcc = {'-D_FORCE_INLINES', '--std=c++11', ...
+  sprintf('-I"%s"',fullfile(matlabroot,'extern','include')), ...
+  sprintf('-I"%s"',fullfile(toolboxdir('distcomp'),'gpu','extern','include')), ...
   opts.cudaArch} ;
 
-if ~opts.debug
-  flags.cxxoptim = horzcat(flags.cxxoptim,'-mssse3','-ffast-math') ;
-  flags.mexcuda_cxxoptim{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
-  flags.nvcc{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
+switch arch
+  case {'maci64','glnxa64'}
+    flags.nvcc{end+1} = '--compiler-options=-fPIC' ;
+    if ~opts.debug
+      flags.cxxoptim = horzcat(flags.cxxoptim,'-mssse3','-ffast-math') ;
+      flags.mexcuda_cxxoptim{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
+      flags.nvcc{end+1} = '--compiler-options=-mssse3,-ffast-math' ;
+    end
 end
 
 if opts.enableGpu
