@@ -31,7 +31,7 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
-> **New:** [1.0-beta25](about.md#changes) released with a new third-party contribution modular system (modules include autodiff as well as a plethora of object detectors). A partial rewrite of the C++ code is also included.
+> **New:** [1.0-beta25](about.md#changes) released with a new modular system [`vl_contrib`](mfiles/vl_contrib.md) for third-party contributions. A partial rewrite of the C++ code and support for recent CuDNN versions is also included.
 >
 > **New:** [1.0-beta24](about.md#changes) released with bugfixes, new
 > examples, and utility functions.
@@ -81,6 +81,9 @@ recognition, and text detection are available.
 - <span class="fa fa-puzzle-piece"></span> [MATLAB functions](functions.md)
 - <span class="fa fa-question-circle"></span> [FAQ](faq.md)
 - <span class="fa fa-comments"></span> [Discussion group](https://groups.google.com/d/forum/matconvnet)
+
+## Extensions
+- [Third party contributions and extensions](github.com/vlfeat/matconvnet-contrib), also accessible using [`vl_contrib`](mfiles/vl_contrib.md), third-party contribution including autodiff as well as a plethora of object detectors.
 
 ## Getting started
 - [Quick start guide](quick.md)
