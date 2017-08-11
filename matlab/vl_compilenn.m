@@ -556,13 +556,13 @@ mex(args{:}) ;
 function mexcuda_compile(opts, src, tgt, flags)
 % --------------------------------------------------------------------
 if check_deps(opts, tgt, src), return ; end
-% Hacky fix: MATLAB includes the -ansi option by default, which
-% prevents -std=c++11 to work. This could be solved by editing the
+% Hacky fix: In glnxa64 MATLAB includes the -ansi option by default, which
+% prevents -std=c++11 to work (an error?). This could be solved by editing the
 % mex configuration file; for convenience, we take it out here by
 % avoiding to append to the default flags.
 glue = '$CXXFLAGS' ;
 switch computer('arch')
-  case {'glnxa64', 'maci64'}
+  case {'glnxa64'}
     glue = '--compiler-options=-fexceptions,-fPIC,-fno-omit-frame-pointer,-pthread' ;
 end
 args = horzcat({'-c', '-outdir', fileparts(tgt), src}, ...

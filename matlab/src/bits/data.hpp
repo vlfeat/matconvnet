@@ -70,15 +70,15 @@ namespace vl {
   template <vl::DataType dataType> struct DataTypeTraits { } ;
   template <> struct DataTypeTraits<VLDT_Char> {
     typedef char type ;
-    static constexpr auto size = sizeof(char) ;
+    static constexpr std::size_t size = sizeof(char) ;
   } ;
   template <> struct DataTypeTraits<VLDT_Float> {
     typedef float type ;
-    static constexpr auto size = sizeof(float) ;
+    static constexpr std::size_t size = sizeof(float) ;
   } ;
   template <> struct DataTypeTraits<VLDT_Double> {
     typedef double type ;
-    static constexpr auto size = sizeof(double) ;
+    static constexpr std::size_t size = sizeof(double) ;
   } ;
 
   template <typename type> struct BuiltinToDataType {} ;
