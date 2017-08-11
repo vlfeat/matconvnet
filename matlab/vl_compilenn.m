@@ -399,7 +399,10 @@ switch arch
   case {'maci64'}
     flags.mex{end+1} = '-cxx' ;
     flags.nvcc{end+1} = '--compiler-options=-mmacosx-version-min=10.10' ;
-    flags.nvcc{end+1} = sprintf('--compiler-bindir="%s"',system('xcrun -f clang++')) ;
+    [s,r] = system('xcrun -f clang++') ;
+    if s == 0
+      flags.nvcc{end+1} = sprintf('--compiler-bindir="%s"',strtrim(r)) ;
+    end
     if opts.enableGpu
       flags.mexlink_ldflags{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudaLibDir) ;
     end
@@ -578,7 +581,7 @@ if check_deps(opts, tgt, src), return ; end
 nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
 nvcc_cmd = sprintf('"%s" -c -o "%s" "%s" %s ', ...
                    nvcc_path, tgt, src, ...
-                   strjoin(flags.nvcc));
+                   strjoin(horzcat(flags.base,flags.nvcc)));
 opts.verbose && fprintf('%s: NVCC CC: %s\n', mfilename, nvcc_cmd) ;
 status = system(nvcc_cmd);
 if status, error('Command %s failed.', nvcc_cmd); end;
