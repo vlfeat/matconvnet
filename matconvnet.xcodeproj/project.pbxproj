@@ -543,7 +543,6 @@
 				2D708ACB1A52F65C004E7D42 /* Makefile */,
 				2D708ACC1A52F65C004E7D42 /* matdoc.py */,
 				2D708ACD1A52F65C004E7D42 /* matdocparser.py */,
-				2D708ACA1A52F61A004E7D42 /* mkdocs.yml */,
 			);
 			name = site;
 			sourceTree = "<group>";
@@ -599,6 +598,7 @@
 				2D433A151BAC49F100D31E69 /* impl.tex */,
 				2D433A161BAC49F100D31E69 /* intro.tex */,
 				2D717F1F19B3A2A50028FE9E /* matconvnet-manual.tex */,
+				2D708ACA1A52F61A004E7D42 /* mkdocs.yml */,
 				2D433A171BAC49F100D31E69 /* wrappers.tex */,
 				2D708AA81A52F60B004E7D42 /* site */,
 			);
@@ -675,11 +675,11 @@
 /* Begin PBXLegacyTarget section */
 		2D1880FA1A7BBD73007C7586 /* matconv cuDNN */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-j4 ENABLE_GPU=y ENABLE_IMREADJPEG=y ENABLE_CUDNN=y $(ACTION)";
+			buildArgumentsString = "make -j4 ENABLE_GPU=y ENABLE_IMREADJPEG=y ENABLE_CUDNN=y $(ACTION)";
 			buildConfigurationList = 2D1880FB1A7BBD73007C7586 /* Build configuration list for PBXLegacyTarget "matconv cuDNN" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/bin/make;
+			buildToolPath = xcrun;
 			buildWorkingDirectory = "";
 			dependencies = (
 			);
@@ -689,11 +689,11 @@
 		};
 		2D375DB518A7F064008A97EE /* matconv GPU */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-j4 ENABLE_GPU=y ENABLE_IMREADJPEG=y $(ACTION)";
+			buildArgumentsString = "make -j4 ENABLE_GPU=y ENABLE_IMREADJPEG=y $(ACTION)";
 			buildConfigurationList = 2D375DB818A7F064008A97EE /* Build configuration list for PBXLegacyTarget "matconv GPU" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/bin/make;
+			buildToolPath = xcrun;
 			buildWorkingDirectory = "";
 			dependencies = (
 			);
@@ -832,9 +832,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
-				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
+				CUDNNROOT = "$(HOME)/share/cudnn-v5.1";
 				DEBUG = YES;
-				DEVELOPER_DIR = /Library/Developer/CommandLineTools;
+				DEVELOPER_BIN_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
+				DEVELOPER_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -859,9 +860,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MATLABROOT = /Applications/MATLAB_R2017a.app;
 				MEX = "$(MATLABROOT)/bin/mex";
+				MEXCUDACONFIG = "local/nvcc_clang++.xml";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
+				SDKROOT = /Applications/Xcode7.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk;
 			};
 			name = Debug;
 		};
@@ -885,10 +887,11 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
-				CUDNNROOT = "$(HOME)/share/cudnn-v5.0-rc";
+				CUDNNROOT = "$(HOME)/share/cudnn-v5.1";
 				DEBUG = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPER_DIR = /Library/Developer/CommandLineTools;
+				DEVELOPER_BIN_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
+				DEVELOPER_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
 				ENABLE_CUDNN = "";
 				ENABLE_GPU = "";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -906,8 +909,9 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MATLABROOT = /Applications/MATLAB_R2017a.app;
 				MEX = "$(MATLABROOT)/bin/mex";
+				MEXCUDACONFIG = "local/nvcc_clang++.xml";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
-				SDKROOT = macosx;
+				SDKROOT = /Applications/Xcode7.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk;
 			};
 			name = Release;
 		};

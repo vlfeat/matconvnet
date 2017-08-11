@@ -149,7 +149,7 @@ Compiling with a newer version of CUDA requires using the
 `cudaMethod,nvcc` option. For example, on macOS this may look like:
 
     > vl_compilenn('enableGpu', true, ...
-                   'cudaRoot', '/Developer/NVIDIA/CUDA-7.0', ...
+                   'cudaRoot', '/Developer/NVIDIA/CUDA-8.0', ...
                    'cudaMethod', 'nvcc')
 
 Note that at this point MatConvNet MEX files are linked *against the
@@ -159,7 +159,7 @@ MATLAB accessing these libraries. On Linux one way to do so
 is to start MATLAB from the command line (terminal) specifying the
 `LD_LIBRARY_PATH` option. For instance, on Linux this may look like:
 
-    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-7.0/lib64 matlab
+    $ LD_LIBRARY_PATH=/Developer/NVIDIA/CUDA-8.0/lib64 matlab
 
 On Windows, chances are that the CUDA libraries are already visible to
 MATLAB so that nothing else needs to be done.
