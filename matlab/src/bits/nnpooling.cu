@@ -121,10 +121,10 @@ struct PoolingForwardCPU
         for (int y = 0; y < outputHeight; ++y) {
           int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
           int y1 = y * (signed)op.strideY - (signed)op.padTop ;
-          int x2 = min(x1 + op.poolWidth, (int)width) ;
-          int y2 = min(y1 + op.poolHeight, (int)height) ;
-          x1 = max(x1, 0) ;
-          y1 = max(y1, 0) ;
+          int x2 = std::min(x1 + op.poolWidth, (int)width) ;
+          int y2 = std::min(y1 + op.poolHeight, (int)height) ;
+          x1 = std::max(x1, 0) ;
+          y1 = std::max(y1, 0) ;
           Accumulator acc(y2 - y1, x2 - x1) ;
           for (int u = x1 ; u < x2 ; ++u) {
             for (int v = y1 ; v < y2 ; ++v) {
@@ -191,10 +191,10 @@ struct PoolingBackwardCPU
         for (int y = 0; y < outputHeight; ++y) {
           int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
           int y1 = y * (signed)op.strideY - (signed)op.padTop ;
-          int x2 = min(x1 + op.poolWidth, (int)width) ;
-          int y2 = min(y1 + op.poolHeight, (int)height) ;
-          x1 = max(x1, 0) ;
-          y1 = max(y1, 0) ;
+          int x2 = std::min(x1 + op.poolWidth, (int)width) ;
+          int y2 = std::min(y1 + op.poolHeight, (int)height) ;
+          x1 = std::max(x1, 0) ;
+          y1 = std::max(y1, 0) ;
           Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * outputHeight + y]) ;
           for (int u = x1 ; u < x2 ; ++u) {
             for (int v = y1 ; v < y2 ; ++v) {

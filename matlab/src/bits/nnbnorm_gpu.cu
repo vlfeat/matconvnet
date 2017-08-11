@@ -844,9 +844,9 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
     size_t blockSize = getBlockSize(planeArea) ;
     //size_t L = 10000 * blockSize ;
     //size_t numBlocksPerChannel = (planeArea * size + L - 1) / L ;
-    //numBlocksPerChannel = min(numBlocksPerChannel, size) ;
-    //numBlocksPerChannel = min(numBlocksPerChannel, 65536 / numChannels) ;
-    //numBlocksPerChannel = max(numBlocksPerChannel, 1) ;
+    //numBlocksPerChannel = std::min(numBlocksPerChannel, size) ;
+    //numBlocksPerChannel = std::min(numBlocksPerChannel, 65536 / numChannels) ;
+    //numBlocksPerChannel = std::max(numBlocksPerChannel, 1) ;
     size_t numBlocksPerChannel = 1  ;
     size_t numBlocks = numChannels * numBlocksPerChannel ;
     assert(numBlocksPerChannel >= 1) ;
@@ -1000,9 +1000,9 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
     size_t blockSize = getBlockSize(planeArea) ;
     //size_t L = 10000 * blockSize ;
     //size_t numBlocksPerChannel = (planeArea * size + L - 1) / L ;
-    //numBlocksPerChannel = min(numBlocksPerChannel, size) ;
-    //numBlocksPerChannel = min(numBlocksPerChannel, 65536 / numChannels) ;
-    //numBlocksPerChannel = max(numBlocksPerChannel, 1) ;
+    //numBlocksPerChannel = std::min(numBlocksPerChannel, size) ;
+    //numBlocksPerChannel = std::min(numBlocksPerChannel, 65536 / numChannels) ;
+    //numBlocksPerChannel = std::max(numBlocksPerChannel, 1) ;
     size_t numBlocksPerChannel = 1  ;
     size_t numBlocks = numChannels * numBlocksPerChannel ;
 
