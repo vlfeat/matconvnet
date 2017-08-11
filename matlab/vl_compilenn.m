@@ -760,7 +760,8 @@ catch
 end
 
 function archs = get_nvcc_supported_archs(nvccPath)
-[~, hstring] = system([nvccPath ' --help']);
+[status, hstring] = system(['"', nvccPath '" --help']);
 archs = regexp(hstring, '''sm_(\d{2})''', 'tokens');
 archs = cellfun(@(a) str2double(a{1}), archs);
+if status, error('NVCC command failed: %s', hstring); end;
 
