@@ -136,7 +136,8 @@ struct ConvolutionForwardCudnn
                                           op.padLeft, op.padTop,
                                           op.strideX, op.strideY,
                                           1,1, // upscale
-                                          CUDNN_CROSS_CORRELATION)) ;
+                                          CUDNN_CROSS_CORRELATION
+                                          IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::dataType))) ;
     // Sanity check
 #if 1
     {
@@ -354,7 +355,8 @@ struct ConvolutionBackwardCudnn
                                           op.padLeft, op.padTop,
                                           op.strideX, op.strideY,
                                           1,1, // upscale
-                                          CUDNN_CROSS_CORRELATION)) ;
+                                          CUDNN_CROSS_CORRELATION
+                                          IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::dataType))) ;
 
     // Must have derOutput for all derivatives
     assert(derOutput) ;
