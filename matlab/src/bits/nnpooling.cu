@@ -17,7 +17,6 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <iostream>
 
-using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;

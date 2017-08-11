@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <iostream>
 
-using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;

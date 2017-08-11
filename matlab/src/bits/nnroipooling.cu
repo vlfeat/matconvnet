@@ -20,7 +20,6 @@ the terms of the BSD license (see the COPYING file).
 #include <cmath>
 #include <iostream>
 
-using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;
@@ -139,10 +138,10 @@ struct ROIPoolingForwardCPU
       int roi_start_w = (int)::round(u1) - 1 ;
       int roi_end_h   = (int)::round(v2) - 1 ;
       int roi_end_w   = (int)::round(u2) - 1 ;
-      int roi_height  = max(roi_end_h - roi_start_h + 1, 1) ;
-      int roi_width   = max(roi_end_w - roi_start_w + 1, 1) ;
+      int roi_height  = std::max(roi_end_h - roi_start_h + 1, 1) ;
+      int roi_width   = std::max(roi_end_w - roi_start_w + 1, 1) ;
 
-      roi_image = min(max(roi_image - 1,0), (int)size - 1) ;
+      roi_image = std::min(std::max(roi_image - 1,0), (int)size - 1) ;
       type const * data_offset = inputData + (roi_image * depth) * (width*height) ;
 
       type bin_size_h = (double)roi_height / op.subdivisions[0] ;
@@ -155,15 +154,15 @@ struct ROIPoolingForwardCPU
         for (int pw = 0; pw < op.subdivisions[1]; ++pw) {
           int wstart = (int)floor(((type)pw) * bin_size_w) ;
           int wend = (int)ceil(((type)(pw + 1)) * bin_size_w) ;
-          wstart = min(max(wstart + roi_start_w, 0), (int)width) ;
-          wend = min(max(wend + roi_start_w, 0), (int)width) ;
+          wstart = std::min(std::max(wstart + roi_start_w, 0), (int)width) ;
+          wend = std::min(std::max(wend + roi_start_w, 0), (int)width) ;
 
           // For each tile in a column.
           for (int ph = 0; ph < op.subdivisions[0]; ++ph) {
             int hstart = (int)floor(((type)ph) * bin_size_h) ;
             int hend = (int)ceil(((type)(ph + 1)) * bin_size_h) ;
-            hstart = min(max(hstart + roi_start_h, 0), (int)height) ;
-            hend = min(max(hend + roi_start_h, 0), (int)height) ;
+            hstart = std::min(std::max(hstart + roi_start_h, 0), (int)height) ;
+            hend = std::min(std::max(hend + roi_start_h, 0), (int)height) ;
 
             bool is_empty = (hend <= hstart) || (wend <= wstart);
 
@@ -258,10 +257,10 @@ struct ROIPoolingBackwardCPU
       int roi_start_w = (int)::round(u1) - 1 ;
       int roi_end_h   = (int)::round(v2) - 1 ;
       int roi_end_w   = (int)::round(u2) - 1 ;
-      int roi_height = max(roi_end_h - roi_start_h + 1, 1) ;
-      int roi_width = max(roi_end_w - roi_start_w + 1, 1) ;
+      int roi_height = std::max(roi_end_h - roi_start_h + 1, 1) ;
+      int roi_width = std::max(roi_end_w - roi_start_w + 1, 1) ;
 
-      roi_image = min(max(roi_image - 1,0), (int)size - 1) ;
+      roi_image = std::min(std::max(roi_image - 1,0), (int)size - 1) ;
       type const * data_offset = inputData + (roi_image * depth) * (width*height);
       type * derInputData_offset = derInputData + (roi_image * depth) * (width*height);
 
@@ -275,15 +274,15 @@ struct ROIPoolingBackwardCPU
         for (int pw = 0; pw < op.subdivisions[1]; ++pw) {
           int wstart = (int)floor(((type)pw) * bin_size_w) ;
           int wend = (int)ceil(((type)(pw + 1)) * bin_size_w) ;
-          wstart = min(max(wstart + roi_start_w, 0), (int)width) ;
-          wend = min(max(wend + roi_start_w, 0), (int)width) ;
+          wstart = std::min(std::max(wstart + roi_start_w, 0), (int)width) ;
+          wend = std::min(std::max(wend + roi_start_w, 0), (int)width) ;
 
           // For each tile in a column.
           for (int ph = 0; ph < op.subdivisions[0]; ++ph) {
             int hstart = (int)floor(((type)ph) * bin_size_h) ;
             int hend = (int)ceil(((type)(ph + 1)) * bin_size_h) ;
-            hstart = min(max(hstart + roi_start_h, 0), (int)height) ;
-            hend = min(max(hend + roi_start_h, 0), (int)height) ;
+            hstart = std::min(std::max(hstart + roi_start_h, 0), (int)height) ;
+            hend = std::min(std::max(hend + roi_start_h, 0), (int)height) ;
 
             Accumulator acc(hend - hstart, wend - wstart, *derOutputData++) ;
             for (int w = wstart; w < wend; ++w) {
@@ -335,8 +334,8 @@ struct ROIPoolingBackward<VLDT_CPU,dataType>
 #endif
 
 ROIPooling::ROIPooling(Context &context,
-                       array<int,2> subdivisions,
-                       array<double,6> transform,
+                       std::array<int,2> subdivisions,
+                       std::array<double,6> transform,
                        Method method) :
 context(context),
 subdivisions(subdivisions),
