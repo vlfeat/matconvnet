@@ -243,7 +243,7 @@ vl::impl::nnbnorm_cudnn<dataType>::backward(Context& context,
                                             vl::Tensor derData,
                                             vl::Tensor derMultipliers,
                                             vl::Tensor derBiases,
-                                            vl::Tensor moments,
+                                            vl::Tensor moments,  // can be null
                                             vl::Tensor data,
                                             vl::Tensor multipliers,
                                             vl::Tensor biases,
@@ -253,7 +253,6 @@ vl::impl::nnbnorm_cudnn<dataType>::backward(Context& context,
   assert(derData) ;
   assert(derMultipliers) ;
   assert(derBiases) ;
-  assert(moments) ;
   assert(data) ;
   assert(multipliers) ;
   assert(biases) ;
