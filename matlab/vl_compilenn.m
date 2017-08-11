@@ -336,7 +336,7 @@ flags.base = {} ;
 if opts.enableGpu, flags.base{end+1} = '-DENABLE_GPU' ; end
 if opts.enableDouble, flags.base{end+1} = '-DENABLE_DOUBLE' ; end
 if opts.enableCudnn
-  flags.base{end+1} = '-DENABLE_CUDNN' ; 
+  flags.base{end+1} = '-DENABLE_CUDNN' ;
   flags.base{end+1} = ['-I"' opts.cudnnIncludeDir '"'] ;
 end
 if opts.verbose > 1, flags.base{end+1} = '-v' ; end
@@ -406,7 +406,7 @@ switch arch
     if opts.enableGpu && opts.enableCudnn
       flags.mexlink_ldflags{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
     end
-    
+
   case {'glnxa64'}
     flags.mex{end+1} = '-cxx' ;
     flags.mexlink{end+1} = '-lrt' ;
@@ -416,7 +416,7 @@ switch arch
     if opts.enableGpu && opts.enableCudnn
       flags.mexlink_ldflags{end+1} = sprintf('-Wl,-rpath -Wl,"%s"', opts.cudnnLibDir) ;
     end
-        
+
   case {'win64'}
     % VisualC does not pass this even if available in the CPU architecture
     flags.mex{end+1} = '-D__SSSE3__' ;
@@ -441,7 +441,7 @@ if opts.verbose
   fprintf('%s: \tBase options: %s\n', mfilename, strjoin(flags.base)) ;
   fprintf('%s: \tMEX CXX: %s\n', mfilename, strjoin(flags.mex)) ;
   fprintf('%s: \tMEX CXXFLAGS: %s\n', mfilename, strjoin(flags.cxx)) ;
-  fprintf('%s: \tMEX CXXOPTIMFLAGS: %s\n', mfilename, strjoin(flags.cxxoptim)) ; 
+  fprintf('%s: \tMEX CXXOPTIMFLAGS: %s\n', mfilename, strjoin(flags.cxxoptim)) ;
   fprintf('%s: \tMEX LINK: %s\n', mfilename, strjoin(flags.mexlink)) ;
   fprintf('%s: \tMEX LINK LDFLAGS: %s\n', mfilename, strjoin(flags.mexlink_ldflags)) ;
   fprintf('%s: \tMEX LINK LDOPTIMFLAGS: %s\n', mfilename, strjoin(flags.mexlink_ldoptimflags)) ;
@@ -450,7 +450,7 @@ end
 if opts.verbose && opts.enableGpu
   fprintf('%s: \tMEX CUDA: %s\n', mfilename, strjoin(flags.mexcuda)) ;
   fprintf('%s: \tMEX CUDA CXXFLAGS: %s\n', mfilename, strjoin(flags.mexcuda_cxx)) ;
-  fprintf('%s: \tMEX CUDA CXXOPTIMFLAGS: %s\n', mfilename, strjoin(flags.mexcuda_cxxoptim)) ; 
+  fprintf('%s: \tMEX CUDA CXXOPTIMFLAGS: %s\n', mfilename, strjoin(flags.mexcuda_cxxoptim)) ;
 end
 if opts.verbose && opts.enableGpu && strcmp(opts.cudaMethod,'nvcc')
   fprintf('%s: \tNVCC: %s\n', mfilename, strjoin(flags.nvcc)) ;
@@ -572,7 +572,7 @@ opts.verbose && fprintf('%s: MEX CUDA: %s\n', mfilename, strjoin(args)) ;
 mexcuda(args{:}) ;
 
 % --------------------------------------------------------------------
-function nvcc_compile(opts, src, tgt, nvcc_opts)
+function nvcc_compile(opts, src, tgt, flags)
 % --------------------------------------------------------------------
 if check_deps(opts, tgt, src), return ; end
 nvcc_path = fullfile(opts.cudaRoot, 'bin', 'nvcc');
@@ -587,7 +587,7 @@ if status, error('Command %s failed.', nvcc_cmd); end;
 function mex_link(opts, objs, mex_dir, flags)
 % --------------------------------------------------------------------
 args = horzcat({'-outdir', mex_dir}, ...
-  flags.base, flags.mexlink, ...  
+  flags.base, flags.mexlink, ...
   {['LDFLAGS=$LDFLAGS ' strjoin(flags.mexlink_ldflags)]}, ...
   {['LDOPTIMFLAGS=$LDOPTIMFLAGS ' strjoin(flags.mexlink_ldoptimflags)]}, ...
   {['LINKLIBS=' strjoin(flags.mexlink_linklibs) ' $LINKLIBS']}, ...
