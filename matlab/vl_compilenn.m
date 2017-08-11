@@ -363,10 +363,10 @@ flags.mexcuda_cxxoptim = {} ;
 if ~isempty(opts.mexCudaConfig), flags.mexcuda = horzcat(flags.mexcuda, {'-f', opts.mexCudaConfig}) ; end
 
 % MEX_LINK: Additional flags passed to `mex` for linking.
-flags.mexlink = {'-largeArrayDims'} ;
+flags.mexlink = {'-largeArrayDims','-lmwblas'} ;
 flags.mexlink_ldflags = {} ;
 flags.mexlink_ldoptimflags = {} ;
-flags.mexlink_linklibs = {'-lmwblas'} ;
+flags.mexlink_linklibs = {} ;
 
 % NVCC: Additional flags passed to `nvcc` for compiling CUDA code.
 flags.nvcc = {'-D_FORCE_INLINES', '--std=c++11', '--compiler-options=-fPIC', ...
