@@ -18,7 +18,7 @@ the terms of the BSD license (see the COPYING file).
 
 #define COMMA ,
 
-#if (CUDNN_VERSION >= 5000)
+#if (CUDNN_VERSION >= 6000)
 #define IF_CUDNN_GE6(x) x
 #else
 #define IF_CUDNN_GE6(x)

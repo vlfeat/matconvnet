@@ -79,14 +79,13 @@ struct BatchNormForwardWithMomentCudnn
 {
   vl::ErrorCode operator()(BatchNorm &op,
                            Tensor &output,
-                           Tensor const &moment,
+                           Tensor const &moment, // can be null
                            Tensor const &input,
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
     assert(output) ;
     assert(input) ;
-    assert(moment) ;
     assert(multiplier) ;
     assert(bias) ;
 

@@ -774,10 +774,11 @@ function archs = get_nvcc_supported_archs(nvccPath)
 % --------------------------------------------------------------------
 switch computer('arch')
   case {'win64'}
-    [~, hstring] = system([nvccPath ' --help']);
+    [status, hstring] = system(sprintf('"%s" --help',nvccPath));
   otherwise
     % fix possible output corruption (see manual)
-    [~, hstring] = system([nvccPath ' --help < /dev/null']);
+    [status, hstring] = system(sprintf('"%s" --help < /dev/null',nvccPath)) ;
 end
 archs = regexp(hstring, '''sm_(\d{2})''', 'tokens');
 archs = cellfun(@(a) str2double(a{1}), archs);
+if status, error('NVCC command failed: %s', hstring); end;
