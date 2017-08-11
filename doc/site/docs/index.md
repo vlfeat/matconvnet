@@ -83,7 +83,7 @@ recognition, and text detection are available.
 - <span class="fa fa-comments"></span> [Discussion group](https://groups.google.com/d/forum/matconvnet)
 
 ## Extensions
-- [Third party contributions and extensions](github.com/vlfeat/matconvnet-contrib), also accessible using [`vl_contrib`](mfiles/vl_contrib.md), third-party contribution including autodiff as well as a plethora of object detectors.
+- [Third party contributions and extensions](https://github.com/vlfeat/matconvnet-contrib), also accessible using [`vl_contrib`](mfiles/vl_contrib.md), third-party contribution including autodiff as well as a plethora of object detectors.
 
 ## Getting started
 - [Quick start guide](quick.md)
