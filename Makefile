@@ -89,7 +89,7 @@ $(if $(DEBUG),-g -DDEBUG,-O -DNDEBUG)
 # code. The MEX_CXXCFLAGS options are passed directly to the
 # encapsulated C++ compiler.
 MEXFLAGS = -largeArrayDims \
-CXXFLAGS='$$CXXFLAGS $(MEX_CXXCFLAGS)' \
+CXXFLAGS='$$CXXFLAGS $(MEX_CXXFLAGS)' \
 CXXOPTIMFLAGS='$$CXXOPTIMFLAGS $(MEX_CXXOPTIMFLAGS)'
 ifdef MEXCONFIG
 MEXFLAGS += -f "$(MEXCONFIG)"
