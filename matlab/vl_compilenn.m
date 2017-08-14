@@ -129,10 +129,11 @@ function vl_compilenn(varargin)
 %   work:
 %
 %   * Windows 10 x64, MATLAB R2015b, Visual C++ 2015, CUDA
-%     Toolkit 7.5-8.0.
+%     Toolkit 8.0. Visual C++ 2013 and lower is not supported due to lack
+%     C++11 support.
 %   * macOS X 10.12, MATLAB R2016a, Xcode 7.3.1, CUDA
 %     Toolkit 7.5-8.0.
-%   * GNU/Linux, MATALB R2015b, gcc/g++, CUDA Toolkit 7.5-8.0.
+%   * GNU/Linux, MATALB R2015b, gcc/g++ 4.8.5+, CUDA Toolkit 7.5-8.0.
 %
 %   Many older versions of these components are also likely to
 %   work.
@@ -193,6 +194,7 @@ opts = vl_argparse(opts, varargin);
 % --------------------------------------------------------------------
 
 arch = computer('arch') ;
+check_compability(arch);
 if isempty(opts.imageLibrary)
   switch arch
     case 'glnxa64', opts.imageLibrary = 'libjpeg' ;
@@ -283,7 +285,6 @@ if opts.enableGpu
     case 'win64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib', 'x64') ;
     case 'maci64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib') ;
     case 'glnxa64', opts.cudaLibDir = fullfile(opts.cudaRoot, 'lib64') ;
-    otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
 
   % Set the nvcc method as default for Win platforms
@@ -308,7 +309,6 @@ if opts.enableCudnn
     case 'win64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib', 'x64') ;
     case 'maci64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib') ;
     case 'glnxa64', opts.cudnnLibDir = fullfile(opts.cudnnRoot, 'lib64') ;
-    otherwise, error('Unsupported architecture ''%s''.', arch) ;
   end
 end
 
@@ -503,6 +503,11 @@ end
 % Reset path adding the mex subdirectory just created
 vl_setupnn() ;
 
+if strcmp(arch, 'win64') && opts.enableCudnn
+  if opts.verbose(), fprintf('Copying CuDNN dll to mex folder.\n'); end
+  copyfile(fullfile(opts.cudnnRoot, 'bin', '*.dll'), flags.mex_dir);
+end
+
 % Save the last compile flags to the build dir
 if isempty(opts.preCompileFn)
   save(fullfile(flags.bld_dir, 'last_compile_opts.mat'), '-struct', 'opts');
@@ -511,6 +516,28 @@ end
 % --------------------------------------------------------------------
 %                                                    Utility functions
 % --------------------------------------------------------------------
+
+% --------------------------------------------------------------------
+function check_compability(arch)
+% --------------------------------------------------------------------
+cc = mex.getCompilerConfigurations('C++');
+if isempty(cc)
+  error(['Mex is not configured.'...
+    'Run "mex -setup" to configure your compiler. See ',...
+    'http://www.mathworks.com/support/compilers ', ...
+    'for supported compilers for your platform.']);
+end
+
+switch arch
+  case 'win64'
+    clversion = str2double(cc.Version);
+    if clversion < 14
+      error('Unsupported VS C++ compiler, ver >=14.0 required (VS 2015).');
+    end
+  case 'maci64'
+  case 'glnxa64'
+  otherwise, error('Unsupported architecture ''%s''.', arch) ;
+end
 
 % --------------------------------------------------------------------
 function done = check_deps(opts, tgt, src)
@@ -616,15 +643,10 @@ function cl_path = check_clpath()
 % Checks whether the cl.exe is in the path (needed for the nvcc). If
 % not, tries to guess the location out of mex configuration.
 cc = mex.getCompilerConfigurations('c++');
-if isempty(cc)
-  error(['Mex is not configured.'...
-    'Run "mex -setup" to configure your compiler. See ',...
-    'http://www.mathworks.com/support/compilers ', ...
-    'for supported compilers for your platform.']);
-end
 cl_path = fullfile(cc.Location, 'VC', 'bin', 'amd64');
 [status, ~] = system('cl.exe -help');
 if status == 1
+  % Add cl.exe to system path so that nvcc can find it.
   warning('CL.EXE not found in PATH. Trying to guess out of mex setup.');
   prev_path = getenv('PATH');
   setenv('PATH', [prev_path ';' cl_path]);
