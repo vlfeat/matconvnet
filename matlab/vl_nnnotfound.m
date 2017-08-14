@@ -8,7 +8,7 @@ function vl_nnnotfound(fname)
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-paths = strsplit(path, ';') ;
+paths = strsplit(path, pathsep) ;
 mexpath = fullfile(fileparts(mfilename('fullpath')), 'mex') ;
 
 if ~exist(mexpath, 'dir') || ~exist(fullfile(mexpath, [fname, '.', mexext]), 'file')
