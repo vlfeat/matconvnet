@@ -1,5 +1,8 @@
 # Installing and compiling the library
 
+> **Remark** MatConvNet can be compiled only with compilers with
+> C++11 support (VS2015 and Higher, etc.).
+
 In order to install the library, follows these steps:
 
 1.  Download and unpack the library source code into a directory of
