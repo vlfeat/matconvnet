@@ -178,8 +178,7 @@ function [filters, biases] = mergeBatchNorm(filters, biases, multipliers, offset
 % wk / sqrt(sigmak^2 + eps)
 % bk - wk muk / sqrt(sigmak^2 + eps)
 a = multipliers(:) ./ moments(:,2) ;
-b = offsets(:) - moments(:,1) .* a ;
-biases(:) = biases(:) + b(:) ;
+biases(:) = (biases(:) - moments(:,1)) .* a + offsets(:) ;
 sz = size(filters) ;
 numFilters = sz(4) ;
 filters = reshape(bsxfun(@times, reshape(filters, [], numFilters), a'), sz) ;
