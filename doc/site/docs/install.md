@@ -1,7 +1,8 @@
-# Installing and compiling the library
+# Requirements
 
-> **Remark** MatConvNet can be compiled only with compilers with
-> C++11 support (VS2015 and Higher, etc.).
+You will need a sufficiently recent MATLAB version (R2015b or newer) and a compiler with C++11 support (Visual Studio 2015, GCC 4.8, Xcode 7.3.1 or higher). For GPU computation, you will need at least CUDA 7.5  and, optionally, CuDNN v4 or newer. Depending on the specific  MATLAB version, further constraints may apply, some of which are discussed below and in the [FAQ](faq).
+
+# Installing and compiling the library
 
 In order to install the library, follows these steps:
 
@@ -68,6 +69,7 @@ library:
       ```
       sudo yum install gcc gcc-c++ libjpeg-turbo-devel
       ```
+      Older versions of GCC (e.g. 4.7) are not compatible with the C++ code in MatConvNet.
 
     * For **Windows**, make sure you have Visual Studio 2015 or greater installed.
 

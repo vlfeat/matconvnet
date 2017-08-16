@@ -40,24 +40,6 @@ recognition, and text detection are available.
 > [`vl_nnroipool`](mfiles/vl_nnroipool) and a Fast-RCNN demo.
 >
 > **New:** [1.0-beta22](about.md#changes) released with a few bugfixes.
->
-> **New:** [1.0-beta21](about.md#changes) provides two new tools,
-> [`vl_tmove`](mfiles/vl_tmove.md) and `ParameterServer`, to
-> accelerate significantly data transfers between multiple GPUs. It
-> also provides a new version of
-> [`vl_imreadjpeg`](mfiles/vl_imreadjpeg) that allows to load,
-> transform, and transfer data to the GPU in parallel, resulting in
-> significant speedups in training and testing (20% to 400%, depending
-> on the model). [`vl_nnconv`](mfiles/vl_nnconv) now has a `dilate`
-> option for dilated convolution.
->
-> **New:** [1.0-beta20](about.md#changes) adds the bilinear resampler
-> layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
-> spatial transformer example.
->
-> **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
-> models (demo training code coming next), CuDNN V5 support, and
-> numerous other improvements and bugfixes.
 
 ## Obtaining MatConvNet
 - <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta25](download/matconvnet-1.0-beta25.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
