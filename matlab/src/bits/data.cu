@@ -629,6 +629,7 @@ TensorShape vl::Tensor::getShape() const
 
 vl::DataType vl::Tensor::getDataType() const { return dataType ; }
 void * vl::Tensor::getMemory() { return memory ; }
+void const * vl::Tensor::getMemory() const { return memory ; }
 void vl::Tensor::setMemory(void * x) { memory = x ; }
 vl::DeviceType vl::Tensor::getDeviceType() const { return deviceType ; }
 bool vl::Tensor::isNull() const { return memory == NULL ; }

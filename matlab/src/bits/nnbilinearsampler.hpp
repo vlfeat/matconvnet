@@ -4,7 +4,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2016- Ankush Gupta and Andrea Vedaldi.
+Copyright (C) 2016-17 Ankush Gupta and Andrea Vedaldi.
 All rights reserved.
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
@@ -16,20 +16,25 @@ the terms of the BSD license (see the COPYING file).
 #include "data.hpp"
 #include <stdio.h>
 
-namespace vl {
-  vl::ErrorCode
-  nnbilinearsampler_forward(vl::Context& context,
-                            vl::Tensor output,
-                            vl::Tensor data,
-                            vl::Tensor grid) ;
+namespace vl { namespace nn {
 
-  vl::ErrorCode
-  nnbilinearsampler_backward(vl::Context& context,
-                             vl::Tensor derData,
-                             vl::Tensor derGrid,
-                             vl::Tensor data,
-                             vl::Tensor grid,
-                             vl::Tensor derOutput) ;
-}
+  class BilinearSampler {
+  public:
+    BilinearSampler(Context &context) ;
+
+    vl::ErrorCode forward(vl::Tensor &output,
+                          vl::Tensor const &input,
+                          vl::Tensor const &grid) ;
+
+    vl::ErrorCode backward(vl::Tensor &derInput,
+                           vl::Tensor &derGrid,
+                           vl::Tensor const &input,
+                           vl::Tensor const &grid,
+                           vl::Tensor const &derOutput) ;
+
+    Context &context ;
+  } ;
+
+} }
 
 #endif /* defined(__vl__nnbilinearsampler__) */

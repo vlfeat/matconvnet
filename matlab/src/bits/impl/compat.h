@@ -25,8 +25,8 @@ typedef signed int ssize_t;
 // Add some missing functions from C99
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
-#define round(x) x >= 0.0 ? (double)(int)(x + 0.5f) : (double)(int)(x - 0.5f)
-#define roundf(x) x >= 0.0f ? (float)(int)(x + 0.5f) : (float)(int)(x - 0.5f)
+#define round(x) (x >= 0.0 ? (double)(int)(x + 0.5) : (double)(int)(x - 0.5))
+#define roundf(x) (x >= 0.0f ? (float)(int)(x + 0.5f) : (float)(int)(x - 0.5f))
 #endif
 
 #endif // _MSC_VER

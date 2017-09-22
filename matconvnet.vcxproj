@@ -1,6 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugGPU|Win32">
+      <Configuration>DebugGPU</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
@@ -13,10 +17,17 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B0BD9132-1D90-4267-A07A-B44DE497A9C7}</ProjectGuid>
     <RootNamespace>matconvnet</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugGPU|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
@@ -34,14 +45,50 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugGPU|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(MatlabRoot)\extern\include;$(IncludePath)</IncludePath>
+    <NMakeBuildCommandLine>@echo off
+matlab -nodesktop -nosplash -wait -r "diary('cclog.txt');try cc; catch e; disp('CC failed'); diary off ; exit(1) ; end ; disp('CC succeeded'); diary off ; exit(0);"
+if %ERRORLEVEL% EQ 0 (
+type cclog.txt
+exit /b 0
+) else (
+type cclog.txt
+exit /b 1
+)
+</NMakeBuildCommandLine>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugGPU|Win32'">
+    <IncludePath>$(MatlabRoot)\extern\include;$(IncludePath)</IncludePath>
+    <NMakeBuildCommandLine>@echo off
+del "cclog.txt" &gt;nul 2&gt;&amp;1
+matlab -nodesktop -nosplash -wait -r "diary('cclog.txt');try run matlab/vl_setupnn;vl_compilenn('enableGpu', true, 'cudaMethod', 'nvcc'); catch e; disp('CC failed'); diary off ; exit(1) ; end ; disp('CC succeeded'); diary off ; exit(0);"
+IF %ERRORLEVEL% EQU 0 (
+type cclog.txt
+exit /b 0
+) ELSE (
+type cclog.txt
+exit /b 1
+)
+</NMakeBuildCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugGPU|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
@@ -67,32 +114,42 @@
     <None Include="matlab\src\bits\data.cu" />
     <None Include="matlab\src\bits\datacu.cu" />
     <None Include="matlab\src\bits\datamex.cu" />
-    <None Include="matlab\src\bits\impl\bnorm_gpu.cu" />
     <None Include="matlab\src\bits\impl\copy_gpu.cu" />
     <None Include="matlab\src\bits\impl\im2row_gpu.cu" />
-    <None Include="matlab\src\bits\impl\nnbias_cudnn.cu" />
-    <None Include="matlab\src\bits\impl\nnconv_cudnn.cu" />
-    <None Include="matlab\src\bits\impl\nnpooling_cudnn.cu" />
-    <None Include="matlab\src\bits\impl\normalize_gpu.cu" />
-    <None Include="matlab\src\bits\impl\pooling_gpu.cu" />
-    <None Include="matlab\src\bits\impl\subsample_gpu.cu" />
+    <None Include="matlab\src\bits\impl\sharedmem.cuh" />
     <None Include="matlab\src\bits\nnbias.cu" />
+    <None Include="matlab\src\bits\nnbias_cudnn.cu" />
     <None Include="matlab\src\bits\nnbilinearsampler.cu" />
+    <None Include="matlab\src\bits\nnbilinearsampler_cudnn.cu" />
+    <None Include="matlab\src\bits\nnbilinearsampler_gpu.cu" />
     <None Include="matlab\src\bits\nnbnorm.cu" />
+    <None Include="matlab\src\bits\nnbnorm_cudnn.cu" />
+    <None Include="matlab\src\bits\nnbnorm_gpu.cu" />
     <None Include="matlab\src\bits\nnconv.cu" />
+    <None Include="matlab\src\bits\nnconv_cudnn.cu" />
     <None Include="matlab\src\bits\nnfullyconnected.cu" />
     <None Include="matlab\src\bits\nnnormalize.cu" />
+    <None Include="matlab\src\bits\nnnormalizelp.cu" />
+    <None Include="matlab\src\bits\nnnormalizelp_gpu.cu" />
+    <None Include="matlab\src\bits\nnnormalize_gpu.cu" />
     <None Include="matlab\src\bits\nnpooling.cu" />
+    <None Include="matlab\src\bits\nnpooling_cudnn.cu" />
+    <None Include="matlab\src\bits\nnpooling_gpu.cu" />
+    <None Include="matlab\src\bits\nnroipooling.cu" />
+    <None Include="matlab\src\bits\nnroipooling_gpu.cu" />
     <None Include="matlab\src\bits\nnsubsample.cu" />
+    <None Include="matlab\src\bits\nnsubsample_gpu.cu" />
     <None Include="matlab\src\vl_cudatool.cu" />
     <None Include="matlab\src\vl_imreadjpeg.cu" />
-    <None Include="matlab\src\vl_imreadjpeg2.cu" />
+    <None Include="matlab\src\vl_imreadjpeg_old.cu" />
     <None Include="matlab\src\vl_nnbilinearsampler.cu" />
     <None Include="matlab\src\vl_nnbnorm.cu" />
     <None Include="matlab\src\vl_nnconv.cu" />
     <None Include="matlab\src\vl_nnconvt.cu" />
     <None Include="matlab\src\vl_nnnormalize.cu" />
+    <None Include="matlab\src\vl_nnnormalizelp.cu" />
     <None Include="matlab\src\vl_nnpool.cu" />
+    <None Include="matlab\src\vl_nnroipool.cu" />
     <None Include="matlab\src\vl_taccummex.cu" />
     <None Include="matlab\src\vl_tmove.cu" />
     <None Include="matlab\vl_argparse.m" />
@@ -118,15 +175,11 @@
   <ItemGroup>
     <ClCompile Include="matlab\src\bits\data.cpp" />
     <ClCompile Include="matlab\src\bits\datamex.cpp" />
-    <ClCompile Include="matlab\src\bits\impl\bnorm_cpu.cpp" />
     <ClCompile Include="matlab\src\bits\impl\copy_cpu.cpp" />
     <ClCompile Include="matlab\src\bits\impl\im2row_cpu.cpp" />
     <ClCompile Include="matlab\src\bits\impl\imread_gdiplus.cpp" />
     <ClCompile Include="matlab\src\bits\impl\imread_libjpeg.cpp" />
     <ClCompile Include="matlab\src\bits\impl\imread_quartz.cpp" />
-    <ClCompile Include="matlab\src\bits\impl\normalize_cpu.cpp" />
-    <ClCompile Include="matlab\src\bits\impl\pooling_cpu.cpp" />
-    <ClCompile Include="matlab\src\bits\impl\subsample_cpu.cpp" />
     <ClCompile Include="matlab\src\bits\impl\tinythread.cpp" />
     <ClCompile Include="matlab\src\bits\imread.cpp" />
     <ClCompile Include="matlab\src\bits\nnbias.cpp" />
@@ -135,16 +188,21 @@
     <ClCompile Include="matlab\src\bits\nnconv.cpp" />
     <ClCompile Include="matlab\src\bits\nnfullyconnected.cpp" />
     <ClCompile Include="matlab\src\bits\nnnormalize.cpp" />
+    <ClCompile Include="matlab\src\bits\nnnormalizelp.cpp" />
     <ClCompile Include="matlab\src\bits\nnpooling.cpp" />
+    <ClCompile Include="matlab\src\bits\nnroipooling.cpp" />
     <ClCompile Include="matlab\src\bits\nnsubsample.cpp" />
     <ClCompile Include="matlab\src\vl_cudatool.cpp" />
     <ClCompile Include="matlab\src\vl_imreadjpeg.cpp" />
+    <ClCompile Include="matlab\src\vl_imreadjpeg_old.cpp" />
     <ClCompile Include="matlab\src\vl_nnbilinearsampler.cpp" />
     <ClCompile Include="matlab\src\vl_nnbnorm.cpp" />
     <ClCompile Include="matlab\src\vl_nnconv.cpp" />
     <ClCompile Include="matlab\src\vl_nnconvt.cpp" />
     <ClCompile Include="matlab\src\vl_nnnormalize.cpp" />
+    <ClCompile Include="matlab\src\vl_nnnormalizelp.cpp" />
     <ClCompile Include="matlab\src\vl_nnpool.cpp" />
+    <ClCompile Include="matlab\src\vl_nnroipool.cpp" />
     <ClCompile Include="matlab\src\vl_taccummex.cpp" />
     <ClCompile Include="matlab\src\vl_tmove.cpp" />
   </ItemGroup>
@@ -153,19 +211,13 @@
     <ClInclude Include="matlab\src\bits\datacu.hpp" />
     <ClInclude Include="matlab\src\bits\datamex.hpp" />
     <ClInclude Include="matlab\src\bits\impl\blashelper.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\bnorm.hpp" />
+    <ClInclude Include="matlab\src\bits\impl\compat.h" />
     <ClInclude Include="matlab\src\bits\impl\copy.hpp" />
+    <ClInclude Include="matlab\src\bits\impl\cudnnhelper.hpp" />
+    <ClInclude Include="matlab\src\bits\impl\dispatcher.hpp" />
     <ClInclude Include="matlab\src\bits\impl\fast_mutex.h" />
     <ClInclude Include="matlab\src\bits\impl\im2row.hpp" />
     <ClInclude Include="matlab\src\bits\impl\imread_helpers.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\nnbias_blas.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\nnbias_cudnn.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\nnconv_blas.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\nnconv_cudnn.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\nnpooling_cudnn.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\normalize.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\pooling.hpp" />
-    <ClInclude Include="matlab\src\bits\impl\subsample.hpp" />
     <ClInclude Include="matlab\src\bits\impl\tinythread.h" />
     <ClInclude Include="matlab\src\bits\imread.hpp" />
     <ClInclude Include="matlab\src\bits\mexutils.h" />
@@ -173,9 +225,13 @@
     <ClInclude Include="matlab\src\bits\nnbilinearsampler.hpp" />
     <ClInclude Include="matlab\src\bits\nnbnorm.hpp" />
     <ClInclude Include="matlab\src\bits\nnconv.hpp" />
+    <ClInclude Include="matlab\src\bits\nnconv_blas.hpp" />
+    <ClInclude Include="matlab\src\bits\nnconv_cudnn.hpp" />
     <ClInclude Include="matlab\src\bits\nnfullyconnected.hpp" />
     <ClInclude Include="matlab\src\bits\nnnormalize.hpp" />
+    <ClInclude Include="matlab\src\bits\nnnormalizelp.hpp" />
     <ClInclude Include="matlab\src\bits\nnpooling.hpp" />
+    <ClInclude Include="matlab\src\bits\nnroipooling.hpp" />
     <ClInclude Include="matlab\src\bits\nnsubsample.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

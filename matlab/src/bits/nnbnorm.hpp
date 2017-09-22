@@ -4,12 +4,12 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Sebastien Ehrhardt and Andrea Vedaldi.
-All rights reserved.
+ Copyright (C) 2015-16 Sebastien Ehrhardt and Andrea Vedaldi.
+ All rights reserved.
 
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
-*/
+ This file is part of the VLFeat library and is made available under
+ the terms of the BSD license (see the COPYING file).
+ */
 
 #ifndef __vl__nnbnorm__
 #define __vl__nnbnorm__
@@ -17,50 +17,47 @@ the terms of the BSD license (see the COPYING file).
 #include "data.hpp"
 #include <stdio.h>
 
-namespace vl {
+namespace vl { namespace nn {
 
-  // This version computes mean and sigma
-  vl::ErrorCode
-  nnbnorm_forward(vl::Context& context,
-                  vl::Tensor output,
-                  vl::Tensor moments, // [output: can pass null]
-                  vl::Tensor data,
-                  vl::Tensor filters,
-                  vl::Tensor biases,
-                  double epsilon) ;
+  class BatchNorm {
+  public:
+    BatchNorm(vl::Context &context,
+              double epsilon) ;
 
-  // This version uses the mean and sigma specified
-  vl::ErrorCode
-  nnbnorm_forward_given_moments(vl::Context& context,
-                                vl::Tensor output,
-                                vl::Tensor moments, // input
-                                vl::Tensor data,
-                                vl::Tensor filters,
-                                vl::Tensor biases) ;
+    vl::ErrorCode forward(vl::Tensor &output,
+                          vl::Tensor &moment,
+                          vl::Tensor const &input,
+                          vl::Tensor const &multiplier,
+                          vl::Tensor const &bias) ;
 
-  vl::ErrorCode
-  nnbnorm_backward(vl::Context& context,
-                   vl::Tensor derData,
-                   vl::Tensor derFilters,
-                   vl::Tensor derBiaises,
-                   vl::Tensor moments,
-                   vl::Tensor data,
-                   vl::Tensor filters,
-                   vl::Tensor biases,
-                   vl::Tensor derOutput,
-                   double epsilon) ;
+    vl::ErrorCode forwardWithMoment(vl::Tensor &output,
+                                    vl::Tensor const &moment,
+                                    vl::Tensor const &input,
+                                    vl::Tensor const &multiplier,
+                                    vl::Tensor const &bias) ;
 
-  vl::ErrorCode
-  nnbnorm_backward_given_moments(vl::Context& context,
-                                 vl::Tensor derData,
-                                 vl::Tensor derFilters,
-                                 vl::Tensor derBiaises,
-                                 vl::Tensor moments,
-                                 vl::Tensor data,
-                                 vl::Tensor filters,
-                                 vl::Tensor biases,
-                                 vl::Tensor derOutput,
-                                 double epsilon) ;
-}
+    vl::ErrorCode backward(vl::Tensor &derInput,
+                           vl::Tensor &derMultiplier,
+                           vl::Tensor &derBias,
+                           vl::Tensor &moment,
+                           vl::Tensor const &input,
+                           vl::Tensor const &multiplier,
+                           vl::Tensor const &bias,
+                           vl::Tensor const &derOutput) ;
+
+    vl::ErrorCode backwardWithMoment(vl::Tensor &derInput,
+                                     vl::Tensor &derMultiplier,
+                                     vl::Tensor &derBias,
+                                     vl::Tensor const &moment,
+                                     vl::Tensor const &input,
+                                     vl::Tensor const &multiplier,
+                                     vl::Tensor const &bias,
+                                     vl::Tensor const &derOutput) ;
+
+    vl::Context& context ;
+    double epsilon ;
+  } ;
+
+} }
 
 #endif /* defined(__vl__nnbnorm__) */

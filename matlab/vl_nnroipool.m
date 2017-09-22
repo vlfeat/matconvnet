@@ -49,8 +49,9 @@
 %
 %   See also: VL_NNPOOL().
 
-% Copyright (C) 2016 Hakan Bilen, Abishek Dutta, and Andrea Vedaldi.
+% Copyright (C) 2016-17 Hakan Bilen, Abishek Dutta, and Andrea Vedaldi.
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+vl_nnnotfound(mfilename);

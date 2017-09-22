@@ -16,6 +16,7 @@ function [net, stats] = cnn_train(net, imdb, getBatch, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+addpath(fullfile(vl_rootnn, 'examples'));
 
 opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
@@ -24,12 +25,23 @@ opts.numSubBatches = 1 ;
 opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
+opts.epochSize = inf;
 opts.prefetch = false ;
 opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
+
+opts.solver = [] ;  % Empty array means use the default SGD solver
+[opts, varargin] = vl_argparse(opts, varargin) ;
+if ~isempty(opts.solver)
+  assert(isa(opts.solver, 'function_handle') && nargout(opts.solver) == 2,...
+    'Invalid solver; expected a function handle with two outputs.') ;
+  % Call without input arguments, to get default options
+  opts.solverOpts = opts.solver() ;
+end
+
 opts.momentum = 0.9 ;
-opts.saveMomentum = true ;
+opts.saveSolverState = true ;
 opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.memoryMapFile = fullfile(tempdir, 'matconvnet.bin') ;
@@ -45,13 +57,18 @@ opts.errorFunction = 'multiclass' ;
 opts.errorLabels = {} ;
 opts.plotDiagnostics = false ;
 opts.plotStatistics = true;
+opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
-if isnan(opts.train), opts.train = [] ; end
-if isnan(opts.val), opts.val = [] ; end
+if isscalar(opts.train) && isnumeric(opts.train) && isnan(opts.train)
+  opts.train = [] ;
+end
+if isscalar(opts.val) && isnumeric(opts.val) && isnan(opts.val)
+  opts.val = [] ;
+end
 
 % -------------------------------------------------------------------------
 %                                                            Initialization
@@ -124,6 +141,7 @@ for epoch=start+1:opts.numEpochs
   params.epoch = epoch ;
   params.learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   params.train = opts.train(randperm(numel(opts.train))) ; % shuffle
+  params.train = params.train(1:min(opts.epochSize, numel(opts.train)));
   params.val = opts.val(randperm(numel(opts.val))) ;
   params.imdb = imdb ;
   params.getBatch = getBatch ;
@@ -150,7 +168,9 @@ for epoch=start+1:opts.numEpochs
   stats.train(epoch) = lastStats.train ;
   stats.val(epoch) = lastStats.val ;
   clear lastStats ;
-  saveStats(modelPath(epoch), stats) ;
+  if ~evaluateMode
+    saveStats(modelPath(epoch), stats) ;
+  end
 
   if params.plotStatistics
     switchFigure(1) ; clf ;
@@ -179,6 +199,16 @@ for epoch=start+1:opts.numEpochs
     end
     drawnow ;
     print(1, modelFigPath, '-dpdf') ;
+  end
+  
+  if ~isempty(opts.postEpochFn)
+    if nargout(opts.postEpochFn) == 0
+      opts.postEpochFn(net, params, state) ;
+    else
+      lr = opts.postEpochFn(net, params, state) ;
+      if ~isempty(lr), opts.learningRate = lr; end
+      if opts.learningRate == 0, break; end
+    end
   end
 end
 
@@ -230,11 +260,10 @@ function [net, state] = processEpoch(net, state, params, mode)
 % spmd caller.
 
 % initialize with momentum 0
-if isempty(state) || isempty(state.momentum)
+if isempty(state) || isempty(state.solverState)
   for i = 1:numel(net.layers)
-    for j = 1:numel(net.layers{i}.weights)
-      state.momentum{i}{j} = 0 ;
-    end
+    state.solverState{i} = cell(1, numel(net.layers{i}.weights)) ;
+    state.solverState{i}(:) = {0} ;
   end
 end
 
@@ -242,9 +271,14 @@ end
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net = vl_simplenn_move(net, 'gpu') ;
-  for i = 1:numel(state.momentum)
-    for j = 1:numel(state.momentum{i})
-      state.momentum{i}{j} = gpuArray(state.momentum{i}{j}) ;
+  for i = 1:numel(state.solverState)
+    for j = 1:numel(state.solverState{i})
+      s = state.solverState{i}{j} ;
+      if isnumeric(s)
+        state.solverState{i}{j} = gpuArray(s) ;
+      elseif isstruct(s)
+        state.solverState{i}{j} = structfun(@gpuArray, s, 'UniformOutput', false) ;
+      end
     end
   end
 end
@@ -370,7 +404,7 @@ for t=1:params.batchSize:numel(subset)
       'XScale', 'log', ...
       'XLim', [1e-5 1], ...
       'XTick', 10.^(-5:1)) ;
-    grid on ;
+    grid on ; title('Variation');
     subplot(2,2,2) ; barh(sqrt(diagnpow)) ;
     set(gca,'TickLabelInterpreter', 'none', ...
       'YTick', 1:numel(diagnpow), ...
@@ -379,7 +413,7 @@ for t=1:params.batchSize:numel(subset)
       'XScale', 'log', ...
       'XLim', [1e-5 1e5], ...
       'XTick', 10.^(-5:5)) ;
-    grid on ;
+    grid on ; title('Power');
     subplot(2,2,3); plot(squeeze(res(end-1).x)) ;
     drawnow ;
   end
@@ -396,12 +430,17 @@ if params.profile
     mpiprofile off ;
   end
 end
-if ~params.saveMomentum
-  state.momentum = [] ;
+if ~params.saveSolverState
+  state.solverState = [] ;
 else
-  for i = 1:numel(state.momentum)
-    for j = 1:numel(state.momentum{i})
-      state.momentum{i}{j} = gather(state.momentum{i}{j}) ;
+  for i = 1:numel(state.solverState)
+    for j = 1:numel(state.solverState{i})
+      s = state.solverState{i}{j} ;
+      if isnumeric(s)
+        state.solverState{i}{j} = gather(s) ;
+      elseif isstruct(s)
+        state.solverState{i}{j} = structfun(@gather, s, 'UniformOutput', false) ;
+      end
     end
   end
 end
@@ -442,24 +481,31 @@ for l=numel(net.layers):-1:1
         parDer = vl_taccum(1/batchSize, parDer, ...
                            thisDecay, net.layers{l}.weights{j}) ;
 
-        % Update momentum.
-        state.momentum{l}{j} = vl_taccum(...
-          params.momentum, state.momentum{l}{j}, ...
-          -1, parDer) ;
-
-        % Nesterov update (aka one step ahead).
-        if params.nesterovUpdate
-          delta = vl_taccum(...
-            params.momentum, state.momentum{l}{j}, ...
+        if isempty(params.solver)
+          % Default solver is the optimised SGD.
+          % Update momentum.
+          state.solverState{l}{j} = vl_taccum(...
+            params.momentum, state.solverState{l}{j}, ...
             -1, parDer) ;
-        else
-          delta = state.momentum{l}{j} ;
-        end
 
-        % Update parameters.
-        net.layers{l}.weights{j} = vl_taccum(...
-          1, net.layers{l}.weights{j}, ...
-          thisLR, delta) ;
+          % Nesterov update (aka one step ahead).
+          if params.nesterovUpdate
+            delta = params.momentum * state.solverState{l}{j} - parDer ;
+          else
+            delta = state.solverState{l}{j} ;
+          end
+
+          % Update parameters.
+          net.layers{l}.weights{j} = vl_taccum(...
+            1, net.layers{l}.weights{j}, ...
+            thisLR, delta) ;
+
+        else
+          % call solver function to update weights
+          [net.layers{l}.weights{j}, state.solverState{l}{j}] = ...
+            params.solver(net.layers{l}.weights{j}, state.solverState{l}{j}, ...
+            parDer, params.solverOpts, thisLR) ;
+        end
       end
     end
 
@@ -469,7 +515,9 @@ for l=numel(net.layers):-1:1
       label = '' ;
       switch net.layers{l}.type
         case {'conv','convt'}
-          variation = thisLR * mean(abs(state.momentum{l}{j}(:))) ;
+          if isnumeric(state.solverState{l}{j})
+            variation = thisLR * mean(abs(state.solverState{l}{j}(:))) ;
+          end
           power = mean(res(l+1).x(:).^2) ;
           if j == 1 % fiters
             base = mean(net.layers{l}.weights{j}(:).^2) ;

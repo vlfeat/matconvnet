@@ -423,65 +423,46 @@ void mexFunction(int nout, mxArray *out[],
    (could be done as a regular case, but it is faster this way)
    */
   if (fullyConnectedMode) {
+    vl::nn::FullyConnected op(context) ;
     if (!backMode) {
-      error = vl::nnfullyconnected_forward(context,
-                                           output,
-                                           data,
-                                           filters,
-                                           biases) ;
+      error = op.forward(output,data,filters,biases) ;
     } else {
-      error = vl::nnfullyconnected_backward(context,
-                                            derData,
-                                            derFilters,
-                                            derBiases,
-                                            data,
-                                            filters,
-                                            derOutput) ;
+      error = op.backward(derData,derFilters,derBiases,data,filters,derOutput) ;
     }
     goto doneok ;
   }
 
   /* special case: no filters = identity filter bank (subsample + bias) */
   if (!hasFilters) {
+    vl::nn::Subsample op(context,strideY,strideX,
+                         padTop,padBottom,padLeft,padRight) ;
     if (!backMode) {
-      error = vl::nnsubsample_forward(context,
-                                      output,
-                                      data,
-                                      biases,
-                                      strideY, strideX,
-                                      padTop, padBottom, padLeft, padRight) ;
+      error = op.forwardWithBias(output,data,biases) ;
     } else {
-      error = vl::nnsubsample_backward(context,
-                                       derData,
-                                       derBiases,
-                                       derOutput,
-                                       strideY, strideX,
-                                       padTop, padBottom, padLeft, padRight) ;
+      error = op.backwardWithBias(derData,derBiases,derOutput) ;
     }
     goto doneok ;
   }
 
   /* regular case */
-  if (!backMode) {
-    error = vl::nnconv_forward(context,
-                               output, 0,
-                               data, 1,
-                               filters,
-                               biases,
-                               strideY, strideX,
-                               padTop, padBottom, padLeft, padRight,
-                               dilateY, dilateX) ;
-  } else {
-    error = vl::nnconv_backward(context,
-                                derData,
-                                derFilters,
-                                derBiases,
-                                data,
-                                filters,
-                                derOutput,
-                                strideY, strideX,
-                                padTop, padBottom, padLeft, padRight,
-                                dilateY, dilateX) ;
+  {
+    vl::nn::Convolution op(context,
+                           strideY, strideX,
+                           padTop, padBottom, padLeft, padRight,
+                           dilateY, dilateX);
+    if (!backMode) {
+      error = op.forward(output, 0,
+                         data, 1,
+                         filters,
+                         biases) ;
+    } else {
+      error = op.backward(derData,
+                          derFilters,
+                          derBiases,
+                          data,
+                          filters,
+                          derOutput) ;
+    }
   }
 
 doneok:

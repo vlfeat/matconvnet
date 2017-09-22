@@ -5,8 +5,8 @@ function [y,mask] = vl_nndropout(x,varargin)
 %   same size as X.
 %
 %   VL_NNDROPOUT(X, 'rate', R) sets the dropout rate to R. Rate is defined
-%   as a probability of a variable *not* to be zeroed (i.e. it is the
-%   expected value of MASK).
+%   as the probability that a variable will be zeroed (i.e. it is one 
+%   minus the expected value of MASK).
 %
 %   [DZDX] = VL_NNDROPOUT(X, DZDY, 'mask', MASK) computes the
 %   derivatives of the blocks projected onto DZDY. Note that MASK must

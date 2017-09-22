@@ -176,7 +176,7 @@ classdef nnconv < nntest
       fn = 10 ;
       n = 8 ;
       depth = 8 ;
-      x = test.randn(128,128,depth,n) ;
+      x = test.randn(64,64,depth,n) ;
       w = test.randn(fh,fw,depth,fn) ;
       b = test.randn(1,fn) ;
 

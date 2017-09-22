@@ -31,6 +31,26 @@ the terms of the BSD license (see the COPYING file).
 #include <cudnn.h>
 #endif
 
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+// AtomicAdd support for older CUDA versions.
+static __device__ double atomicAdd(double* address, double val)
+{
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val +
+                                         __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+#endif
+
+template<vl::DataType dataType> struct ConvolutionForwardCudnn ;
+template<vl::DataType dataType> struct ConvolutionBackwardCudnn ;
+
 namespace vl {
 
 #if ENABLE_CUDNN
@@ -85,7 +105,8 @@ namespace vl {
     vl::ErrorCode catchCudnnError(cudnnStatus_t status,
                               char const* description = NULL) ;
 
-    template<vl::DataType type> friend struct vl::impl::nnconv_cudnn ;
+    template<vl::DataType type> friend struct ::ConvolutionForwardCudnn ;
+    template<vl::DataType type> friend struct ::ConvolutionBackwardCudnn ;
 #endif
 
   protected:

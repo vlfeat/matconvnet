@@ -67,10 +67,19 @@ namespace vl {
     VLDT_Double
   } ;
 
-  template <vl::DataType id> struct DataTypeTraits { } ;
-  template <> struct DataTypeTraits<VLDT_Char> { typedef char type ; } ;
-  template <> struct DataTypeTraits<VLDT_Float> { typedef float type ; } ;
-  template <> struct DataTypeTraits<VLDT_Double> { typedef double type ; } ;
+  template <vl::DataType dataType> struct DataTypeTraits { } ;
+  template <> struct DataTypeTraits<VLDT_Char> {
+    typedef char type ;
+    static constexpr std::size_t size = sizeof(char) ;
+  } ;
+  template <> struct DataTypeTraits<VLDT_Float> {
+    typedef float type ;
+    static constexpr std::size_t size = sizeof(float) ;
+  } ;
+  template <> struct DataTypeTraits<VLDT_Double> {
+    typedef double type ;
+    static constexpr std::size_t size = sizeof(double) ;
+  } ;
 
   template <typename type> struct BuiltinToDataType {} ;
   template <> struct BuiltinToDataType<char> { enum { dataType = VLDT_Char } ; } ;
@@ -79,9 +88,9 @@ namespace vl {
 
   inline size_t getDataTypeSizeInBytes(DataType dataType) {
     switch (dataType) {
-      case VLDT_Char:   return sizeof(DataTypeTraits<VLDT_Char>::type) ;
-      case VLDT_Float:  return sizeof(DataTypeTraits<VLDT_Float>::type) ;
-      case VLDT_Double: return sizeof(DataTypeTraits<VLDT_Double>::type) ;
+      case VLDT_Char:   return DataTypeTraits<VLDT_Char>::size ;
+      case VLDT_Float:  return DataTypeTraits<VLDT_Float>::size ;
+      case VLDT_Double: return DataTypeTraits<VLDT_Double>::size ;
       default:          return 0 ;
     }
   }
@@ -228,6 +237,7 @@ namespace vl {
     Tensor(TensorShape const & shape, DataType dataType,
            DeviceType deviceType, void * memory, size_t memorySize) ;
     void * getMemory() ;
+    void const * getMemory() const ;
     DeviceType getDeviceType() const ;
     TensorShape getShape() const ;
     DataType getDataType() const ;

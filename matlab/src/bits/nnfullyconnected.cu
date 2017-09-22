@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2014-16 Andrea Vedaldi.
+Copyright (C) 2014-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -11,245 +11,206 @@ the terms of the BSD license (see the COPYING file).
 */
 
 #include "nnfullyconnected.hpp"
+#include "impl/dispatcher.hpp"
 #include "impl/blashelper.hpp"
 #include "impl/copy.hpp"
-#include <assert.h>
+#include <cassert>
 
 using namespace vl ;
+using namespace vl::nn ;
+using namespace vl::impl ;
 
-/* ---------------------------------------------------------------- */
-/* nnfullyconnected_forward_impl                                    */
-/* ---------------------------------------------------------------- */
+template<DeviceType deviceType, DataType dataType> struct FullyConnectedForward ;
+template<DeviceType deviceType, DataType dataType> struct FullyConnectedBackward ;
 
-template<vl::DeviceType deviceType, vl::DataType dataType> vl::ErrorCode
-nnfullyconnected_forward_impl(Context& context,
-                              Tensor output,
-                              Tensor data,
-                              Tensor filters,
-                              Tensor biases)
+// -------------------------------------------------------------------
+//                                                             Forward
+// -------------------------------------------------------------------
+
+template<DeviceType deviceType, DataType dataType>
+struct FullyConnectedForward
 {
-  vl::ErrorCode error ;
-  typedef typename vl::DataTypeTraits<dataType>::type type ;
-  type alpha = 1 ;
-  type beta = 0 ;
+  vl::ErrorCode operator()
+  (FullyConnected &op,
+   Tensor &output,
+   Tensor const& input,
+   Tensor const& filter,
+   Tensor const& bias)
+  {
+    vl::ErrorCode error ;
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    type alpha = 1 ;
+    type beta = 0 ;
 
-  if (filters) {
-    ptrdiff_t filtersVolume = filters.getHeight() * filters.getWidth() * filters.getDepth() ;
-    if (data.getSize() == 1) {
-      /* one image in the stack */
-      error = vl::impl::blas<deviceType,dataType>::gemv
-      (context,
-       't',
-       filtersVolume, filters.getSize(),
-       alpha,
-       (type const*)filters.getMemory(), filtersVolume,
-       (type const*)data.getMemory(), 1,
-       beta,
-       (type*)output.getMemory(), 1) ;
-      if (error != vl::VLE_Success) { goto done ; }
+    if (filter) {
+      ptrdiff_t filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+      if (input.getSize() == 1) {
+        /* one image in the stack */
+        error = vl::impl::blas<deviceType,dataType>::gemv
+        (op.context,
+         't',
+         filterVolume, filter.getSize(),
+         alpha,
+         (type const*)filter.getMemory(), filterVolume,
+         (type const*)input.getMemory(), 1,
+         beta,
+         (type*)output.getMemory(), 1) ;
+        if (error != vl::VLE_Success) { goto done ; }
+      } else {
+        /* multiple images in the stack */
+        error = vl::impl::blas<deviceType,dataType>::gemm
+        (op.context,
+         't', 'n',
+         filter.getSize(), input.getSize(), filterVolume,
+         alpha,
+         (type const*)filter.getMemory(), filterVolume,
+         (type const*)input.getMemory(), filterVolume,
+         beta,
+         (type*)output.getMemory(), filter.getSize()) ;
+        if (error != vl::VLE_Success) { goto done ; }
+      }
     } else {
-      /* multiple images in the stack */
+      error = vl::impl::operations<deviceType,type>::copy
+      ((type*)output.getMemory(),
+       (type const*)input.getMemory(),
+       input.getNumElements()) ;
+    }
+
+    if (bias) {
+      type beta = 1 ;
+      type const* allOnesMemory = (type*)
+      op.context.getAllOnes(deviceType,
+                            dataType,
+                            input.getSize()) ;
+      if (allOnesMemory == NULL) {
+        error = op.context.getLastError() ;
+        goto done ;
+      }
       error = vl::impl::blas<deviceType,dataType>::gemm
-      (context,
-       't', 'n',
-       filters.getSize(), data.getSize(), filtersVolume,
+      (op.context, 'n', 'n',
+       bias.getNumElements(), input.getSize(), 1,
        alpha,
-       (type const*)filters.getMemory(), filtersVolume,
-       (type const*)data.getMemory(), filtersVolume,
+       (type*)bias.getMemory(), bias.getNumElements(),
+       allOnesMemory, 1,
        beta,
-       (type*)output.getMemory(), filters.getSize()) ;
+       (type*)output.getMemory(), bias.getNumElements()) ;
       if (error != vl::VLE_Success) { goto done ; }
     }
-  } else {
-    error = vl::impl::operations<deviceType,type>::copy
-    ((type*)output.getMemory(),
-     (type const*)data.getMemory(),
-     data.getNumElements()) ;
+  done:
+    return op.context.passError(error, __func__) ;
   }
+};
 
-  if (biases) {
-    type beta = 1 ;
-    type const* allOnesMemory = (type*) context.getAllOnes(deviceType,
-                                                           dataType,
-                                                           data.getSize()) ;
-    if (allOnesMemory == NULL) {
-      error = context.getLastError() ;
-      goto done ;
-    }
-    error = vl::impl::blas<deviceType,dataType>::gemm
-    (context, 'n', 'n',
-     biases.getNumElements(), data.getSize(), 1,
-     alpha,
-     (type*)biases.getMemory(), biases.getNumElements(),
-     allOnesMemory, 1,
-     beta,
-     (type*)output.getMemory(), biases.getNumElements()) ;
-    if (error != vl::VLE_Success) { goto done ; }
-  }
-done:
-  return context.passError(error, __func__) ;
-}
+// -------------------------------------------------------------------
+//                                                           Backward
+// -------------------------------------------------------------------
 
-/* ---------------------------------------------------------------- */
-/* nnfullyconnected_backward_impl                                   */
-/* ---------------------------------------------------------------- */
-
-template<vl::DeviceType deviceType, vl::DataType dataType> vl::ErrorCode
-nnfullyconnected_backward_impl(vl::Context& context,
-                               vl::Tensor derData,
-                               vl::Tensor derFilters,
-                               vl::Tensor derBiases,
-                               vl::Tensor data,
-                               vl::Tensor filters,
-                               vl::Tensor derOutput)
+template<DeviceType deviceType, DataType dataType>
+struct FullyConnectedBackward
 {
-  vl::ErrorCode error ;
-  typedef typename vl::DataTypeTraits<dataType>::type type ;
-  type alpha = 1 ;
-  type beta = 0 ;
+  vl::ErrorCode operator()
+  (FullyConnected &op,
+   vl::Tensor &derInput,
+   vl::Tensor &derFilter,
+   vl::Tensor &derBias,
+   vl::Tensor const &input,
+   vl::Tensor const &filter,
+   vl::Tensor const &derOutput)
+  {
+    vl::ErrorCode error ;
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    type alpha = 1 ;
+    type beta = 0 ;
 
-  if (filters) {
-    ptrdiff_t filtersVolume = filters.getHeight() * filters.getWidth() * filters.getDepth() ;
+    if (filter) {
+      ptrdiff_t filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
 
-    if (derFilters) {
-      error = vl::impl::blas<deviceType,dataType>::gemm
-      (context,
+      if (derFilter) {
+        error = vl::impl::blas<deviceType,dataType>::gemm
+        (op.context,
+         'n', 't',
+         filterVolume, filter.getSize(), input.getSize(),
+         alpha,
+         (type*)input.getMemory(), filterVolume,
+         (type*)derOutput.getMemory(), filter.getSize(),
+         beta,
+         (type*)derFilter.getMemory(), filterVolume) ;
+        if (error != vl::VLE_Success) { goto done ; }
+      }
+
+      if (derInput) {
+        error = vl::impl::blas<deviceType,dataType>::gemm
+        (op.context,
+         'n', 'n',
+         filterVolume, input.getSize(), filter.getSize(),
+         alpha,
+         (type*)filter.getMemory(), filterVolume,
+         (type*)derOutput.getMemory(), filter.getSize(),
+         beta,
+         (type*)derInput.getMemory(), filterVolume) ;
+        if (error != vl::VLE_Success) { goto done ; }
+      }
+    } else {
+      vl::impl::operations<deviceType,type>::copy
+      ((type*)derInput.getMemory(),
+       (type const*)derOutput.getMemory(),
+       derOutput.getNumElements()) ;
+    }
+
+    if (derBias) {
+      auto allOnesMemory = (type const*)
+      op.context.getAllOnes(deviceType,
+                            dataType,
+                            derOutput.getSize()) ;
+      if (allOnesMemory == NULL) {
+        error = op.context.getLastError() ;
+        goto done ;
+      }
+
+      error = vl::impl::blas<deviceType, dataType>::gemm
+      (op.context,
        'n', 't',
-       filtersVolume, filters.getSize(), data.getSize(),
+       1, derOutput.getDepth(), derOutput.getSize(),
        alpha,
-       (type*)data.getMemory(), filtersVolume,
-       (type*)derOutput.getMemory(), filters.getSize(),
+       (type*)allOnesMemory, 1,
+       (type*)derOutput.getMemory(), derOutput.getDepth(),
        beta,
-       (type*)derFilters.getMemory(), filtersVolume) ;
+       (type*)derBias.getMemory(), 1) ;
       if (error != vl::VLE_Success) { goto done ; }
-    }
 
-    if (derData) {
-      error = vl::impl::blas<deviceType,dataType>::gemm
-      (context,
-       'n', 'n',
-       filtersVolume, data.getSize(), filters.getSize(),
-       alpha,
-       (type*)filters.getMemory(), filtersVolume,
-       (type*)derOutput.getMemory(), filters.getSize(),
-       beta,
-       (type*)derData.getMemory(), filtersVolume) ;
-      if (error != vl::VLE_Success) { goto done ; }
     }
-  } else {
-    vl::impl::operations<deviceType,type>::copy
-    ((type*)derData.getMemory(),
-     (type const*)derOutput.getMemory(),
-     derOutput.getNumElements()) ;
+  done:
+    return op.context.passError(error, __func__) ;
   }
+};
 
-  if (derBiases) {
-    type const* allOnesMemory = (type*) context.getAllOnes(deviceType,
-                                                           dataType,
-                                                           derOutput.getSize()) ;
-    if (allOnesMemory == NULL) {
-      error = context.getLastError() ;
-      goto done ;
-    }
+// -------------------------------------------------------------------
+//                                                              Driver
+// -------------------------------------------------------------------
 
-    error = vl::impl::blas<deviceType, dataType>::gemm
-    (context,
-     'n', 't',
-     1, derOutput.getDepth(), derOutput.getSize(),
-     alpha,
-     (type*)allOnesMemory, 1,
-     (type*)derOutput.getMemory(), derOutput.getDepth(),
-     beta,
-     (type*)derBiases.getMemory(), 1) ;
-    if (error != vl::VLE_Success) { goto done ; }
+FullyConnected::FullyConnected(Context &context)
+: context(context)
+{ }
 
-  }
-done:
-  return context.passError(error, __func__) ;
-}
-
-/* ---------------------------------------------------------------- */
-/* nnfullyconnected_forward                                         */
-/* ---------------------------------------------------------------- */
-
-#define DISPATCH(deviceType, dataType) \
-error = nnfullyconnected_forward_impl<deviceType,dataType> \
-(context, output, data, filters, biases) ;
-
-#define DISPATCH2(deviceType) \
-switch (dataType) { \
-case VLDT_Float : DISPATCH(deviceType, VLDT_Float) ; break ; \
-IF_DOUBLE(case VLDT_Double : DISPATCH(deviceType, VLDT_Double) ; break ;) \
-default: assert(false) ; return VLE_Unknown ; \
+vl::ErrorCode
+FullyConnected::forward(Tensor &output,
+                        Tensor const& input,
+                        Tensor const& filter,
+                        Tensor const& bias)
+{
+  return dispatch<FullyConnectedForward>()
+  (*this,output,input,filter,bias) ;
 }
 
 vl::ErrorCode
-vl::nnfullyconnected_forward(Context& context,
-                             Tensor output,
-                             Tensor data,
-                             Tensor filters,
-                             Tensor biases)
+FullyConnected::backward(Tensor &derInput,
+                         Tensor &derFilter,
+                         Tensor &derBias,
+                         Tensor const &input,
+                         Tensor const &filter,
+                         Tensor const &derOutput)
 {
-  vl::ErrorCode error = vl::VLE_Success ;
-  vl::DataType dataType = data.getDataType() ;
-
-  switch (data.getDeviceType()) {
-    default:
-      assert(false) ;
-      error = vl::VLE_Unknown ;
-      break ;
-
-    case vl::VLDT_CPU:
-      DISPATCH2(vl::VLDT_CPU) ;
-      break ;
-
-#if ENABLE_GPU
-    case vl::VLDT_GPU:
-      DISPATCH2(vl::VLDT_GPU) ;
-      break ;
-#endif
-  }
-  return context.passError(error, __func__) ;
+  return dispatch<FullyConnectedBackward>()
+  (*this,derInput,derFilter,derBias,input,filter,derOutput) ;
 }
-
-/* ---------------------------------------------------------------- */
-/* nnfullyconnected_backward                                        */
-/* ---------------------------------------------------------------- */
-
-#undef DISPATCH
-#define DISPATCH(deviceType, dataType) \
-error = nnfullyconnected_backward_impl<deviceType,dataType> \
-(context, derData, derFilters, derBiases, data, filters, derOutput) ;
-
-vl::ErrorCode
-vl::nnfullyconnected_backward(vl::Context& context,
-                              vl::Tensor derData,
-                              vl::Tensor derFilters,
-                              vl::Tensor derBiases,
-                              vl::Tensor data,
-                              vl::Tensor filters,
-                              vl::Tensor derOutput)
-{
-  vl::ErrorCode error = vl::VLE_Success ;
-  vl::DataType dataType = data.getDataType() ;
-
-  switch (derOutput.getDeviceType()) {
-    default:
-      assert(false) ;
-      error = vl::VLE_Unknown ;
-      break ;
-
-    case vl::VLDT_CPU:
-      DISPATCH2(vl::VLDT_CPU) ;
-      break ;
-
-#if ENABLE_GPU
-    case vl::VLDT_GPU:
-      DISPATCH2(vl::VLDT_GPU) ;
-      break ;
-#endif
-  }
-  return context.passError(error, __func__) ;
-}
-
 

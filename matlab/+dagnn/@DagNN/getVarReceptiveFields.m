@@ -21,7 +21,7 @@ function rfs = getVarReceptiveFields(obj, var)
 if ~isnumeric(var)
   var_n = obj.getVarIndex(var) ;
   if isnan(var_n)
-    error('Variable %s not found.', var_n);
+    error('Variable %s not found.', var);
   end
   var = var_n;
 end

@@ -18,6 +18,12 @@ the terms of the BSD license (see the COPYING file).
 
 #define COMMA ,
 
+#if (CUDNN_VERSION >= 6000)
+#define IF_CUDNN_GE6(x) x
+#else
+#define IF_CUDNN_GE6(x)
+#endif
+
 #if (CUDNN_VERSION >= 5000)
 #define IF_CUDNN_GE5(x) x
 #else
@@ -46,14 +52,14 @@ the terms of the BSD license (see the COPYING file).
 namespace vl { namespace impl {
 
   template <vl::DataType dataType> struct DataTypeToCudnn { } ;
-  template <> struct DataTypeToCudnn<vl::VLDT_Float> { static cudnnDataType_t const id = CUDNN_DATA_FLOAT ; } ;
-  template <> struct DataTypeToCudnn<vl::VLDT_Double> { static cudnnDataType_t const id = CUDNN_DATA_DOUBLE ; } ;
+  template <> struct DataTypeToCudnn<vl::VLDT_Float> { static cudnnDataType_t const dataType = CUDNN_DATA_FLOAT ; } ;
+  template <> struct DataTypeToCudnn<vl::VLDT_Double> { static cudnnDataType_t const dataType = CUDNN_DATA_DOUBLE ; } ;
 
   inline cudnnDataType_t dataTypeToCudnn(vl::DataType dataType)
   {
     switch (dataType) {
-      case VLDT_Float: return DataTypeToCudnn<vl::VLDT_Float>::id ;
-      case VLDT_Double: return DataTypeToCudnn<vl::VLDT_Double>::id ;
+      case VLDT_Float: return DataTypeToCudnn<vl::VLDT_Float>::dataType ;
+      case VLDT_Double: return DataTypeToCudnn<vl::VLDT_Double>::dataType ;
       default: assert(false) ; return CUDNN_DATA_FLOAT ; // bogus
     }
   }

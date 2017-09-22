@@ -200,14 +200,11 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
 
   vl::ErrorCode error ;
+  vl::nn::BilinearSampler op(context) ;
   if (!backMode) {
-    error = vl::nnbilinearsampler_forward(context,
-                                  output,
-                                  data, grid);
+    error = op.forward(output,data,grid) ;
   } else {
-    error = vl::nnbilinearsampler_backward(context,
-                                   derData, derGrid,
-                                   data, grid, derOutput);
+    error = op.backward(derData,derGrid,data,grid,derOutput);
   }
 
   /* -------------------------------------------------------------- */

@@ -126,7 +126,7 @@ if isempty(dzdy)
     y1 = bsxfun(@times, opts.instanceWeights, y1) ;
   end
   if opts.aggregate
-    y1 = sum(sum(y1)) ;
+    y1 = sum(y1(:)) ;
   end
 end
 if ~isempty(dzdy), y2 = -y1; end

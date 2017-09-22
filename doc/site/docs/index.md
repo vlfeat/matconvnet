@@ -2,7 +2,7 @@
 
 <div class="row" style="white-space: nowrap;">
 <div class="col-sm-3">
-<a href="download/matconvnet-1.0-beta21.tar.gz">
+<a href="download/matconvnet-1.0-beta25.tar.gz">
 <div class="menuicon"><span class="fa fa-download fa-2x"></span></div>
 Download</a>
 </div>
@@ -31,31 +31,18 @@ efficient, and can run and learn state-of-the-art CNNs. Many
 pre-trained CNNs for image classification, segmentation, face
 recognition, and text detection are available.
 
+> **New:** [1.0-beta25](about.md#changes) released with a new modular system [`vl_contrib`](mfiles/vl_contrib.md) for third-party contributions. A partial rewrite of the C++ code and support for recent CuDNN versions is also included.
+>
+> **New:** [1.0-beta24](about.md#changes) released with bugfixes, new
+> examples, and utility functions.
+>
 > **New:** [1.0-beta23](about.md#changes) released with
 > [`vl_nnroipool`](mfiles/vl_nnroipool) and a Fast-RCNN demo.
 >
 > **New:** [1.0-beta22](about.md#changes) released with a few bugfixes.
->
-> **New:** [1.0-beta21](about.md#changes) provides two new tools,
-> [`vl_tmove`](mfiles/vl_tmove.md) and `ParameterServer`, to
-> accelerate significantly data transfers between multiple GPUs. It
-> also provides a new version of
-> [`vl_imreadjpeg`](mfiles/vl_imreadjpeg) that allows to load,
-> transform, and transfer data to the GPU in parallel, resulting in
-> significant speedups in training and testing (20% to 400%, depending
-> on the model). [`vl_nnconv`](mfiles/vl_nnconv) now has a `dilate`
-> option for dilated convolution.
->
-> **New:** [1.0-beta20](about.md#changes) adds the binlinear resampler
-> layer [`vl_nnbilinearsampler`](mfiles/vl_nnbilinearsampler.md) and a
-> spatial transformer example.
->
-> **New:** [1.0-beta19](about.md#changes) adds pre-trained ResNet
-> models (demo training code coming next), CuDNN V5 support, and
-> numerous other improvements and bugfixes.
 
 ## Obtaining MatConvNet
-- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta23](download/matconvnet-1.0-beta23.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
+- <span class="fa fa-file-archive-o"></span>&nbsp;Tarball for [version 1.0-beta25](download/matconvnet-1.0-beta25.tar.gz); [older versions](download/) (<span class="fa fa-apple"/> <span class="fa fa-windows"/> <span class="fa fa-linux"/>)
 - <span class="fa fa-github"></span>&nbsp;[GIT repository](http://www.github.com/vlfeat/matconvnet.git)
 - <span class="fa fa-pencil-square-o"></span>&nbsp;<a href="javascript:void(0);"
   onclick="toggle_visibility('citation');">Citation</a>
@@ -77,6 +64,9 @@ recognition, and text detection are available.
 - <span class="fa fa-question-circle"></span> [FAQ](faq.md)
 - <span class="fa fa-comments"></span> [Discussion group](https://groups.google.com/d/forum/matconvnet)
 
+## Extensions
+- [Third party contributions and extensions](https://github.com/vlfeat/matconvnet-contrib), also accessible using [`vl_contrib`](mfiles/vl_contrib.md), third-party contribution including autodiff and several modern object detectors.
+
 ## Getting started
 - [Quick start guide](quick.md)
 - [Installation instructions](install.md)
@@ -97,4 +87,3 @@ recognition, and text detection are available.
 ## Other information
 - [Changes](about/#changes)
 - [Developing the library](developers.md)
-

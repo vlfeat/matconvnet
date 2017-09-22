@@ -13,6 +13,7 @@ site=doc/site/docs
 mfiles=\
 vl_argparse.m \
 vl_compilenn.m \
+vl_contrib.m \
 vl_imreadjpeg.m \
 vl_nnbnorm.m \
 vl_nnbilinearsampler.m \
@@ -39,6 +40,7 @@ vl_imreadjpeg.m \
 vl_imreadjpeg.m \
 vl_taccum.m \
 vl_tmove.m \
+vl_tshow.m \
 simplenn/vl_simplenn.m \
 simplenn/vl_simplenn_diagnose.m \
 simplenn/vl_simplenn_tidy.m \

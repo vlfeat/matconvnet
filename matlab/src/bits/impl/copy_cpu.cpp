@@ -18,24 +18,30 @@ namespace vl { namespace impl {
   template <typename type>
   struct operations<vl::VLDT_CPU, type>
   {
-    typedef type data_type ;
-
     static vl::ErrorCode
-    copy(data_type * dest,
-         data_type const * src,
-         size_t numElements)
+    copy(type * dst,
+         type const * src,
+         size_t numElements,
+         double mult)
     {
-      memcpy(dest, src, numElements * sizeof(data_type)) ;
+      if (mult == 1.0) {
+        memcpy(dst, src, numElements * sizeof(type)) ;
+      } else {
+        auto end = src + numElements ;
+        while (src != end) {
+          *dst++ = mult * (*src++) ;
+        }
+      }
       return VLE_Success ;
     }
 
     static vl::ErrorCode
-    fill(data_type * dest,
+    fill(type * dst,
          size_t numElements,
-         data_type value)
+         type value)
     {
       for (size_t k = 0 ; k < numElements ; ++k) {
-        dest[k] = value ;
+        dst[k] = value ;
       }
       return VLE_Success ;
     }

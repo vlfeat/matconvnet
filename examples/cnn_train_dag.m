@@ -8,6 +8,7 @@ function [net,stats] = cnn_train_dag(net, imdb, getBatch, varargin)
 %
 % This file is part of the VLFeat library and is made available under
 % the terms of the BSD license (see the COPYING file).
+addpath(fullfile(vl_rootnn, 'examples'));
 
 opts.expDir = fullfile('data','exp') ;
 opts.continue = true ;
@@ -17,11 +18,22 @@ opts.train = [] ;
 opts.val = [] ;
 opts.gpus = [] ;
 opts.prefetch = false ;
+opts.epochSize = inf;
 opts.numEpochs = 300 ;
 opts.learningRate = 0.001 ;
 opts.weightDecay = 0.0005 ;
+
+opts.solver = [] ;  % Empty array means use the default SGD solver
+[opts, varargin] = vl_argparse(opts, varargin) ;
+if ~isempty(opts.solver)
+  assert(isa(opts.solver, 'function_handle') && nargout(opts.solver) == 2,...
+    'Invalid solver; expected a function handle with two outputs.') ;
+  % Call without input arguments, to get default options
+  opts.solverOpts = opts.solver() ;
+end
+
 opts.momentum = 0.9 ;
-opts.saveMomentum = true ;
+opts.saveSolverState = true ;
 opts.nesterovUpdate = false ;
 opts.randomSeed = 0 ;
 opts.profile = false ;
@@ -31,13 +43,18 @@ opts.parameterServer.prefix = 'mcn' ;
 opts.derOutputs = {'objective', 1} ;
 opts.extractStatsFn = @extractStats ;
 opts.plotStatistics = true;
+opts.postEpochFn = [] ;  % postEpochFn(net,params,state) called after each epoch; can return a new learning rate, 0 to stop, [] for no change
 opts = vl_argparse(opts, varargin) ;
 
 if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
 if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
 if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
-if isnan(opts.train), opts.train = [] ; end
-if isnan(opts.val), opts.val = [] ; end
+if isscalar(opts.train) && isnumeric(opts.train) && isnan(opts.train)
+  opts.train = [] ;
+end
+if isscalar(opts.val) && isnumeric(opts.val) && isnan(opts.val)
+  opts.val = [] ;
+end
 
 % -------------------------------------------------------------------------
 %                                                            Initialization
@@ -79,6 +96,7 @@ for epoch=start+1:opts.numEpochs
   params.epoch = epoch ;
   params.learningRate = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
   params.train = opts.train(randperm(numel(opts.train))) ; % shuffle
+  params.train = params.train(1:min(opts.epochSize, numel(opts.train)));
   params.val = opts.val(randperm(numel(opts.val))) ;
   params.imdb = imdb ;
   params.getBatch = getBatch ;
@@ -135,6 +153,16 @@ for epoch=start+1:opts.numEpochs
     drawnow ;
     print(1, modelFigPath, '-dpdf') ;
   end
+  
+  if ~isempty(opts.postEpochFn)
+    if nargout(opts.postEpochFn) == 0
+      opts.postEpochFn(net, params, state) ;
+    else
+      lr = opts.postEpochFn(net, params, state) ;
+      if ~isempty(lr), opts.learningRate = lr; end
+      if opts.learningRate == 0, break; end
+    end
+  end
 end
 
 % With multiple GPUs, return one copy
@@ -148,15 +176,23 @@ function [net, state] = processEpoch(net, state, params, mode)
 % spmd caller.
 
 % initialize with momentum 0
-if isempty(state) || isempty(state.momentum)
-  state.momentum = num2cell(zeros(1, numel(net.params))) ;
+if isempty(state) || isempty(state.solverState)
+  state.solverState = cell(1, numel(net.params)) ;
+  state.solverState(:) = {0} ;
 end
 
 % move CNN  to GPU as needed
 numGpus = numel(params.gpus) ;
 if numGpus >= 1
   net.move('gpu') ;
-  state.momentum = cellfun(@gpuArray, state.momentum, 'uniformoutput', false) ;
+  for i = 1:numel(state.solverState)
+    s = state.solverState{i} ;
+    if isnumeric(s)
+      state.solverState{i} = gpuArray(s) ;
+    elseif isstruct(s)
+      state.solverState{i} = structfun(@gpuArray, s, 'UniformOutput', false) ;
+    end
+  end
 end
 if numGpus > 1
   parserv = ParameterServer(params.parameterServer) ;
@@ -260,10 +296,17 @@ if params.profile
     mpiprofile off ;
   end
 end
-if ~params.saveMomentum
-  state.momentum = [] ;
+if ~params.saveSolverState
+  state.solverState = [] ;
 else
-  state.momentum = cellfun(@gather, state.momentum, 'uniformoutput', false) ;
+  for i = 1:numel(state.solverState)
+    s = state.solverState{i} ;
+    if isnumeric(s)
+      state.solverState{i} = gather(s) ;
+    elseif isstruct(s)
+      state.solverState{i} = structfun(@gather, s, 'UniformOutput', false) ;
+    end
+  end
 end
 
 net.reset() ;
@@ -300,23 +343,30 @@ for p=1:numel(net.params)
         parDer = vl_taccum(1/batchSize, parDer, ...
                            thisDecay, net.params(p).value) ;
 
-        % Update momentum.
-        state.momentum{p} = vl_taccum(...
-          params.momentum, state.momentum{p}, ...
-          -1, parDer) ;
-
-        % Nesterov update (aka one step ahead).
-        if params.nesterovUpdate
-          delta = vl_taccum(...
-            params.momentum, state.momentum{p}, ...
+        if isempty(params.solver)
+          % Default solver is the optimised SGD.
+          % Update momentum.
+          state.solverState{p} = vl_taccum(...
+            params.momentum, state.solverState{p}, ...
             -1, parDer) ;
-        else
-          delta = state.momentum{p} ;
-        end
 
-        % Update parameters.
-        net.params(p).value = vl_taccum(...
-          1,  net.params(p).value, thisLR, delta) ;
+          % Nesterov update (aka one step ahead).
+          if params.nesterovUpdate
+            delta = params.momentum * state.solverState{p} - parDer ;
+          else
+            delta = state.solverState{p} ;
+          end
+
+          % Update parameters.
+          net.params(p).value = vl_taccum(...
+            1,  net.params(p).value, thisLR, delta) ;
+
+        else
+          % call solver function to update weights
+          [net.params(p).value, state.solverState{p}] = ...
+            params.solver(net.params(p).value, state.solverState{p}, ...
+            parDer, params.solverOpts, thisLR) ;
+        end
       end
     otherwise
       error('Unknown training method ''%s'' for parameter ''%s''.', ...
@@ -363,6 +413,7 @@ function stats = extractStats(stats, net)
 % -------------------------------------------------------------------------
 sel = find(cellfun(@(x) isa(x,'dagnn.Loss'), {net.layers.block})) ;
 for i = 1:numel(sel)
+  if net.layers(sel(i)).block.ignoreAverage, continue; end;
   stats.(net.layers(sel(i)).outputs{1}) = net.layers(sel(i)).block.average ;
 end
 

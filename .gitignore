@@ -10,6 +10,7 @@ data
 index.html
 matconvnet-*.tar.gz
 local
+contrib
 
 # Documentation
 doc/figures/svg/*.pdf
