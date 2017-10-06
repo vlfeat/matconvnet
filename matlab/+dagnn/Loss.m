@@ -12,12 +12,20 @@ classdef Loss < dagnn.ElementWise
 
   methods
     function outputs = forward(obj, inputs, params)
-      outputs{1} = vl_nnloss(inputs{1}, inputs{2}, [], 'loss', obj.loss, obj.opts{:}) ;
+      ind = find(strcmpi(obj.opts,'instanceWeights'));
+      if numel(inputs)==3
+        weights = inputs{3};
+      elseif ~isempty(ind)
+        weights = obj.opts{ind+1};
+      else
+        weights = [];
+      end
+      outputs{1} = vl_nnloss(inputs{1}, inputs{2}, [], 'loss', obj.loss, 'instanceWeights', weights, obj.opts{:}) ;
       obj.accumulateAverage(inputs, outputs);
     end
 
     function accumulateAverage(obj, inputs, outputs)
-      if obj.ignoreAverage, return; end;
+      if obj.ignoreAverage, return; end
       n = obj.numAveraged ;
       m = n + size(inputs{1}, 1) *  size(inputs{1}, 2) * size(inputs{1}, 4);
       obj.average = bsxfun(@plus, n * obj.average, gather(outputs{1})) / m ;
@@ -25,7 +33,16 @@ classdef Loss < dagnn.ElementWise
     end
 
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
-      derInputs{1} = vl_nnloss(inputs{1}, inputs{2}, derOutputs{1}, 'loss', obj.loss, obj.opts{:}) ;
+      ind = find(strcmpi(obj.opts,'instanceWeights'));
+      if numel(inputs)==3
+        weights = inputs{3};
+        derInputs{3} = [];
+      elseif ~isempty(ind)
+        weights = obj.opts{ind+1};
+      else
+        weights = [];
+      end
+      derInputs{1} = vl_nnloss(inputs{1}, inputs{2}, derOutputs{1}, 'loss', obj.loss, 'instanceWeights', weights, obj.opts{:}) ;
       derInputs{2} = [] ;
       derParams = {} ;
     end
