@@ -100,7 +100,7 @@ vl::getErrorMessage(ErrorCode error)
   return messages[error] ;
 }
 
-static int
+static size_t
 getTypeSize(DataType dataType)
 {
   switch (dataType) {
@@ -437,7 +437,7 @@ vl::Context::getAllOnes(DeviceType deviceType, DataType dataType, size_t size)
   if (n < allOnes[deviceType].getNumReallocations()) {
     switch (deviceType) {
       case vl::VLDT_CPU:
-        for (int i = 0 ; i < size ; ++i) {
+        for (long unsigned i = 0 ; i < size ; ++i) {
           if (dataType == VLDT_Float) {
             ((float*)data)[i] = 1.0f ;
           } else {
@@ -512,7 +512,7 @@ void vl::TensorShape::clear()
 void vl::TensorShape::setDimensions(size_t const * newDimensions, size_t newNumDimensions)
 {
   assert(newNumDimensions  <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
-  for (int k = 0 ; k < newNumDimensions ; ++k) {
+  for (long unsigned k = 0 ; k < newNumDimensions ; ++k) {
     dimensions[k] = newDimensions[k] ;
   }
   numDimensions = newNumDimensions ;

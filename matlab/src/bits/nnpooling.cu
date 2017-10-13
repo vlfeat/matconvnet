@@ -33,7 +33,7 @@ template<DataType dataType> struct PoolingBackwardCudnn ;
 template <typename type>
 struct acc_max
 {
-  inline acc_max(int poolHeight, int poolWidth, type derOutput = 0)
+  inline acc_max(long poolHeight, long poolWidth, type derOutput = 0)
   :
   value(-std::numeric_limits<type>::infinity()),
   derOutput(derOutput),
@@ -68,7 +68,7 @@ struct acc_max
 template <typename type>
 struct acc_sum
 {
-  inline acc_sum(int poolHeight, int poolWidth, type derOutput = 0)
+  inline acc_sum(long poolHeight, long poolWidth, type derOutput = 0)
   :
   value(0),
   scale(type(1)/type(poolHeight*poolWidth)),
@@ -113,22 +113,22 @@ struct PoolingForwardCPU
     auto size = input.getSize() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
+    auto outputWidth = (as_signed(width) + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
+    auto outputHeight = (as_signed(height) + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
 
-    for (int z = 0; z < depth * size ; ++z) {
-      for (int x = 0; x < outputWidth; ++x) {
-        for (int y = 0; y < outputHeight; ++y) {
-          int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
-          int y1 = y * (signed)op.strideY - (signed)op.padTop ;
-          int x2 = std::min(x1 + op.poolWidth, (int)width) ;
-          int y2 = std::min(y1 + op.poolHeight, (int)height) ;
-          x1 = std::max(x1, 0) ;
-          y1 = std::max(y1, 0) ;
+    for (long z = 0; z < (signed)(depth * size) ; ++z) {
+      for (long x = 0; x < outputWidth; ++x) {
+        for (long y = 0; y < outputHeight; ++y) {
+          auto x1 = x * op.strideX - op.padLeft ;
+          auto y1 = y * op.strideY - op.padTop ;
+          auto x2 = std::min(x1 + op.poolWidth, as_signed(width)) ;
+          auto y2 = std::min(y1 + op.poolHeight, as_signed(height)) ;
+          x1 = std::max(x1, 0L) ;
+          y1 = std::max(y1, 0L) ;
           Accumulator acc(y2 - y1, x2 - x1) ;
-          for (int u = x1 ; u < x2 ; ++u) {
-            for (int v = y1 ; v < y2 ; ++v) {
-              acc.accumulate_forward(inputData[u * height + v]) ;
+          for (auto u = x1 ; u < x2 ; ++u) {
+            for (auto v = y1 ; v < y2 ; ++v) {
+              acc.accumulate_forward(inputData[u * as_signed(height) + v]) ;
             }
           }
           outputData[x * outputHeight + y] = acc.done_forward() ;
@@ -183,23 +183,23 @@ struct PoolingBackwardCPU
     auto derInputData = (type*)derInput.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
+    auto outputWidth = (as_signed(width) + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
+    auto outputHeight = (as_signed(height) + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
 
-    for (int z = 0; z < depth * size ; ++z) {
+    for (int z = 0; z < as_signed(depth * size) ; ++z) {
       for (int x = 0; x < outputWidth ; ++x) {
         for (int y = 0; y < outputHeight; ++y) {
-          int x1 = x * (signed)op.strideX - (signed)op.padLeft ;
-          int y1 = y * (signed)op.strideY - (signed)op.padTop ;
-          int x2 = std::min(x1 + op.poolWidth, (int)width) ;
-          int y2 = std::min(y1 + op.poolHeight, (int)height) ;
+          int x1 = x * op.strideX - op.padLeft ;
+          int y1 = y * op.strideY - op.padTop ;
+          int x2 = std::min(x1 + op.poolWidth, (signed)width) ;
+          int y2 = std::min(y1 + op.poolHeight, (signed)height) ;
           x1 = std::max(x1, 0) ;
           y1 = std::max(y1, 0) ;
           Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * outputHeight + y]) ;
           for (int u = x1 ; u < x2 ; ++u) {
             for (int v = y1 ; v < y2 ; ++v) {
-              acc.accumulate_backward(&inputData[u * height + v],
-                                      &derInputData[u * height + v]) ;
+              acc.accumulate_backward(&inputData[u * as_signed(height) + v],
+                                      &derInputData[u * as_signed(height) + v]) ;
             }
           }
           acc.done_backward() ;

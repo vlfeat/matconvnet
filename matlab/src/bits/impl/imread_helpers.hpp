@@ -408,7 +408,9 @@ namespace vl { namespace impl {
       free(starts) ;
     }
 
-    ImageResizeFilter(size_t outputWidth, size_t inputWidth, size_t cropWidth, size_t cropOffset, FilterType filterType = kBilinear)
+    ImageResizeFilter(size_t outputWidth, size_t inputWidth,
+                      size_t cropWidth, size_t cropOffset,
+                      FilterType filterType = kBilinear)
     {
       filterSize = 0 ;
       switch (filterType) {
@@ -445,7 +447,7 @@ namespace vl { namespace impl {
       /* the filter extends in the interval (-filterSize/2, filterSize/2)
         (extrema not included)
        */
-      for (int v = 0 ; v < outputWidth ; ++v, filter += filterSize) {
+      for (size_t v = 0 ; v < outputWidth ; ++v, filter += filterSize) {
         /* y(v) = sum_k h(k - u) x(k),  u = alpha * v + beta */
         /* for uniformity we assume that the sum is non-zero for
          u - filterSize/2 <= k < u + filterSize/2

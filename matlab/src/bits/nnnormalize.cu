@@ -246,11 +246,11 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     auto derOutputData = (type const*)derOutput.getMemory() ;
     auto derInputData = (type*)derInput.getMemory() ;
 
-    int m1 = ((signed)op.normDepth-1)/2 ;
-    int m2 = (int)op.normDepth - m1 - 1 ;
-    int offset = (int)width*(int)height ;
+    auto m1 = ((signed)op.normDepth-1)/2 ;
+    auto m2 = (signed)op.normDepth - m1 - 1 ;
+    auto offset = width*height ;
     type ab2 = 2*op.alpha*op.beta ;
-    int t ;
+    long t ;
 
 #ifndef VL_NNNORMALIZE_FAST
     int q ;
@@ -365,8 +365,8 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
        just obtained.
        */
       for (t = 0 ; t < (signed)depth ; ++t) {
-        int q1 = t - m2 - 1 ;
-        int q2 = ((t + m1) <= (depth - 1)) ? t + m1 : depth - 1 ;
+        auto q1 = t - m2 - 1 ;
+        auto q2 = ((t + m1) <= (depth - 1)) ? t + m1 : depth - 1 ;
         type const* restrict acc22_ = acc2 + offset * q2 ;
         type const* restrict acc21_ = acc2 + offset * q1 ;
         type const* restrict data_  = inputData + offset * t ;

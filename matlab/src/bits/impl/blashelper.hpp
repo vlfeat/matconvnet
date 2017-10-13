@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -15,7 +15,12 @@ the terms of the BSD license (see the COPYING file).
 
 #include "../data.hpp"
 
+#ifdef APPLE_BLAS
+#include <Accelerate/Accelerate.h>
+#else
 #include <blas.h>
+#endif
+
 #ifdef ENABLE_GPU
 #include "../datacu.hpp"
 #include <cublas_v2.h>
@@ -26,6 +31,17 @@ the terms of the BSD license (see the COPYING file).
 /* ---------------------------------------------------------------- */
 
 namespace vl { namespace impl {
+
+#ifdef APPLE_BLAS
+  static inline CBLAS_TRANSPOSE toaAppleTransposeFlag(char c) {
+    switch (c) {
+      case 'n': case 'N': return CblasNoTrans ;
+      case 't': case 'T': return CblasTrans ;
+      case 'c': case 'C': return CblasConjTrans ;
+      default: assert(false) ;
+    }
+  }
+#endif
 
 template<vl::DeviceType deviceType, vl::DataType dataType>
 struct blas
@@ -86,6 +102,17 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
        type beta,
        type * c, ptrdiff_t ldc)
   {
+#ifdef APPLE_BLAS
+    cblas_sgemm(CblasColMajor,
+                toaAppleTransposeFlag(op1),
+                toaAppleTransposeFlag(op2),
+                (int)m, (int)n, (int)k,
+                alpha,
+                (type*)a, (int)lda,
+                (type*)b, (int)ldb,
+                beta,
+                c, (int)ldc) ;
+#else
     sgemm(&op1, &op2,
           &m, &n, &k,
           &alpha,
@@ -93,6 +120,7 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
           (type*)b, &ldb,
           &beta,
           c, &ldc) ;
+#endif
     return vl::VLE_Success ;
   }
 
@@ -106,12 +134,23 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
        type beta,
        type * y, ptrdiff_t incy)
   {
+#ifdef APPLE_BLAS
+    cblas_sgemv(CblasColMajor,
+                toaAppleTransposeFlag(op),
+                (int)m, (int)n,
+                alpha,
+                (type*)a, (int)lda,
+                (type*)x, (int)incx,
+                beta,
+                y, (int)incy) ;
+#else
     sgemv(&op,
           &m, &n, &alpha,
-          (float*)a, &lda,
-          (float*)x, &incx,
+          (type*)a, &lda,
+          (type*)x, &incx,
           &beta,
           y, &incy) ;
+#endif
     return vl::VLE_Success ;
   }
 
@@ -122,10 +161,17 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
        type const *x, ptrdiff_t incx,
        type *y, ptrdiff_t incy)
   {
+#if defined(APPLE_BLAS)
+    cblas_saxpy((int)n,
+                alpha,
+                (type*)x, (int)incx,
+                (type*)y, (int)incy) ;
+#else
     saxpy(&n,
           &alpha,
-          (float*)x, &incx,
-          (float*)y, &incy) ;
+          (type*)x, &incx,
+          (type*)y, &incy) ;
+#endif
     return vl::VLE_Success ;
   }
 
@@ -135,10 +181,17 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
        type alpha,
        type *x, ptrdiff_t incx)
   {
+#if defined(APPLE_BLAS)
+    cblas_sscal((int)n,
+                alpha,
+                (type*)x, (int)incx) ;
+#else
     sscal(&n,
           &alpha,
-          (float*)x, &incx) ;
+          (type*)x, &incx) ;
+#endif
     return vl::VLE_Success ;
+
   }
 } ;
 
@@ -157,6 +210,17 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
        type beta,
        type * c, ptrdiff_t ldc)
   {
+#ifdef APPLE_BLAS
+    cblas_dgemm(CblasColMajor,
+                toaAppleTransposeFlag(op1),
+                toaAppleTransposeFlag(op2),
+                (int)m, (int)n, (int)k,
+                alpha,
+                (type*)a, (int)lda,
+                (type*)b, (int)ldb,
+                beta,
+                c, (int)ldc) ;
+#else
     dgemm(&op1, &op2,
           &m, &n, &k,
           &alpha,
@@ -164,6 +228,7 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
           (type*)b, &ldb,
           &beta,
           c, &ldc) ;
+#endif
     return vl::VLE_Success ;
   }
 
@@ -177,12 +242,23 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
        type beta,
        type * y, ptrdiff_t incy)
   {
+#ifdef APPLE_BLAS
+    cblas_dgemv(CblasColMajor,
+                toaAppleTransposeFlag(op),
+                (int)m, (int)n,
+                alpha,
+                (type*)a, (int)lda,
+                (type*)x, (int)incx,
+                beta,
+                y, (int)incy) ;
+#else
     dgemv(&op,
           &m, &n, &alpha,
           (type*)a, &lda,
           (type*)x, &incx,
           &beta,
           y, &incy) ;
+#endif
     return vl::VLE_Success ;
   }
 
@@ -193,10 +269,17 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
        type const *x, ptrdiff_t incx,
        type *y, ptrdiff_t incy)
   {
+#ifdef APPLE_BLAS
+    cblas_daxpy((int)n,
+                alpha,
+                (type*)x, (int)incx,
+                (type*)y, (int)incy) ;
+#else
     daxpy(&n,
           &alpha,
           (double*)x, &incx,
-          (double*)y, &incy) ;
+          (double*)y, &incy);
+#endif
     return vl::VLE_Success ;
   }
 
@@ -206,9 +289,15 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
        type alpha,
        type *x, ptrdiff_t incx)
   {
+#ifdef APPLE_BLAS
+    cblas_dscal((int)n,
+                alpha,
+                (type*)x, (int)incx) ;
+#else
     dscal(&n,
           &alpha,
           (double*)x, &incx) ;
+#endif
     return vl::VLE_Success ;
   }
 } ;

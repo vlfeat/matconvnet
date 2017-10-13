@@ -43,15 +43,15 @@ struct FullyConnectedForward
     type beta = 0 ;
 
     if (filter) {
-      ptrdiff_t filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+      auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
       if (input.getSize() == 1) {
         /* one image in the stack */
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.context,
          't',
-         filterVolume, filter.getSize(),
+         as_signed(filterVolume), as_signed(filter.getSize()),
          alpha,
-         (type const*)filter.getMemory(), filterVolume,
+         (type const*)filter.getMemory(), as_signed(filterVolume),
          (type const*)input.getMemory(), 1,
          beta,
          (type*)output.getMemory(), 1) ;
@@ -61,12 +61,14 @@ struct FullyConnectedForward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.context,
          't', 'n',
-         filter.getSize(), input.getSize(), filterVolume,
+         as_signed(filter.getSize()),
+         as_signed(input.getSize()),
+         as_signed(filterVolume),
          alpha,
-         (type const*)filter.getMemory(), filterVolume,
-         (type const*)input.getMemory(), filterVolume,
+         (type const*)filter.getMemory(), as_signed(filterVolume),
+         (type const*)input.getMemory(), as_signed(filterVolume),
          beta,
-         (type*)output.getMemory(), filter.getSize()) ;
+         (type*)output.getMemory(), as_signed(filter.getSize())) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     } else {
@@ -88,12 +90,12 @@ struct FullyConnectedForward
       }
       error = vl::impl::blas<deviceType,dataType>::gemm
       (op.context, 'n', 'n',
-       bias.getNumElements(), input.getSize(), 1,
+       as_signed(bias.getNumElements()), as_signed(input.getSize()), 1,
        alpha,
-       (type*)bias.getMemory(), bias.getNumElements(),
+       (type*)bias.getMemory(), as_signed(bias.getNumElements()),
        allOnesMemory, 1,
        beta,
-       (type*)output.getMemory(), bias.getNumElements()) ;
+       (type*)output.getMemory(), as_signed(bias.getNumElements())) ;
       if (error != vl::VLE_Success) { goto done ; }
     }
   done:
@@ -123,18 +125,20 @@ struct FullyConnectedBackward
     type beta = 0 ;
 
     if (filter) {
-      ptrdiff_t filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+      auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
 
       if (derFilter) {
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.context,
          'n', 't',
-         filterVolume, filter.getSize(), input.getSize(),
+         as_signed(filterVolume),
+         as_signed(filter.getSize()),
+         as_signed(input.getSize()),
          alpha,
-         (type*)input.getMemory(), filterVolume,
-         (type*)derOutput.getMemory(), filter.getSize(),
+         (type*)input.getMemory(), as_signed(filterVolume),
+         (type*)derOutput.getMemory(), as_signed(filter.getSize()),
          beta,
-         (type*)derFilter.getMemory(), filterVolume) ;
+         (type*)derFilter.getMemory(), as_signed(filterVolume)) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
 
@@ -142,12 +146,14 @@ struct FullyConnectedBackward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.context,
          'n', 'n',
-         filterVolume, input.getSize(), filter.getSize(),
+         as_signed(filterVolume),
+         as_signed(input.getSize()),
+         as_signed(filter.getSize()),
          alpha,
-         (type*)filter.getMemory(), filterVolume,
-         (type*)derOutput.getMemory(), filter.getSize(),
+         (type*)filter.getMemory(), as_signed(filterVolume),
+         (type*)derOutput.getMemory(), as_signed(filter.getSize()),
          beta,
-         (type*)derInput.getMemory(), filterVolume) ;
+         (type*)derInput.getMemory(), as_signed(filterVolume)) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     } else {
@@ -170,10 +176,12 @@ struct FullyConnectedBackward
       error = vl::impl::blas<deviceType, dataType>::gemm
       (op.context,
        'n', 't',
-       1, derOutput.getDepth(), derOutput.getSize(),
+       1,
+       as_signed(derOutput.getDepth()),
+       as_signed(derOutput.getSize()),
        alpha,
        (type*)allOnesMemory, 1,
-       (type*)derOutput.getMemory(), derOutput.getDepth(),
+       (type*)derOutput.getMemory(), as_signed(derOutput.getDepth()),
        beta,
        (type*)derBias.getMemory(), 1) ;
       if (error != vl::VLE_Success) { goto done ; }

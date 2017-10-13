@@ -118,7 +118,7 @@ struct ROIPoolingForwardCPU
     auto pooledData = (type*)pooled.getMemory() ;
 
     // For each ROI R = [t x1 y1 x2 y2].
-    for (int roi = 0; roi < numROIs; ++roi) {
+    for (int roi = 0; roi < (int)numROIs; ++roi) {
 
       // Apply scale and offset to each ROI coordinate.
       type u1_ = roisData[5 * roi + 1] ;
@@ -142,13 +142,14 @@ struct ROIPoolingForwardCPU
       int roi_width   = std::max(roi_end_w - roi_start_w + 1, 1) ;
 
       roi_image = std::min(std::max(roi_image - 1,0), (int)size - 1) ;
-      type const * data_offset = inputData + (roi_image * depth) * (width*height) ;
+      type const * data_offset = inputData + (roi_image * as_signed(depth))
+      * as_signed(width*height) ;
 
       type bin_size_h = (double)roi_height / op.subdivisions[0] ;
       type bin_size_w = (double)roi_width / op.subdivisions[1] ;
 
       // For each feature channel.
-      for (int z = 0; z < depth; ++z) {
+      for (int z = 0; z < as_signed(depth); ++z) {
 
         // For each column of tiles.
         for (int pw = 0; pw < op.subdivisions[1]; ++pw) {
@@ -173,7 +174,7 @@ struct ROIPoolingForwardCPU
               Accumulator acc(hend - hstart, wend - wstart) ;
               for (int w = wstart ; w < wend; ++w) {
                 for (int h = hstart ; h < hend; ++h) {
-                  const int index = w * height + h ;
+                  auto const index = w * as_signed(height) + h ;
                   acc.accumulate_forward(data_offset[index]) ;
                 }
               }
@@ -261,14 +262,14 @@ struct ROIPoolingBackwardCPU
       int roi_width = std::max(roi_end_w - roi_start_w + 1, 1) ;
 
       roi_image = std::min(std::max(roi_image - 1,0), (int)size - 1) ;
-      type const * data_offset = inputData + (roi_image * depth) * (width*height);
-      type * derInputData_offset = derInputData + (roi_image * depth) * (width*height);
+      type const * data_offset = inputData + roi_image * as_signed(depth*width*height) ;
+      type * derInputData_offset = derInputData + roi_image * as_signed(depth*width*height) ;
 
       const type bin_size_h = (double)roi_height / op.subdivisions[0] ;
       const type bin_size_w = (double)roi_width / op.subdivisions[1] ;
 
       // For each feature channel.
-      for (int z = 0; z < depth; ++z) {
+      for (int z = 0; z < (int)depth; ++z) {
 
         // For each column of tiles.
         for (int pw = 0; pw < op.subdivisions[1]; ++pw) {
@@ -287,7 +288,7 @@ struct ROIPoolingBackwardCPU
             Accumulator acc(hend - hstart, wend - wstart, *derOutputData++) ;
             for (int w = wstart; w < wend; ++w) {
               for (int h = hstart; h < hend; ++h) {
-                const int index = w * height + h ;
+                auto const index = w * as_signed(height) + h ;
                 acc.accumulate_backward(&data_offset[index],
                                         &derInputData_offset[index]) ;
               }

@@ -45,20 +45,20 @@ struct SubsampleForward<vl::VLDT_CPU, dataType>
     auto size = input.getSize() ;
     auto inputData = (type*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - 1)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - 1)/op.strideY + 1 ;
+    auto outputWidth = (as_signed(width) + (op.padLeft + op.padRight) - 1)/op.strideX + 1 ;
+    auto outputHeight = (as_signed(height) + (op.padTop + op.padBottom) - 1)/op.strideY + 1 ;
 
-    assert(outputWidth == output.getWidth()) ;
-    assert(outputHeight == output.getHeight()) ;
+    assert(outputWidth == as_signed(output.getWidth())) ;
+    assert(outputHeight == as_signed(output.getHeight())) ;
 
-    for (int z = 0; z < depth * size ; ++z) {
-      for (int x = 0; x < outputWidth; ++x) {
-        for (int y = 0; y < outputHeight; ++y) {
-          int x1 = x * (int)op.strideX - (int)op.padLeft ;
-          int y1 = y * (int)op.strideY - (int)op.padTop ;
+    for (size_t z = 0; z < depth * size ; ++z) {
+      for (ptrdiff_t x = 0; x < as_signed(outputWidth) ; ++x) {
+        for (ptrdiff_t y = 0; y < as_signed(outputHeight) ; ++y) {
+          auto x1 = x * op.strideX - op.padLeft ;
+          auto y1 = y * op.strideY - op.padTop ;
           type value = 0 ;
-          if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-            value = inputData[x1 * height + y1] ;
+          if (x1 >= 0 && x1 < as_signed(width) && y1 >= 0 && y1 < as_signed(height)) {
+            value = inputData[x1 * as_signed(height) + y1] ;
           }
           outputData[x * outputHeight + y] = value ;
         }
@@ -87,7 +87,7 @@ struct SubsampleAndBiasForward
     error = SubsampleForward<deviceType,dataType>()(op,output,input) ;
     if (error != VLE_Success) { return error ; }
 
-    ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
+    auto numOutputPixels = output.getHeight() * output.getWidth() ;
     type const* allOnesMemory = (type*) op.context.getAllOnes(deviceType, dataType, numOutputPixels) ;
 
     if (allOnesMemory == NULL) {
@@ -95,21 +95,20 @@ struct SubsampleAndBiasForward
       goto done ;
     }
 
-    for (int image = 0 ; image < input.getSize() ; ++image) {
-      ptrdiff_t dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
-      ptrdiff_t outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
+    for (size_t image = 0 ; image < input.getSize() ; ++image) {
+      auto outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
       if (biases) {
         type alpha = 1 ;
         type beta = 1 ;
         error = vl::impl::blas<deviceType, dataType>::gemm
         (op.context,
          'n', 'n',
-         numOutputPixels, biases.getNumElements(), 1,
+         numOutputPixels, as_signed(biases.getNumElements()), 1,
          alpha,
-         allOnesMemory, numOutputPixels,
+         allOnesMemory, as_signed(numOutputPixels),
          (type*)biases.getMemory(), 1,
          beta,
-         (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+         (type*)output.getMemory() + outputOffset, as_signed(numOutputPixels)) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     }
@@ -139,21 +138,22 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
     auto size = derInput.getSize() ;
     auto derInputData = (type*)derInput.getMemory() ;
     auto derOutputData = (type*)derOutput.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - 1)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - 1)/op.strideY + 1 ;
+    auto outputWidth = (as_signed(width) + (op.padLeft + op.padRight) - 1)/op.strideX + 1 ;
+    auto outputHeight = (as_signed(height) + (op.padTop + op.padBottom) - 1)/op.strideY + 1 ;
 
-    assert(outputWidth == derOutput.getWidth()) ;
-    assert(outputHeight == derOutput.getHeight()) ;
+    assert(outputWidth == as_signed(derOutput.getWidth())) ;
+    assert(outputHeight == as_signed(derOutput.getHeight())) ;
 
     memset(derInputData, 0, sizeof(type) * width * height * depth * size) ;
 
-    for (int z = 0; z < depth * size; ++z) {
-      for (int px = 0; px < outputWidth; ++px) {
-        for (int py = 0; py < outputHeight; ++py) {
-          int x1 = px * (int)op.strideX - (int)op.padLeft ;
-          int y1 = py * (int)op.strideY - (int)op.padTop ;
-          if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
-            derInputData[x1 * height + y1] = derOutputData[px * outputHeight + py] ;
+    for (size_t z = 0; z < depth * size; ++z) {
+      for (ptrdiff_t px = 0; px < outputWidth; ++px) {
+        for (ptrdiff_t py  = 0; py < outputHeight; ++py) {
+          auto x1 = px * op.strideX - op.padLeft ;
+          auto y1 = py * op.strideY - op.padTop ;
+          if (x1 >= 0 && x1 < as_signed(width) && y1 >= 0 && y1 < as_signed(height)) {
+            derInputData[x1 * as_signed(height) + y1]
+            = derOutputData[px * as_signed(outputHeight) + py] ;
           }
         }
       }
@@ -185,7 +185,7 @@ struct SubsampleAndBiasBackward
 
     // Compute derBiases.
     if (derBiases) {
-      ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
+      auto numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
       type const* allOnesMemory = (type*) op.context.getAllOnes(deviceType, dataType, numOutputPixels) ;
 
       if (allOnesMemory == NULL) {
@@ -193,16 +193,16 @@ struct SubsampleAndBiasBackward
         goto done ;
       }
 
-      for (int image = 0 ; image < derInput.getSize() ; ++image) {
-        ptrdiff_t derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+      for (size_t image = 0 ; image < derInput.getSize() ; ++image) {
+        auto derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
         type alpha = 1 ;
         type beta = (image > 0) ; // Avoids having to clear derOutputs first.
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.context,
          't',
-         numOutputPixels, derOutput.getDepth(),
+         as_signed(numOutputPixels), as_signed(derOutput.getDepth()),
          alpha,
-         (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
+         (type const*)derOutput.getMemory() + derOutputOffset, as_signed(numOutputPixels),
          allOnesMemory, 1,
          beta,
          (type*)derBiases.getMemory(), 1) ;

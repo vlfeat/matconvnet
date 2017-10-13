@@ -45,7 +45,6 @@ struct BiasForward
   {
     vl::ErrorCode error ;
     auto numOutputPixels = output.getHeight() * output.getWidth() ;
-    auto volume = output.getNumElements() ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
@@ -57,8 +56,8 @@ struct BiasForward
         error = op.context.getLastError() ; goto done ;
       }
 
-      for (int image = 0 ; image < output.getSize() ; ++image) {
-        ptrdiff_t outputOffset =
+      for (size_t image = 0 ; image < output.getSize() ; ++image) {
+        auto outputOffset =
         (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
 
         type alpha = outputMult ;
@@ -66,12 +65,13 @@ struct BiasForward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.context,
          'n', 'n',
-         numOutputPixels, bias.getNumElements(), 1,
+         as_signed(numOutputPixels), as_signed(bias.getNumElements()), 1,
          biasMult,
-         allOnesMemory, numOutputPixels,
+         allOnesMemory, as_signed(numOutputPixels),
          (type*)bias.getMemory(), 1,
          alpha,
-         (type*)output.getMemory() + outputOffset, numOutputPixels) ;
+         (type*)output.getMemory() + outputOffset,
+         as_signed(numOutputPixels)) ;
         if (error != VLE_Success) { goto done ; }
       }
     }
@@ -84,7 +84,7 @@ struct BiasForward
     // Add inputMult * input.
     if (input && inputMult != 0) {
       error = vl::impl::blas<deviceType,dataType>::axpy
-      (op.context,output.getNumElements(),
+      (op.context,as_signed(output.getNumElements()),
        inputMult,(type const*)input.getMemory(),1,
        (type*)output.getMemory(),1) ;
       if (error != VLE_Success) { goto done ; }
@@ -112,7 +112,7 @@ struct BiasBackward
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    ptrdiff_t numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
+    auto numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
 
     // Sratch space.
     type const* allOnesMemory = NULL ;
@@ -128,16 +128,17 @@ struct BiasBackward
     if (derBias) {
       // Sum derOutput along the broadcast dimensions. These
       // are x,y, and image.
-      for (int image = 0 ; image < derOutput.getSize() ; ++image) {
-        ptrdiff_t derOutputOffset =
+      for (size_t image = 0 ; image < derOutput.getSize() ; ++image) {
+        auto derOutputOffset =
         (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
 
         error = vl::impl::blas<deviceType,dataType>::
         gemv(op.context,
              't',
-             numOutputPixels, derOutput.getDepth(),
+             as_signed(numOutputPixels),
+             as_signed(derOutput.getDepth()),
              biasMult, // alpha
-             (type*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
+             (type*)derOutput.getMemory() + derOutputOffset, as_signed(numOutputPixels),
              allOnesMemory, 1,
              (image == 0) ? derBiasMult : 1.0, // beta
              (type*)derBias.getMemory(), 1) ;
@@ -163,7 +164,7 @@ struct BiasBackward
 
       // Add.
       error = vl::impl::blas<deviceType,dataType>::
-      axpy(op.context,derInput.getNumElements(),
+      axpy(op.context,as_signed(derInput.getNumElements()),
            inputMult,(type const*)derOutput.getMemory(),1,
            (type*)derInput.getMemory(),1) ;
       if (error != VLE_Success) { goto done ; }

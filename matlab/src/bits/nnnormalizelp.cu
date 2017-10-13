@@ -35,27 +35,27 @@ struct VisitPattern
 {
   std::vector<ptrdiff_t> steps ;
   std::vector<ptrdiff_t> stepPeriods ;
-  size_t normsVolume ;
-  size_t inputVolume ;
+  ptrdiff_t normsVolume ;
+  ptrdiff_t inputVolume ;
 } ;
 
 VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 {
   // Compute tensor geometry.
-  int n = input.getNumDimensions() ;
+  auto n = input.getNumDimensions() ;
   auto inputDimensions = std::vector<size_t>(input.getDimensions(),
                                              input.getDimensions() + n) ;
 
   assert(n <= 4) ; // Todo: relax (just extend the for loops below).
 
-  size_t inputVolume = 1 ;
-  size_t normsVolume = 1 ;
+  ptrdiff_t inputVolume = 1 ;
+  ptrdiff_t normsVolume = 1 ;
   auto steps = std::vector<ptrdiff_t>(n+1,0) ;
   auto stepPeriods = std::vector<ptrdiff_t>(n+1,0) ;
 
   // Find out how to traverse the reduced results as the input is
   // scanned from first to last element.
-  for (int d = 0 ; d < n ; ++d) {
+  for (size_t d = 0 ; d < n ; ++d) {
     stepPeriods[d] = inputVolume ;
 
     bool squashed =
@@ -73,20 +73,20 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
   stepPeriods[n] = inputVolume ;
 
   // Simplify traversal.
-  for (int d = 0 ; d < steps.size() - 2 ; ) {
+  for (size_t d = 0 ; d + 2 < steps.size() ; ) {
     if (steps[d] == 0 && steps[d+1] == 0) {
-      steps.erase(steps.begin() + d) ;
-      stepPeriods.erase(stepPeriods.begin() + d+1) ;
+      steps.erase(steps.begin() + as_signed(d)) ;
+      stepPeriods.erase(stepPeriods.begin() + as_signed(d) + 1) ;
     } else {
       ++ d ;
     }
   }
 
   // Make it suitable for more efficient loops.
-  for (int d = steps.size()-1 ; d >= 1 ; --d) {
-    stepPeriods[d] /= stepPeriods[d - 1] ;
+  for (auto d = as_signed(steps.size()) - 1 ; d >= 1 ; --d) {
+    stepPeriods[as_unsigned(d)] /= stepPeriods[as_unsigned(d) - 1] ;
   }
-  for (int d = steps.size() ; d < 5 ; ++d) {
+  for (auto d = as_signed(steps.size()) ; d < 5 ; ++d) {
     steps.push_back(0) ;
     stepPeriods.push_back(1) ;
   }
@@ -104,7 +104,7 @@ void computeNorms(NormalizeLp const & op,
                   type * normsData, type const * inputData, VisitPattern vp)
 {
   // Clear norms.
-  memset(normsData, 0, vp.normsVolume * sizeof(type)) ;
+  memset(normsData, 0, as_unsigned(vp.normsVolume) * sizeof(type)) ;
 
   // Accumulate norm.
   auto npt = normsData ;
@@ -155,7 +155,7 @@ struct NormalizeLpForwardCPU
     type * normsData ;
     bool normsDataIsOwner = false ;
     if (norms) { normsData = (type*)norms.getMemory() ; }
-    else { normsData = new type [vp.normsVolume] ; normsDataIsOwner = true ; }
+    else { normsData = new type [as_unsigned(vp.normsVolume)] ; normsDataIsOwner = true ; }
 
     // Compute norm if needed.
     if (!givenNorms) {
@@ -226,7 +226,7 @@ struct NormalizeLpBackwardCPU
     type * normsData ;
     bool normsDataIsOwner = false ;
     if (norms) { normsData = (type*)norms.getMemory() ; }
-    else { normsData = new type [vp.normsVolume] ; normsDataIsOwner = true ; }
+    else { normsData = new type [as_unsigned(vp.normsVolume)] ; normsDataIsOwner = true ; }
 
     // Compute norms if given.
     if (!givenNorms) {
@@ -234,7 +234,7 @@ struct NormalizeLpBackwardCPU
     }
 
     // Compute sum(derOutput .* input).
-    type * scratchData = new type [vp.normsVolume] () ; // zeros
+    type * scratchData = new type [as_unsigned(vp.normsVolume)] () ; // zeros
     {
       auto ipt = inputData ;
       auto dopt = derOutputData ;
@@ -329,8 +329,8 @@ vl::TensorShape
 NormalizeLp::getNormsShapeForData(vl::Tensor const &data)
 {
   vl::TensorShape shape(data) ;
-  int n = shape.getNumDimensions() ;
-  for (int d = 0 ; d < n ; ++d) {
+  auto n = shape.getNumDimensions() ;
+  for (size_t d = 0 ; d < n ; ++d) {
     bool squashed =
     (find(selectedDimensions.begin(), selectedDimensions.end(), d) !=
      selectedDimensions.end()) ;

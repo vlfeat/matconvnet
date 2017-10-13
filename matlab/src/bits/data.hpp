@@ -67,6 +67,20 @@ namespace vl {
     VLDT_Double
   } ;
 
+  /// Convert unsigned data to signed.
+  template<typename T>
+  static inline typename std::make_signed<T>::type as_signed(T x)
+  {
+    return static_cast<typename std::make_signed<T>::type >(x) ;
+  }
+
+  /// Convert unsigned data to unsigned.
+  template<typename T>
+  static inline typename std::make_unsigned<T>::type as_unsigned(T x)
+  {
+    return static_cast<typename std::make_unsigned<T>::type >(x) ;
+  }
+
   template <vl::DataType dataType> struct DataTypeTraits { } ;
   template <> struct DataTypeTraits<VLDT_Char> {
     typedef char type ;

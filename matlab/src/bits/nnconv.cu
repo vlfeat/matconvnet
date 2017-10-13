@@ -86,11 +86,11 @@ struct ConvolutionForward
     vl::ErrorCode error ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
-    ptrdiff_t numGroups = input.getDepth() / filter.getDepth() ;
-    ptrdiff_t numFiltersPerGroup = filter.getSize() / numGroups ;
-    ptrdiff_t numOutputPixels = output.getHeight() * output.getWidth() ;
-    ptrdiff_t filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
-    ptrdiff_t tempVolume = numOutputPixels * filterVolume * numGroups ;
+    auto numGroups = input.getDepth() / filter.getDepth() ;
+    auto numFiltersPerGroup = filter.getSize() / numGroups ;
+    auto numOutputPixels = output.getHeight() * output.getWidth() ;
+    auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+    auto tempVolume = numOutputPixels * filterVolume * numGroups ;
 
     type* tempMemory = (type*) op.context.getWorkspace(deviceType, tempVolume * sizeof(type)) ;
     type const* allOnesMemory = (type*) op.context.getAllOnes(deviceType,
@@ -101,10 +101,10 @@ struct ConvolutionForward
       goto done ;
     }
 
-    for (int image = 0 ; image < input.getSize() ; ++image) {
+    for (size_t image = 0 ; image < input.getSize() ; ++image) {
 
-      ptrdiff_t dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
-      ptrdiff_t outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
+      auto dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
+      auto outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
 
       error = vl::impl::im2row<deviceType,type>::forward
       (op.context,
@@ -112,8 +112,12 @@ struct ConvolutionForward
        (type*)input.getMemory() + dataOffset,
        input.getHeight(), input.getWidth(), input.getDepth(),
        filter.getHeight(), filter.getWidth(),
-       op.strideY, op.strideX,
-       op.padTop, op.padBottom, op.padLeft, op.padRight,
+       as_unsigned(op.strideY),
+       as_unsigned(op.strideX),
+       as_unsigned(op.padTop),
+       as_unsigned(op.padBottom),
+       as_unsigned(op.padLeft),
+       as_unsigned(op.padRight),
        op.dilateY, op.dilateX) ;
       if (error != vl::VLE_Success) { goto done ; }
 

@@ -54,11 +54,11 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
 
   // intermediate buffer
   char unsigned * pixels = NULL ;
-  int bytesPerPixel ;
-  int bytesPerRow ;
+  size_t bytesPerPixel = 0 ;
+  size_t bytesPerRow = 0 ;
 
   // Core graphics
-  CGBitmapInfo bitmapInfo ;
+  CGBitmapInfo bitmapInfo = NULL ;
   CFURLRef url = NULL ;
   CGImageSourceRef imageSourceRef = NULL ;
   CGImageRef imageRef = NULL ;
@@ -73,7 +73,8 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
   shape.depth = 0 ;
 
   // get file
-  url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)fileName, strlen(fileName), false) ;
+  url = CFURLCreateFromFileSystemRepresentation
+  (kCFAllocatorDefault,(const UInt8 *)fileName, (CFIndex)strlen(fileName), false) ;
   check(url) ;
 
   // get image source from file
@@ -103,7 +104,7 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
     case 3:
       colorSpaceRef = CGColorSpaceCreateDeviceRGB();
       bytesPerPixel = 4 ;
-      bitmapInfo = kCGImageAlphaPremultipliedLast || kCGBitmapByteOrder32Big ;
+      bitmapInfo = kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big ;
       /* this means
        pixels[0] = R
        pixels[1] = G
@@ -155,9 +156,6 @@ vl::ImageReader::readShape(vl::ImageShape & shape, const char * fileName)
 {
   vl::ErrorCode error = vl::VLE_Success ;
 
-  // intermediate buffer
-  char unsigned * rgba = NULL ;
-
   // Core graphics
   CFURLRef url = NULL ;
   CGImageSourceRef imageSourceRef = NULL ;
@@ -168,7 +166,8 @@ vl::ImageReader::readShape(vl::ImageShape & shape, const char * fileName)
   shape.clear() ;
 
   // get file
-  url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)fileName, strlen(fileName), false) ;
+  url = CFURLCreateFromFileSystemRepresentation
+  (kCFAllocatorDefault, (const UInt8 *)fileName, (CFIndex)strlen(fileName), false) ;
   check(url) ;
 
   // get image source from file

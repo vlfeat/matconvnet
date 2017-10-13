@@ -33,6 +33,26 @@
 		2DA349B51A83FC2C0073185F /* nnfullyconnected.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DA349B31A83FC2C0073185F /* nnfullyconnected.hpp */; };
 		2DA349BC1A86C5210073185F /* nnsubsample.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2DA349BA1A86C5210073185F /* nnsubsample.cu */; };
 		2DA349BD1A86C5210073185F /* nnsubsample.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DA349BB1A86C5210073185F /* nnsubsample.hpp */; };
+		2DB06DDF1F91118000BDB89B /* mcnlib_cpu.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DB06DDE1F91118000BDB89B /* mcnlib_cpu.hpp */; };
+		2DB06DE11F91118000BDB89B /* mcnlib_cpuPriv.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DB06DE01F91118000BDB89B /* mcnlib_cpuPriv.hpp */; };
+		2DB06DE31F91118000BDB89B /* mcnlib_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DB06DE21F91118000BDB89B /* mcnlib_cpu.cpp */; };
+		2DB06DE71F91121B00BDB89B /* copy_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */; };
+		2DB06DE81F91121B00BDB89B /* im2row_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D479D0D1A88AF4300826D48 /* im2row_cpu.cpp */; };
+		2DB06DEB1F91121B00BDB89B /* imread_quartz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */; };
+		2DB06DEC1F91121B00BDB89B /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D19E6761AB20B2900D4FF0C /* tinythread.cpp */; };
+		2DB06DED1F91121B00BDB89B /* data.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D528B9A1A8284C6006EC40A /* data.cpp */; };
+		2DB06DEF1F91121B00BDB89B /* imread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF897C01C4182CE002C7EB9 /* imread.cpp */; };
+		2DB06DF01F91121B00BDB89B /* nnbias.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D14F00B1B02AB9800A8F33D /* nnbias.cpp */; };
+		2DB06DF11F91121B00BDB89B /* nnbilinearsampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7A6F731D8C5377008F8B22 /* nnbilinearsampler.cpp */; };
+		2DB06DF21F91121B00BDB89B /* nnbnorm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D80792D1AEF94650040BC14 /* nnbnorm.cpp */; };
+		2DB06DF31F91121B00BDB89B /* nnconv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7B11371A8AC8A700A3D8A0 /* nnconv.cpp */; };
+		2DB06DF41F91121B00BDB89B /* nnfullyconnected.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7B11331A8AC81E00A3D8A0 /* nnfullyconnected.cpp */; };
+		2DB06DF51F91121B00BDB89B /* nnnormalize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7B11391A8BDB3C00A3D8A0 /* nnnormalize.cpp */; };
+		2DB06DF61F91121B00BDB89B /* nnnormalizelp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D9AFE491EBE3EA90084B95F /* nnnormalizelp.cpp */; };
+		2DB06DF71F91121B00BDB89B /* nnpooling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7B11311A88F12000A3D8A0 /* nnpooling.cpp */; };
+		2DB06DF81F91121B00BDB89B /* nnroipooling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7A6F6E1D8C5377008F8B22 /* nnroipooling.cpp */; };
+		2DB06DF91F91121B00BDB89B /* nnsubsample.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D7B11351A8AC85300A3D8A0 /* nnsubsample.cpp */; };
+		2DB06DFC1F9112E100BDB89B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2DB06DFB1F9112E100BDB89B /* Accelerate.framework */; };
 		2DE27163197A5531001768CA /* vl_imreadjpeg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DE27162197A5531001768CA /* vl_imreadjpeg.cpp */; };
 		2DF07B701AAB7A5C001A3943 /* imread_quartz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */; };
 		2DF07B721AAB9160001A3943 /* imread_libjpeg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */; };
@@ -56,7 +76,7 @@
 /* Begin PBXFileReference section */
 		2D0958DA1C3A938500553C8A /* cudnnhelper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = cudnnhelper.hpp; path = matlab/src/bits/impl/cudnnhelper.hpp; sourceTree = "<group>"; };
 		2D0FBD441D04116E0081FA19 /* vl_cudatool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_cudatool.cu; path = matlab/src/vl_cudatool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		2D14F0071B02AB5700A8F33D /* nnbias.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias.cu; path = matlab/src/bits/nnbias.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D14F0071B02AB5700A8F33D /* nnbias.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias.cu; path = matlab/src/bits/nnbias.cu; sourceTree = "<group>"; };
 		2D14F0081B02AB5700A8F33D /* nnbias.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbias.hpp; path = matlab/src/bits/nnbias.hpp; sourceTree = "<group>"; };
 		2D14F00B1B02AB9800A8F33D /* nnbias.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbias.cpp; path = matlab/src/bits/nnbias.cpp; sourceTree = "<group>"; };
 		2D16767D1AB5AF6000CC738D /* imread_helpers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = imread_helpers.hpp; path = matlab/src/bits/impl/imread_helpers.hpp; sourceTree = "<group>"; };
@@ -75,7 +95,7 @@
 		2D1FE19F1F39128400EEFFD0 /* vl_tmove.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_tmove.m; path = matlab/vl_tmove.m; sourceTree = "<group>"; };
 		2D1FE1A01F39128400EEFFD0 /* vl_tshow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_tshow.m; path = matlab/vl_tshow.m; sourceTree = "<group>"; };
 		2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = copy_cpu.cpp; path = matlab/src/bits/impl/copy_cpu.cpp; sourceTree = "<group>"; };
-		2D2FBAC11EC309F8001039FA /* nnbnorm_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm_cudnn.cu; path = matlab/src/bits/nnbnorm_cudnn.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D2FBAC11EC309F8001039FA /* nnbnorm_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm_cudnn.cu; path = matlab/src/bits/nnbnorm_cudnn.cu; sourceTree = "<group>"; };
 		2D2FBAC21EC309F8001039FA /* nnbnorm_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm_gpu.cu; path = matlab/src/bits/nnbnorm_gpu.cu; sourceTree = "<group>"; };
 		2D3492D31EC3C5BF00D9ED38 /* nnsubsample_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnsubsample_gpu.cu; path = matlab/src/bits/nnsubsample_gpu.cu; sourceTree = "<group>"; };
 		2D3492D41EC472FA00D9ED38 /* nnbias_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbias_cudnn.cu; path = matlab/src/bits/nnbias_cudnn.cu; sourceTree = "<group>"; };
@@ -117,29 +137,29 @@
 		2D479D0C1A88AF4300826D48 /* im2row_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = im2row_gpu.cu; path = matlab/src/bits/impl/im2row_gpu.cu; sourceTree = "<group>"; };
 		2D479D0D1A88AF4300826D48 /* im2row_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = im2row_cpu.cpp; path = matlab/src/bits/impl/im2row_cpu.cpp; sourceTree = "<group>"; };
 		2D479D0E1A88AF4300826D48 /* im2row.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = im2row.hpp; path = matlab/src/bits/impl/im2row.hpp; sourceTree = "<group>"; };
-		2D47A19C1A88CB0900826D48 /* datacu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datacu.cu; path = matlab/src/bits/datacu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D47A19C1A88CB0900826D48 /* datacu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datacu.cu; path = matlab/src/bits/datacu.cu; sourceTree = "<group>"; };
 		2D47A19D1A88CB0900826D48 /* datacu.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = datacu.hpp; path = matlab/src/bits/datacu.hpp; sourceTree = "<group>"; };
 		2D4DFB501EC5A52B000E5BD9 /* nnconv_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnconv_cudnn.cu; path = matlab/src/bits/nnconv_cudnn.cu; sourceTree = "<group>"; };
 		2D4DFB511EC5B8D8000E5BD9 /* nnbilinearsampler_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler_cudnn.cu; path = matlab/src/bits/nnbilinearsampler_cudnn.cu; sourceTree = "<group>"; };
 		2D4DFB521EC5B8D8000E5BD9 /* nnbilinearsampler_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler_gpu.cu; path = matlab/src/bits/nnbilinearsampler_gpu.cu; sourceTree = "<group>"; };
 		2D4E88271C37FAB80074DDEE /* sharedmem.cuh */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = sharedmem.cuh; path = matlab/src/bits/impl/sharedmem.cuh; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D528B9A1A8284C6006EC40A /* data.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = data.cpp; path = matlab/src/bits/data.cpp; sourceTree = "<group>"; };
-		2D528B9B1A8284C6006EC40A /* data.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = data.cu; path = matlab/src/bits/data.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D528B9B1A8284C6006EC40A /* data.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = data.cu; path = matlab/src/bits/data.cu; sourceTree = "<group>"; };
 		2D528B9C1A8284C6006EC40A /* data.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; lineEnding = 0; name = data.hpp; path = matlab/src/bits/data.hpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D528B9D1A8284C6006EC40A /* datamex.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datamex.cpp; path = matlab/src/bits/datamex.cpp; sourceTree = "<group>"; };
-		2D528B9E1A8284C6006EC40A /* datamex.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datamex.cu; path = matlab/src/bits/datamex.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D528B9E1A8284C6006EC40A /* datamex.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = datamex.cu; path = matlab/src/bits/datamex.cu; sourceTree = "<group>"; };
 		2D528B9F1A8284C6006EC40A /* datamex.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = datamex.hpp; path = matlab/src/bits/datamex.hpp; sourceTree = "<group>"; };
 		2D528BA41A8284C6006EC40A /* mexutils.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = mexutils.h; path = matlab/src/bits/mexutils.h; sourceTree = "<group>"; };
-		2D528BB11A8284FA006EC40A /* nnconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnconv.cu; path = matlab/src/bits/nnconv.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D528BB11A8284FA006EC40A /* nnconv.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnconv.cu; path = matlab/src/bits/nnconv.cu; sourceTree = "<group>"; };
 		2D528BB21A8284FA006EC40A /* nnconv.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = nnconv.hpp; path = matlab/src/bits/nnconv.hpp; sourceTree = "<group>"; };
 		2D5C34D519745588002B399E /* vl_nnpool.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnpool.m; path = matlab/vl_nnpool.m; sourceTree = "<group>"; };
 		2D63B5CC1BFB3EC700B356CC /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = "<group>"; };
 		2D63B5CE1BFB403300B356CC /* vl_simplenn_tidy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_simplenn_tidy.m; path = matlab/simplenn/vl_simplenn_tidy.m; sourceTree = "<group>"; };
 		2D6541BD1EC09CA6006E856E /* dispatcher.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = dispatcher.hpp; path = matlab/src/bits/impl/dispatcher.hpp; sourceTree = "<group>"; };
-		2D6541BF1EC0ADBC006E856E /* nnnormalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalize_gpu.cu; path = matlab/src/bits/nnnormalize_gpu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		2D6541C01EC1B665006E856E /* nnroipooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnroipooling_gpu.cu; path = matlab/src/bits/nnroipooling_gpu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D6541BF1EC0ADBC006E856E /* nnnormalize_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalize_gpu.cu; path = matlab/src/bits/nnnormalize_gpu.cu; sourceTree = "<group>"; };
+		2D6541C01EC1B665006E856E /* nnroipooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnroipooling_gpu.cu; path = matlab/src/bits/nnroipooling_gpu.cu; sourceTree = "<group>"; };
 		2D6541C11EC1F389006E856E /* nnpooling_cudnn.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnpooling_cudnn.cu; path = matlab/src/bits/nnpooling_cudnn.cu; sourceTree = "<group>"; };
-		2D6541C21EC1F389006E856E /* nnpooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnpooling_gpu.cu; path = matlab/src/bits/nnpooling_gpu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D6541C21EC1F389006E856E /* nnpooling_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnpooling_gpu.cu; path = matlab/src/bits/nnpooling_gpu.cu; sourceTree = "<group>"; };
 		2D67FEB01D1F397B00345CFD /* nndagnn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nndagnn.m; path = matlab/xtest/suite/nndagnn.m; sourceTree = "<group>"; };
 		2D67FEB11D1F397B00345CFD /* nnmnist.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnmnist.m; path = matlab/xtest/suite/nnmnist.m; sourceTree = "<group>"; };
 		2D67FEB21D1F397B00345CFD /* nnnormalizelp.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnnormalizelp.m; path = matlab/xtest/suite/nnnormalizelp.m; sourceTree = "<group>"; };
@@ -220,29 +240,29 @@
 		2D7A6F6F1D8C5377008F8B22 /* nnroipooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnroipooling.hpp; path = matlab/src/bits/nnroipooling.hpp; sourceTree = "<group>"; };
 		2D7A6F721D8C5377008F8B22 /* vl_nnroipool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnroipool.cpp; path = matlab/src/vl_nnroipool.cpp; sourceTree = "<group>"; };
 		2D7A6F731D8C5377008F8B22 /* nnbilinearsampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbilinearsampler.cpp; path = matlab/src/bits/nnbilinearsampler.cpp; sourceTree = "<group>"; };
-		2D7A6F741D8C53D0008F8B22 /* nnroipooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnroipooling.cu; path = matlab/src/bits/nnroipooling.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D7A6F741D8C53D0008F8B22 /* nnroipooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnroipooling.cu; path = matlab/src/bits/nnroipooling.cu; sourceTree = "<group>"; };
 		2D7A6F761D8C53D0008F8B22 /* vl_nnroipool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnroipool.cu; path = matlab/src/vl_nnroipool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D7A6F771D8C58B4008F8B22 /* vl_nnroipool.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnroipool.m; path = matlab/vl_nnroipool.m; sourceTree = "<group>"; };
-		2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling.cu; path = matlab/src/bits/nnpooling.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling.cu; path = matlab/src/bits/nnpooling.cu; sourceTree = "<group>"; };
 		2D7B112E1A88F0FF00A3D8A0 /* nnpooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnpooling.hpp; path = matlab/src/bits/nnpooling.hpp; sourceTree = "<group>"; };
 		2D7B11311A88F12000A3D8A0 /* nnpooling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnpooling.cpp; path = matlab/src/bits/nnpooling.cpp; sourceTree = "<group>"; };
 		2D7B11331A8AC81E00A3D8A0 /* nnfullyconnected.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnfullyconnected.cpp; path = matlab/src/bits/nnfullyconnected.cpp; sourceTree = "<group>"; };
 		2D7B11351A8AC85300A3D8A0 /* nnsubsample.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnsubsample.cpp; path = matlab/src/bits/nnsubsample.cpp; sourceTree = "<group>"; };
 		2D7B11371A8AC8A700A3D8A0 /* nnconv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnconv.cpp; path = matlab/src/bits/nnconv.cpp; sourceTree = "<group>"; };
 		2D7B11391A8BDB3C00A3D8A0 /* nnnormalize.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnnormalize.cpp; path = matlab/src/bits/nnnormalize.cpp; sourceTree = "<group>"; };
-		2D7B113A1A8BDB3C00A3D8A0 /* nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnnormalize.cu; path = matlab/src/bits/nnnormalize.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D7B113A1A8BDB3C00A3D8A0 /* nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnnormalize.cu; path = matlab/src/bits/nnnormalize.cu; sourceTree = "<group>"; };
 		2D7B113B1A8BDB3C00A3D8A0 /* nnnormalize.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnnormalize.hpp; path = matlab/src/bits/nnnormalize.hpp; sourceTree = "<group>"; };
 		2D7E91AC1F3B3000009B575D /* theme */ = {isa = PBXFileReference; lastKnownFileType = folder; name = theme; path = doc/site/theme; sourceTree = "<group>"; };
 		2D80792D1AEF94650040BC14 /* nnbnorm.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbnorm.cpp; path = matlab/src/bits/nnbnorm.cpp; sourceTree = "<group>"; };
-		2D80792E1AEF94650040BC14 /* nnbnorm.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm.cu; path = matlab/src/bits/nnbnorm.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D80792E1AEF94650040BC14 /* nnbnorm.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbnorm.cu; path = matlab/src/bits/nnbnorm.cu; sourceTree = "<group>"; };
 		2D80792F1AEF94650040BC14 /* nnbnorm.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbnorm.hpp; path = matlab/src/bits/nnbnorm.hpp; sourceTree = "<group>"; };
 		2D8079301AEF94860040BC14 /* vl_nnbnorm.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnbnorm.cpp; path = matlab/src/vl_nnbnorm.cpp; sourceTree = "<group>"; };
 		2D8079311AEF94860040BC14 /* vl_nnbnorm.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnbnorm.cu; path = matlab/src/vl_nnbnorm.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		2D91CFC01EBFA8B600CB064D /* nnnormalizelp_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalizelp_gpu.cu; path = matlab/src/bits/nnnormalizelp_gpu.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D91CFC01EBFA8B600CB064D /* nnnormalizelp_gpu.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalizelp_gpu.cu; path = matlab/src/bits/nnnormalizelp_gpu.cu; sourceTree = "<group>"; };
 		2D9AFE471EBE3A6D0084B95F /* vl_nnnormalizelp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_nnnormalizelp.cpp; path = matlab/src/vl_nnnormalizelp.cpp; sourceTree = "<group>"; };
 		2D9AFE481EBE3A6D0084B95F /* vl_nnnormalizelp.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnnormalizelp.cu; path = matlab/src/vl_nnnormalizelp.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D9AFE491EBE3EA90084B95F /* nnnormalizelp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnnormalizelp.cpp; path = matlab/src/bits/nnnormalizelp.cpp; sourceTree = "<group>"; };
-		2D9AFE4A1EBE3EA90084B95F /* nnnormalizelp.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalizelp.cu; path = matlab/src/bits/nnnormalizelp.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2D9AFE4A1EBE3EA90084B95F /* nnnormalizelp.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnnormalizelp.cu; path = matlab/src/bits/nnnormalizelp.cu; sourceTree = "<group>"; };
 		2D9AFE4B1EBE3EA90084B95F /* nnnormalizelp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnnormalizelp.hpp; path = matlab/src/bits/nnnormalizelp.hpp; sourceTree = "<group>"; };
 		2D9BC77C1D0ECDE400EC9F94 /* vl_taccummex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_taccummex.cpp; path = matlab/src/vl_taccummex.cpp; sourceTree = "<group>"; };
 		2D9BC77D1D0ECDE400EC9F94 /* vl_taccummex.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_taccummex.cu; path = matlab/src/vl_taccummex.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -260,6 +280,11 @@
 		2DA761D71CCD28BA00265BD8 /* nnbilinearsampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = nnbilinearsampler.m; path = matlab/xtest/suite/nnbilinearsampler.m; sourceTree = "<group>"; };
 		2DA761D81CCD297400265BD8 /* spatial-transformer.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = "spatial-transformer.md"; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
+		2DB06DDC1F91118000BDB89B /* libmcn-lib-cpu.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libmcn-lib-cpu.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2DB06DDE1F91118000BDB89B /* mcnlib_cpu.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mcnlib_cpu.hpp; sourceTree = "<group>"; };
+		2DB06DE01F91118000BDB89B /* mcnlib_cpuPriv.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mcnlib_cpuPriv.hpp; sourceTree = "<group>"; };
+		2DB06DE21F91118000BDB89B /* mcnlib_cpu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mcnlib_cpu.cpp; sourceTree = "<group>"; };
+		2DB06DFB1F9112E100BDB89B /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.13.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		2DD177081D31760000B0A17E /* vl_cudatool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_cudatool.cpp; path = matlab/src/vl_cudatool.cpp; sourceTree = "<group>"; };
 		2DD177091D31760000B0A17E /* vl_imreadjpeg_old.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_imreadjpeg_old.cpp; path = matlab/src/vl_imreadjpeg_old.cpp; sourceTree = "<group>"; };
 		2DD1770A1D31760000B0A17E /* vl_imreadjpeg_old.cu */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = vl_imreadjpeg_old.cu; path = matlab/src/vl_imreadjpeg_old.cu; sourceTree = "<group>"; };
@@ -274,7 +299,7 @@
 		2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imread_libjpeg.cpp; path = matlab/src/bits/impl/imread_libjpeg.cpp; sourceTree = "<group>"; };
 		2DF0C6211CB54C3E005BEF89 /* vl_nnbilinearsampler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = vl_nnbilinearsampler.m; path = matlab/vl_nnbilinearsampler.m; sourceTree = "<group>"; };
 		2DF0C6221CB54CA8005BEF89 /* vl_nnbilinearsampler.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_nnbilinearsampler.cu; path = matlab/src/vl_nnbilinearsampler.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		2DF0C6231CB54CBA005BEF89 /* nnbilinearsampler.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler.cu; path = matlab/src/bits/nnbilinearsampler.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		2DF0C6231CB54CBA005BEF89 /* nnbilinearsampler.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = nnbilinearsampler.cu; path = matlab/src/bits/nnbilinearsampler.cu; sourceTree = "<group>"; };
 		2DF0C6241CB54CBA005BEF89 /* nnbilinearsampler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbilinearsampler.hpp; path = matlab/src/bits/nnbilinearsampler.hpp; sourceTree = "<group>"; };
 		2DF145CF18AA61BD00D920BA /* vl_nnpool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnpool.cu; path = matlab/src/vl_nnpool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2DF61A991AB5925900ED9A1F /* vl_imreadjpeg.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = vl_imreadjpeg.cu; path = matlab/src/vl_imreadjpeg.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -289,6 +314,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2DB06DD91F91118000BDB89B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2DB06DFC1F9112E100BDB89B /* Accelerate.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -300,7 +333,9 @@
 				2D375DBD18A7F796008A97EE /* src */,
 				2DD3FACA18EC0E4C00053032 /* matlab */,
 				2D63B5CC1BFB3EC700B356CC /* examples */,
+				2DB06DDD1F91118000BDB89B /* mcnlib-cpu */,
 				2D375DC418A7FD1C008A97EE /* Products */,
+				2DB06DFA1F9112E000BDB89B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -343,6 +378,7 @@
 			isa = PBXGroup;
 			children = (
 				2D375DC318A7FD1C008A97EE /* libgconv.dylib */,
+				2DB06DDC1F91118000BDB89B /* libmcn-lib-cpu.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -605,6 +641,24 @@
 			name = doc;
 			sourceTree = "<group>";
 		};
+		2DB06DDD1F91118000BDB89B /* mcnlib-cpu */ = {
+			isa = PBXGroup;
+			children = (
+				2DB06DDE1F91118000BDB89B /* mcnlib_cpu.hpp */,
+				2DB06DE01F91118000BDB89B /* mcnlib_cpuPriv.hpp */,
+				2DB06DE21F91118000BDB89B /* mcnlib_cpu.cpp */,
+			);
+			path = "mcnlib-cpu";
+			sourceTree = "<group>";
+		};
+		2DB06DFA1F9112E000BDB89B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2DB06DFB1F9112E100BDB89B /* Accelerate.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		2DD3FACA18EC0E4C00053032 /* matlab */ = {
 			isa = PBXGroup;
 			children = (
@@ -670,48 +724,57 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2DB06DDA1F91118000BDB89B /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2DB06DDF1F91118000BDB89B /* mcnlib_cpu.hpp in Headers */,
+				2DB06DE11F91118000BDB89B /* mcnlib_cpuPriv.hpp in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXLegacyTarget section */
-		2D1880FA1A7BBD73007C7586 /* matconv cuDNN */ = {
+		2D1880FA1A7BBD73007C7586 /* mcn-cudnn */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "make -j4 ENABLE_GPU=y ENABLE_IMREADJPEG=y ENABLE_CUDNN=y $(ACTION)";
-			buildConfigurationList = 2D1880FB1A7BBD73007C7586 /* Build configuration list for PBXLegacyTarget "matconv cuDNN" */;
+			buildConfigurationList = 2D1880FB1A7BBD73007C7586 /* Build configuration list for PBXLegacyTarget "mcn-cudnn" */;
 			buildPhases = (
 			);
 			buildToolPath = xcrun;
 			buildWorkingDirectory = "";
 			dependencies = (
 			);
-			name = "matconv cuDNN";
+			name = "mcn-cudnn";
 			passBuildSettingsInEnvironment = 1;
 			productName = matconv;
 		};
-		2D375DB518A7F064008A97EE /* matconv GPU */ = {
+		2D375DB518A7F064008A97EE /* mcn-gpu */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "make -j4 ENABLE_GPU=y ENABLE_IMREADJPEG=y $(ACTION)";
-			buildConfigurationList = 2D375DB818A7F064008A97EE /* Build configuration list for PBXLegacyTarget "matconv GPU" */;
+			buildConfigurationList = 2D375DB818A7F064008A97EE /* Build configuration list for PBXLegacyTarget "mcn-gpu" */;
 			buildPhases = (
 			);
 			buildToolPath = xcrun;
 			buildWorkingDirectory = "";
 			dependencies = (
 			);
-			name = "matconv GPU";
+			name = "mcn-gpu";
 			passBuildSettingsInEnvironment = 1;
 			productName = matconv;
 		};
-		2D95CDAA18EEB2630076E3A2 /* matconv CPU */ = {
+		2D95CDAA18EEB2630076E3A2 /* mcn-cpu */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "-j4 ENABLE_IMREADJPEG=y $(ACTION)";
-			buildConfigurationList = 2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "matconv CPU" */;
+			buildConfigurationList = 2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "mcn-cpu" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
 			buildWorkingDirectory = "";
 			dependencies = (
 			);
-			name = "matconv CPU";
+			name = "mcn-cpu";
 			passBuildSettingsInEnvironment = 1;
 			productName = matconv;
 		};
@@ -736,14 +799,37 @@
 			productReference = 2D375DC318A7FD1C008A97EE /* libgconv.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
+		2DB06DDB1F91118000BDB89B /* mcn-lib-cpu */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2DB06DE61F91118000BDB89B /* Build configuration list for PBXNativeTarget "mcn-lib-cpu" */;
+			buildPhases = (
+				2DB06DD81F91118000BDB89B /* Sources */,
+				2DB06DD91F91118000BDB89B /* Frameworks */,
+				2DB06DDA1F91118000BDB89B /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "mcn-lib-cpu";
+			productName = "mcnlib-cpu";
+			productReference = 2DB06DDC1F91118000BDB89B /* libmcn-lib-cpu.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		2D375DB118A7F064008A97EE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0830;
+				LastUpgradeCheck = 0900;
 				ORGANIZATIONNAME = "Andrea Vedaldi";
+				TargetAttributes = {
+					2DB06DDB1F91118000BDB89B = {
+						CreatedOnToolsVersion = 9.0;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = 2D375DB418A7F064008A97EE /* Build configuration list for PBXProject "matconvnet" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -757,10 +843,11 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				2D95CDAA18EEB2630076E3A2 /* matconv CPU */,
-				2D375DB518A7F064008A97EE /* matconv GPU */,
-				2D1880FA1A7BBD73007C7586 /* matconv cuDNN */,
+				2D95CDAA18EEB2630076E3A2 /* mcn-cpu */,
+				2D375DB518A7F064008A97EE /* mcn-gpu */,
+				2D1880FA1A7BBD73007C7586 /* mcn-cudnn */,
 				2D375DC218A7FD1C008A97EE /* gconv */,
+				2DB06DDB1F91118000BDB89B /* mcn-lib-cpu */,
 			);
 		};
 /* End PBXProject section */
@@ -795,6 +882,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2DB06DD81F91118000BDB89B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2DB06DF91F91121B00BDB89B /* nnsubsample.cpp in Sources */,
+				2DB06DF71F91121B00BDB89B /* nnpooling.cpp in Sources */,
+				2DB06DF61F91121B00BDB89B /* nnnormalizelp.cpp in Sources */,
+				2DB06DF41F91121B00BDB89B /* nnfullyconnected.cpp in Sources */,
+				2DB06DF81F91121B00BDB89B /* nnroipooling.cpp in Sources */,
+				2DB06DE31F91118000BDB89B /* mcnlib_cpu.cpp in Sources */,
+				2DB06DF11F91121B00BDB89B /* nnbilinearsampler.cpp in Sources */,
+				2DB06DED1F91121B00BDB89B /* data.cpp in Sources */,
+				2DB06DEF1F91121B00BDB89B /* imread.cpp in Sources */,
+				2DB06DF01F91121B00BDB89B /* nnbias.cpp in Sources */,
+				2DB06DE71F91121B00BDB89B /* copy_cpu.cpp in Sources */,
+				2DB06DF31F91121B00BDB89B /* nnconv.cpp in Sources */,
+				2DB06DF21F91121B00BDB89B /* nnbnorm.cpp in Sources */,
+				2DB06DEB1F91121B00BDB89B /* imread_quartz.cpp in Sources */,
+				2DB06DF51F91121B00BDB89B /* nnnormalize.cpp in Sources */,
+				2DB06DEC1F91121B00BDB89B /* tinythread.cpp in Sources */,
+				2DB06DE81F91121B00BDB89B /* im2row_cpu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -819,14 +930,20 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -874,14 +991,20 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -963,10 +1086,82 @@
 			};
 			name = Release;
 		};
+		2DB06DE41F91118000BDB89B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				EXECUTABLE_PREFIX = lib;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_ENABLE_CPP_EXCEPTIONS = YES;
+				GCC_ENABLE_CPP_RTTI = YES;
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=*]" = "APPLE_BLAS=1";
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MATLABROOT = "";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = (
+					"-Wsign-conversion",
+					"-Wsign-compare",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		2DB06DE51F91118000BDB89B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				EXECUTABLE_PREFIX = lib;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_ENABLE_CPP_EXCEPTIONS = YES;
+				GCC_ENABLE_CPP_RTTI = YES;
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=*]" = "APPLE_BLAS=1";
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MATLABROOT = "";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"-Wsign-conversion",
+					"-Wsign-compare",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2D1880FB1A7BBD73007C7586 /* Build configuration list for PBXLegacyTarget "matconv cuDNN" */ = {
+		2D1880FB1A7BBD73007C7586 /* Build configuration list for PBXLegacyTarget "mcn-cudnn" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2D1880FC1A7BBD73007C7586 /* Debug */,
@@ -984,7 +1179,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2D375DB818A7F064008A97EE /* Build configuration list for PBXLegacyTarget "matconv GPU" */ = {
+		2D375DB818A7F064008A97EE /* Build configuration list for PBXLegacyTarget "mcn-gpu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2D375DB918A7F064008A97EE /* Debug */,
@@ -1002,11 +1197,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "matconv CPU" */ = {
+		2D95CDAB18EEB2630076E3A2 /* Build configuration list for PBXLegacyTarget "mcn-cpu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2D95CDAC18EEB2630076E3A2 /* Debug */,
 				2D95CDAD18EEB2630076E3A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2DB06DE61F91118000BDB89B /* Build configuration list for PBXNativeTarget "mcn-lib-cpu" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2DB06DE41F91118000BDB89B /* Debug */,
+				2DB06DE51F91118000BDB89B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

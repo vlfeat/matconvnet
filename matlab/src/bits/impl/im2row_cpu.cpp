@@ -20,21 +20,25 @@ using namespace vl::impl ;
 /*                                                  Heper functions */
 /* ---------------------------------------------------------------- */
 
-static inline int floor_divide(int a, int b) {
+template<typename T>
+static inline T floor_divide(T a, T b) {
   if (a >= 0) return a/b;
   else return (a - b + 1)/b;
 }
 
-static inline int ceil_divide(int a, int b) {
+template<typename T>
+static inline T ceil_divide(T a, T b) {
   if (a >= 0) return (a + b - 1)/b ;
   else return a/b ;
 }
 
-static inline int static_max(int a, int b) {
+template<typename T>
+static inline T static_max(T a, T b) {
   return (a>=b) ? a:b ;
 }
 
-static inline int static_min(int a, int b) {
+template<typename T>
+static inline T static_min(T a, T b) {
   return (a<=b) ? a:b ;
 }
 
@@ -67,11 +71,11 @@ namespace vl { namespace impl {
             int dilateX,
             int dilateY)
     {
-      int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
-      int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
-      int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
-      int numRows = windowWidth * windowHeight * depth ;
+      auto windowExtentX = as_signed(windowWidth - 1)*dilateX + 1 ;
+      auto windowExtentY = as_signed(windowHeight - 1)*dilateY + 1 ;
+      auto numPatchesX = (as_signed(width + padLeft + padRight) - windowExtentX)/as_signed(strideX) + 1 ;
+      auto numPatchesY = (as_signed(height + padTop + padBottom) - windowExtentY)/as_signed(strideY) + 1 ;
+      auto numRows = as_signed(windowWidth * windowHeight * depth) ;
 
       /*
        Fill a row of the patch matrix. Since patches are stored
@@ -83,14 +87,14 @@ namespace vl { namespace impl {
        we tend to access spatially adiacent elements
        in the input image, particulary for small strides.
        */
-      for (int row = 0; row < numRows ; ++row) {
+      for (long row = 0; row < numRows ; ++row) {
         /*
          Get the patch offset corresponding to this row of the stacked
          image.
          */
-        int u = row ;
-        int v = u / windowWidth ;
-        int z = v / windowHeight ;
+        auto u = row ;
+        auto v = u / as_signed(windowWidth) ;
+        auto z = v / as_signed(windowHeight) ;
         u %= windowWidth ;
         v %= windowHeight ;
 
@@ -126,12 +130,12 @@ namespace vl { namespace impl {
          below.
          */
 
-        int x0 = static_min(numPatchesX, ceil_divide(padLeft - u * dilateX, strideX)) ;
-        int y0 = static_min(numPatchesY, ceil_divide(padTop - v * dilateY, strideY)) ;
-        int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u * dilateX, strideX) + 1) ;
-        int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v * dilateY, strideY) + 1) ;
-        int x ;
-        int y ;
+        auto x0 = static_min(numPatchesX, ceil_divide(as_signed(padLeft) - u * dilateX, as_signed(strideX))) ;
+        auto y0 = static_min(numPatchesY, ceil_divide(as_signed(padTop) - v * dilateY, as_signed(strideY))) ;
+        auto x1 = static_min(numPatchesX, floor_divide(as_signed(width + padLeft) - u * dilateX - 1, as_signed(strideX)) + 1) ;
+        auto y1 = static_min(numPatchesY, floor_divide(as_signed(height + padTop) - v * dilateY - 1, as_signed(strideY)) + 1) ;
+        long x ;
+        long y ;
 
         for (y = 0 ; y < y0 ; ++y) {
           for (x = 0 ; x < numPatchesX ; ++x) {
@@ -142,9 +146,9 @@ namespace vl { namespace impl {
           for (x = 0 ; x < x0 ; ++x) {
             *stacked++ = 0 ;
           }
-          int y_data = y * strideY + v * dilateY - padTop ;
-          int x_data = x * strideX + u * dilateX - padLeft ;
-          type const * b = data + (z * height + y_data) * width + x_data ;
+          auto y_data = y * as_signed(strideY) + v * dilateY - as_signed(padTop) ;
+          auto x_data = x * as_signed(strideX) + u * (signed)dilateX - as_signed(padLeft) ;
+          type const * b = data + (z * as_signed(height) + y_data) * as_signed(width) + x_data ;
           for ( ; x < x1 ; ++x) {
             *stacked++ = *b ;
             b += strideX ;
@@ -184,11 +188,12 @@ namespace vl { namespace impl {
              int dilateX,
              int dilateY)
     {
-      int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
-      int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
-      int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
-      int numRows = windowWidth * windowHeight * depth ;
+
+      auto windowExtentX = as_signed(windowWidth - 1)*dilateX + 1 ;
+      auto windowExtentY = as_signed(windowHeight - 1)*dilateY + 1 ;
+      auto numPatchesX = (as_signed(width + padLeft + padRight) - windowExtentX)/as_signed(strideX) + 1 ;
+      auto numPatchesY = (as_signed(height + padTop + padBottom) - windowExtentY)/as_signed(strideY) + 1 ;
+      auto numRows = as_signed(windowWidth * windowHeight * depth) ;
 
       memset(data, 0, sizeof(type) * width * height * depth) ;
 
@@ -196,27 +201,25 @@ namespace vl { namespace impl {
        Do the converse of im2col, still scanning rows of the stacked image.
        See comments of im2col for an explanation of the algorithm.
        */
-      for (int row = 0; row < numRows ; ++row) {
-        int u = row ;
-        int v = u / windowWidth ;
-        int z = v / windowHeight ;
+      for (long row = 0; row < numRows ; ++row) {
+        auto u = row ;
+        auto v = u / as_signed(windowWidth) ;
+        auto z = v / as_signed(windowHeight) ;
         u %= windowWidth ;
         v %= windowHeight ;
 
-        int x0 = static_min(numPatchesX, ceil_divide(padLeft - u * dilateX, strideX)) ;
-        int y0 = static_min(numPatchesY, ceil_divide(padTop - v * dilateY, strideY)) ;
-        int x1 = static_min(numPatchesX, floor_divide(width-1 + padLeft - u * dilateX, strideX) + 1) ;
-        int y1 = static_min(numPatchesY, floor_divide(height-1 + padTop - v * dilateY, strideY) + 1) ;
-        int x ;
-        int y ;
+        auto x0 = static_min(numPatchesX, ceil_divide(as_signed(padLeft) - u * dilateX, as_signed(strideX))) ;
+        auto y0 = static_min(numPatchesY, ceil_divide(as_signed(padTop) - v * dilateY, as_signed(strideY))) ;
+        auto x1 = static_min(numPatchesX, floor_divide(as_signed(width + padLeft) - u * dilateX - 1, as_signed(strideX)) + 1) ;
+        auto y1 = static_min(numPatchesY, floor_divide(as_signed(height + padTop) - v * dilateY - 1, as_signed(strideY)) + 1) ;
 
-        y = static_max(0, y0) ;
-        stacked += numPatchesX * static_max(y, 0) ;
+        auto y = static_max(0L, y0) ;
+        stacked += numPatchesX * static_max(0L, y) ;
         for ( ; y < y1 ; ++y) {
-          x = static_max(0, x0) ;
-          int y_data = y * strideY + v * dilateY - padTop ;
-          int x_data = x * strideX + u * dilateX - padLeft ;
-          type * b = data + (z * height + y_data) * width + x_data ;
+          auto x = static_max(0L, x0) ;
+          auto y_data = y * as_signed(strideY) + v * as_signed(dilateY) - as_signed(padTop) ;
+          auto x_data = x * as_signed(strideX) + u * as_signed(dilateX) - as_signed(padLeft) ;
+          type * b = data + (z * as_signed(height) + y_data) * as_signed(width) + x_data ;
           stacked += x ;
           for ( ; x < x1 ; ++x) {
             *b += *stacked++ ;
