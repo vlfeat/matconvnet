@@ -88,9 +88,11 @@ struct dispatch
       case vl::VLDT_Float:
         error = C<vl::VLDT_CPU,vl::VLDT_Float>()(base,args...) ;
         break ;
+#if ENABLE_DOUBLE
       case vl::VLDT_Double:
         error = C<vl::VLDT_CPU,vl::VLDT_Double>()(base,args...) ;
         break ;
+#endif
       default: assert(false) ;
     }
     return base.context.passError(error, __func__) ;

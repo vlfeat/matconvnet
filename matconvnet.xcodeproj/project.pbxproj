@@ -33,9 +33,6 @@
 		2DA349B51A83FC2C0073185F /* nnfullyconnected.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DA349B31A83FC2C0073185F /* nnfullyconnected.hpp */; };
 		2DA349BC1A86C5210073185F /* nnsubsample.cu in Sources */ = {isa = PBXBuildFile; fileRef = 2DA349BA1A86C5210073185F /* nnsubsample.cu */; };
 		2DA349BD1A86C5210073185F /* nnsubsample.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DA349BB1A86C5210073185F /* nnsubsample.hpp */; };
-		2DB06DDF1F91118000BDB89B /* mcnlib_cpu.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DB06DDE1F91118000BDB89B /* mcnlib_cpu.hpp */; };
-		2DB06DE11F91118000BDB89B /* mcnlib_cpuPriv.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2DB06DE01F91118000BDB89B /* mcnlib_cpuPriv.hpp */; };
-		2DB06DE31F91118000BDB89B /* mcnlib_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DB06DE21F91118000BDB89B /* mcnlib_cpu.cpp */; };
 		2DB06DE71F91121B00BDB89B /* copy_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */; };
 		2DB06DE81F91121B00BDB89B /* im2row_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D479D0D1A88AF4300826D48 /* im2row_cpu.cpp */; };
 		2DB06DEB1F91121B00BDB89B /* imread_quartz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */; };
@@ -281,9 +278,6 @@
 		2DA761D81CCD297400265BD8 /* spatial-transformer.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = "spatial-transformer.md"; sourceTree = "<group>"; };
 		2DADAFF418E63E7800165C90 /* vl_nnnormalize.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnnormalize.cu; path = matlab/src/vl_nnnormalize.cu; sourceTree = "<group>"; };
 		2DB06DDC1F91118000BDB89B /* libmcn-lib-cpu.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libmcn-lib-cpu.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		2DB06DDE1F91118000BDB89B /* mcnlib_cpu.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mcnlib_cpu.hpp; sourceTree = "<group>"; };
-		2DB06DE01F91118000BDB89B /* mcnlib_cpuPriv.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mcnlib_cpuPriv.hpp; sourceTree = "<group>"; };
-		2DB06DE21F91118000BDB89B /* mcnlib_cpu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mcnlib_cpu.cpp; sourceTree = "<group>"; };
 		2DB06DFB1F9112E100BDB89B /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.13.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		2DD177081D31760000B0A17E /* vl_cudatool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_cudatool.cpp; path = matlab/src/vl_cudatool.cpp; sourceTree = "<group>"; };
 		2DD177091D31760000B0A17E /* vl_imreadjpeg_old.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vl_imreadjpeg_old.cpp; path = matlab/src/vl_imreadjpeg_old.cpp; sourceTree = "<group>"; };
@@ -333,7 +327,6 @@
 				2D375DBD18A7F796008A97EE /* src */,
 				2DD3FACA18EC0E4C00053032 /* matlab */,
 				2D63B5CC1BFB3EC700B356CC /* examples */,
-				2DB06DDD1F91118000BDB89B /* mcnlib-cpu */,
 				2D375DC418A7FD1C008A97EE /* Products */,
 				2DB06DFA1F9112E000BDB89B /* Frameworks */,
 			);
@@ -641,16 +634,6 @@
 			name = doc;
 			sourceTree = "<group>";
 		};
-		2DB06DDD1F91118000BDB89B /* mcnlib-cpu */ = {
-			isa = PBXGroup;
-			children = (
-				2DB06DDE1F91118000BDB89B /* mcnlib_cpu.hpp */,
-				2DB06DE01F91118000BDB89B /* mcnlib_cpuPriv.hpp */,
-				2DB06DE21F91118000BDB89B /* mcnlib_cpu.cpp */,
-			);
-			path = "mcnlib-cpu";
-			sourceTree = "<group>";
-		};
 		2DB06DFA1F9112E000BDB89B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -728,8 +711,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2DB06DDF1F91118000BDB89B /* mcnlib_cpu.hpp in Headers */,
-				2DB06DE11F91118000BDB89B /* mcnlib_cpuPriv.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -891,7 +872,6 @@
 				2DB06DF61F91121B00BDB89B /* nnnormalizelp.cpp in Sources */,
 				2DB06DF41F91121B00BDB89B /* nnfullyconnected.cpp in Sources */,
 				2DB06DF81F91121B00BDB89B /* nnroipooling.cpp in Sources */,
-				2DB06DE31F91118000BDB89B /* mcnlib_cpu.cpp in Sources */,
 				2DB06DF11F91121B00BDB89B /* nnbilinearsampler.cpp in Sources */,
 				2DB06DED1F91121B00BDB89B /* data.cpp in Sources */,
 				2DB06DEF1F91121B00BDB89B /* imread.cpp in Sources */,
