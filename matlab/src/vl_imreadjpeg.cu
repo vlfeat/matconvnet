@@ -4,26 +4,25 @@
  **/
 
 /*
-Copyright (C) 2014-16 Andrea Vedaldi.
+Copyright (C) 2014-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include <assert.h>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <thread>
 #include <cstdlib>
+#include <cassert>
 
-#include "bits/impl/tinythread.h"
 #include "bits/impl/blashelper.hpp"
 #include "bits/imread.hpp"
 #include "bits/impl/imread_helpers.hpp"
-
 #include "bits/datamex.hpp"
 #include "bits/mexutils.h"
 
@@ -379,7 +378,7 @@ void Batch::finalize()
 
 Batch::Item * Batch::borrowNextItem()
 {
-  std::lock_guard<std::mutex> lock(mutex) ;
+  std::unique_lock<std::mutex> lock(mutex) ;
   while (true) {
     if (quit) { return NULL ; }
     if (nextItem < items.size()) {
@@ -390,7 +389,7 @@ Batch::Item * Batch::borrowNextItem()
         return item ;
       }
     }
-    waitNextItemToBorrow.wait(mutex) ;
+    waitNextItemToBorrow.wait(lock) ;
   }
 }
 
@@ -438,7 +437,7 @@ void Batch::setAverageImage(float const * image)
 
 void Batch::clear()
 {
-  std::lock_guard<std::mutex> lock(mutex) ;
+  std::unique_lock<std::mutex> lock(mutex) ;
 
   // Stop threads from getting more tasks. After this any call to borrowItem() by a worker will
   // stop in a waiting state. Thus, we simply wait for all of them to return their items.
@@ -447,7 +446,7 @@ void Batch::clear()
   // Wait for all thread to return their items
   for (int i = 0 ; i < items.size() ; ++i) {
     while (items[i]->borrowed) {
-      waitCompletion.wait(mutex) ;
+      waitCompletion.wait(lock) ;
     }
   }
   for (int i = 0 ; i < items.size() ; ++i) {
@@ -465,14 +464,14 @@ void Batch::clear()
 
 void Batch::sync() const
 {
-  std::lock_guard<std::mutex> lock(mutex) ;
+  std::unique_lock<std::mutex> lock(mutex) ;
 
   // Wait for threads to complete work for all items.
   // Note that it is not enough to check that threads are all in a
   // "done" state as this does not mean that all work has been done yet.
   // Instead, we look at the number of items returned.
   while (numReturnedItems < items.size()) {
-    waitCompletion.wait(mutex) ;
+    waitCompletion.wait(lock) ;
   }
 
   if (gpuMode) {

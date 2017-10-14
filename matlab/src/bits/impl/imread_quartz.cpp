@@ -58,7 +58,7 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
   size_t bytesPerRow = 0 ;
 
   // Core graphics
-  CGBitmapInfo bitmapInfo = NULL ;
+  CGBitmapInfo bitmapInfo = 0 ;
   CFURLRef url = NULL ;
   CGImageSourceRef imageSourceRef = NULL ;
   CGImageRef imageRef = NULL ;

@@ -19,7 +19,6 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datacu.hpp"
 #endif
 
-#include "bits/impl/tinythread.h"
 #include "bits/impl/blashelper.hpp"
 
 #include <assert.h>
@@ -40,6 +39,7 @@ the terms of the BSD license (see the COPYING file).
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <thread>
 
 /**
  \file vl_tmove.cu
@@ -952,6 +952,8 @@ private:
     vl::ErrorCode beginTransaction(int tensorIndex) ;
     vl::ErrorCode waitTensor(int tensorIndex) ;
 
+    std::mutex mutable mutex ;
+
   private:
     ProcessPool & pool ;
 
@@ -983,7 +985,6 @@ private:
     uint32_t session ;
     int pipeFD [2] ;
     int socketFD ;
-    std::mutex mutex ;
     std::condition_variable waitingList ;
     bool shutdownRequested ; // local
     bool forceQuit ;
@@ -1060,11 +1061,11 @@ void ProcessPool::finalize()
 
 void ProcessPool::mexPrint() const
 {
-  std::lock_guard<std::mutex> (mutex) ;
+  std::lock_guard<std::mutex> lock(supervisor.mutex) ;
   if (sharedSpace) {
     sharedSpace->mexPrint() ;
   } else {
-    mexPrintf("Uninitialized.") ;
+    mexPrintf("Process pool uninitialized.") ;
   }
 }
 
@@ -1261,9 +1262,9 @@ vl::ErrorCode ProcessPool::Supervisor::init()
 
   // Wait for initialization to be complete.
   {
-    std::lock_guard<std::mutex> lock(mutex) ;
+    std::unique_lock<std::mutex> lock(mutex) ;
     while (state == connecting) {
-      waitingList.wait(mutex) ;
+      waitingList.wait(lock) ;
     }
     if (state == running) {
       error = vl::VLE_Success ;
@@ -1305,13 +1306,13 @@ vl::ErrorCode ProcessPool::Supervisor::shutdown()
   // Wait for shutdown to complete
   {
     size_t start = vl::getTime() ;
-    std::lock_guard<std::mutex> lock(mutex) ;
+    std::unique_lock<std::mutex> lock(mutex) ;
     while (state != down) {
       if (vl::getTime() > start + pool.timeoutInterval) {
         LOGERROR << "timeout while shutting down" ;
         return vl::VLE_Timeout ;
       }
-      waitingList.wait(mutex) ;
+      waitingList.wait(lock) ;
     }
   }
   return vl::VLE_Success ;
@@ -1345,7 +1346,7 @@ vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
 {
   SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
   size_t start = vl::getTime() ;
-  std::lock_guard<std::mutex> lock(mutex) ;
+  std::unique_lock<std::mutex> lock(mutex) ;
   while (T.state != SharedTensorSpace::ready) {
     if ((vl::getTime() - start) > pool.timeoutInterval) {
       return vl::VLE_Timeout ;
@@ -1353,7 +1354,7 @@ vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
     if (state != running) {
       return vl::VLE_Unknown ;
     }
-    waitingList.wait(mutex) ;
+    waitingList.wait(lock) ;
   }
   return vl::VLE_Success ;
 }

@@ -75,7 +75,7 @@ space+=
 join-with = $(subst $(space),$1,$(strip $2))
 nvcc_quote = $(if $(strip $1),-Xcompiler $(call join-with,$(comma),$(1)),)
 nvcc_filter := 2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
-nvcc_filter :=
+#nvcc_filter :=
 
 # BASEFLAGS: Base flags passed to `mex` and `nvcc` always.
 BASEFLAGS = \
@@ -210,13 +210,11 @@ mex_src+=matlab/src/vl_taccummex.$(ext)
 mex_src+=matlab/src/vl_tmove.$(ext)
 ifdef ENABLE_IMREADJPEG
 mex_src+=matlab/src/vl_imreadjpeg.$(ext)
-mex_src+=matlab/src/vl_imreadjpeg_old.$(ext)
 endif
 
 # CPU-specific files
 cpp_src+=matlab/src/bits/impl/im2row_cpu.cpp
 cpp_src+=matlab/src/bits/impl/copy_cpu.cpp
-cpp_src+=matlab/src/bits/impl/tinythread.cpp
 ifdef ENABLE_IMREADJPEG
 cpp_src+=matlab/src/bits/impl/imread_$(IMAGELIB).cpp
 cpp_src+=matlab/src/bits/imread.cpp
