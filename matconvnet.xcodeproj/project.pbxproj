@@ -36,7 +36,6 @@
 		2DB06DE71F91121B00BDB89B /* copy_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D2A74F61A88D73900C372A4 /* copy_cpu.cpp */; };
 		2DB06DE81F91121B00BDB89B /* im2row_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D479D0D1A88AF4300826D48 /* im2row_cpu.cpp */; };
 		2DB06DEB1F91121B00BDB89B /* imread_quartz.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */; };
-		2DB06DEC1F91121B00BDB89B /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D19E6761AB20B2900D4FF0C /* tinythread.cpp */; };
 		2DB06DED1F91121B00BDB89B /* data.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D528B9A1A8284C6006EC40A /* data.cpp */; };
 		2DB06DEF1F91121B00BDB89B /* imread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2DF897C01C4182CE002C7EB9 /* imread.cpp */; };
 		2DB06DF01F91121B00BDB89B /* nnbias.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2D14F00B1B02AB9800A8F33D /* nnbias.cpp */; };
@@ -77,10 +76,7 @@
 		2D14F0081B02AB5700A8F33D /* nnbias.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnbias.hpp; path = matlab/src/bits/nnbias.hpp; sourceTree = "<group>"; };
 		2D14F00B1B02AB9800A8F33D /* nnbias.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnbias.cpp; path = matlab/src/bits/nnbias.cpp; sourceTree = "<group>"; };
 		2D16767D1AB5AF6000CC738D /* imread_helpers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = imread_helpers.hpp; path = matlab/src/bits/impl/imread_helpers.hpp; sourceTree = "<group>"; };
-		2D19E6741AB20B2900D4FF0C /* fast_mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = fast_mutex.h; path = matlab/src/bits/impl/fast_mutex.h; sourceTree = "<group>"; };
 		2D19E6751AB20B2900D4FF0C /* imread_gdiplus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imread_gdiplus.cpp; path = matlab/src/bits/impl/imread_gdiplus.cpp; sourceTree = "<group>"; };
-		2D19E6761AB20B2900D4FF0C /* tinythread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tinythread.cpp; path = matlab/src/bits/impl/tinythread.cpp; sourceTree = "<group>"; };
-		2D19E6771AB20B2900D4FF0C /* tinythread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tinythread.h; path = matlab/src/bits/impl/tinythread.h; sourceTree = "<group>"; };
 		2D19E6781AB2171800D4FF0C /* vl_compilenn.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_compilenn.m; path = matlab/vl_compilenn.m; sourceTree = "<group>"; };
 		2D19E6791AB2171800D4FF0C /* vl_imreadjpeg.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_imreadjpeg.m; path = matlab/vl_imreadjpeg.m; sourceTree = "<group>"; };
 		2D19E67A1AB3031200D4FF0C /* faq.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = faq.md; sourceTree = "<group>"; };
@@ -457,7 +453,6 @@
 				2D479D0A1A88AF4300826D48 /* copy_gpu.cu */,
 				2D479D0B1A88AF4300826D48 /* copy.hpp */,
 				2D0958DA1C3A938500553C8A /* cudnnhelper.hpp */,
-				2D19E6741AB20B2900D4FF0C /* fast_mutex.h */,
 				2D479D0D1A88AF4300826D48 /* im2row_cpu.cpp */,
 				2D479D0C1A88AF4300826D48 /* im2row_gpu.cu */,
 				2D479D0E1A88AF4300826D48 /* im2row.hpp */,
@@ -466,8 +461,6 @@
 				2DF07B711AAB9160001A3943 /* imread_libjpeg.cpp */,
 				2DF07B6F1AAB7A5C001A3943 /* imread_quartz.cpp */,
 				2D4E88271C37FAB80074DDEE /* sharedmem.cuh */,
-				2D19E6761AB20B2900D4FF0C /* tinythread.cpp */,
-				2D19E6771AB20B2900D4FF0C /* tinythread.h */,
 				2D6541BD1EC09CA6006E856E /* dispatcher.hpp */,
 			);
 			name = impl;
@@ -881,7 +874,6 @@
 				2DB06DF21F91121B00BDB89B /* nnbnorm.cpp in Sources */,
 				2DB06DEB1F91121B00BDB89B /* imread_quartz.cpp in Sources */,
 				2DB06DF51F91121B00BDB89B /* nnnormalize.cpp in Sources */,
-				2DB06DEC1F91121B00BDB89B /* tinythread.cpp in Sources */,
 				2DB06DE81F91121B00BDB89B /* im2row_cpu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

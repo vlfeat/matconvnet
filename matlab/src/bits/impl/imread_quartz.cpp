@@ -133,10 +133,10 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
     Image image(shape, memory) ;
     switch (shape.depth) {
       case 3:
-        vl::impl::imageFromPixels<impl::pixelFormatRGBA>(image, pixels, shape.width * bytesPerPixel) ;
+        vl::impl::imageFromPixels<impl::pixelFormatRGBA>(image, pixels, as_signed(shape.width * bytesPerPixel)) ;
         break ;
       case 1:
-        vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, shape.width * bytesPerPixel) ;
+        vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, as_signed(shape.width * bytesPerPixel)) ;
         break ;
     }
   }

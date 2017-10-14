@@ -955,7 +955,7 @@ private:
   private:
     ProcessPool & pool ;
 
-    tthread::thread * thread ;
+    std::thread * thread ;
     enum State {
       connecting,
       running,
@@ -983,8 +983,8 @@ private:
     uint32_t session ;
     int pipeFD [2] ;
     int socketFD ;
-    tthread::mutex mutex ;
-    tthread::condition_variable waitingList ;
+    std::mutex mutex ;
+    std::condition_variable waitingList ;
     bool shutdownRequested ; // local
     bool forceQuit ;
 
@@ -1060,7 +1060,7 @@ void ProcessPool::finalize()
 
 void ProcessPool::mexPrint() const
 {
-  tthread::lock_guard<tthread::mutex> (mutex) ;
+  std::lock_guard<std::mutex> (mutex) ;
   if (sharedSpace) {
     sharedSpace->mexPrint() ;
   } else {
@@ -1257,11 +1257,11 @@ vl::ErrorCode ProcessPool::Supervisor::init()
   state = connecting ;
   shutdownRequested = false ;
   forceQuit = false ;
-  thread = new tthread::thread(threadEntryPoint, this) ;
+  thread = new std::thread(threadEntryPoint, this) ;
 
   // Wait for initialization to be complete.
   {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     while (state == connecting) {
       waitingList.wait(mutex) ;
     }
@@ -1279,7 +1279,7 @@ void ProcessPool::Supervisor::finalize()
 {
   if (thread) {
     {
-      tthread::lock_guard<tthread::mutex> lock(mutex) ;
+      std::lock_guard<std::mutex> lock(mutex) ;
       forceQuit = true ;
       if (pipeFD[1] >= 0) {
         char dummy = 1 ;
@@ -1305,7 +1305,7 @@ vl::ErrorCode ProcessPool::Supervisor::shutdown()
   // Wait for shutdown to complete
   {
     size_t start = vl::getTime() ;
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     while (state != down) {
       if (vl::getTime() > start + pool.timeoutInterval) {
         LOGERROR << "timeout while shutting down" ;
@@ -1334,7 +1334,7 @@ vl::ErrorCode ProcessPool::Supervisor::beginTransaction(int tensorIndex)
 
   // Signal the supervisory thread
   {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     char dummy = 1 ;
     write(pipeFD[1], &dummy, 1) ;
   }
@@ -1345,7 +1345,7 @@ vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
 {
   SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
   size_t start = vl::getTime() ;
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
   while (T.state != SharedTensorSpace::ready) {
     if ((vl::getTime() - start) > pool.timeoutInterval) {
       return vl::VLE_Timeout ;
@@ -1478,7 +1478,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
   socketFD = -1 ;
 
   // Lock for entire duration of connect()
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
 
   // Advertise
   state = connecting ;
@@ -1629,7 +1629,7 @@ done:
 void ProcessPool::Supervisor::disconnect()
 {
   // Lock for entire duration of disconnect()
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
 
   for (int p = 0 ; p < peers.size() ; ++p) {
     if (peers[p].socketFD != -1) {
@@ -1670,7 +1670,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
   vl::ErrorCode error = vl::VLE_Success ;
 
   // Lock for entire duration of handshake()
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
 
   LOG(2) << "handshake begins" ;
 
@@ -2098,7 +2098,7 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(int tensorIndex)
     allChildrenDone &= thisChildDone ;
   }
   if (allChildrenDone) {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     T.state = SharedTensorSpace::ready ;
     waitingList.notify_all() ;
   }
@@ -2116,7 +2116,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
   // loop. Syncrhonization with the main thread is kept efficient
   // using lock-free mechanisms.
   {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     state = running ;
     waitingList.notify_all() ;
   }

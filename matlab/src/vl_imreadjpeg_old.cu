@@ -146,13 +146,13 @@ private:
 
 typedef std::vector<Task*> Tasks ;
 Tasks tasks ;
-tthread::mutex tasksMutex ;
-tthread::condition_variable tasksCondition ;
-tthread::condition_variable completedCondition ;
+std::mutex tasksMutex ;
+std::condition_variable tasksCondition ;
+std::condition_variable completedCondition ;
 int nextTaskIndex = 0 ;
 int numTasksCompleted = 0 ;
 
-typedef std::pair<tthread::thread*,vl::ImageReader*> reader_t ;
+typedef std::pair<std::thread*,vl::ImageReader*> reader_t ;
 typedef std::vector<reader_t> readers_t ;
 readers_t readers ;
 bool terminateReaders = true ;
@@ -227,7 +227,7 @@ void create_readers(int num, int verbosity)
   terminateReaders = false ;
   for (int r = 0 ; r < num ; ++r) {
     vl::ImageReader * reader = new vl::ImageReader() ;
-    tthread::thread * readerThread = new tthread::thread(reader_function, reader) ;
+    std::thread * readerThread = new std::thread(reader_function, reader) ;
     readers.push_back(reader_t(readerThread, reader)) ;
   }
   if (verbosity > 1) { mexPrintf("vl_imreadjpeg: created %d reader threads\n", readers.size()) ; }

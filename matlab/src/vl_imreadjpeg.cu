@@ -213,9 +213,9 @@ public:
 private:
   vl::MexContext & context ;
 
-  tthread::mutex mutable mutex ;
-  tthread::condition_variable mutable waitNextItemToBorrow ;
-  tthread::condition_variable mutable waitCompletion ;
+  std::mutex mutable mutex ;
+  std::condition_variable mutable waitNextItemToBorrow ;
+  std::condition_variable mutable waitCompletion ;
   bool quit ;
   typedef std::vector<Item*> items_t ;
   items_t items ;
@@ -371,7 +371,7 @@ void Batch::finalize()
 
   // Signal waiting threads that we are quitting
   {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     quit = true ;
     waitNextItemToBorrow.notify_all() ;
   }
@@ -379,7 +379,7 @@ void Batch::finalize()
 
 Batch::Item * Batch::borrowNextItem()
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
   while (true) {
     if (quit) { return NULL ; }
     if (nextItem < items.size()) {
@@ -396,7 +396,7 @@ Batch::Item * Batch::borrowNextItem()
 
 void Batch::returnItem(Batch::Item * item)
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
   numReturnedItems ++ ;
   if (item->state == Item::fetch &&
       numReturnedItems == items.size() &&
@@ -438,7 +438,7 @@ void Batch::setAverageImage(float const * image)
 
 void Batch::clear()
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
 
   // Stop threads from getting more tasks. After this any call to borrowItem() by a worker will
   // stop in a waiting state. Thus, we simply wait for all of them to return their items.
@@ -465,7 +465,7 @@ void Batch::clear()
 
 void Batch::sync() const
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
 
   // Wait for threads to complete work for all items.
   // Note that it is not enough to check that threads are all in a
@@ -488,7 +488,7 @@ void Batch::sync() const
 
 vl::ErrorCode Batch::registerItem(std::string const & name)
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
   Item * item = new Item(*this) ;
   item->index = (int)items.size() ;
   item->name = name ;
@@ -499,7 +499,7 @@ vl::ErrorCode Batch::registerItem(std::string const & name)
 
 void Batch::setGpuMode(bool gpu)
 {
-  tthread::lock_guard<tthread::mutex> lock(mutex) ;
+  std::lock_guard<std::mutex> lock(mutex) ;
 #if ENABLE_GPU
   if (gpu) {
     cudaGetDevice(&gpuDevice) ;
@@ -769,7 +769,7 @@ vl::ErrorCode Batch::prefetch()
 
   // Notify that we are ready to fetch
   {
-    tthread::lock_guard<tthread::mutex> lock(mutex) ;
+    std::lock_guard<std::mutex> lock(mutex) ;
     waitNextItemToBorrow.notify_all() ;
   }
 
@@ -792,7 +792,7 @@ public:
 private:
   int index ;
   Batch * batch ;
-  tthread::thread * thread ;
+  std::thread * thread ;
   vl::ImageReader * reader ;
   static void threadEntryPoint(void * thing) ;
   void entryPoint() ;
@@ -1064,7 +1064,7 @@ vl::ErrorCode ReaderTask::init(Batch * batch, int index)
   finalize() ;
   this->batch = batch ;
   this->index = index ;
-  thread = new tthread::thread(threadEntryPoint, this) ;
+  thread = new std::thread(threadEntryPoint, this) ;
   reader = new vl::ImageReader() ;
   return vl::VLE_Success ;
 }
