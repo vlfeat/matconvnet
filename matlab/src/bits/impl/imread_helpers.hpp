@@ -1,9 +1,9 @@
-// @file imread_helpers.cpp
+// @file imread_helpers.hpp
 // @brief Image reader helper functions.
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -39,14 +39,14 @@ namespace vl { namespace impl {
 #warning "SSSE3 instruction set not enabled. Using slower image conversion routines."
 #endif
 
-  template<int pixelFormat> void
-  imageFromPixels(vl::Image & image, char unsigned const * rgb, int rowStride)
+  template<ptrdiff_t pixelFormat> void
+  imageFromPixels(vl::Image & image, char unsigned const * rgb, ptrdiff_t rowStride)
   {
     vl::ImageShape const & shape = image.getShape() ;
-    int blockSizeX ;
-    int blockSizeY ;
-    int pixelStride ;
-    int imagePlaneStride = (int)shape.width * (int)shape.height ;
+    ptrdiff_t blockSizeX ;
+    ptrdiff_t blockSizeY ;
+    ptrdiff_t pixelStride ;
+    ptrdiff_t imagePlaneStride = as_signed(shape.width * shape.height) ;
     switch (pixelFormat) {
       case pixelFormatL:
         pixelStride = 1 ;
@@ -75,18 +75,18 @@ namespace vl { namespace impl {
     // and recompute silly multiplications in the inner loop
 
     float * const  __restrict imageMemory = image.getMemory() ;
-    int const imageHeight = (int)shape.height ;
-    int const imageWidth = (int)shape.width ;
+    ptrdiff_t const imageHeight = as_signed(shape.height) ;
+    ptrdiff_t const imageWidth = as_signed(shape.width) ;
 
-    for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
+    for (ptrdiff_t x = 0 ; x < imageWidth ; x += blockSizeX) {
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
-      int bsx = (std::min)(imageWidth - x, blockSizeX) ;
+      ptrdiff_t bsx = (std::min)(imageWidth - x, blockSizeX) ;
 
-      for (int y = 0 ; y < imageHeight ; y += blockSizeY) {
-        int bsy = (std::min)(imageHeight - y, blockSizeY) ;
+      for (ptrdiff_t y = 0 ; y < imageHeight ; y += blockSizeY) {
+        ptrdiff_t bsy = (std::min)(imageHeight - y, blockSizeY) ;
         float * __restrict r ;
         float * rend ;
-        for (int dx = 0 ; dx < bsx ; ++dx) {
+        for (ptrdiff_t dx = 0 ; dx < bsx ; ++dx) {
           char unsigned const * __restrict pixel = rgb + y * rowStride + (x + dx) * pixelStride ;
           r = imageMemoryX + y + dx * imageHeight ;
           rend = r + bsy ;
@@ -130,14 +130,14 @@ namespace vl { namespace impl {
 (char)i, (char)j, (char)k, (char)l, \
 (char)m, (char)n, (char)o, (char)p
 
-  template<int pixelFormat> void
-  imageFromPixels(vl::Image & image, char unsigned const * rgb, int rowStride)
+  template<ptrdiff_t pixelFormat> void
+  imageFromPixels(vl::Image & image, char unsigned const * rgb, ptrdiff_t rowStride)
   {
     vl::ImageShape const & shape = image.getShape() ;
-    int blockSizeX ;
-    int blockSizeY ;
-    int pixelStride ;
-    int imagePlaneStride = (int)shape.width * (int)shape.height ;
+    ptrdiff_t blockSizeX ;
+    ptrdiff_t blockSizeY ;
+    ptrdiff_t pixelStride ;
+    ptrdiff_t imagePlaneStride = as_signed(shape.width * shape.height) ;
     __m128i shuffleRgb ;
     __m128i const shuffleL = _mm_set_epi8(epi8(0xff, 0xff, 0xff,  3,
                                                0xff, 0xff, 0xff,  2,
@@ -214,13 +214,13 @@ namespace vl { namespace impl {
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
     float *  const __restrict imageMemory = image.getMemory() ;
-    int const imageHeight = (int)shape.height ;
-    int const imageWidth = (int)shape.width ;
+    ptrdiff_t const imageHeight = as_signed(shape.height) ;
+    ptrdiff_t const imageWidth = as_signed(shape.width) ;
 
-    for (int x = 0 ; x < imageWidth ; x += blockSizeX) {
-      int y = 0 ;
+    for (ptrdiff_t x = 0 ; x < imageWidth ; x += blockSizeX) {
+      ptrdiff_t y = 0 ;
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
-      int bsx = (std::min)(imageWidth - x, blockSizeX) ;
+      ptrdiff_t bsx = (std::min)(imageWidth - x, blockSizeX) ;
       if (bsx < blockSizeX) goto boundary ;
 
       for ( ; y < imageHeight - blockSizeY + 1 ; y += blockSizeY) {
@@ -350,7 +350,7 @@ namespace vl { namespace impl {
             p3 = _mm_unpackhi_epi64(T2, T3);
 
             // store four 4x4 subblock
-            for (int i = 0 ; i < 4 ; ++i) {
+            for (ptrdiff_t i = 0 ; i < 4 ; ++i) {
               _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p0, shuffleL))) ; r += imageHeight ;
               _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p1, shuffleL))) ; r += imageHeight ;
               _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p2, shuffleL))) ; r += imageHeight ;
@@ -367,10 +367,10 @@ namespace vl { namespace impl {
     boundary:
       /* special case if there is not a full 4x4 block to process */
       for ( ; y < imageHeight ; y += blockSizeY) {
-        int bsy = (std::min)(imageHeight - y, blockSizeY) ;
+        ptrdiff_t bsy = (std::min)(imageHeight - y, blockSizeY) ;
         float * __restrict r ;
         float * rend ;
-        for (int dx = 0 ; dx < bsx ; ++dx) {
+        for (ptrdiff_t dx = 0 ; dx < bsx ; ++dx) {
           char unsigned const * __restrict pixel = rgb + y * rowStride + (x + dx) * pixelStride ;
           r = imageMemoryX + y + dx * imageHeight ;
           rend = r + bsy ;
@@ -466,7 +466,7 @@ namespace vl { namespace impl {
         starts[v] = std::ceil(u - filterSupport / 2) ;
 
         for (ptrdiff_t r = 0 ; r < filterSize ; ++r) {
-          auto k = r + starts[v] ;
+          ptrdiff_t k = r + starts[v] ;
           float h ;
           float delta = u - k ;
           if (alpha > 1) {
