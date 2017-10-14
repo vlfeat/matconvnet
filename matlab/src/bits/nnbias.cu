@@ -43,7 +43,7 @@ struct BiasForward
                            Tensor const &input, double inputMult,
                            Tensor const &bias, double biasMult)
   {
-    vl::ErrorCode error ;
+    vl::ErrorCode error = VLE_Success ;
     auto numOutputPixels = output.getHeight() * output.getWidth() ;
 
     typedef typename DataTypeTraits<dataType>::type type ;

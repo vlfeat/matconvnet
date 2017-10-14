@@ -37,7 +37,7 @@ struct FullyConnectedForward
    Tensor const& filter,
    Tensor const& bias)
   {
-    vl::ErrorCode error ;
+    vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     type alpha = 1 ;
     type beta = 0 ;
@@ -119,7 +119,7 @@ struct FullyConnectedBackward
    vl::Tensor const &filter,
    vl::Tensor const &derOutput)
   {
-    vl::ErrorCode error ;
+    vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     type alpha = 1 ;
     type beta = 0 ;

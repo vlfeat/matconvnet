@@ -123,6 +123,13 @@ namespace vl { namespace impl {
 #endif
   /* SSSE3 optimised version */
 
+// Suppress sign-conversion warnings.
+#define epi8(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p) \
+(char)a, (char)b, (char)c, (char)d, \
+(char)e, (char)f, (char)g, (char)h, \
+(char)i, (char)j, (char)k, (char)l, \
+(char)m, (char)n, (char)o, (char)p
+
   template<int pixelFormat> void
   imageFromPixels(vl::Image & image, char unsigned const * rgb, int rowStride)
   {
@@ -132,10 +139,10 @@ namespace vl { namespace impl {
     int pixelStride ;
     int imagePlaneStride = (int)shape.width * (int)shape.height ;
     __m128i shuffleRgb ;
-    __m128i const shuffleL = _mm_set_epi8(0xff, 0xff, 0xff,  3,
-                                          0xff, 0xff, 0xff,  2,
-                                          0xff, 0xff, 0xff,  1,
-                                          0xff, 0xff, 0xff,  0) ;
+    __m128i const shuffleL = _mm_set_epi8(epi8(0xff, 0xff, 0xff,  3,
+                                               0xff, 0xff, 0xff,  2,
+                                               0xff, 0xff, 0xff,  1,
+                                               0xff, 0xff, 0xff,  0)) ;
     __m128i const mask = _mm_set_epi32(0xff, 0xff, 0xff, 0xff) ;
 
     switch (pixelFormat) {
@@ -168,38 +175,38 @@ namespace vl { namespace impl {
         break ;
 
       case pixelFormatRGB:
-        shuffleRgb = _mm_set_epi8(0xff, 11, 10,  9,
-                                  0xff,  8,  7,  6,
-                                  0xff,  5,  4,  3,
-                                  0xff,  2,  1,  0) ;
+        shuffleRgb = _mm_set_epi8(epi8(0xff, 11, 10,  9,
+                                       0xff,  8,  7,  6,
+                                       0xff,  5,  4,  3,
+                                       0xff,  2,  1,  0)) ;
         break ;
 
       case pixelFormatRGBA:
-        shuffleRgb = _mm_set_epi8(0xff, 14, 13, 12,
-                                  0xff, 10,  9,  8,
-                                  0xff,  6,  5,  4,
-                                  0xff,  2,  1,  0) ;
+        shuffleRgb = _mm_set_epi8(epi8(0xff, 14, 13, 12,
+                                       0xff, 10,  9,  8,
+                                       0xff,  6,  5,  4,
+                                       0xff,  2,  1,  0)) ;
         break ;
 
       case pixelFormatBGR:
-        shuffleRgb = _mm_set_epi8(0xff,  9, 10, 11,
-                                  0xff,  6,  7,  8,
-                                  0xff,  3,  4,  4,
-                                  0xff,  0,  1,  2) ;
+        shuffleRgb = _mm_set_epi8(epi8(0xff,  9, 10, 11,
+                                       0xff,  6,  7,  8,
+                                       0xff,  3,  4,  4,
+                                       0xff,  0,  1,  2)) ;
         break ;
 
       case pixelFormatBGRA:
-        shuffleRgb = _mm_set_epi8(0xff, 12, 13, 14,
-                                  0xff,  8,  9, 10,
-                                  0xff,  4,  5,  6,
-                                  0xff,  0,  1,  2) ;
+        shuffleRgb = _mm_set_epi8(epi8(0xff, 12, 13, 14,
+                                       0xff,  8,  9, 10,
+                                       0xff,  4,  5,  6,
+                                       0xff,  0,  1,  2)) ;
         break ;
 
       case pixelFormatBGRAasL:
-        shuffleRgb = _mm_set_epi8(0xff, 0xff, 0xff, 12,
-                                  0xff, 0xff, 0xff, 8,
-                                  0xff, 0xff, 0xff, 4,
-                                  0xff, 0xff, 0xff, 0) ;
+        shuffleRgb = _mm_set_epi8(epi8(0xff, 0xff, 0xff, 12,
+                                       0xff, 0xff, 0xff, 8,
+                                       0xff, 0xff, 0xff, 4,
+                                       0xff, 0xff, 0xff, 0)) ;
         break ;
     }
 
@@ -399,8 +406,8 @@ namespace vl { namespace impl {
   struct ImageResizeFilter
   {
     float * weights ;
-    int * starts ;
-    int filterSize ;
+    ptrdiff_t * starts ;
+    ptrdiff_t filterSize ;
     enum FilterType { kBox, kBilinear, kBicubic, kLanczos2, kLanczos3 } ;
 
     ~ImageResizeFilter() {
@@ -440,8 +447,8 @@ namespace vl { namespace impl {
         filterSize = (int)ceilf(filterSupport) ;
       }
 
-      weights = (float*)calloc(filterSize * outputWidth, sizeof(float)) ;
-      starts = (int*)malloc(sizeof(int) * outputWidth) ;
+      weights = (float*)calloc(as_unsigned(filterSize) * outputWidth, sizeof(float)) ;
+      starts = (decltype(starts))malloc(sizeof(starts[0]) * outputWidth) ;
       float * filter = weights ;
 
       /* the filter extends in the interval (-filterSize/2, filterSize/2)
@@ -454,12 +461,12 @@ namespace vl { namespace impl {
          so that there are always filerWidth elements to sum on */
         float u = alpha * v + beta ;
         float mass = 0 ;
-        int skip = filterSize ;
+        auto skip = filterSize ;
 
-        starts[v] = (int)std::ceil(u - filterSupport / 2) ;
+        starts[v] = std::ceil(u - filterSupport / 2) ;
 
-        for (int r = 0 ; r < filterSize ; ++r) {
-          int k = r + starts[v] ;
+        for (ptrdiff_t r = 0 ; r < filterSize ; ++r) {
+          auto k = r + starts[v] ;
           float h ;
           float delta = u - k ;
           if (alpha > 1) {
@@ -515,7 +522,7 @@ namespace vl { namespace impl {
             // the borders: it mirrors-pad them. This is a bit more
             // difficult to obtain with our data structure. Instead,
             // we repeat the first/last pixel.
-            int q = r ;
+            auto q = r ;
             if (k < 0) {
               q = r - k ;
             } else if (k >= (signed)inputWidth) {
@@ -529,7 +536,7 @@ namespace vl { namespace impl {
           }
         }
         {
-          int r = 0 ;
+          ptrdiff_t r = 0 ;
           starts[v] += skip ;
           for (r = 0 ; r < filterSize - skip ; ++r) {
             filter[r] = filter[r + skip] / mass ;
@@ -551,24 +558,22 @@ namespace vl { namespace impl {
                                   vl::impl::ImageResizeFilter::FilterType filterType = vl::impl::ImageResizeFilter::kBilinear)
   {
     ImageResizeFilter filters(outputHeight, height, cropHeight, cropOffset, filterType) ;
-    int filterSize = filters.filterSize ;
-    for (int d = 0 ; d < (int)depth ; ++d) {
-      for (int x = 0 ; x < (int)width ; ++x) {
-        for (int y = 0 ; y < (int)outputHeight ; ++y) {
+    auto filterSize = filters.filterSize ;
+    for (ptrdiff_t d = 0 ; d < (int)depth ; ++d) {
+      for (ptrdiff_t x = 0 ; x < (int)width ; ++x) {
+        for (ptrdiff_t y = 0 ; y < (int)outputHeight ; ++y) {
           float z = 0 ;
-          int begin = filters.starts[y] ;
+          auto begin = filters.starts[y] ;
           float const * weights = filters.weights + filterSize * y ;
-          for (int k = begin ; k < begin + filterSize ; ++k) {
+          for (auto k = begin ; k < begin + filterSize ; ++k) {
             float w = *weights++ ;
             if (w == 0.f) break ;
-            //if ((0 <= k) & (k < (signed)height)) {
-              z += input[k] * w ;
-            //}
+            z += input[k] * w ;
           }
           if (!flip) {
-            output[x + y * width] = z ; // transpose
+            output[x + y * as_signed(width)] = z ; // transpose
           } else {
-            output[x + ((int)outputHeight - 1 - y) * width] = z ; // flip and transpose
+            output[x + (as_signed(outputHeight) - 1 - y) * as_signed(width)] = z ; // flip and transpose
           }
         }
         input += height ;

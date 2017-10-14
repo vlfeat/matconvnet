@@ -148,10 +148,10 @@ struct LRNForward<vl::VLDT_CPU, dataType>
                            vl::Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = output.getWidth() ;
-    auto height = output.getHeight() ;
-    auto depth = output.getDepth() ;
-    auto num = output.getSize() ;
+    auto width = as_signed(output.getWidth()) ;
+    auto height = as_signed(output.getHeight()) ;
+    auto depth = as_signed(output.getDepth()) ;
+    auto num = as_signed(output.getSize()) ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
@@ -182,12 +182,12 @@ struct LRNForward<vl::VLDT_CPU, dataType>
       output += width*height*depth ;
     }
 #else
-    type * acc = (type*) calloc(sizeof(type), width*height) ;
-    for (int k = 0 ; k < num ; ++k) {
-      memset(acc, 0, sizeof(type) * width*height) ;
+    type * acc = (type*) calloc(sizeof(type), as_unsigned(width*height)) ;
+    for (ptrdiff_t k = 0 ; k < num ; ++k) {
+      memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
       for (t = -m2 ; t < (signed)depth ; ++t) {
-        int tm = t - m1 - 1 ;
-        int tp = t + m2 ;
+        auto tm = t - m1 - 1 ;
+        auto tp = t + m2 ;
         type const* xam = inputData + offset * (t-m1-1) ;
         type const* xap = inputData + offset * (t+m2) ;
         type *end = acc + width*height ;
@@ -238,19 +238,19 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
                            vl::Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = derOutput.getWidth() ;
-    auto height = derOutput.getHeight() ;
-    auto depth = derOutput.getDepth() ;
-    auto num = derOutput.getSize() ;
+    auto width = as_signed(derOutput.getWidth()) ;
+    auto height = as_signed(derOutput.getHeight()) ;
+    auto depth = as_signed(derOutput.getDepth()) ;
+    auto num = as_signed(derOutput.getSize()) ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
     auto derInputData = (type*)derInput.getMemory() ;
 
-    auto m1 = ((signed)op.normDepth-1)/2 ;
-    auto m2 = (signed)op.normDepth - m1 - 1 ;
-    auto offset = width*height ;
+    ptrdiff_t m1 = (op.normDepth-1)/2 ;
+    ptrdiff_t m2 = op.normDepth - m1 - 1 ;
+    ptrdiff_t offset = width*height ;
     type ab2 = 2*op.alpha*op.beta ;
-    long t ;
+    ptrdiff_t t ;
 
 #ifndef VL_NNNORMALIZE_FAST
     int q ;
@@ -290,18 +290,18 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
       derOutput += width*height*depth ;
     }
 #else
-    type * restrict acc = (type*) malloc(sizeof(type) * width*height) ;
-    type * restrict acc2 = (type*) malloc(sizeof(type) * width*height*depth) ;
-    for (int k = 0 ; k < num ; ++k) {
-      memset(acc, 0, sizeof(type) * width*height) ;
-      for (t = -m2 ; t < (signed)depth ; ++t) {
+    type * restrict acc = (type*) malloc(sizeof(type) * as_unsigned(width*height)) ;
+    type * restrict acc2 = (type*) malloc(sizeof(type) * as_unsigned(width*height*depth)) ;
+    for (ptrdiff_t k = 0 ; k < num ; ++k) {
+      memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
+      for (t = -m2 ; t < as_signed(depth) ; ++t) {
         /*
          Compue the square of the input data x.^2 summed in the normalization window. This is done
          incrementally, by updating the previous normalization window sum.
          */
         {
-          int const tm = t - m1 - 1 ;
-          int const tp = t + m2 ;
+          auto const tm = t - m1 - 1 ;
+          auto const tp = t + m2 ;
           type const* restrict datam_ = inputData + offset * tm ;
           type const* restrict datap_ = inputData + offset * tp ;
           type *end = acc + width*height ;
@@ -366,7 +366,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
        */
       for (t = 0 ; t < (signed)depth ; ++t) {
         auto q1 = t - m2 - 1 ;
-        auto q2 = ((t + m1) <= (depth - 1)) ? t + m1 : depth - 1 ;
+        auto q2 = ((t + m1) <= depth - 1) ? t + m1 : as_signed(depth) - 1 ;
         type const* restrict acc22_ = acc2 + offset * q2 ;
         type const* restrict acc21_ = acc2 + offset * q1 ;
         type const* restrict data_  = inputData + offset * t ;

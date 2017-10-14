@@ -103,7 +103,8 @@ struct SubsampleAndBiasForward
         error = vl::impl::blas<deviceType, dataType>::gemm
         (op.context,
          'n', 'n',
-         numOutputPixels, as_signed(biases.getNumElements()), 1,
+         as_signed(numOutputPixels),
+         as_signed(biases.getNumElements()), 1,
          alpha,
          allOnesMemory, as_signed(numOutputPixels),
          (type*)biases.getMemory(), 1,
@@ -174,7 +175,7 @@ struct SubsampleAndBiasBackward
   {
     assert(derOutput) ;
 
-    vl::ErrorCode error ;
+    vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
     // Compute derInput.
