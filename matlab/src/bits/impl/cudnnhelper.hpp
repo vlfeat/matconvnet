@@ -14,7 +14,7 @@ the terms of the BSD license (see the COPYING file).
 #define cudnnhelper_h
 
 #include "cudnn.h"
-#include "assert.h"
+#include <cassert>
 
 #define COMMA ,
 

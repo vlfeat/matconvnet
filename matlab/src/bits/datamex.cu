@@ -15,7 +15,7 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
-#include <assert.h>
+#include <cassert>
 #ifndef NDEBUG
 #include<iostream>
 #endif

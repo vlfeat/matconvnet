@@ -13,7 +13,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnsubsample.hpp"
 #include "datacu.hpp"
-#include <assert.h>
+#include <cassert>
 #include <float.h>
 #include <iostream>
 

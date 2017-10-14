@@ -21,7 +21,7 @@ the terms of the BSD license (see the COPYING file).
 #endif
 
 #include <memory>
-#include <assert.h>
+#include <cassert>
 
 enum {
   IN_ALPHA, IN_A, IN_BETA, IN_B, IN_END

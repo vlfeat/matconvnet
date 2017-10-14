@@ -14,7 +14,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "datacu.hpp"
 
-#include <assert.h>
+#include <cassert>
 #include <cfloat>
 #include <algorithm>
 #include <sm_20_atomic_functions.h>

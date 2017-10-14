@@ -18,7 +18,7 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datacu.hpp"
 #endif
 
-#include <assert.h>
+#include <cassert>
 
 /* option codes */
 enum {

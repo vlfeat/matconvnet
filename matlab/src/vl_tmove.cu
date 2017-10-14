@@ -21,7 +21,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "bits/impl/blashelper.hpp"
 
-#include <assert.h>
+#include <cassert>
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>

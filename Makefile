@@ -33,10 +33,6 @@ MATLABROOT ?= /Applications/MATLAB_R2017a.app
 CUDAROOT ?= /Developer/NVIDIA/CUDA-8.0
 # Remark: each MATLAB version requires a particular CUDA Toolkit version.
 # Note that multiple CUDA Toolkits can be installed.
-#MATLABROOT ?= /Applications/MATLAB_R2014b.app
-#CUDAROOT ?= /Developer/NVIDIA/CUDA-6.0
-#MATLABROOT ?= /Applications/MATLAB_R2015a.app
-#CUDAROOT ?= /Developer/NVIDIA/CUDA-7.0
 #MATLABROOT ?= /Applications/MATLAB_R2015b.app
 #CUDAROOT ?= /Developer/NVIDIA/CUDA-7.5
 
@@ -46,7 +42,6 @@ CUDAMETHOD ?= $(if $(ENABLE_CUDNN),nvcc,mex)
 # For Mac OS X: Use this to use an old Xcode (for CUDA) after installing
 # the corresponding Xcode Command Line Tools from developer.apple.compile
 # DEVELOPER_DIR=/Applications/Xcode7.3.1.app/Contents/Developer
-
 
 # Maintenance
 NAME = matconvnet

@@ -17,8 +17,6 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
-#define VL_IMAGE_ERROR_MSG_MAX_LENGTH 256
-
   struct ImageShape
   {
     size_t height ;

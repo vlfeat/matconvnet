@@ -22,7 +22,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include <ctype.h>
 #include <string.h>
-#include <assert.h>
+#include <cassert>
 
 #include "impl/compat.h"
 

@@ -13,7 +13,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "nnpooling.hpp"
 #include "datacu.hpp"
-#include <assert.h>
+#include <cassert>
 #include <float.h>
 #include <sm_20_atomic_functions.h>
 

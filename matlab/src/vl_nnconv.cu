@@ -24,7 +24,7 @@ the terms of the BSD license (see the COPYING file).
 #endif
 
 #include <memory>
-#include <assert.h>
+#include <cassert>
 #include <math.h>
 
 /* option codes */

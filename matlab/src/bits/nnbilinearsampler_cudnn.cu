@@ -13,7 +13,7 @@ the terms of the BSD license (see the COPYING file).
 #include "nnbilinearsampler.hpp"
 #include "datacu.hpp"
 #include "impl/cudnnhelper.hpp"
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 
 using namespace std ;
