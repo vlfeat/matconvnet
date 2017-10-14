@@ -1,6 +1,6 @@
 # file: Makefile
 # author: Andrea Vedaldi
-# brief: matconvnet makefile for mex files
+# brief: MatConvNet Makefile for MEX files.
 
 # Copyright (C) 2014-17 Andrea Vedaldi.
 # All rights reserved.
