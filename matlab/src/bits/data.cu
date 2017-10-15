@@ -495,6 +495,25 @@ vl::TensorShape::TensorShape(TensorShape const & t)
   }
 }
 
+vl::TensorShape::TensorShape(const std::initializer_list<size_t> &dims)
+: numDimensions(0)
+{
+  assert(dims.size() <= maxNumDimensions) ;
+  for (auto d : dims) {
+    dimensions[numDimensions++] = d ;
+  }
+}
+
+vl::TensorShape::TensorShape(const std::vector<size_t> &dims)
+: numDimensions(0)
+{
+  assert(dims.size() <= maxNumDimensions) ;
+  for (auto d : dims) {
+    dimensions[numDimensions++] = d ;
+  }
+}
+
+
 vl::TensorShape::TensorShape(size_t height, size_t width, size_t depth, size_t size)
 : numDimensions(4)
 {
@@ -511,7 +530,7 @@ void vl::TensorShape::clear()
 
 void vl::TensorShape::setDimensions(size_t const * newDimensions, size_t newNumDimensions)
 {
-  assert(newNumDimensions  <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  assert(newNumDimensions  <= maxNumDimensions) ;
   for (long unsigned k = 0 ; k < newNumDimensions ; ++k) {
     dimensions[k] = newDimensions[k] ;
   }
@@ -520,7 +539,7 @@ void vl::TensorShape::setDimensions(size_t const * newDimensions, size_t newNumD
 
 void vl::TensorShape::setDimension(size_t num, size_t dimension)
 {
-  assert(num + 1 <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  assert(num + 1 <= maxNumDimensions) ;
   if (num + 1 > numDimensions) {
     size_t x = (getNumElements() > 0) ;
     for (size_t k = numDimensions ; k < num ; ++k) {
@@ -584,7 +603,7 @@ bool vl::operator== (vl::TensorShape const & a, vl::TensorShape const & b)
 
 void vl::TensorShape::reshape(size_t newNumDimensions)
 {
-  assert(newNumDimensions <= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) ;
+  assert(newNumDimensions <= maxNumDimensions) ;
   size_t n = getNumElements() ;
   if (newNumDimensions > 0) {
     setDimension(newNumDimensions - 1, 1) ;

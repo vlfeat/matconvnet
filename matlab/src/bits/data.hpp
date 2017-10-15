@@ -15,6 +15,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include "impl/compat.h"
 
@@ -196,13 +197,15 @@ namespace vl {
    * TensorShape
    * -------------------------------------------------------------- */
 
-#define VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS 8
-
   class TensorShape
   {
   public:
+    static constexpr size_t maxNumDimensions = 8 ;
+
     TensorShape() ;
     TensorShape(TensorShape const& t) ;
+    TensorShape(const std::initializer_list<size_t> &dims) ;
+    TensorShape(const std::vector<size_t> &dims) ;
     TensorShape(size_t height, size_t width, size_t depth, size_t size) ;
     TensorShape(size_t const * dimensions, size_t numDimensions) ;
 
@@ -228,7 +231,7 @@ namespace vl {
     bool isEmpty() const ;
 
   protected:
-    size_t dimensions [VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS] ;
+    size_t dimensions [maxNumDimensions] ;
     size_t numDimensions ;
   } ;
 
