@@ -82,7 +82,7 @@ void mexFunction(int nout, mxArray *out[],
   bool backMode = false ;
   double epsilon = 1e-2 ;
   double exponent = 2.0 ;
-  std::vector<int> dimensions = {2} ;
+  std::vector<vl::Int> dimensions = {2} ;
 
   // For the moment true need to be fixed
   bool computeDerData = true ;

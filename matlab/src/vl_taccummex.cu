@@ -56,7 +56,7 @@ accumulate(vl::Context & context,
   vl::ErrorCode error ;
 
   typedef typename vl::DataTypeTraits<dataType>::type type ;
-  ptrdiff_t n = a.getShape().getNumElements() ;
+  Int n = a.getShape().getNumElements() ;
 
   bool inplace = (output.getMemory() == a.getMemory()) ;
 

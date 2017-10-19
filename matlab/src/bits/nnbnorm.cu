@@ -110,8 +110,8 @@ compute_ders_and_moments(T * derMultipliers,
   memset(derMultipliers, 0, sizeof(T) * depth) ;
   memset(derBiases, 0, sizeof(T) * depth) ;
   memset(moments, 0, sizeof(T) * 2 * depth) ;
-  for(size_t channel = 0; channel < depth; ++channel){
-    for(size_t element = 0; element < num; ++element ){
+  for(size_t channel = 0; channel < depth; ++channel) {
+    for(size_t element = 0; element < num; ++element) {
       for(size_t wh = 0; wh < WH; ++wh){
         auto offset = wh + channel * WH + element * (WH*depth) ;
         moments[channel] += data[offset] ;
@@ -227,7 +227,7 @@ struct BatchNormForward<VLDT_CPU, dataType>
     // Compute the moments.
     Tensor ownMoment(moment) ;
     if (ownMoment.getMemory() == NULL) {
-      auto * buffer = (type*)op.context.getWorkspace(vl::VLDT_CPU, sizeof(type)*2*depth) ;
+      auto * buffer = (type*)op.getContext().getWorkspace(vl::VLDT_CPU, sizeof(type)*2*depth) ;
       if (!buffer) {
         error = VLE_OutOfMemory ;
         goto done ;
@@ -241,7 +241,7 @@ struct BatchNormForward<VLDT_CPU, dataType>
                            static_cast<int>(width*height),
                            static_cast<int>(depth),
                            static_cast<int>(size),
-                           op.epsilon) ;
+                           op.getEpsilon()) ;
     }
 
     // Compute output.
@@ -290,7 +290,7 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
     compute_ders<type>(derMultiplierData, derBiasData,
                        momentData, inputData, derOutputData,
                        WH, depth, size,
-                       op.epsilon);
+                       op.getEpsilon());
 
     // Compute derData.
     batch_normalize_backward<type>(derInputData,
@@ -332,7 +332,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
     // Get workspace if needed.
     Tensor ownMoment(moment) ;
     if (ownMoment.getMemory() == NULL) {
-      auto * buffer = (type*)op.context.getWorkspace(vl::VLDT_CPU, sizeof(type)*2*depth) ;
+      auto * buffer = (type*)op.getContext().getWorkspace(vl::VLDT_CPU, sizeof(type)*2*depth) ;
       if (!buffer) {
         error = VLE_OutOfMemory ;
         goto done ;
@@ -347,7 +347,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
       compute_ders_and_moments<type>(derMultiplierData, derBiasData, momentData,
                                      inputData, derOutputData,
                                      WH, depth, size,
-                                     op.epsilon);
+                                     op.getEpsilon());
 
       // Compute derData.
       batch_normalize_backward<type>(derInputData,
@@ -376,7 +376,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
 BatchNorm::BatchNorm(Context &context,
                      double epsilon)
 :
-context(context),
+Operation(context),
 epsilon(epsilon)
 { }
 

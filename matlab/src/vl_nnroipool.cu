@@ -70,7 +70,7 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  std::array<int,2> subdivisions {1, 1} ;
+  std::array<vl::Int,2> subdivisions {1, 1} ;
   std::array<double,6> transform {1., 0., 0., 1., 0., 0.} ;
   vl::nn::ROIPooling::Method method = vl::nn::ROIPooling::Max ;
   bool backMode = false ;

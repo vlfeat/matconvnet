@@ -51,36 +51,36 @@ struct blas
   static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
-       ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+       Int m, Int n, Int k,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * b, ptrdiff_t ldb,
+       type const * a, Int lda,
+       type const * b, Int ldb,
        type beta,
-       type * c, ptrdiff_t ldc) ;
+       type * c, Int ldc) ;
 
   static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
-       ptrdiff_t m, ptrdiff_t n,
+       Int m, Int n,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * x, ptrdiff_t incx,
+       type const * a, Int lda,
+       type const * x, Int incx,
        type beta,
-       type * y, ptrdiff_t incy) ;
+       type * y, Int incy) ;
 
   static vl::ErrorCode
   axpy(vl::Context& context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type const *x, ptrdiff_t incx,
-       type *y, ptrdiff_t incy) ;
+       type const *x, Int incx,
+       type *y, Int incy) ;
 
   static vl::ErrorCode
   scal(vl::Context& context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
        type *x,
-       ptrdiff_t inc) ;
+       Int inc) ;
 } ;
 
 /* ---------------------------------------------------------------- */
@@ -95,12 +95,12 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
   static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
-       ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+       Int m, Int n, Int k,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * b, ptrdiff_t ldb,
+       type const * a, Int lda,
+       type const * b, Int ldb,
        type beta,
-       type * c, ptrdiff_t ldc)
+       type * c, Int ldc)
   {
 #ifdef APPLE_BLAS
     cblas_sgemm(CblasColMajor,
@@ -127,12 +127,12 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
   static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
-       ptrdiff_t m, ptrdiff_t n,
+       Int m, Int n,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * x, ptrdiff_t incx,
+       type const * a, Int lda,
+       type const * x, Int incx,
        type beta,
-       type * y, ptrdiff_t incy)
+       type * y, Int incy)
   {
 #ifdef APPLE_BLAS
     cblas_sgemv(CblasColMajor,
@@ -156,10 +156,10 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
 
   static vl::ErrorCode
   axpy(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type const *x, ptrdiff_t incx,
-       type *y, ptrdiff_t incy)
+       type const *x, Int incx,
+       type *y, Int incy)
   {
 #if defined(APPLE_BLAS)
     cblas_saxpy((int)n,
@@ -177,9 +177,9 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Float>
 
   static vl::ErrorCode
   scal(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type *x, ptrdiff_t incx)
+       type *x, Int incx)
   {
 #if defined(APPLE_BLAS)
     cblas_sscal((int)n,
@@ -203,12 +203,12 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
   static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
-       ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+       Int m, Int n, Int k,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * b, ptrdiff_t ldb,
+       type const * a, Int lda,
+       type const * b, Int ldb,
        type beta,
-       type * c, ptrdiff_t ldc)
+       type * c, Int ldc)
   {
 #ifdef APPLE_BLAS
     cblas_dgemm(CblasColMajor,
@@ -235,12 +235,12 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
   static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
-       ptrdiff_t m, ptrdiff_t n,
+       Int m, Int n,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * x, ptrdiff_t incx,
+       type const * a, Int lda,
+       type const * x, Int incx,
        type beta,
-       type * y, ptrdiff_t incy)
+       type * y, Int incy)
   {
 #ifdef APPLE_BLAS
     cblas_dgemv(CblasColMajor,
@@ -264,10 +264,10 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
 
   static vl::ErrorCode
   axpy(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type const *x, ptrdiff_t incx,
-       type *y, ptrdiff_t incy)
+       type const *x, Int incx,
+       type *y, Int incy)
   {
 #ifdef APPLE_BLAS
     cblas_daxpy((int)n,
@@ -285,9 +285,9 @@ struct blas<vl::VLDT_CPU, vl::VLDT_Double>
 
   static vl::ErrorCode
   scal(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type *x, ptrdiff_t incx)
+       type *x, Int incx)
   {
 #ifdef APPLE_BLAS
     cblas_dscal((int)n,
@@ -316,12 +316,12 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Float>
   static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
-       ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+       Int m, Int n, Int k,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * b, ptrdiff_t ldb,
+       type const * a, Int lda,
+       type const * b, Int ldb,
        type beta,
-       type * c, ptrdiff_t ldc)
+       type * c, Int ldc)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -345,12 +345,12 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Float>
   static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
-       ptrdiff_t m, ptrdiff_t n,
+       Int m, Int n,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * x, ptrdiff_t incx,
+       type const * a, Int lda,
+       type const * x, Int incx,
        type beta,
-       type * y, ptrdiff_t incy)
+       type * y, Int incy)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -372,9 +372,9 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Float>
 
   static vl::ErrorCode
   scal(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type *x, ptrdiff_t incx)
+       type *x, Int incx)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -391,10 +391,10 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Float>
 
   static vl::ErrorCode
   axpy(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type const *x, ptrdiff_t incx,
-       type *y, ptrdiff_t incy)
+       type const *x, Int incx,
+       type *y, Int incy)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -419,12 +419,12 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Double>
   static vl::ErrorCode
   gemm(vl::Context& context,
        char op1, char op2,
-       ptrdiff_t m, ptrdiff_t n, ptrdiff_t k,
+       Int m, Int n, Int k,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * b, ptrdiff_t ldb,
+       type const * a, Int lda,
+       type const * b, Int ldb,
        type beta,
-       type * c, ptrdiff_t ldc)
+       type * c, Int ldc)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -448,12 +448,12 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Double>
   static vl::ErrorCode
   gemv(vl::Context& context,
        char op,
-       ptrdiff_t m, ptrdiff_t n,
+       Int m, Int n,
        type alpha,
-       type const * a, ptrdiff_t lda,
-       type const * x, ptrdiff_t incx,
+       type const * a, Int lda,
+       type const * x, Int incx,
        type beta,
-       type * y, ptrdiff_t incy)
+       type * y, Int incy)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -475,9 +475,9 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Double>
 
   static vl::ErrorCode
   scal(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type *x, ptrdiff_t incx)
+       type *x, Int incx)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;
@@ -494,10 +494,10 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Double>
 
   static vl::ErrorCode
   axpy(vl::Context & context,
-       ptrdiff_t n,
+       Int n,
        type alpha,
-       type const *x, ptrdiff_t incx,
-       type *y, ptrdiff_t incy)
+       type const *x, Int incx,
+       type *y, Int incy)
   {
     cublasHandle_t handle ;
     cublasStatus_t status ;

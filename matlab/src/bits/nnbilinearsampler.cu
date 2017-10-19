@@ -69,8 +69,8 @@ forward_backward
   // if (backwardGrid) {
   //   memset(derGrid, 0, 2 * outHeight * outWidth * outCardinality * sizeof(type)) ;
   // }
-  for (long n = 0 ; n < (signed)outCardinality ; ++n) {
-    for (long c = 0 ; c < (signed)outDepth ; ++c) {
+  for (Int n = 0 ; n < (signed)outCardinality ; ++n) {
+    for (Int c = 0 ; c < (signed)outDepth ; ++c) {
       type const * end = grid + 2 * outWidth * outHeight ;
       while (grid < end) {
         type py = *grid++ ;
@@ -78,8 +78,8 @@ forward_backward
 
         py = type(0.5)*(py + type(1.0)) * (inHeight - 1) ;
         px = type(0.5)*(px + type(1.0)) * (inWidth - 1) ;
-        long const sx = floor(px); // todo: check floor vs floorf
-        long const sy = floor(py);
+        Int const sx = floor(px); // todo: check floor vs floorf
+        Int const sy = floor(py);
 
         type acc = 0 ;
         type dgridx = 0 ;
@@ -97,9 +97,9 @@ forward_backward
           const type wy = py - sy ;
 
 #pragma unroll
-          for (long j=0; j < 2; j++) {
+          for (Int j=0; j < 2; j++) {
 #pragma unroll
-            for (long i=0; i < 2; i++) {
+            for (Int i=0; i < 2; i++) {
               auto ssy = sy + i ;
               auto ssx = sx + j ;
               if (ssy < 0 || ssy >= (signed)inHeight || ssx < 0 || ssx >= (signed)inWidth) {
@@ -138,7 +138,7 @@ forward_backward
       derGrid -= 2 * outHeight * outWidth ;
     }
     // next image
-    if (((unsigned)n + 1) % groupSize != 0) {
+    if ((as_unsigned(n) + 1) % groupSize != 0) {
       data -= inHeight * inWidth * outDepth ;
       derData -= inHeight * inWidth * outDepth ;
     }
@@ -175,7 +175,7 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
     auto gridData = (type const*)grid.getMemory() ;
 
     return forward_backward<type, false, false>
-    (op.context, outputData, NULL, NULL, inputData, gridData, NULL,
+    (op.getContext(), outputData, NULL, NULL, inputData, gridData, NULL,
      outHeight, outWidth, outDepth, outCardinality,
      inHeight, inWidth, inCardinality) ;
   }
@@ -187,7 +187,7 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
 
 #define DISPATCH(bwData, bwGrid) \
 error = forward_backward<type, bwData, bwGrid> \
-(op.context, NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
+(op.getContext(), NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
 outHeight, outWidth, outDepth, outCardinality, \
 inHeight, inWidth,inCardinality) ;
 
@@ -243,7 +243,7 @@ struct BilinearSamplerBackward<VLDT_CPU,dataType>
 #endif
 
 BilinearSampler::BilinearSampler(Context &context)
-: context(context)
+: Operation(context)
 { }
 
 vl::ErrorCode

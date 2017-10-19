@@ -13,11 +13,11 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __vl__nnfullyconnected__
 #define __vl__nnfullyconnected__
 
-#include "data.hpp"
+#include "nnoperation.hpp"
 
 namespace vl { namespace nn {
 
-  class FullyConnected {
+  class FullyConnected : public Operation {
   public:
     FullyConnected(vl::Context &context) ;
 
@@ -33,7 +33,6 @@ namespace vl { namespace nn {
                            vl::Tensor const &filter,
                            vl::Tensor const &derOutput) ;
 
-    vl::Context& context ;
   } ;
 
 } }

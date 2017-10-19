@@ -143,7 +143,7 @@ inline float fast_pow(float a, float b)
 template<vl::DataType dataType>
 struct LRNForward<vl::VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(vl::nn::LRN &op,
+  vl::ErrorCode operator()(vl::nn::LRN const &op,
                            vl::Tensor &output,
                            vl::Tensor const &input)
   {
@@ -155,10 +155,11 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
-    int t ;
-    int m1 = ((signed)op.normDepth-1)/2 ;
-    int m2 = (int)op.normDepth - m1 - 1 ;
-    int offset = (int)width*(int)height ;
+    Int t ;
+    Int m1 = (op.getNormDepth() - 1)/2 ;
+    Int m2 = op.getNormDepth() - m1 - 1 ;
+    Int offset = as_signed(width*height) ;
+
 #ifndef VL_NNNORMALIZE_FAST
     for (int k = 0 ; k < num ; ++k) {
       for (int h = 0 ; h < height ; ++h) {
@@ -183,7 +184,11 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     }
 #else
     type * acc = (type*) calloc(sizeof(type), as_unsigned(width*height)) ;
-    for (ptrdiff_t k = 0 ; k < num ; ++k) {
+    auto alpha = static_cast<type>(op.getAlpha()) ;
+    auto kappa = static_cast<type>(op.getKappa()) ;
+    auto beta = static_cast<type>(op.getBeta()) ;
+
+    for (Int k = 0 ; k < num ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
       for (t = -m2 ; t < (signed)depth ; ++t) {
         auto tm = t - m1 - 1 ;
@@ -212,7 +217,7 @@ struct LRNForward<vl::VLDT_CPU, dataType>
           type const* xx = inputData + offset * t ;
           type * xy = outputData + offset * t ;
           for(type *xacc = acc ; xacc != end ; ++xacc, ++xx, ++xy) {
-            (*xy) = (*xx) * fast_pow(op.kappa + op.alpha * (*xacc), -op.beta) ;
+            (*xy) = (*xx) * fast_pow(kappa + alpha * (*xacc), -beta) ;
           }
         }
       }
@@ -232,7 +237,7 @@ struct LRNForward<vl::VLDT_CPU, dataType>
 template<vl::DataType dataType>
 struct LRNBackward<vl::VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(vl::nn::LRN &op,
+  vl::ErrorCode operator()(vl::nn::LRN const &op,
                            vl::Tensor &derInput,
                            vl::Tensor const &input,
                            vl::Tensor const &derOutput)
@@ -246,11 +251,11 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     auto derOutputData = (type const*)derOutput.getMemory() ;
     auto derInputData = (type*)derInput.getMemory() ;
 
-    ptrdiff_t m1 = (op.normDepth-1)/2 ;
-    ptrdiff_t m2 = op.normDepth - m1 - 1 ;
-    ptrdiff_t offset = width*height ;
-    type ab2 = 2*op.alpha*op.beta ;
-    ptrdiff_t t ;
+    Int m1 = (op.getNormDepth() - 1)/2 ;
+    Int m2 = op.getNormDepth() - m1 - 1 ;
+    Int offset = width*height ;
+    type ab2 = 2*op.getAlpha()*op.getBeta() ;
+    Int t ;
 
 #ifndef VL_NNNORMALIZE_FAST
     int q ;
@@ -292,7 +297,11 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
 #else
     type * restrict acc = (type*) malloc(sizeof(type) * as_unsigned(width*height)) ;
     type * restrict acc2 = (type*) malloc(sizeof(type) * as_unsigned(width*height*depth)) ;
-    for (ptrdiff_t k = 0 ; k < num ; ++k) {
+    auto alpha = static_cast<type>(op.getAlpha()) ;
+    auto kappa = static_cast<type>(op.getKappa()) ;
+    auto beta = static_cast<type>(op.getBeta()) ;
+
+    for (Int k = 0 ; k < num ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
       for (t = -m2 ; t < as_signed(depth) ; ++t) {
         /*
@@ -337,8 +346,8 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
           type * end = acc + width*height ;
           for(type * restrict acc_ = acc ; acc_ != end ;
               ++acc_, ++acc2_, ++data_, ++derOutput_, ++output_) {
-            type L = op.kappa + op.alpha * (*acc_) ;
-            type Lbeta = fast_pow(L, -(type)op.beta) ;
+            type L = kappa + alpha * (*acc_) ;
+            type Lbeta = fast_pow(L, -beta) ;
             type temp1 = (*derOutput_) * Lbeta ;
             type temp2 = (*data_) * ab2 * temp1 / L ;
             *output_ = temp1 ;
@@ -402,16 +411,16 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
 #endif
 
 LRN::LRN(vl::Context &context,
-         int normDepth,
+         Int normDepth,
          double kappa,
          double alpha,
          double beta)
-: context(context), normDepth(normDepth), kappa(kappa), alpha(alpha), beta(beta)
+: Operation(context), normDepth(normDepth), kappa(kappa), alpha(alpha), beta(beta)
 { }
 
 vl::ErrorCode
 LRN::forward(vl::Tensor &output,
-             vl::Tensor const &input)
+             vl::Tensor const &input) const
 {
   return dispatch<LRNForward>()(*this,output,input) ;
 }
@@ -419,7 +428,7 @@ LRN::forward(vl::Tensor &output,
 vl::ErrorCode
 LRN::backward(vl::Tensor &derInput,
               vl::Tensor const &input,
-              vl::Tensor const &derOutput)
+              vl::Tensor const &derOutput) const
 {
   return dispatch<LRNBackward>()(*this,derInput,input,derOutput) ;
 }

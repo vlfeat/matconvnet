@@ -194,7 +194,7 @@ vl::MexTensor::initHelper(DeviceType newDeviceType, DataType newDataType,
   clear() ;
 
   // assign dimensions
-  mwSize dimensions [VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS] ;
+  mwSize dimensions [Tensor::maxNumDimensions] ;
   for (int k = 0 ; k < newShape.getNumDimensions() ; ++k) {
     dimensions[k] = (mwSize)newShape.getDimension(k) ;
   }
@@ -376,7 +376,7 @@ vl::MexTensor::init(mxArray const * array_)
     newNumDimensions = mxGetNumberOfDimensions(newArray) ;
   }
 
-  if (newNumDimensions >= VL_TENSOR_SHAPE_MAX_NUM_DIMENSIONS) {
+  if (newNumDimensions >= Tensor::maxNumDimensions) {
 #if ENABLE_GPU
     if (newGpuArray) {
       mxGPUDestroyGPUArray(newGpuArray) ;

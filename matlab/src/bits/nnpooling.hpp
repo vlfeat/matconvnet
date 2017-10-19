@@ -13,38 +13,48 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __vl__nnpooling__
 #define __vl__nnpooling__
 
-#include "data.hpp"
-#include <stdio.h>
+#include "nnoperation.hpp"
+#include <array>
+#include <cassert>
 
 namespace vl { namespace nn {
 
-  class Pooling {
+  class Pooling : public ConvolutionLike {
   public:
     enum Method { Max, Average } ;
 
     Pooling(vl::Context &context,
-            int poolHeight, int poolWidth,
-            int strideY, int strideX,
-            int padTop, int padBottom,
-            int padLeft, int padRight,
+            Int poolHeight, Int poolWidth,
+            Int strideY, Int strideX,
+            Int padTop, Int padBottom,
+            Int padLeft, Int padRight,
             Method method) ;
 
+    Pooling(vl::Context &context) ;
+
     vl::ErrorCode forward(vl::Tensor &output,
-                          vl::Tensor const &input) ;
+                          vl::Tensor const &input) const ;
+
+    vl::ErrorCode forwardShape(vl::TensorShape &output,
+                               vl::TensorShape const &input) const ;
 
     vl::ErrorCode backward(vl::Tensor &derInput,
                            vl::Tensor const &input,
-                           vl::Tensor const &derOutput) ;
+                           vl::Tensor const &derOutput) const ;
 
-    vl::Context& context ;
-    int poolHeight ;
-    int poolWidth ;
-    int strideY ;
-    int strideX ;
-    int padTop ;
-    int padBottom ;
-    int padLeft ;
-    int padRight ;
+    vl::ErrorCode setShape(std::vector<Int> const& shape) ;
+
+    Int getShape(Int index) const {
+      assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
+      return shape[as_unsigned(index)] ;
+    }
+
+    vl::ErrorCode setMethod(Method method) ;
+
+    Method getMethod() const { return method ; }
+
+  private:
+    std::array<Int, vl::Tensor::maxNumDimensions> shape ;
     Method method ;
   } ;
   

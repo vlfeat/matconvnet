@@ -29,7 +29,7 @@ namespace vl { namespace impl {
             size_t windowHeight, size_t windowWidth,
             size_t strideY, size_t strideX,
             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight,
-            int dilateY, int dialteX) ;
+            Int dilateY, Int dialteX) ;
 
     static vl::ErrorCode
     backward(vl::Context& context,
@@ -39,7 +39,7 @@ namespace vl { namespace impl {
              size_t windowHeight, size_t windowWidth,
              size_t strideY, size_t strideX,
              size_t padTop, size_t padBottom, size_t padLeft, size_t padRight,
-             int dilateY, int dilateX) ;
+             Int dilateY, Int dilateX) ;
   } ;
 
 } }

@@ -13,11 +13,11 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __vl__nnbias__
 #define __vl__nnbias__
 
-#include "data.hpp"
+#include "nnoperation.hpp"
 
 namespace vl { namespace nn {
 
-  class Bias {
+  class Bias : public Operation {
   public:
     Bias(vl::Context &context) ;
 
@@ -30,8 +30,6 @@ namespace vl { namespace nn {
                            vl::Tensor &derBias, double derBiasMult,
                            double inputMult, double biasMult,
                            vl::Tensor const &derOutput) ;
-
-    vl::Context& context ;
   } ;
   
 } }

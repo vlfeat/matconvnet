@@ -31,7 +31,7 @@ template<DeviceType deviceType, DataType dataType>
 struct FullyConnectedForward
 {
   vl::ErrorCode operator()
-  (FullyConnected &op,
+  (FullyConnected const &op,
    Tensor &output,
    Tensor const& input,
    Tensor const& filter,
@@ -47,7 +47,7 @@ struct FullyConnectedForward
       if (input.getSize() == 1) {
         /* one image in the stack */
         error = vl::impl::blas<deviceType,dataType>::gemv
-        (op.context,
+        (op.getContext(),
          't',
          as_signed(filterVolume), as_signed(filter.getSize()),
          alpha,
@@ -59,7 +59,7 @@ struct FullyConnectedForward
       } else {
         /* multiple images in the stack */
         error = vl::impl::blas<deviceType,dataType>::gemm
-        (op.context,
+        (op.getContext(),
          't', 'n',
          as_signed(filter.getSize()),
          as_signed(input.getSize()),
@@ -81,15 +81,15 @@ struct FullyConnectedForward
     if (bias) {
       type beta = 1 ;
       type const* allOnesMemory = (type*)
-      op.context.getAllOnes(deviceType,
+      op.getContext().getAllOnes(deviceType,
                             dataType,
                             input.getSize()) ;
       if (allOnesMemory == NULL) {
-        error = op.context.getLastError() ;
+        error = op.getContext().getLastError() ;
         goto done ;
       }
       error = vl::impl::blas<deviceType,dataType>::gemm
-      (op.context, 'n', 'n',
+      (op.getContext(), 'n', 'n',
        as_signed(bias.getNumElements()), as_signed(input.getSize()), 1,
        alpha,
        (type*)bias.getMemory(), as_signed(bias.getNumElements()),
@@ -99,7 +99,7 @@ struct FullyConnectedForward
       if (error != vl::VLE_Success) { goto done ; }
     }
   done:
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 };
 
@@ -111,7 +111,7 @@ template<DeviceType deviceType, DataType dataType>
 struct FullyConnectedBackward
 {
   vl::ErrorCode operator()
-  (FullyConnected &op,
+  (FullyConnected const &op,
    vl::Tensor &derInput,
    vl::Tensor &derFilter,
    vl::Tensor &derBias,
@@ -129,7 +129,7 @@ struct FullyConnectedBackward
 
       if (derFilter) {
         error = vl::impl::blas<deviceType,dataType>::gemm
-        (op.context,
+        (op.getContext(),
          'n', 't',
          as_signed(filterVolume),
          as_signed(filter.getSize()),
@@ -144,7 +144,7 @@ struct FullyConnectedBackward
 
       if (derInput) {
         error = vl::impl::blas<deviceType,dataType>::gemm
-        (op.context,
+        (op.getContext(),
          'n', 'n',
          as_signed(filterVolume),
          as_signed(input.getSize()),
@@ -165,16 +165,16 @@ struct FullyConnectedBackward
 
     if (derBias) {
       auto allOnesMemory = (type const*)
-      op.context.getAllOnes(deviceType,
+      op.getContext().getAllOnes(deviceType,
                             dataType,
                             derOutput.getSize()) ;
       if (allOnesMemory == NULL) {
-        error = op.context.getLastError() ;
+        error = op.getContext().getLastError() ;
         goto done ;
       }
 
       error = vl::impl::blas<deviceType, dataType>::gemm
-      (op.context,
+      (op.getContext(),
        'n', 't',
        1,
        as_signed(derOutput.getDepth()),
@@ -188,7 +188,7 @@ struct FullyConnectedBackward
 
     }
   done:
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 };
 
@@ -197,7 +197,7 @@ struct FullyConnectedBackward
 // -------------------------------------------------------------------
 
 FullyConnected::FullyConnected(Context &context)
-: context(context)
+: Operation(context)
 { }
 
 vl::ErrorCode

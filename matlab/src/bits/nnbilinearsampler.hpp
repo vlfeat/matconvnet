@@ -14,11 +14,12 @@ the terms of the BSD license (see the COPYING file).
 #define __vl__nnbilinearsampler__
 
 #include "data.hpp"
+#include "nnoperation.hpp"
 #include <stdio.h>
 
 namespace vl { namespace nn {
 
-  class BilinearSampler {
+  class BilinearSampler : public Operation {
   public:
     BilinearSampler(Context &context) ;
 
@@ -31,8 +32,6 @@ namespace vl { namespace nn {
                            vl::Tensor const &input,
                            vl::Tensor const &grid,
                            vl::Tensor const &derOutput) ;
-
-    Context &context ;
   } ;
 
 } }

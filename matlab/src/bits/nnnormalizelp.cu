@@ -33,10 +33,10 @@ template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBac
 
 struct VisitPattern
 {
-  std::vector<ptrdiff_t> steps ;
-  std::vector<ptrdiff_t> stepPeriods ;
-  ptrdiff_t normsVolume ;
-  ptrdiff_t inputVolume ;
+  std::vector<Int> steps ;
+  std::vector<Int> stepPeriods ;
+  Int normsVolume ;
+  Int inputVolume ;
 } ;
 
 VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
@@ -48,19 +48,18 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 
   assert(n <= 4) ; // Todo: relax (just extend the for loops below).
 
-  ptrdiff_t inputVolume = 1 ;
-  ptrdiff_t normsVolume = 1 ;
-  auto steps = std::vector<ptrdiff_t>(n+1,0) ;
-  auto stepPeriods = std::vector<ptrdiff_t>(n+1,0) ;
+  Int inputVolume = 1 ;
+  Int normsVolume = 1 ;
+  auto steps = std::vector<Int>(n+1,0) ;
+  auto stepPeriods = std::vector<Int>(n+1,0) ;
 
   // Find out how to traverse the reduced results as the input is
   // scanned from first to last element.
   for (size_t d = 0 ; d < n ; ++d) {
     stepPeriods[d] = inputVolume ;
 
-    bool squashed =
-    (find(op.selectedDimensions.begin(), op.selectedDimensions.end(), d) !=
-     op.selectedDimensions.end()) ;
+    auto const& sd = op.getSelectedDimensions() ;
+    bool squashed = (find(sd.begin(), sd.end(), d) != sd.end()) ;
 
     if (!squashed)  {
       steps[d] += normsVolume ;
@@ -107,13 +106,15 @@ void computeNorms(NormalizeLp const & op,
   memset(normsData, 0, as_unsigned(vp.normsVolume) * sizeof(type)) ;
 
   // Accumulate norm.
+  auto const exponent = static_cast<type>(op.getExponent()) ;
+  auto const epsilon = static_cast<type>(op.getEpsilon()) ;
   auto npt = normsData ;
   auto ipt = inputData ;
-  for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
-    for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
-      for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
-        for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
-          *npt += pow(*ipt++, op.exponent) ;
+  for (Int i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+    for (Int i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+      for (Int i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+        for (Int i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+          *npt += pow(*ipt++, exponent) ;
           npt += vp.steps[0] ;
         }
         npt += vp.steps[1] ;
@@ -124,8 +125,8 @@ void computeNorms(NormalizeLp const & op,
   }
 
   // Root norm.
-  for (ptrdiff_t i = 0 ; i < vp.normsVolume ; ++i) {
-    normsData[i] = pow(normsData[i] + op.epsilon, 1.0/op.exponent) ;
+  for (Int i = 0 ; i < vp.normsVolume ; ++i) {
+    normsData[i] = pow(normsData[i] + epsilon, 1.0/exponent) ;
   }
 }
 
@@ -166,10 +167,10 @@ struct NormalizeLpForwardCPU
     if (output) {
       auto npt = normsData ;
       type * outputData = (type*)output.getMemory() ;
-      for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
-        for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
-          for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
-            for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+      for (Int i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+        for (Int i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+          for (Int i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+            for (Int i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
               *outputData = *inputData / *npt ;
               inputData ++ ;
               outputData ++ ;
@@ -239,10 +240,10 @@ struct NormalizeLpBackwardCPU
       auto ipt = inputData ;
       auto dopt = derOutputData ;
       auto spt = scratchData ;
-      for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
-        for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
-          for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
-            for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+      for (Int i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+        for (Int i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+          for (Int i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+            for (Int i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
               *spt += (*ipt) * (*dopt) ;
               ipt ++ ;
               dopt ++ ;
@@ -258,17 +259,18 @@ struct NormalizeLpBackwardCPU
 
     // Compute derInputs.
     {
+      auto const exponent = static_cast<type>(op.getExponent()) ;
       auto dipt = derInputData ;
       auto npt = normsData ;
       auto ipt = inputData ;
       auto dopt = derOutputData ;
       auto spt = scratchData ;
-      for (ptrdiff_t i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
-        for (ptrdiff_t i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
-          for (ptrdiff_t i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
-            for (ptrdiff_t i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
+      for (Int i3 = 0 ; i3 < vp.stepPeriods[4] ; ++i3) {
+        for (Int i2 = 0 ; i2 < vp.stepPeriods[3] ; ++i2) {
+          for (Int i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
+            for (Int i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
               auto n = *npt ;
-              *dipt = (*dopt) / n - (*spt) * pow(*ipt, op.exponent-1) / pow(n,op.exponent+1) ;
+              *dipt = (*dopt) / n - (*spt) * pow(*ipt, exponent-1) / pow(n,exponent+1) ;
 
               dipt ++ ;
               ipt ++ ;
@@ -316,10 +318,10 @@ struct NormalizeLpBackwardWithNorms<vl::VLDT_CPU, dataType>
 #endif
 
 NormalizeLp::NormalizeLp(vl::Context &context,
-                         std::vector<int> const& selectedDimensions,
+                         std::vector<Int> const& selectedDimensions,
                          double exponent,
                          double epsilon) :
-context(context),
+Operation(context),
 selectedDimensions(selectedDimensions),
 exponent(exponent),
 epsilon(epsilon)

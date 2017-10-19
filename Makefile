@@ -183,6 +183,7 @@ mex_src :=
 ext := $(if $(ENABLE_GPU),cu,cpp)
 cpp_src+=matlab/src/bits/data.$(ext)
 cpp_src+=matlab/src/bits/datamex.$(ext)
+cpp_src+=matlab/src/bits/nnoperation.$(ext)
 cpp_src+=matlab/src/bits/nnconv.$(ext)
 cpp_src+=matlab/src/bits/nnbias.$(ext)
 cpp_src+=matlab/src/bits/nnfullyconnected.$(ext)

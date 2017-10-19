@@ -142,9 +142,9 @@ struct BilinearSamplerForwardCudnn
     {
       type alpha = 1.0f ;
       type beta = 0.0f ;
-      const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
-      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ;
-      const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
+      const Int dataOffset = inHeight * inWidth * inDepth ;
+      const Int gridOffset = 2 * outWidth * outHeight ;
+      const Int outOffset = outHeight * outWidth * outDepth ;
       type const* data_ptr = (type const*) input.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;
       type * out_ptr = (type *) output.getMemory() ;
@@ -258,9 +258,9 @@ struct BilinearSamplerBackwardCudnn
       type alpha = 1.0f ;
       type dataBeta = 1.0f ; // assuming that the derInputData has been initialized to zero
       type gridBeta = 0.0f ;
-      const ptrdiff_t dataOffset = inHeight * inWidth * inDepth ;
-      const ptrdiff_t gridOffset = 2 * outWidth * outHeight ;
-      const ptrdiff_t outOffset = outHeight * outWidth * outDepth ;
+      const Int dataOffset = inHeight * inWidth * inDepth ;
+      const Int gridOffset = 2 * outWidth * outHeight ;
+      const Int outOffset = outHeight * outWidth * outDepth ;
       type const* data_ptr = (type const*) input.getMemory() ;
       type * derInputData_ptr = (type *) derInput.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;

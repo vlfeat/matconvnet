@@ -14,16 +14,15 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __nnnormalizelp__
 #define __nnnormalizelp__
 
-#include "data.hpp"
-#include <stdio.h>
+#include "nnoperation.hpp"
 #include <vector>
 
 namespace vl { namespace nn {
 
-  class NormalizeLp {
+  class NormalizeLp : public Operation {
   public:
     NormalizeLp(vl::Context &context,
-                std::vector<int> const& selectedDimensions,
+                std::vector<Int> const& selectedDimensions,
                 double exponent = 2.0,
                 double epsilon = 1e-3) ;
 
@@ -47,8 +46,15 @@ namespace vl { namespace nn {
                                     vl::Tensor const &data,
                                     vl::Tensor const &derOutput) ;
 
-    vl::Context& context ;
-    std::vector<int> selectedDimensions ;
+
+    double getExponent() const { return exponent ; }
+    double getEpsilon() const { return epsilon ; }
+    std::vector<Int> const& getSelectedDimensions() const {
+      return selectedDimensions ;
+    }
+
+  private:
+    std::vector<Int> selectedDimensions ;
     double exponent ;
     double epsilon ;
   } ;

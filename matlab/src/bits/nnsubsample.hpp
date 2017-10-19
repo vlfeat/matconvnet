@@ -13,32 +13,28 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __vl__nnsubsample__
 #define __vl__nnsubsample__
 
-#include "data.hpp"
+#include "nnoperation.hpp"
+#include <array>
+#include <cassert>
 
 namespace vl { namespace nn {
 
-  class Subsample {
+  class Subsample : public ConvolutionLike {
   public:
     Subsample(vl::Context &context,
-              int strideY, int strideX,
-              int padTop, int padBottom,
-              int padLeft, int padRight) ;
+              Int strideY, Int strideX,
+              Int padTop, Int padBottom,
+              Int padLeft, Int padRight) ;
 
     vl::ErrorCode forwardWithBias(vl::Tensor &output,
                                   vl::Tensor const &input,
-                                  vl::Tensor const &biases) ;
+                                  vl::Tensor const &biases) const ;
+
+    vl::ErrorCode forwardShape(vl::TensorShape &output, vl::TensorShape const& input) const ;
 
     vl::ErrorCode backwardWithBias(vl::Tensor &derInput,
                                    vl::Tensor &derBiases,
-                                   vl::Tensor const &derOutput) ;
-
-    vl::Context& context ;
-    int strideY ;
-    int strideX ;
-    int padTop ;
-    int padBottom ;
-    int padLeft ;
-    int padRight ;
+                                   vl::Tensor const &derOutput) const ;
   } ;
 
 } }

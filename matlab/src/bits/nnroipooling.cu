@@ -102,7 +102,7 @@ struct acc_sum
 template<DataType dataType, class Accumulator>
 struct ROIPoolingForwardCPU
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor &pooled,
                            Tensor const &input,
                            Tensor const &rois)
@@ -126,10 +126,11 @@ struct ROIPoolingForwardCPU
       type u2_ = roisData[5 * roi + 3] ;
       type v2_ = roisData[5 * roi + 4] ;
 
-      type u1 = op.transform[0] * u1_ + op.transform[2] * v1_ + op.transform[4] ;
-      type v1 = op.transform[1] * u1_ + op.transform[3] * v1_ + op.transform[5] ;
-      type u2 = op.transform[0] * u2_ + op.transform[2] * v2_ + op.transform[4] ;
-      type v2 = op.transform[1] * u2_ + op.transform[3] * v2_ + op.transform[5] ;
+      auto const& tf = op.getTransform() ;
+      type u1 = tf[0] * u1_ + tf[2] * v1_ + tf[4] ;
+      type v1 = tf[1] * u1_ + tf[3] * v1_ + tf[5] ;
+      type u2 = tf[0] * u2_ + tf[2] * v2_ + tf[4] ;
+      type v2 = tf[1] * u2_ + tf[3] * v2_ + tf[5] ;
 
       // First and last pixel of each ROI (rounded
       // for compatibility with the Caffe definition).
@@ -145,21 +146,21 @@ struct ROIPoolingForwardCPU
       type const * data_offset = inputData + (roi_image * as_signed(depth))
       * as_signed(width*height) ;
 
-      type bin_size_h = (double)roi_height / op.subdivisions[0] ;
-      type bin_size_w = (double)roi_width / op.subdivisions[1] ;
+      type bin_size_h = (double)roi_height / op.getSubdivisions()[0] ;
+      type bin_size_w = (double)roi_width / op.getSubdivisions()[1] ;
 
       // For each feature channel.
       for (int z = 0; z < as_signed(depth); ++z) {
 
         // For each column of tiles.
-        for (int pw = 0; pw < op.subdivisions[1]; ++pw) {
+        for (int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
           int wstart = (int)floor(((type)pw) * bin_size_w) ;
           int wend = (int)ceil(((type)(pw + 1)) * bin_size_w) ;
           wstart = std::min(std::max(wstart + roi_start_w, 0), (int)width) ;
           wend = std::min(std::max(wend + roi_start_w, 0), (int)width) ;
 
           // For each tile in a column.
-          for (int ph = 0; ph < op.subdivisions[0]; ++ph) {
+          for (int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
             int hstart = (int)floor(((type)ph) * bin_size_h) ;
             int hend = (int)ceil(((type)(ph + 1)) * bin_size_h) ;
             hstart = std::min(std::max(hstart + roi_start_h, 0), (int)height) ;
@@ -192,12 +193,12 @@ struct ROIPoolingForwardCPU
 template<DataType dataType>
 struct ROIPoolingForward<VLDT_CPU,dataType>
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor &pooled,
                            Tensor const &input,
                            Tensor const &rois)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case ROIPooling::Max:
         return
         ROIPoolingForwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
@@ -218,7 +219,7 @@ struct ROIPoolingForward<VLDT_CPU,dataType>
 template<DataType dataType, class Accumulator>
 struct ROIPoolingBackwardCPU
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &rois,
@@ -246,10 +247,11 @@ struct ROIPoolingBackwardCPU
       type u2_ = roisData[5 * roi + 3] ;
       type v2_ = roisData[5 * roi + 4] ;
 
-      type u1 = op.transform[0] * u1_ + op.transform[2] * v1_ + op.transform[4] ;
-      type v1 = op.transform[1] * u1_ + op.transform[3] * v1_ + op.transform[5] ;
-      type u2 = op.transform[0] * u2_ + op.transform[2] * v2_ + op.transform[4] ;
-      type v2 = op.transform[1] * u2_ + op.transform[3] * v2_ + op.transform[5] ;
+      auto const& tf = op.getTransform() ;
+      type u1 = tf[0] * u1_ + tf[2] * v1_ + tf[4] ;
+      type v1 = tf[1] * u1_ + tf[3] * v1_ + tf[5] ;
+      type u2 = tf[0] * u2_ + tf[2] * v2_ + tf[4] ;
+      type v2 = tf[1] * u2_ + tf[3] * v2_ + tf[5] ;
 
       // First and last pixel of each ROI (rounded
       // for compatibility with the Caffe definition).
@@ -265,21 +267,21 @@ struct ROIPoolingBackwardCPU
       type const * data_offset = inputData + roi_image * as_signed(depth*width*height) ;
       type * derInputData_offset = derInputData + roi_image * as_signed(depth*width*height) ;
 
-      const type bin_size_h = (double)roi_height / op.subdivisions[0] ;
-      const type bin_size_w = (double)roi_width / op.subdivisions[1] ;
+      const type bin_size_h = (double)roi_height / op.getSubdivisions()[0] ;
+      const type bin_size_w = (double)roi_width / op.getSubdivisions()[1] ;
 
       // For each feature channel.
       for (int z = 0; z < (int)depth; ++z) {
 
         // For each column of tiles.
-        for (int pw = 0; pw < op.subdivisions[1]; ++pw) {
+        for (int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
           int wstart = (int)floor(((type)pw) * bin_size_w) ;
           int wend = (int)ceil(((type)(pw + 1)) * bin_size_w) ;
           wstart = std::min(std::max(wstart + roi_start_w, 0), (int)width) ;
           wend = std::min(std::max(wend + roi_start_w, 0), (int)width) ;
 
           // For each tile in a column.
-          for (int ph = 0; ph < op.subdivisions[0]; ++ph) {
+          for (int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
             int hstart = (int)floor(((type)ph) * bin_size_h) ;
             int hend = (int)ceil(((type)(ph + 1)) * bin_size_h) ;
             hstart = std::min(std::max(hstart + roi_start_h, 0), (int)height) ;
@@ -308,13 +310,13 @@ struct ROIPoolingBackwardCPU
 template<DataType dataType>
 struct ROIPoolingBackward<VLDT_CPU,dataType>
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const&op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &rois,
                            Tensor const &derOutput)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case ROIPooling::Max: return
         ROIPoolingBackwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
         ()(op,derInput,input,rois,derOutput) ;
@@ -335,10 +337,10 @@ struct ROIPoolingBackward<VLDT_CPU,dataType>
 #endif
 
 ROIPooling::ROIPooling(Context &context,
-                       std::array<int,2> subdivisions,
+                       std::array<Int,2> subdivisions,
                        std::array<double,6> transform,
                        Method method) :
-context(context),
+Operation(context),
 subdivisions(subdivisions),
 transform(transform),
 method(method)
@@ -347,7 +349,7 @@ method(method)
 vl::ErrorCode
 ROIPooling::forward(Tensor &output,
                     Tensor const &input,
-                    Tensor const &rois)
+                    Tensor const &rois) const
 {
   return dispatch<ROIPoolingForward>()(*this,output,input,rois) ;
 }
@@ -356,7 +358,7 @@ vl::ErrorCode
 ROIPooling::backward(Tensor &derInput,
                      Tensor const &input,
                      Tensor const &rois,
-                     Tensor const &derOutput)
+                     Tensor const &derOutput) const
 {
   return dispatch<ROIPoolingBackward>()(*this,derInput,input,rois,derOutput) ;
 }

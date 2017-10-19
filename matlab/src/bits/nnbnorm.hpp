@@ -14,12 +14,12 @@
 #ifndef __vl__nnbnorm__
 #define __vl__nnbnorm__
 
-#include "data.hpp"
+#include "nnoperation.hpp"
 #include <stdio.h>
 
 namespace vl { namespace nn {
 
-  class BatchNorm {
+  class BatchNorm : public Operation {
   public:
     BatchNorm(vl::Context &context,
               double epsilon) ;
@@ -54,7 +54,9 @@ namespace vl { namespace nn {
                                      vl::Tensor const &bias,
                                      vl::Tensor const &derOutput) ;
 
-    vl::Context& context ;
+    double getEpsilon() const { return epsilon ; }
+
+  private:
     double epsilon ;
   } ;
 

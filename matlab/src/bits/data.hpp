@@ -35,6 +35,8 @@ the terms of the BSD license (see the COPYING file).
 
 namespace vl {
 
+  typedef ptrdiff_t Int ;
+  
   /// Error codes
   enum ErrorCode {
     VLE_Success = 0,

@@ -15,31 +15,41 @@ the terms of the BSD license (see the COPYING file).
 #ifndef __vl__nnroipooling__
 #define __vl__nnroipooling__
 
-#include "data.hpp"
+#include "nnoperation.hpp"
 #include <array>
 
 namespace vl { namespace nn {
 
-  class ROIPooling {
+  class ROIPooling : public Operation {
   public:
     enum Method { Max, Average } ;
 
     ROIPooling(vl::Context &context,
-               std::array<int,2> subdivisions,
+               std::array<Int,2> subdivisions,
                std::array<double,6> transform,
                Method method) ;
 
     vl::ErrorCode forward(vl::Tensor &output,
                           vl::Tensor const &input,
-                          vl::Tensor const &rois) ;
+                          vl::Tensor const &rois) const ;
 
     vl::ErrorCode backward(vl::Tensor &derInput,
                            vl::Tensor const &input,
                            vl::Tensor const &rois,
-                           vl::Tensor const &derOutput) ;
+                           vl::Tensor const &derOutput) const ;
 
-    vl::Context& context ;
-    std::array<int,2> subdivisions ;
+    std::array<Int,2> const& getSubdivisions() const {
+      return subdivisions ;
+    }
+
+    std::array<double,6> const& getTransform() const {
+      return transform ;
+    }
+
+    Method getMethod() const { return method ; }
+
+  private:
+    std::array<Int,2> subdivisions ;
     std::array<double,6> transform ;
     Method method ;
   } ;

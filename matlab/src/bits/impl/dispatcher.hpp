@@ -78,10 +78,10 @@ struct dispatch
         default: assert(false) ;
       }
       if (error == vl::VLE_Cuda) {
-        base.context.setError
-        (base.context.getCudaHelper().catchCudaError("GPU")) ;
+        base.getContext().setError
+        (base.getContext().getCudaHelper().catchCudaError("GPU")) ;
       }
-      return base.context.passError(error, __func__) ;
+      return base.getContext().passError(error, __func__) ;
     }
 #endif
     switch (tt.dataType) {
@@ -95,7 +95,7 @@ struct dispatch
 #endif
       default: assert(false) ;
     }
-    return base.context.passError(error, __func__) ;
+    return base.getContext().passError(error, __func__) ;
   }
 } ;
 
@@ -125,7 +125,7 @@ struct dispatch_cudnn
       }
       if (error == vl::VLE_Success) { return error ; }
       if (error == vl::VLE_Unsupported) { goto fallback ; }
-      return base.context.passError(error, __func__) ;
+      return base.getContext().passError(error, __func__) ;
     }
   fallback:
 #endif

@@ -40,10 +40,10 @@ GPUVisitPattern getGPUVisitPatternForInput(NormalizeLp const & op, vl::Tensor in
 
   size_t inputVolume = 1 ;
   size_t normsVolume = 1 ;
-  auto dims = std::vector<ptrdiff_t>{} ;
-  auto steps = std::vector<ptrdiff_t>{} ;
-  auto ndims = std::vector<ptrdiff_t>{} ;
-  auto nstrides = std::vector<ptrdiff_t>{} ;
+  auto dims = std::vector<Int>{} ;
+  auto steps = std::vector<Int>{} ;
+  auto ndims = std::vector<Int>{} ;
+  auto nstrides = std::vector<Int>{} ;
 
   // Find out how to traverse the reduced results as the input is
   // scanned from first to last element.

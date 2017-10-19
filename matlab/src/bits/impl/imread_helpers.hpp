@@ -39,14 +39,14 @@ namespace vl { namespace impl {
 #warning "SSSE3 instruction set not enabled. Using slower image conversion routines."
 #endif
 
-  template<ptrdiff_t pixelFormat> void
-  imageFromPixels(vl::Image & image, char unsigned const * rgb, ptrdiff_t rowStride)
+  template<Int pixelFormat> void
+  imageFromPixels(vl::Image & image, char unsigned const * rgb, Int rowStride)
   {
     vl::ImageShape const & shape = image.getShape() ;
-    ptrdiff_t blockSizeX ;
-    ptrdiff_t blockSizeY ;
-    ptrdiff_t pixelStride ;
-    ptrdiff_t imagePlaneStride = as_signed(shape.width * shape.height) ;
+    Int blockSizeX ;
+    Int blockSizeY ;
+    Int pixelStride ;
+    Int imagePlaneStride = as_signed(shape.width * shape.height) ;
     switch (pixelFormat) {
       case pixelFormatL:
         pixelStride = 1 ;
@@ -75,18 +75,18 @@ namespace vl { namespace impl {
     // and recompute silly multiplications in the inner loop
 
     float * const  __restrict imageMemory = image.getMemory() ;
-    ptrdiff_t const imageHeight = as_signed(shape.height) ;
-    ptrdiff_t const imageWidth = as_signed(shape.width) ;
+    Int const imageHeight = as_signed(shape.height) ;
+    Int const imageWidth = as_signed(shape.width) ;
 
-    for (ptrdiff_t x = 0 ; x < imageWidth ; x += blockSizeX) {
+    for (Int x = 0 ; x < imageWidth ; x += blockSizeX) {
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
-      ptrdiff_t bsx = (std::min)(imageWidth - x, blockSizeX) ;
+      Int bsx = (std::min)(imageWidth - x, blockSizeX) ;
 
-      for (ptrdiff_t y = 0 ; y < imageHeight ; y += blockSizeY) {
-        ptrdiff_t bsy = (std::min)(imageHeight - y, blockSizeY) ;
+      for (Int y = 0 ; y < imageHeight ; y += blockSizeY) {
+        Int bsy = (std::min)(imageHeight - y, blockSizeY) ;
         float * __restrict r ;
         float * rend ;
-        for (ptrdiff_t dx = 0 ; dx < bsx ; ++dx) {
+        for (Int dx = 0 ; dx < bsx ; ++dx) {
           char unsigned const * __restrict pixel = rgb + y * rowStride + (x + dx) * pixelStride ;
           r = imageMemoryX + y + dx * imageHeight ;
           rend = r + bsy ;
@@ -130,14 +130,14 @@ namespace vl { namespace impl {
 (char)i, (char)j, (char)k, (char)l, \
 (char)m, (char)n, (char)o, (char)p
 
-  template<ptrdiff_t pixelFormat> void
-  imageFromPixels(vl::Image & image, char unsigned const * rgb, ptrdiff_t rowStride)
+  template<Int pixelFormat> void
+  imageFromPixels(vl::Image & image, char unsigned const * rgb, Int rowStride)
   {
     vl::ImageShape const & shape = image.getShape() ;
-    ptrdiff_t blockSizeX ;
-    ptrdiff_t blockSizeY ;
-    ptrdiff_t pixelStride ;
-    ptrdiff_t imagePlaneStride = as_signed(shape.width * shape.height) ;
+    Int blockSizeX ;
+    Int blockSizeY ;
+    Int pixelStride ;
+    Int imagePlaneStride = as_signed(shape.width * shape.height) ;
     __m128i shuffleRgb ;
     __m128i const shuffleL = _mm_set_epi8(epi8(0xff, 0xff, 0xff,  3,
                                                0xff, 0xff, 0xff,  2,
@@ -214,13 +214,13 @@ namespace vl { namespace impl {
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
     float *  const __restrict imageMemory = image.getMemory() ;
-    ptrdiff_t const imageHeight = as_signed(shape.height) ;
-    ptrdiff_t const imageWidth = as_signed(shape.width) ;
+    Int const imageHeight = as_signed(shape.height) ;
+    Int const imageWidth = as_signed(shape.width) ;
 
-    for (ptrdiff_t x = 0 ; x < imageWidth ; x += blockSizeX) {
-      ptrdiff_t y = 0 ;
+    for (Int x = 0 ; x < imageWidth ; x += blockSizeX) {
+      Int y = 0 ;
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
-      ptrdiff_t bsx = (std::min)(imageWidth - x, blockSizeX) ;
+      Int bsx = (std::min)(imageWidth - x, blockSizeX) ;
       if (bsx < blockSizeX) goto boundary ;
 
       for ( ; y < imageHeight - blockSizeY + 1 ; y += blockSizeY) {
@@ -350,7 +350,7 @@ namespace vl { namespace impl {
             p3 = _mm_unpackhi_epi64(T2, T3);
 
             // store four 4x4 subblock
-            for (ptrdiff_t i = 0 ; i < 4 ; ++i) {
+            for (Int i = 0 ; i < 4 ; ++i) {
               _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p0, shuffleL))) ; r += imageHeight ;
               _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p1, shuffleL))) ; r += imageHeight ;
               _mm_storeu_ps(r, _mm_cvtepi32_ps(_mm_shuffle_epi8(p2, shuffleL))) ; r += imageHeight ;
@@ -367,10 +367,10 @@ namespace vl { namespace impl {
     boundary:
       /* special case if there is not a full 4x4 block to process */
       for ( ; y < imageHeight ; y += blockSizeY) {
-        ptrdiff_t bsy = (std::min)(imageHeight - y, blockSizeY) ;
+        Int bsy = (std::min)(imageHeight - y, blockSizeY) ;
         float * __restrict r ;
         float * rend ;
-        for (ptrdiff_t dx = 0 ; dx < bsx ; ++dx) {
+        for (Int dx = 0 ; dx < bsx ; ++dx) {
           char unsigned const * __restrict pixel = rgb + y * rowStride + (x + dx) * pixelStride ;
           r = imageMemoryX + y + dx * imageHeight ;
           rend = r + bsy ;
@@ -406,8 +406,8 @@ namespace vl { namespace impl {
   struct ImageResizeFilter
   {
     float * weights ;
-    ptrdiff_t * starts ;
-    ptrdiff_t filterSize ;
+    Int * starts ;
+    Int filterSize ;
     enum FilterType { kBox, kBilinear, kBicubic, kLanczos2, kLanczos3 } ;
 
     ~ImageResizeFilter() {
@@ -465,8 +465,8 @@ namespace vl { namespace impl {
 
         starts[v] = std::ceil(u - filterSupport / 2) ;
 
-        for (ptrdiff_t r = 0 ; r < filterSize ; ++r) {
-          ptrdiff_t k = r + starts[v] ;
+        for (Int r = 0 ; r < filterSize ; ++r) {
+          Int k = r + starts[v] ;
           float h ;
           float delta = u - k ;
           if (alpha > 1) {
@@ -536,7 +536,7 @@ namespace vl { namespace impl {
           }
         }
         {
-          ptrdiff_t r = 0 ;
+          Int r = 0 ;
           starts[v] += skip ;
           for (r = 0 ; r < filterSize - skip ; ++r) {
             filter[r] = filter[r + skip] / mass ;
@@ -559,9 +559,9 @@ namespace vl { namespace impl {
   {
     ImageResizeFilter filters(outputHeight, height, cropHeight, cropOffset, filterType) ;
     auto filterSize = filters.filterSize ;
-    for (ptrdiff_t d = 0 ; d < (int)depth ; ++d) {
-      for (ptrdiff_t x = 0 ; x < (int)width ; ++x) {
-        for (ptrdiff_t y = 0 ; y < (int)outputHeight ; ++y) {
+    for (Int d = 0 ; d < (int)depth ; ++d) {
+      for (Int x = 0 ; x < (int)width ; ++x) {
+        for (Int y = 0 ; y < (int)outputHeight ; ++y) {
           float z = 0 ;
           auto begin = filters.starts[y] ;
           float const * weights = filters.weights + filterSize * y ;

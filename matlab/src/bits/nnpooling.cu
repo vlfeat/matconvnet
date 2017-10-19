@@ -20,6 +20,7 @@ the terms of the BSD license (see the COPYING file).
 using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;
+using namespace std ;
 
 template<DeviceType deviceType, DataType dataType> struct PoolingForward ;
 template<DeviceType deviceType, DataType dataType> struct PoolingBackward ;
@@ -33,7 +34,7 @@ template<DataType dataType> struct PoolingBackwardCudnn ;
 template <typename type>
 struct acc_max
 {
-  inline acc_max(long poolHeight, long poolWidth, type derOutput = 0)
+  inline acc_max(Int poolHeight, Int poolWidth, type derOutput = 0)
   :
   value(-std::numeric_limits<type>::infinity()),
   derOutput(derOutput),
@@ -68,7 +69,7 @@ struct acc_max
 template <typename type>
 struct acc_sum
 {
-  inline acc_sum(long poolHeight, long poolWidth, type derOutput = 0)
+  inline acc_sum(Int poolHeight, Int poolWidth, type derOutput = 0)
   :
   value(0),
   scale(type(1)/type(poolHeight*poolWidth)),
@@ -102,7 +103,7 @@ struct acc_sum
 template<DataType dataType, class Accumulator>
 struct PoolingForwardCPU
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &output,
                            Tensor const &input)
   {
@@ -113,16 +114,19 @@ struct PoolingForwardCPU
     auto size = input.getSize() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
-    auto outputWidth = (as_signed(width) + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
-    auto outputHeight = (as_signed(height) + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
 
-    for (long z = 0; z < (signed)(depth * size) ; ++z) {
-      for (long x = 0; x < outputWidth; ++x) {
-        for (long y = 0; y < outputHeight; ++y) {
-          auto x1 = x * op.strideX - op.padLeft ;
-          auto y1 = y * op.strideY - op.padTop ;
-          auto x2 = std::min(x1 + op.poolWidth, as_signed(width)) ;
-          auto y2 = std::min(y1 + op.poolHeight, as_signed(height)) ;
+    TensorShape outputShape ;
+    op.forwardShape(outputShape, input) ;
+    auto outputHeight = as_signed(outputShape.getDimensions()[0]) ;
+    auto outputWidth = as_signed(outputShape.getDimensions()[1]) ;
+
+    for (Int z = 0; z < as_signed(depth * size) ; ++z) {
+      for (Int x = 0; x < outputWidth ; ++x) {
+        for (Int y = 0; y < outputHeight ; ++y) {
+          Int x1 = x * op.getStride(1) - op.getPadding(1) ;
+          Int y1 = y * op.getStride(0) - op.getPadding(0) ;
+          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          Int y2 = std::min(y1 + op.getShape(0), as_signed(height)) ;
           x1 = std::max(x1, 0L) ;
           y1 = std::max(y1, 0L) ;
           Accumulator acc(y2 - y1, x2 - x1) ;
@@ -144,11 +148,11 @@ struct PoolingForwardCPU
 template<DataType dataType>
 struct PoolingForward<VLDT_CPU,dataType>
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const&op,
                            Tensor output,
                            Tensor input)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case Pooling::Max:
         return
         PoolingForwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
@@ -170,7 +174,7 @@ struct PoolingForward<VLDT_CPU,dataType>
 template<DataType dataType, class Accumulator>
 struct PoolingBackwardCPU
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &derOutput)
@@ -183,21 +187,24 @@ struct PoolingBackwardCPU
     auto derInputData = (type*)derInput.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto outputWidth = (as_signed(width) + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
-    auto outputHeight = (as_signed(height) + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
 
-    for (int z = 0; z < as_signed(depth * size) ; ++z) {
-      for (int x = 0; x < outputWidth ; ++x) {
-        for (int y = 0; y < outputHeight; ++y) {
-          int x1 = x * op.strideX - op.padLeft ;
-          int y1 = y * op.strideY - op.padTop ;
-          int x2 = std::min(x1 + op.poolWidth, (signed)width) ;
-          int y2 = std::min(y1 + op.poolHeight, (signed)height) ;
-          x1 = std::max(x1, 0) ;
-          y1 = std::max(y1, 0) ;
-          Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * outputHeight + y]) ;
-          for (int u = x1 ; u < x2 ; ++u) {
-            for (int v = y1 ; v < y2 ; ++v) {
+    TensorShape outputShape ;
+    op.forwardShape(outputShape, input) ;
+    auto outputHeight = outputShape.getDimensions()[0] ;
+    auto outputWidth = outputShape.getDimensions()[1] ;
+
+    for (Int z = 0; z < as_signed(depth * size) ; ++z) {
+      for (Int x = 0; x < as_signed(outputWidth) ; ++x) {
+        for (Int y = 0; y < as_signed(outputHeight) ; ++y) {
+          Int x1 = x * op.getStride(1) - op.getPadding(1) ;
+          Int y1 = y * op.getStride(0) - op.getPadding(0) ;
+          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          Int y2 = std::min(y1 + op.getShape(0), as_signed(height)) ;
+          x1 = std::max(x1, static_cast<decltype(x1)>(0)) ;
+          y1 = std::max(y1, static_cast<decltype(y1)>(0)) ;
+          Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * as_signed(outputHeight) + y]) ;
+          for (Int u = x1 ; u < x2 ; ++u) {
+            for (Int v = y1 ; v < y2 ; ++v) {
               acc.accumulate_backward(&inputData[u * as_signed(height) + v],
                                       &derInputData[u * as_signed(height) + v]) ;
             }
@@ -216,12 +223,12 @@ struct PoolingBackwardCPU
 template<DataType dataType>
 struct PoolingBackward<VLDT_CPU,dataType>
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &derOutput)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case Pooling::Max:
         return
         PoolingBackwardCPU<dataType,acc_max<typename vl::DataTypeTraits<dataType>::type> >
@@ -249,34 +256,77 @@ struct PoolingBackward<VLDT_CPU,dataType>
 #endif
 
 Pooling::Pooling(Context &context,
-                 int poolHeight, int poolWidth,
-                 int strideY, int strideX,
-                 int padTop, int padBottom,
-                 int padLeft, int padRight,
-                 Method method) :
-context(context),
-poolHeight(poolHeight),
-poolWidth(poolWidth),
-strideY(strideY),
-strideX(strideX),
-padTop(padTop),
-padBottom(padBottom),
-padLeft(padLeft),
-padRight(padRight),
-method(method)
-{ }
+                 Int poolHeight, Int poolWidth,
+                 Int strideY, Int strideX,
+                 Int padTop, Int padBottom,
+                 Int padLeft, Int padRight,
+                 Method method)
+: ConvolutionLike(context,2),
+  method(method)
+{
+  setShape({poolHeight,poolWidth}) ;
+  setStride({strideY,strideX}) ;
+  setPadding({padTop,padBottom,padLeft,padRight}) ;
+}
+
+Pooling::Pooling(Context &context)
+: ConvolutionLike(context), method(Average)
+{
+  shape.fill(1) ;
+}
+
+ErrorCode Pooling::setMethod(Method method) {
+  if (method != Average && method != Max) {
+    return VLE_IllegalArgument ;
+  }
+  this->method = method ;
+  return VLE_Success ;
+}
+
+ErrorCode Pooling::setShape(vector<Int> const& shape) {
+  // There must one shape per spatial dimension.
+  if (Int(shape.size()) != getNumSpatialDimensions()) {
+    return VLE_IllegalArgument ;
+  }
+  // Shape must be positive.
+  if (any_of(begin(shape),begin(shape)+getNumSpatialDimensions(),[](Int x){return x <= 0;})) {
+    return VLE_IllegalArgument ;
+  }
+  copy(begin(shape),begin(shape)+getNumSpatialDimensions(),begin(this->shape)) ;
+  return VLE_Success ;
+}
 
 vl::ErrorCode
 Pooling::forward(Tensor &output,
-                 Tensor const &input)
+                 Tensor const &input) const
 {
   return dispatch_cudnn<PoolingForward,PoolingForwardCudnn>()(*this,output,input) ;
 }
 
 vl::ErrorCode
+Pooling::forwardShape(TensorShape& output,
+                      TensorShape const& input) const
+{
+  output = TensorShape() ; // null
+  if (as_signed(input.getNumDimensions()) < getNumSpatialDimensions()) {
+    return VLE_IllegalArgument ;
+  }
+  output = input ;
+  for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
+    auto odim = convLikeSizeHelper(as_signed(input.getDimensions()[d]),
+                                   getShape(d),
+                                   getStride(d),
+                                   {getPadding(2*d),getPadding(2*d+1)},
+                                   1) ;
+    output.setDimension(as_unsigned(d), as_unsigned(odim)) ;
+  }
+  return VLE_Success ;
+}
+
+vl::ErrorCode
 Pooling::backward(Tensor &derInput,
                   Tensor const &input,
-                  Tensor const &derOutput)
+                  Tensor const &derOutput) const
 {
   return dispatch_cudnn<PoolingBackward,PoolingBackwardCudnn>()(*this,derInput,input,derOutput) ;
 }

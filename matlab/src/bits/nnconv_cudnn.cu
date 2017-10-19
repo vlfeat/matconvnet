@@ -191,10 +191,10 @@ struct ConvolutionForwardCudnn
 
     // Perform convolution for each filter group
     for (int g = 0  ; g < numGroups ; ++g) {
-      ptrdiff_t dataGrpOffset = (input.getHeight() * input.getWidth() * filter.getDepth()) *  g ;
-      ptrdiff_t filterGrpOffset = (filter.getHeight() * filter.getWidth() * filter.getDepth()) * numFiltersPerGroup * g ;
-      ptrdiff_t outputGrpOffset = (output.getHeight() * output.getWidth() * numFiltersPerGroup) * g ;
-      ptrdiff_t biasGrpOffset = numFiltersPerGroup * g ;
+      Int dataGrpOffset = (input.getHeight() * input.getWidth() * filter.getDepth()) *  g ;
+      Int filterGrpOffset = (filter.getHeight() * filter.getWidth() * filter.getDepth()) * numFiltersPerGroup * g ;
+      Int outputGrpOffset = (output.getHeight() * output.getWidth() * numFiltersPerGroup) * g ;
+      Int biasGrpOffset = numFiltersPerGroup * g ;
 
       type alpha = inputMult ;
       type beta = outputMult ;
@@ -272,9 +272,9 @@ struct ConvolutionBackwardCudnn
     size_t workSpaceSize = 0 ;
 #endif
 
-    ptrdiff_t numGroups = 1 ;
-    ptrdiff_t numFiltersPerGroup = 0 ;
-    ptrdiff_t filterVolume = 0 ;
+    Int numGroups = 1 ;
+    Int numFiltersPerGroup = 0 ;
+    Int filterVolume = 0 ;
 
     if (op.dilateX != 1 || op.dilateY != 1) return vl::VLE_Unsupported ;
     if (op.padLeft != op.padRight) return vl::VLE_Unsupported ;
@@ -453,11 +453,11 @@ struct ConvolutionBackwardCudnn
 
     // Perform backward convolution for each filter group
     for (int g = 0  ; g < numGroups ; ++g) {
-      ptrdiff_t filterGrpOffset = filterVolume * numFiltersPerGroup  * g ;
-      ptrdiff_t derOutputGrpOffset = (derOutput.getHeight() * derOutput.getWidth() * numFiltersPerGroup) * g ;
+      Int filterGrpOffset = filterVolume * numFiltersPerGroup  * g ;
+      Int derOutputGrpOffset = (derOutput.getHeight() * derOutput.getWidth() * numFiltersPerGroup) * g ;
 
       if (derBias) {
-        ptrdiff_t derBiasGrpOffset = numFiltersPerGroup * g ;
+        Int derBiasGrpOffset = numFiltersPerGroup * g ;
         type alpha = 1 ;
         type beta = 0 ;
         CHECK(cudnnConvolutionBackwardBias
@@ -469,7 +469,7 @@ struct ConvolutionBackwardCudnn
       }
 
       if (derFilter) {
-        ptrdiff_t dataGrpOffset = (input.getHeight() * input.getWidth() * derFilter.getDepth()) *  g ;
+        Int dataGrpOffset = (input.getHeight() * input.getWidth() * derFilter.getDepth()) *  g ;
         type alpha = 1 ;
         type beta = 0 ;
 #if (CUDNN_VERSION >= 3000)
@@ -498,7 +498,7 @@ struct ConvolutionBackwardCudnn
       }
 
       if (derInput) {
-        ptrdiff_t dataGrpOffset = (derInput.getHeight() * derInput.getWidth() * filter.getDepth()) *  g ;
+        Int dataGrpOffset = (derInput.getHeight() * derInput.getWidth() * filter.getDepth()) *  g ;
         type alpha = 1 ;
         type beta = 0 ;
 
