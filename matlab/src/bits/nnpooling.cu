@@ -123,12 +123,12 @@ struct PoolingForwardCPU
     for (Int z = 0; z < as_signed(depth * size) ; ++z) {
       for (Int x = 0; x < outputWidth ; ++x) {
         for (Int y = 0; y < outputHeight ; ++y) {
-          Int x1 = x * op.getStride(1) - op.getPadding(1) ;
           Int y1 = y * op.getStride(0) - op.getPadding(0) ;
-          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          Int x1 = x * op.getStride(1) - op.getPadding(2) ;
           Int y2 = std::min(y1 + op.getShape(0), as_signed(height)) ;
-          x1 = std::max(x1, 0L) ;
+          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
           y1 = std::max(y1, 0L) ;
+          x1 = std::max(x1, 0L) ;
           Accumulator acc(y2 - y1, x2 - x1) ;
           for (auto u = x1 ; u < x2 ; ++u) {
             for (auto v = y1 ; v < y2 ; ++v) {
@@ -196,12 +196,12 @@ struct PoolingBackwardCPU
     for (Int z = 0; z < as_signed(depth * size) ; ++z) {
       for (Int x = 0; x < as_signed(outputWidth) ; ++x) {
         for (Int y = 0; y < as_signed(outputHeight) ; ++y) {
-          Int x1 = x * op.getStride(1) - op.getPadding(1) ;
           Int y1 = y * op.getStride(0) - op.getPadding(0) ;
-          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          Int x1 = x * op.getStride(1) - op.getPadding(2) ;
           Int y2 = std::min(y1 + op.getShape(0), as_signed(height)) ;
-          x1 = std::max(x1, static_cast<decltype(x1)>(0)) ;
-          y1 = std::max(y1, static_cast<decltype(y1)>(0)) ;
+          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          y1 = std::max(y1, 0L) ;
+          x1 = std::max(x1, 0L) ;
           Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * as_signed(outputHeight) + y]) ;
           for (Int u = x1 ; u < x2 ; ++u) {
             for (Int v = y1 ; v < y2 ; ++v) {
@@ -284,7 +284,7 @@ ErrorCode Pooling::setMethod(Method method) {
 }
 
 ErrorCode Pooling::setShape(vector<Int> const& shape) {
-  // There must one shape per spatial dimension.
+  // There must one shape dimension per spatial dimension.
   if (Int(shape.size()) != getNumSpatialDimensions()) {
     return VLE_IllegalArgument ;
   }
