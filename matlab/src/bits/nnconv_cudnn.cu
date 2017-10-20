@@ -86,7 +86,11 @@ struct ConvolutionForwardCudnn
     CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
                                        DataTypeToCudnn<dataType>::dataType ,
                                        (int)output.getSize(), // sizes
+#if CUDNN_VERSION < 7000
                                        (int)numFiltersPerGroup,
+#else
+                                       (int)output.getDepth(),
+#endif
                                        (int)output.getWidth(),
                                        (int)output.getHeight(),
                                        (int)(output.getHeight()*output.getWidth()*output.getDepth()), //strides
@@ -99,7 +103,11 @@ struct ConvolutionForwardCudnn
     CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
                                        DataTypeToCudnn<dataType>::dataType,
                                        (int)input.getSize(),
+#if CUDNN_VERSION < 7000
                                        (int)(input.getDepth() / numGroups),
+#else
+                                       (int)input.getDepth(),
+#endif
                                        (int)input.getWidth(),
                                        (int)input.getHeight(),
                                        (int)(input.getHeight()*input.getWidth()*input.getDepth()), //strides
@@ -112,7 +120,11 @@ struct ConvolutionForwardCudnn
     CHECK(cudnnSetFilter4dDescriptor(filterDesc,
                                      DataTypeToCudnn<dataType>::dataType,
                                      IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
+#if CUDNN_VERSION < 7000
                                      (int)numFiltersPerGroup,
+#else
+                                     (int)filter.getSize(),
+#endif
                                      (int)filter.getDepth(),
                                      (int)filter.getWidth(),
                                      (int)filter.getHeight())) ;
@@ -124,7 +136,11 @@ struct ConvolutionForwardCudnn
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType ,
                                        1,
+#if CUDNN_VERSION < 7000
                                        (int)(bias.getNumElements() / numGroups),
+#else
+                                       (int)bias.getNumElements(),
+#endif
                                        1,
                                        1)) ;
     }
@@ -138,6 +154,11 @@ struct ConvolutionForwardCudnn
                                           1,1, // upscale
                                           CUDNN_CROSS_CORRELATION
                                           IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::dataType))) ;
+
+#if (CUDNN_VERSION >= 7000)
+    CHECK(cudnnSetConvolutionGroupCount(convDesc, (int)numGroups)) ;
+#endif
+
     // Sanity check
 #if 1
     {
@@ -148,7 +169,11 @@ struct ConvolutionForwardCudnn
                                             &n, &c, &w, &h) ;
       bool sane =
       output.getSize() == n &&
+#if (CUDNN_VERSION < 7000)
       numFiltersPerGroup == c &&
+#else
+      output.getDepth() == c &&
+#endif
       output.getWidth() == w &&
       output.getHeight() == h ;
       assert(sane) ;
@@ -190,6 +215,7 @@ struct ConvolutionForwardCudnn
     }
 
     // Perform convolution for each filter group
+#if (CUDNN_VERSION < 7000)
     for (int g = 0  ; g < numGroups ; ++g) {
       Int dataGrpOffset = (input.getHeight() * input.getWidth() * filter.getDepth()) *  g ;
       Int filterGrpOffset = (filter.getHeight() * filter.getWidth() * filter.getDepth()) * numFiltersPerGroup * g ;
@@ -227,6 +253,31 @@ struct ConvolutionForwardCudnn
 #endif
       }
     }
+#else
+    {
+      auto alpha = static_cast<type>(inputMult) ;
+      auto beta = static_cast<type>(outputMult) ;
+      CHECK(cudnnConvolutionForward(handle,
+                                    &alpha,
+                                    dataDesc, (type const*)input.getMemory(),
+                                    filterDesc, (type const*)filter.getMemory(),
+                                    convDesc,
+                                    op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo,
+                                    workSpace, op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed,
+                                    &beta,
+                                    outputDesc, (type*)output.getMemory())) ;
+      if (bias) {
+        type alpha = 1.0f ;
+        type beta = 1.0f ;
+        CHECK(cudnnAddTensor(handle,
+                             &alpha,
+                             biasDesc, (type const*)bias.getMemory(),
+                             &beta,
+                             outputDesc, (type*)output.getMemory())) ;
+      }
+    }
+#endif
+
 
     /* cleanup */
   done:
