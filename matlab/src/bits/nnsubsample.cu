@@ -159,7 +159,7 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
 
     memset(derInputData, 0, sizeof(type) * size_t(width * height * depth * size)) ;
 
-    for (size_t z = 0; z < depth * size; ++z) {
+    for (Int z = 0; z < depth * size; ++z) {
       for (Int px = 0; px < outputWidth; ++px) {
         for (Int py  = 0; py < outputHeight; ++py) {
           auto x1 = px * strideX - padLeft ;

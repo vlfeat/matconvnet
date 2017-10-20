@@ -26,7 +26,6 @@ namespace vl { namespace nn {
     Context& context ;
   } ;
 
-
   class ConvolutionLike : public Operation {
   public:
     ConvolutionLike(Context& context, Int numSpatialDimensions = 2) ;

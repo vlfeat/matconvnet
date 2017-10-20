@@ -225,11 +225,12 @@ struct ROIPoolingBackwardCPU
                            Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto numROIs = rois.getNumElements() / 5 ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    Int numROIs = rois.getNumElements() / 5 ;
+    Int height = input.getHeight() ;
+    Int width = input.getWidth() ;
+    Int depth = input.getDepth() ;
+    Int size = input.getSize() ;
+    
     auto derInputData = (type*)derInput.getMemory() ;
     auto roisData = (type const*)rois.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -238,7 +239,7 @@ struct ROIPoolingBackwardCPU
     memset(derInputData, 0, (size_t)derInput.getNumElements() * sizeof(type)) ;
 
     // For each ROI R = [t x1 y1 x2 y2].
-    for (size_t roi = 0; roi < numROIs ; ++roi) {
+    for (Int roi = 0; roi < numROIs ; ++roi) {
 
       // Apply sacle and offset to each ROI coordinate.
       type u1_ = roisData[5 * roi + 1] ;
