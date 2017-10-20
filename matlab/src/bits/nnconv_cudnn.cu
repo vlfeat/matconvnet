@@ -324,8 +324,10 @@ struct ConvolutionBackwardCudnn
 #endif
 
     Int numGroups = 1 ;
+#if CUDNN_VERSION < 7000
     Int numFiltersPerGroup = 0 ;
     Int filterVolume = 0 ;
+#endif
 
     if (op.getDilation(1) != 1 || op.getDilation(0) != 1) return vl::VLE_Unsupported ;
     if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
@@ -345,15 +347,21 @@ struct ConvolutionBackwardCudnn
     if (derInput) {
       assert(filter) ;
       numGroups = derInput.getDepth() / filter.getDepth() ;
+#if CUDNN_VERSION < 7000
       numFiltersPerGroup = filter.getSize() / numGroups ;
       filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+#endif
 
       CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
       dataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
                                          DataTypeToCudnn<dataType>::dataType ,
                                          (int)derInput.getSize(),
+#if CUDNN_VERSION < 7000
                                          (int)(derInput.getDepth() / numGroups),
+#else
+                                         (int)derInput.getDepth(),
+#endif
                                          (int)derInput.getWidth(),
                                          (int)derInput.getHeight(),
                                          (int)(derInput.getHeight()*derInput.getWidth()*derInput.getDepth()), //strides
@@ -366,22 +374,32 @@ struct ConvolutionBackwardCudnn
       CHECK(cudnnSetFilter4dDescriptor(filterDesc,
                                        DataTypeToCudnn<dataType>::dataType ,
                                        IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
+#if CUDNN_VERSION < 7000
                                        (int)numFiltersPerGroup,
+#else
+                                       (int)filter.getSize(),
+#endif
                                        (int)filter.getDepth(),
                                        (int)filter.getWidth(),
                                        (int)filter.getHeight())) ;
     } else if (derFilter) {
       assert(input) ;
       numGroups = input.getDepth() / derFilter.getDepth() ;
+#if CUDNN_VERSION < 7000
       numFiltersPerGroup = derFilter.getSize() / numGroups ;
       filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getDepth() ;
+#endif
 
       CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
       dataDescInitialized = true ;
       CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
                                          DataTypeToCudnn<dataType>::dataType ,
                                          (int)input.getSize(),
+#if CUDNN_VERSION < 7000
                                          (int)(input.getDepth() / numGroups),
+#else
+                                         (int)input.getDepth(),
+#endif
                                          (int)input.getWidth(),
                                          (int)input.getHeight(),
                                          (int)(input.getHeight()*input.getWidth()*input.getDepth()), //strides
@@ -394,7 +412,11 @@ struct ConvolutionBackwardCudnn
       CHECK(cudnnSetFilter4dDescriptor(filterDesc,
                                        DataTypeToCudnn<dataType>::dataType ,
                                        IF_CUDNN_GE5(CUDNN_TENSOR_NCHW COMMA)
+#if CUDNN_VERSION < 7000
                                        (int)numFiltersPerGroup,
+#else
+                                       (int)derFilter.getSize(),
+#endif
                                        (int)derFilter.getDepth(),
                                        (int)derFilter.getWidth(),
                                        (int)derFilter.getHeight())) ;
@@ -409,6 +431,10 @@ struct ConvolutionBackwardCudnn
                                           CUDNN_CROSS_CORRELATION
                                           IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::dataType))) ;
 
+#if (CUDNN_VERSION >= 7000)
+    CHECK(cudnnSetConvolutionGroupCount(convDesc, (int)numGroups)) ;
+#endif
+
     // Must have derOutput for all derivatives
     assert(derOutput) ;
     CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
@@ -416,7 +442,11 @@ struct ConvolutionBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
                                        DataTypeToCudnn<dataType>::dataType ,
                                        (int)derOutput.getSize(), // sizes
+#if CUDNN_VERSION < 7000
                                        (int)numFiltersPerGroup,
+#else
+                                       (int)derOutput.getDepth(),
+#endif
                                        (int)derOutput.getWidth(),
                                        (int)derOutput.getHeight(),
                                        (int)(derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()), //strides
@@ -432,7 +462,11 @@ struct ConvolutionBackwardCudnn
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType ,
                                        1,
+#if CUDNN_VERSION < 7000
                                        (int)(derBias.getNumElements() / numGroups),
+#else
+                                       (int)derBias.getNumElements(),
+#endif
                                        1,
                                        1)) ;
     }
@@ -469,7 +503,7 @@ struct ConvolutionBackwardCudnn
     }
 
     if (derInput) {
-      // Get data derivatives
+      // Get data derivatives algorithm
       CHECK(cudnnGetConvolutionBackwardDataAlgorithm
             (handle,
              filterDesc,
@@ -503,6 +537,7 @@ struct ConvolutionBackwardCudnn
 #endif
 
     // Perform backward convolution for each filter group
+#if CUDNN_VERSION < 7000
     for (int g = 0  ; g < numGroups ; ++g) {
       Int filterGrpOffset = filterVolume * numFiltersPerGroup  * g ;
       Int derOutputGrpOffset = (derOutput.getHeight() * derOutput.getWidth() * numFiltersPerGroup) * g ;
@@ -578,6 +613,48 @@ struct ConvolutionBackwardCudnn
 #endif
       }
     }
+#else // CUDNN >= 7.0
+    if (derBias) {
+      type alpha = 1 ;
+      type beta = 0 ;
+      CHECK(cudnnConvolutionBackwardBias
+            (handle,
+             &alpha,
+             derOutputDesc, (type const*)derOutput.getMemory(),
+             &beta,
+             derBiasDesc, (type*)derBias.getMemory())) ;
+    }
+
+    if (derFilter) {
+      type alpha = 1 ;
+      type beta = 0 ;
+      CHECK(cudnnConvolutionBackwardFilter
+            (handle,
+             &alpha,
+             dataDesc, (type const*)input.getMemory(),
+             derOutputDesc, (type const*)derOutput.getMemory(),
+             convDesc,
+             op.getContext().getCudaHelper().cudnnConvolutionBwdFilterAlgo,
+             workSpace, workSpaceSize,
+             &beta,
+             filterDesc, (type*)derFilter.getMemory())) ;
+    }
+
+    if (derInput) {
+      type alpha = 1 ;
+      type beta = 0 ;
+      CHECK(cudnnConvolutionBackwardData
+            (handle,
+             &alpha,
+             filterDesc, (type const*)filter.getMemory(),
+             derOutputDesc, (type const*)derOutput.getMemory(),
+             convDesc,
+             op.getContext().getCudaHelper().cudnnConvolutionBwdDataAlgo,
+             workSpace, workSpaceSize,
+             &beta,
+             dataDesc, (type*)derInput.getMemory())) ;
+    }
+#endif
 
   done:
     if (convDescInitialized) { cudnnDestroyConvolutionDescriptor(convDesc) ; }
@@ -589,6 +666,6 @@ struct ConvolutionBackwardCudnn
   }
 
   } ;
-
+            
 
 
