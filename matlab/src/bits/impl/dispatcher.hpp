@@ -111,6 +111,7 @@ struct dispatch_cudnn
     tensor_type tt = findTensorType(args...) ;
 
     vl::ErrorCode error ;
+    if (!base.getContext().getCudaHelper().getCudnnEnabled()) goto fallback;
     if (tt.deviceType == vl::VLDT_GPU) {
       switch (tt.dataType) {
         case vl::VLDT_Float:
