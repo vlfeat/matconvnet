@@ -128,8 +128,8 @@ struct PoolingForwardCPU
           Int x1 = x * op.getStride(1) - op.getPadding(2) ;
           Int y2 = std::min(y1 + op.getShape(0), height) ;
           Int x2 = std::min(x1 + op.getShape(1), width) ;
-          y1 = std::max(y1, 0L) ;
-          x1 = std::max(x1, 0L) ;
+          y1 = std::max(y1, (Int)0) ;
+          x1 = std::max(x1, (Int)0) ;
           Accumulator acc(y2 - y1, x2 - x1) ;
           for (Int u = x1 ; u < x2 ; ++u) {
             for (Int v = y1 ; v < y2 ; ++v) {
@@ -201,8 +201,8 @@ struct PoolingBackwardCPU
           Int x1 = x * op.getStride(1) - op.getPadding(2) ;
           Int y2 = std::min(y1 + op.getShape(0), height) ;
           Int x2 = std::min(x1 + op.getShape(1), width) ;
-          y1 = std::max(y1, 0L) ;
-          x1 = std::max(x1, 0L) ;
+          y1 = std::max(y1, (Int)0) ;
+          x1 = std::max(x1, (Int)0) ;
           Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * outputHeight + y]) ;
           for (Int u = x1 ; u < x2 ; ++u) {
             for (Int v = y1 ; v < y2 ; ++v) {
@@ -284,9 +284,9 @@ ErrorCode Pooling::setMethod(Method method) {
   return VLE_Success ;
 }
 
-ErrorCode Pooling::setShape(vector<Int> const& shape) {
+ErrorCode Pooling::setShape(std::vector<Int> const& shape) {
   // There must one shape dimension per spatial dimension.
-  if (Int(shape.size()) != getNumSpatialDimensions()) {
+  if ((Int)shape.size() != getNumSpatialDimensions()) {
     return VLE_IllegalArgument ;
   }
   // Shape must be positive.

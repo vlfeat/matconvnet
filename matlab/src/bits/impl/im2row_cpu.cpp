@@ -213,10 +213,10 @@ namespace vl { namespace impl {
         Int x1 = static_min(numPatchesX, floor_divide(width + padLeft - u * dilateX - 1, strideX) + 1) ;
         Int y1 = static_min(numPatchesY, floor_divide(height + padTop - v * dilateY - 1, strideY) + 1) ;
 
-        Int y = static_max(0L, y0) ;
-        stacked += numPatchesX * static_max(0L, y) ;
+        Int y = static_max((Int)0, y0) ;
+        stacked += numPatchesX * static_max((Int)0, y) ;
         for ( ; y < y1 ; ++y) {
-          Int x = static_max(0L, x0) ;
+          Int x = static_max((Int)0, x0) ;
           Int y_data = y * strideY + v * dilateY - padTop ;
           Int x_data = x * strideX + u * dilateX - padLeft ;
           type * b = data + (z * height + y_data) * width + x_data ;

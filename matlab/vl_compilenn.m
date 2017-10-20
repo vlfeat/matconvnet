@@ -244,9 +244,9 @@ switch arch
 end
 
 % CPU-specific files
+lib_src{end+1} = fullfile(root,'matlab','src','bits','nnoperation.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','im2row_cpu.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','copy_cpu.cpp') ;
-lib_src{end+1} = fullfile(root,'matlab','src','bits','impl','tinythread.cpp') ;
 lib_src{end+1} = fullfile(root,'matlab','src','bits','imread.cpp') ;
 
 % GPU-specific files
@@ -264,7 +264,6 @@ end
 % Other files
 if opts.enableImreadJpeg
   mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg.' ext]) ;
-  mex_src{end+1} = fullfile(root,'matlab','src', ['vl_imreadjpeg_old.' ext]) ;
   lib_src{end+1} = fullfile(root,'matlab','src', 'bits', 'impl', ['imread_' opts.imageLibrary '.cpp']) ;
 end
 
@@ -802,7 +801,7 @@ switch computer('arch')
   case {'win64'}
     [status, hstring] = system(sprintf('"%s" --help',nvccPath));
   otherwise
-    % fix possible output corruption (see manual)
+    % fix possible output corruption (see MATLAB manual page for system)
     [status, hstring] = system(sprintf('"%s" --help < /dev/null',nvccPath)) ;
 end
 archs = regexp(hstring, '''sm_(\d{2})''', 'tokens');

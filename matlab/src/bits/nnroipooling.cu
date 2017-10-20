@@ -139,10 +139,10 @@ struct ROIPoolingForwardCPU
       Int roi_start_w = (Int)::round(u1) - 1 ;
       Int roi_end_h   = (Int)::round(v2) - 1 ;
       Int roi_end_w   = (Int)::round(u2) - 1 ;
-      Int roi_height  = std::max(roi_end_h - roi_start_h + 1, Int(1)) ;
-      Int roi_width   = std::max(roi_end_w - roi_start_w + 1, Int(1)) ;
+      Int roi_height  = std::max(roi_end_h - roi_start_h + 1, (Int)1) ;
+      Int roi_width   = std::max(roi_end_w - roi_start_w + 1, (Int)1) ;
 
-      roi_image = std::min(std::max(roi_image - 1,Int(0)), size - 1) ;
+      roi_image = std::min(std::max(roi_image - 1, (Int)0), size - 1) ;
       type const * data_offset = inputData + (roi_image * depth) * (width*height) ;
 
       type bin_size_h = (type)roi_height / op.getSubdivisions()[0] ;
@@ -155,15 +155,15 @@ struct ROIPoolingForwardCPU
         for (Int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
           Int wstart = (Int)floor(((type)pw) * bin_size_w) ;
           Int wend = (Int)ceil(((type)(pw + 1)) * bin_size_w) ;
-          wstart = std::min(std::max(wstart + roi_start_w, Int(0)), width) ;
-          wend = std::min(std::max(wend + roi_start_w, Int(0)), width) ;
+          wstart = std::min(std::max(wstart + roi_start_w, (Int)0), width) ;
+          wend = std::min(std::max(wend + roi_start_w, (Int)0), width) ;
 
           // For each tile in a column.
           for (Int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
             Int hstart = (Int)floor(((type)ph) * bin_size_h) ;
             Int hend = (Int)ceil(((type)(ph + 1)) * bin_size_h) ;
-            hstart = std::min(std::max(hstart + roi_start_h, Int(0)), height) ;
-            hend = std::min(std::max(hend + roi_start_h, Int(0)), height) ;
+            hstart = std::min(std::max(hstart + roi_start_h, (Int)0), height) ;
+            hend = std::min(std::max(hend + roi_start_h, (Int)0), height) ;
 
             bool is_empty = (hend <= hstart) || (wend <= wstart);
 
@@ -260,10 +260,10 @@ struct ROIPoolingBackwardCPU
       Int roi_start_w = (Int)::round(u1) - 1 ;
       Int roi_end_h   = (Int)::round(v2) - 1 ;
       Int roi_end_w   = (Int)::round(u2) - 1 ;
-      Int roi_height = std::max(roi_end_h - roi_start_h + 1, Int(1)) ;
-      Int roi_width = std::max(roi_end_w - roi_start_w + 1, Int(1)) ;
+      Int roi_height = std::max(roi_end_h - roi_start_h + 1, (Int)1) ;
+      Int roi_width = std::max(roi_end_w - roi_start_w + 1, (Int)1) ;
 
-      roi_image = std::min(std::max(roi_image - 1,Int(0)), size - 1) ;
+      roi_image = std::min(std::max(roi_image - 1,(Int)0), size - 1) ;
       type const * data_offset = inputData + roi_image * (depth*width*height) ;
       type * derInputData_offset = derInputData + roi_image * (depth*width*height) ;
 
@@ -277,15 +277,15 @@ struct ROIPoolingBackwardCPU
         for (Int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
           Int wstart = (Int)floor(((type)pw) * bin_size_w) ;
           Int wend = (Int)ceil(((type)(pw + 1)) * bin_size_w) ;
-          wstart = std::min(std::max(wstart + roi_start_w, Int(0)), width) ;
-          wend = std::min(std::max(wend + roi_start_w, Int(0)), width) ;
+          wstart = std::min(std::max(wstart + roi_start_w, (Int)0), width) ;
+          wend = std::min(std::max(wend + roi_start_w, (Int)0), width) ;
 
           // For each tile in a column.
           for (Int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
             Int hstart = (Int)floor(((type)ph) * bin_size_h) ;
             Int hend = (Int)ceil(((type)(ph + 1)) * bin_size_h) ;
-            hstart = std::min(std::max(hstart + roi_start_h, Int(0)), height) ;
-            hend = std::min(std::max(hend + roi_start_h, Int(0)), height) ;
+            hstart = std::min(std::max(hstart + roi_start_h, (Int)0), height) ;
+            hend = std::min(std::max(hend + roi_start_h, (Int)0), height) ;
 
             Accumulator acc(hend - hstart, wend - wstart, *derOutputData++) ;
             for (Int w = wstart; w < wend; ++w) {
