@@ -360,7 +360,7 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Float>
                          (op == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
                          (int)m, (int)n,
                          &alpha,
-                         a, lda,
+                         a, (int)lda,
                          x, (int)incx,
                          &beta,
                          y, (int)incy);
@@ -464,7 +464,7 @@ struct blas<vl::VLDT_GPU, vl::VLDT_Double>
                          (op == 't') ? CUBLAS_OP_T : CUBLAS_OP_N,
                          (int)m, (int)n,
                          &alpha,
-                         a, lda,
+                         a, (int)lda,
                          x, (int)incx,
                          &beta,
                          y, (int)incy);

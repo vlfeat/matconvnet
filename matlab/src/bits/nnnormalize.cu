@@ -148,17 +148,17 @@ struct LRNForward<vl::VLDT_CPU, dataType>
                            vl::Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = as_signed(output.getWidth()) ;
-    auto height = as_signed(output.getHeight()) ;
-    auto depth = as_signed(output.getDepth()) ;
-    auto num = as_signed(output.getSize()) ;
+    Int width = output.getWidth() ;
+    Int height = output.getHeight() ;
+    Int depth = output.getDepth() ;
+    Int num = output.getSize() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
     Int t ;
     Int m1 = (op.getNormDepth() - 1)/2 ;
     Int m2 = op.getNormDepth() - m1 - 1 ;
-    Int offset = as_signed(width*height) ;
+    Int offset = width*height ;
 
 #ifndef VL_NNNORMALIZE_FAST
     for (int k = 0 ; k < num ; ++k) {
@@ -243,10 +243,10 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
                            vl::Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = as_signed(derOutput.getWidth()) ;
-    auto height = as_signed(derOutput.getHeight()) ;
-    auto depth = as_signed(derOutput.getDepth()) ;
-    auto num = as_signed(derOutput.getSize()) ;
+    Int width = derOutput.getWidth() ;
+    Int height = derOutput.getHeight() ;
+    Int depth = derOutput.getDepth() ;
+    Int num = derOutput.getSize() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
     auto derInputData = (type*)derInput.getMemory() ;
@@ -254,7 +254,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     Int m1 = (op.getNormDepth() - 1)/2 ;
     Int m2 = op.getNormDepth() - m1 - 1 ;
     Int offset = width*height ;
-    type ab2 = 2*op.getAlpha()*op.getBeta() ;
+    auto ab2 = (type)(2*op.getAlpha()*op.getBeta()) ;
     Int t ;
 
 #ifndef VL_NNNORMALIZE_FAST
@@ -303,7 +303,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
 
     for (Int k = 0 ; k < num ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
-      for (t = -m2 ; t < as_signed(depth) ; ++t) {
+      for (t = -m2 ; t < depth ; ++t) {
         /*
          Compue the square of the input data x.^2 summed in the normalization window. This is done
          incrementally, by updating the previous normalization window sum.
@@ -375,7 +375,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
        */
       for (t = 0 ; t < (signed)depth ; ++t) {
         auto q1 = t - m2 - 1 ;
-        auto q2 = ((t + m1) <= depth - 1) ? t + m1 : as_signed(depth) - 1 ;
+        auto q2 = ((t + m1) <= depth - 1) ? t + m1 : depth - 1 ;
         type const* restrict acc22_ = acc2 + offset * q2 ;
         type const* restrict acc21_ = acc2 + offset * q1 ;
         type const* restrict data_  = inputData + offset * t ;

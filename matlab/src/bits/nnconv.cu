@@ -88,11 +88,11 @@ struct ConvolutionForward
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
-    auto numGroups = as_signed(input.getDepth() / filter.getDepth()) ;
-    auto numFiltersPerGroup = as_signed(filter.getSize()) / numGroups ;
-    auto numOutputPixels = as_signed(output.getHeight() * output.getWidth()) ;
-    auto filterVolume = as_signed(filter.getHeight() * filter.getWidth() * filter.getDepth()) ;
-    auto tempVolume = numOutputPixels * filterVolume * numGroups ;
+    Int numGroups = input.getDepth() / filter.getDepth() ;
+    Int numFiltersPerGroup = filter.getSize() / numGroups ;
+    Int numOutputPixels = output.getHeight() * output.getWidth() ;
+    Int filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+    Int tempVolume = numOutputPixels * filterVolume * numGroups ;
 
     type* tempMemory = (type*) op.getContext().getWorkspace
     (deviceType, as_unsigned(tempVolume) * sizeof(type)) ;
@@ -105,7 +105,7 @@ struct ConvolutionForward
       goto done ;
     }
 
-    for (size_t image = 0 ; image < input.getSize() ; ++image) {
+    for (Int image = 0 ; image < input.getSize() ; ++image) {
 
       auto dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
       auto outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
@@ -116,21 +116,22 @@ struct ConvolutionForward
        (type*)input.getMemory() + dataOffset,
        input.getHeight(), input.getWidth(), input.getDepth(),
        filter.getHeight(), filter.getWidth(),
-       as_unsigned(op.getStride(0)),
-       as_unsigned(op.getStride(1)),
-       as_unsigned(op.getPadding(0)),
-       as_unsigned(op.getPadding(1)),
-       as_unsigned(op.getPadding(2)),
-       as_unsigned(op.getPadding(3)),
-       op.getDilation(0), op.getDilation(1)) ;
+       op.getStride(0),
+       op.getStride(1),
+       op.getPadding(0),
+       op.getPadding(1),
+       op.getPadding(2),
+       op.getPadding(3),
+       op.getDilation(0),
+       op.getDilation(1)) ;
       if (error != vl::VLE_Success) { goto done ; }
 
       for (Int g = 0 ; g < numGroups ; ++ g) {
         Int filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
         Int tempGrpOffset = numOutputPixels * filterVolume * g ;
         Int outputGrpOffset = numOutputPixels * numFiltersPerGroup * g  ;
-        type alpha = inputMult ;
-        type beta = outputMult ;
+        auto alpha = static_cast<type>(inputMult) ;
+        auto beta = static_cast<type>(outputMult) ;
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          'n', 'n',
@@ -149,8 +150,8 @@ struct ConvolutionForward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          'n', 'n',
-         as_signed(numOutputPixels),
-         as_signed(bias.getNumElements()), 1,
+         numOutputPixels,
+         bias.getNumElements(), 1,
          alpha,
          allOnesMemory, numOutputPixels,
          (type*)bias.getMemory(), 1,
@@ -194,7 +195,7 @@ struct ConvolutionBackward
 
     // for all derivatives
     assert(derOutput) ;
-    Int numOutputPixels = as_signed(derOutput.getHeight() * derOutput.getWidth()) ;
+    Int numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
 
     if (derBias) {
       // for derivative w.r.t. bias
@@ -210,16 +211,16 @@ struct ConvolutionBackward
     if (derInput) {
       // for derivative w.r.t. data
       assert(filter) ;
-      numGroups = as_signed(derInput.getDepth() / filter.getDepth()) ;
-      filterVolume = as_signed(filter.getHeight() * filter.getWidth() * filter.getDepth()) ;
+      numGroups = derInput.getDepth() / filter.getDepth() ;
+      filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
     }
     else if (derFilter) {
       // for derivative w.r.t. filter
       assert(input) ;
-      numGroups = as_signed(input.getDepth() / derFilter.getDepth()) ;
-      filterVolume = as_signed(derFilter.getHeight() * derFilter.getWidth() * derFilter.getDepth()) ;
+      numGroups = input.getDepth() / derFilter.getDepth() ;
+      filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getDepth() ;
     }
-    numFiltersPerGroup = as_signed(derOutput.getDepth()) / numGroups ;
+    numFiltersPerGroup = derOutput.getDepth() / numGroups ;
 
     // get scratch space
     tempVolume = numOutputPixels * filterVolume * numGroups ;
@@ -231,9 +232,9 @@ struct ConvolutionBackward
       }
     }
 
-    for (Int image = 0 ; image < as_signed(derOutput.getSize()) ; ++image) {
+    for (Int image = 0 ; image < derOutput.getSize() ; ++image) {
 
-      Int derOutputOffset = as_signed(derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+      Int derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
 
       /* compute derInput dz/dbias */
       if (derBias) {
@@ -243,7 +244,7 @@ struct ConvolutionBackward
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.getContext(),
          't',
-         numOutputPixels, as_signed(derOutput.getDepth()),
+         numOutputPixels, derOutput.getDepth(),
          alpha, /* alpha */
          (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
          allOnesMemory, 1,
@@ -255,7 +256,7 @@ struct ConvolutionBackward
       /* compute derInpu dz/dx */
       if (derInput) {
         // has derInpu, derOutput, filter
-        Int derInpuOffset = as_signed(derInput.getHeight()*derInput.getWidth()*derInput.getDepth()) * image ;
+        Int derInpuOffset = (derInput.getHeight()*derInput.getWidth()*derInput.getDepth()) * image ;
         for (Int g = 0 ; g < numGroups ; ++ g) {
           Int filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
           Int tempGrpOffset = numOutputPixels * filterVolume * g ;
@@ -279,33 +280,35 @@ struct ConvolutionBackward
          tempMemory,
          derInput.getHeight(), derInput.getWidth(), derInput.getDepth(),
          filter.getHeight(), filter.getWidth(),
-         as_unsigned(op.getStride(0)),
-         as_unsigned(op.getStride(1)),
-         as_unsigned(op.getPadding(0)),
-         as_unsigned(op.getPadding(1)),
-         as_unsigned(op.getPadding(2)),
-         as_unsigned(op.getPadding(3)),
-         op.getDilation(0), op.getDilation(1)) ;
+         op.getStride(0),
+         op.getStride(1),
+         op.getPadding(0),
+         op.getPadding(1),
+         op.getPadding(2),
+         op.getPadding(3),
+         op.getDilation(0),
+         op.getDilation(1)) ;
         if (error != vl::VLE_Success) { return error ; }
       }
 
       /* compute derFilter dz/dF */
       if (derFilter) {
         // has derFilter, derOutput, data
-        Int dataOffset = as_signed(input.getHeight()*input.getWidth()*input.getDepth()) * image ;
+        Int dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
         error = vl::impl::im2row<deviceType,type>::forward
         (op.getContext(),
          (type*)tempMemory,
          (type*)input.getMemory() + dataOffset,
          input.getHeight(), input.getWidth(), input.getDepth(),
          derFilter.getHeight(), derFilter.getWidth(),
-         as_unsigned(op.getStride(0)),
-         as_unsigned(op.getStride(1)),
-         as_unsigned(op.getPadding(0)),
-         as_unsigned(op.getPadding(1)),
-         as_unsigned(op.getPadding(2)),
-         as_unsigned(op.getPadding(3)),
-         op.getDilation(0), op.getDilation(1)) ;
+         op.getStride(0),
+         op.getStride(1),
+         op.getPadding(0),
+         op.getPadding(1),
+         op.getPadding(2),
+         op.getPadding(3),
+         op.getDilation(0),
+         op.getDilation(1)) ;
         if (error != vl::VLE_Success) { return error ; }
         for (Int g = 0 ; g < numGroups ; ++ g) {
           Int filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
@@ -348,12 +351,12 @@ struct ConvolutionTransposeForward
    vl::Tensor const &bias)
   {
     vl::ErrorCode error = VLE_Success ;
-    Int dataOffset = as_signed(input.getHeight()*input.getWidth()*input.getDepth()) ;
-    Int outputOffset = as_signed(output.getHeight()*output.getWidth()*output.getDepth()) ;
+    Int dataOffset = input.getHeight()*input.getWidth()*input.getDepth() ;
+    Int outputOffset = output.getHeight()*output.getWidth()*output.getDepth() ;
 
     // we need to process this down per image as nnconv_backward would otherwise
     // accumulate everything into a single feature field in the output
-    for (Int image = 0 ; image < as_signed(input.getSize()) ; ++image) {
+    for (Int image = 0 ; image < input.getSize() ; ++image) {
       Tensor inputSlice(input) ;
       Tensor outputSlice(output) ;
 
@@ -506,17 +509,17 @@ Convolution::forwardShape(TensorShape &output,
   if (input.getNumDimensions() != filter.getNumDimensions()) {
     return VLE_IllegalArgument ;
   }
-  if (as_signed(input.getNumDimensions()) < getNumSpatialDimensions()) {
+  if (input.getNumDimensions() < getNumSpatialDimensions()) {
     return VLE_IllegalArgument ;
   }
   output = input ;
   for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    auto odim = convLikeSizeHelper(as_signed(input.getDimensions()[d]),
-                                   as_signed(filter.getDimensions()[d]),
-                                   getStride(d),
-                                   {getPadding(2*d),getPadding(2*d+1)},
-                                   getDilation(d)) ;
-    output.setDimension(as_unsigned(d), as_unsigned(odim)) ;
+    Int odim = convLikeSizeHelper(input.getDimension(d),
+                                  filter.getDimension(d),
+                                  getStride(d),
+                                  {getPadding(2*d),getPadding(2*d+1)},
+                                  getDilation(d)) ;
+    output.setDimension(d,odim) ;
   }
   return VLE_Success ;
 }

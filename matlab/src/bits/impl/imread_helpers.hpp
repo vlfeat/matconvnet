@@ -46,7 +46,7 @@ namespace vl { namespace impl {
     Int blockSizeX ;
     Int blockSizeY ;
     Int pixelStride ;
-    Int imagePlaneStride = as_signed(shape.width * shape.height) ;
+    Int imagePlaneStride = shape.width * shape.height ;
     switch (pixelFormat) {
       case pixelFormatL:
         pixelStride = 1 ;
@@ -75,8 +75,8 @@ namespace vl { namespace impl {
     // and recompute silly multiplications in the inner loop
 
     float * const  __restrict imageMemory = image.getMemory() ;
-    Int const imageHeight = as_signed(shape.height) ;
-    Int const imageWidth = as_signed(shape.width) ;
+    Int const imageHeight = shape.height ;
+    Int const imageWidth = shape.width ;
 
     for (Int x = 0 ; x < imageWidth ; x += blockSizeX) {
       float * __restrict imageMemoryX = imageMemory + x * imageHeight ;
@@ -137,7 +137,7 @@ namespace vl { namespace impl {
     Int blockSizeX ;
     Int blockSizeY ;
     Int pixelStride ;
-    Int imagePlaneStride = as_signed(shape.width * shape.height) ;
+    Int imagePlaneStride = shape.width * shape.height ;
     __m128i shuffleRgb ;
     __m128i const shuffleL = _mm_set_epi8(epi8(0xff, 0xff, 0xff,  3,
                                                0xff, 0xff, 0xff,  2,
@@ -214,8 +214,8 @@ namespace vl { namespace impl {
     // will assume that the reference &image can be aliased
     // and recompute silly multiplications in the inner loop
     float *  const __restrict imageMemory = image.getMemory() ;
-    Int const imageHeight = as_signed(shape.height) ;
-    Int const imageWidth = as_signed(shape.width) ;
+    Int const imageHeight = shape.height ;
+    Int const imageWidth = shape.width ;
 
     for (Int x = 0 ; x < imageWidth ; x += blockSizeX) {
       Int y = 0 ;
@@ -415,8 +415,8 @@ namespace vl { namespace impl {
       free(starts) ;
     }
 
-    ImageResizeFilter(size_t outputWidth, size_t inputWidth,
-                      size_t cropWidth, size_t cropOffset,
+    ImageResizeFilter(Int outputWidth, Int inputWidth,
+                      Int cropWidth, Int cropOffset,
                       FilterType filterType = kBilinear)
     {
       filterSize = 0 ;
@@ -447,14 +447,14 @@ namespace vl { namespace impl {
         filterSize = (int)ceilf(filterSupport) ;
       }
 
-      weights = (float*)calloc(as_unsigned(filterSize) * outputWidth, sizeof(float)) ;
-      starts = (decltype(starts))malloc(sizeof(starts[0]) * outputWidth) ;
+      weights = (decltype(weights))calloc(size_t(filterSize * outputWidth), sizeof(weights[0])) ;
+      starts = (decltype(starts))malloc(sizeof(starts[0]) * (size_t)outputWidth) ;
       float * filter = weights ;
 
       /* the filter extends in the interval (-filterSize/2, filterSize/2)
         (extrema not included)
        */
-      for (size_t v = 0 ; v < outputWidth ; ++v, filter += filterSize) {
+      for (Int v = 0 ; v < outputWidth ; ++v, filter += filterSize) {
         /* y(v) = sum_k h(k - u) x(k),  u = alpha * v + beta */
         /* for uniformity we assume that the sum is non-zero for
          u - filterSize/2 <= k < u + filterSize/2
@@ -463,7 +463,7 @@ namespace vl { namespace impl {
         float mass = 0 ;
         auto skip = filterSize ;
 
-        starts[v] = std::ceil(u - filterSupport / 2) ;
+        starts[v] = (Int)std::ceil(u - filterSupport / 2) ;
 
         for (Int r = 0 ; r < filterSize ; ++r) {
           Int k = r + starts[v] ;
@@ -495,8 +495,8 @@ namespace vl { namespace impl {
             case kLanczos2: {
               if (fabsf(delta) < 2) {
                 const float eps = 1e-5f ;
-                h = (sin(VL_M_PI_F * delta) *
-                     sin(VL_M_PI_F * delta / 2.f) + eps) /
+                h = (sinf(VL_M_PI_F * delta) *
+                     sinf(VL_M_PI_F * delta / 2.f) + eps) /
                 ((VL_M_PI_F*VL_M_PI_F * delta*delta / 2.f) + eps);
               } else {
                 h = 0.f ;
@@ -506,8 +506,8 @@ namespace vl { namespace impl {
             case kLanczos3:
               if (fabsf(delta) < 3) {
                 const float eps = 1e-5f ;
-                h = (sin(VL_M_PI_F * delta) *
-                     sin(VL_M_PI_F * delta / 3.f) + eps) /
+                h = (sinf(VL_M_PI_F * delta) *
+                     sinf(VL_M_PI_F * delta / 3.f) + eps) /
                 ((VL_M_PI_F*VL_M_PI_F * delta*delta / 3.f) + eps);
               } else {
                 h = 0.f ;
@@ -530,7 +530,7 @@ namespace vl { namespace impl {
             }
             filter[q] += h ;
             mass += h ;
-            if (h) {
+            if (h != 0) {
               skip = (std::min)(skip, q) ;
             }
           }
@@ -550,30 +550,30 @@ namespace vl { namespace impl {
   } ;
 
   inline void imageResizeVertical(float * output, float const * input,
-                                  size_t outputHeight,
-                                  size_t height, size_t width, size_t depth,
-                                  size_t cropHeight,
-                                  size_t cropOffset,
+                                  Int outputHeight,
+                                  Int height, Int width, Int depth,
+                                  Int cropHeight,
+                                  Int cropOffset,
                                   bool flip = false,
                                   vl::impl::ImageResizeFilter::FilterType filterType = vl::impl::ImageResizeFilter::kBilinear)
   {
     ImageResizeFilter filters(outputHeight, height, cropHeight, cropOffset, filterType) ;
-    auto filterSize = filters.filterSize ;
-    for (Int d = 0 ; d < (int)depth ; ++d) {
-      for (Int x = 0 ; x < (int)width ; ++x) {
-        for (Int y = 0 ; y < (int)outputHeight ; ++y) {
+    auto filterSize = (Int)filters.filterSize ;
+    for (Int d = 0 ; d < (Int)depth ; ++d) {
+      for (Int x = 0 ; x < (Int)width ; ++x) {
+        for (Int y = 0 ; y < (Int)outputHeight ; ++y) {
           float z = 0 ;
           auto begin = filters.starts[y] ;
           float const * weights = filters.weights + filterSize * y ;
-          for (auto k = begin ; k < begin + filterSize ; ++k) {
+          for (Int k = begin ; k < begin + filterSize ; ++k) {
             float w = *weights++ ;
             if (w == 0.f) break ;
             z += input[k] * w ;
           }
           if (!flip) {
-            output[x + y * as_signed(width)] = z ; // transpose
+            output[x + y * Int(width)] = z ; // transpose
           } else {
-            output[x + (as_signed(outputHeight) - 1 - y) * as_signed(width)] = z ; // flip and transpose
+            output[x + (Int(outputHeight) - 1 - y) * Int(width)] = z ; // flip and transpose
           }
         }
         input += height ;
@@ -587,7 +587,7 @@ namespace vl { namespace impl {
     vl::ImageShape const & inputShape = input.getShape() ;
     vl::ImageShape const & outputShape = output.getShape() ;
     assert(outputShape.depth == inputShape.depth) ;
-    float * temp = (float*)malloc(sizeof(float) * outputShape.height * inputShape.width * inputShape.depth) ;
+    float * temp = (float*)malloc(sizeof(float) * size_t(outputShape.height * inputShape.width * inputShape.depth)) ;
     imageResizeVertical(temp, input.getMemory(),
                         outputShape.height,
                         inputShape.height, inputShape.width, inputShape.depth,

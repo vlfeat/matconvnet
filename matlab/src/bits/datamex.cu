@@ -200,7 +200,7 @@ vl::MexTensor::initHelper(DeviceType newDeviceType, DataType newDataType,
   }
 
   // compute the size in bytes
-  mwSize newMemorySize = newShape.getNumElements() ;
+  auto newMemorySize = static_cast<mwSize>(newShape.getNumElements()) ;
   mxClassID classID ;
   switch (newDataType) {
     case VLDT_Float:
@@ -235,13 +235,15 @@ vl::MexTensor::initHelper(DeviceType newDeviceType, DataType newDataType,
                                       classID,
                                       mxREAL) ;
       mxSetData(newArray, newMemory) ;
-      mxSetDimensions(newArray, dimensions, newShape.getNumDimensions()) ;
+      mxSetDimensions(newArray, dimensions,
+                      static_cast<mwSize>(newShape.getNumDimensions())) ;
     }
   }
 #ifdef ENABLE_GPU
   else {
     context.initGpu() ;
-    newGpuArray = mxGPUCreateGPUArray(newShape.getNumDimensions(), dimensions,
+    newGpuArray = mxGPUCreateGPUArray(static_cast<mwSize>(newShape.getNumDimensions()),
+                                      dimensions,
                                       classID,
                                       mxREAL,
                                       fillWithZeros ? MX_GPU_INITIALIZE_VALUES : MX_GPU_DO_NOT_INITIALIZE) ;
@@ -299,7 +301,7 @@ vl::MexTensor::initWithValue(DeviceType newDeviceType,
   } else {
     vl::ErrorCode error = initHelper(newDeviceType, newDataType, newShape, false) ;
     if (error != VLE_Success) { return error ; }
-    size_t const n = getNumElements() ;
+    auto const n = static_cast<size_t>(getNumElements()) ;
     if (newDeviceType == vl::VLDT_CPU) {
       switch (newDataType) {
         case VLDT_Float: error = operations<vl::VLDT_CPU,float>::fill((float*)memory, n, (float)value) ; break ;
@@ -386,12 +388,12 @@ vl::MexTensor::init(mxArray const * array_)
     mexErrMsgTxt("An input has more than the maximum number of allowed dimensions.") ;
   }
 
-  numDimensions = newNumDimensions ;
+  numDimensions = static_cast<vl::Int>(newNumDimensions) ;
   for (int k = 0 ; k < numDimensions ; ++k) {
-    setDimension(k, newDimensions[k]) ;
+    setDimension(k, (Int)newDimensions[k]) ;
   }
 
-  size_t newMemorySize = getNumElements() ;
+  auto newMemorySize = static_cast<mwSize>(getNumElements()) ;
 
   switch (newClassID) {
     case mxSINGLE_CLASS:
@@ -443,7 +445,7 @@ void vl::print(char const * str, vl::MexTensor const & tensor)
 {
   size_t size = tensor.getMemorySize() ;
   double scaled ;
-  size_t const * dimensions = tensor.getDimensions() ;
+  auto dimensions = tensor.getDimensions() ;
   const char * units ;
   const char * type ;
   if (size < 1024) {

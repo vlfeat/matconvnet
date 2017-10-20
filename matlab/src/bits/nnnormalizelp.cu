@@ -42,7 +42,7 @@ struct VisitPattern
 VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 {
   // Compute tensor geometry.
-  auto n = input.getNumDimensions() ;
+  auto n = (size_t)input.getNumDimensions() ;
   auto inputDimensions = std::vector<size_t>(input.getDimensions(),
                                              input.getDimensions() + n) ;
 
@@ -56,7 +56,7 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
   // Find out how to traverse the reduced results as the input is
   // scanned from first to last element.
   for (size_t d = 0 ; d < n ; ++d) {
-    stepPeriods[d] = inputVolume ;
+    stepPeriods[size_t(d)] = inputVolume ;
 
     auto const& sd = op.getSelectedDimensions() ;
     bool squashed = (find(sd.begin(), sd.end(), d) != sd.end()) ;
@@ -82,10 +82,10 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
   }
 
   // Make it suitable for more efficient loops.
-  for (auto d = as_signed(steps.size()) - 1 ; d >= 1 ; --d) {
+  for (Int d = as_signed(steps.size()) - 1 ; d >= 1 ; --d) {
     stepPeriods[as_unsigned(d)] /= stepPeriods[as_unsigned(d) - 1] ;
   }
-  for (auto d = as_signed(steps.size()) ; d < 5 ; ++d) {
+  for (Int d = as_signed(steps.size()) ; d < 5 ; ++d) {
     steps.push_back(0) ;
     stepPeriods.push_back(1) ;
   }
@@ -126,7 +126,7 @@ void computeNorms(NormalizeLp const & op,
 
   // Root norm.
   for (Int i = 0 ; i < vp.normsVolume ; ++i) {
-    normsData[i] = pow(normsData[i] + epsilon, 1.0/exponent) ;
+    normsData[i] = pow(normsData[i] + epsilon, static_cast<type>(1.0)/exponent) ;
   }
 }
 
@@ -332,11 +332,11 @@ NormalizeLp::getNormsShapeForData(vl::Tensor const &data)
 {
   vl::TensorShape shape(data) ;
   auto n = shape.getNumDimensions() ;
-  for (size_t d = 0 ; d < n ; ++d) {
+  for (size_t d = 0 ; d < size_t(n) ; ++d) {
     bool squashed =
     (find(selectedDimensions.begin(), selectedDimensions.end(), d) !=
      selectedDimensions.end()) ;
-    if (squashed) { shape.setDimension(d, 1) ; }
+    if (squashed) { shape.setDimension((Int)d, 1) ; }
   }
   return shape ;
 }

@@ -110,7 +110,7 @@ LINKLIBS='$(MEXLINK_LINKLIBS) $$LINKLIBS' \
 -lmwblas
 
 # Additional flags passed to `nvcc` for compiling CUDA code.
-NVCCFLAGS = -D_FORCE_INLINES --std=c++11 --compiler-options=-fPIC \
+NVCCFLAGS = -D_FORCE_INLINES --std=c++11 --compiler-options=-fPIC,-Wconversion \
 -I"$(MATLABROOT)/extern/include" \
 -I"$(MATLABROOT)/toolbox/distcomp/gpu/extern/include" \
 -gencode=arch=compute_30,code=\"sm_30,compute_30\"
@@ -119,7 +119,7 @@ NVCCFLAGS = -D_FORCE_INLINES --std=c++11 --compiler-options=-fPIC \
 # Generic configuration
 # --------------------------------------------------------------------
 
-MEX_CXXFLAGS = --std=c++11
+MEX_CXXFLAGS = --std=c++11 -Wconversion
 
 ifndef DEBUG
 MEX_CXXOPTIMFLAGS += -mssse3 -ffast-math

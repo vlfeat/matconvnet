@@ -46,23 +46,23 @@ template<DataType dataType> struct BatchNormBackwardWithMomentCudnn ;
 template<typename T> inline void
 compute_moment(T * moments,
                T const * data,
-               int WH,
-               int depth,
-               int num,
+               Int WH,
+               Int depth,
+               Int num,
                T epsilon)
 {
   memset(moments, 0, sizeof(T) * 2 * as_unsigned(depth)) ;
-  int mass = WH * num ;
-  for(int channel = 0; channel < depth; ++channel) {
-    for(int element = 0; element < num; ++element) {
-      for(int wh = 0; wh < WH; ++wh){
+  Int mass = WH * num ;
+  for(Int channel = 0; channel < depth; ++channel) {
+    for(Int element = 0; element < num; ++element) {
+      for(Int wh = 0; wh < WH; ++wh){
         T x = data[wh + channel*WH + element*(depth*WH)] ;
         moments[channel] += x ; // mean
         moments[channel + depth] += x * x; // sigma
       }
     }
   }
-  for(int i = 0; i < depth; ++i) {
+  for(Int i = 0; i < depth; ++i) {
     T mean = moments[i] / mass ;
     T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
     moments[i] = mean ;
@@ -77,21 +77,21 @@ compute_ders(T * derMultipliers,
              T const * moments,
              T const * data,
              T const * derOutput,
-             size_t WH, size_t depth, size_t num,
+             Int WH, Int depth, Int num,
              T epsilon)
 {
-  memset(derMultipliers, 0, sizeof(T) * depth) ;
-  memset(derBiases, 0, sizeof(T) * depth) ;
-  for(size_t channel = 0; channel < depth; ++channel){
-    for(size_t element = 0; element < num; ++element ){
-      for(size_t wh = 0; wh < WH; ++wh){
+  memset(derMultipliers, 0, sizeof(T) * (size_t)depth) ;
+  memset(derBiases, 0, sizeof(T) * (size_t)depth) ;
+  for(Int channel = 0; channel < depth; ++channel){
+    for(Int element = 0; element < num; ++element ){
+      for(Int wh = 0; wh < WH; ++wh){
         auto offset = wh + channel * WH + element * (WH*depth) ;
         derMultipliers[channel] += derOutput[offset] * data[offset];
         derBiases[channel] += derOutput[offset];
       }
     }
   }
-  for(size_t i = 0; i < depth; ++i) {
+  for(Int i = 0; i < depth; ++i) {
     T mean = moments[i] ;
     T sigma = moments[i + depth] ;
     derMultipliers[i] = (derMultipliers[i] - mean*derBiases[i]) / sigma;
@@ -104,15 +104,17 @@ compute_ders_and_moments(T * derMultipliers,
                          T * moments,
                          T const * data,
                          T const * derOutput,
-                         size_t WH, size_t depth, size_t num,
+                         Int WH,
+                         Int depth,
+                         Int num,
                          T epsilon)
 {
-  memset(derMultipliers, 0, sizeof(T) * depth) ;
-  memset(derBiases, 0, sizeof(T) * depth) ;
-  memset(moments, 0, sizeof(T) * 2 * depth) ;
-  for(size_t channel = 0; channel < depth; ++channel) {
-    for(size_t element = 0; element < num; ++element) {
-      for(size_t wh = 0; wh < WH; ++wh){
+  memset(derMultipliers, 0, sizeof(T) * (size_t)depth) ;
+  memset(derBiases, 0, sizeof(T) * (size_t)depth) ;
+  memset(moments, 0, sizeof(T) * 2 * (size_t)depth) ;
+  for(Int channel = 0; channel < depth; ++channel) {
+    for(Int element = 0; element < num; ++element) {
+      for(Int wh = 0; wh < WH; ++wh){
         auto offset = wh + channel * WH + element * (WH*depth) ;
         moments[channel] += data[offset] ;
         moments[channel + depth] += data[offset] * data[offset];
@@ -123,7 +125,7 @@ compute_ders_and_moments(T * derMultipliers,
   }
 
   T mass = WH*num;
-  for(size_t i = 0; i < depth; ++i) {
+  for(Int i = 0; i < depth; ++i) {
     T mean = moments[i] / mass ;
     T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
     T sigma = sqrt(sigma2 + epsilon);
@@ -141,12 +143,12 @@ batch_normalize_backward(T * derData,
                          T const * derMultipliers,
                          T const * derBiases,
                          T const * derOutput,
-                         size_t WH,
-                         size_t depth,
-                         size_t num)
+                         Int WH,
+                         Int depth,
+                         Int num)
 {
   T mass = WH*num;
-  for(size_t channel = 0; channel < depth; ++channel ) {
+  for (Int channel = 0; channel < depth; ++channel ) {
     T mean = moments[channel] ;
     T sigma = moments[channel + depth] ;
 
@@ -154,8 +156,8 @@ batch_normalize_backward(T * derData,
     T G1 = multipliers[channel]/sigma ;
     T G2 = G1 * derMultipliers[channel]/(mass*sigma);
 
-    for(size_t element = 0; element < num; ++element){
-      for(size_t wh = 0; wh < WH; ++wh){
+    for (Int element = 0; element < num; ++element){
+      for (Int wh = 0; wh < WH; ++wh){
         auto offset = wh + channel * WH + element * (WH*depth) ;
         derData[offset] = G1 * (derOutput[offset] - muz) - G2 * (data[offset]-mean) ;
       }
@@ -227,7 +229,8 @@ struct BatchNormForward<VLDT_CPU, dataType>
     // Compute the moments.
     Tensor ownMoment(moment) ;
     if (ownMoment.getMemory() == NULL) {
-      auto * buffer = (type*)op.getContext().getWorkspace(vl::VLDT_CPU, sizeof(type)*2*depth) ;
+      auto * buffer = (type*)op.getContext().getWorkspace
+      (vl::VLDT_CPU, sizeof(type)*2*size_t(depth)) ;
       if (!buffer) {
         error = VLE_OutOfMemory ;
         goto done ;
@@ -238,10 +241,8 @@ struct BatchNormForward<VLDT_CPU, dataType>
     {
       auto momentData = (type*)ownMoment.getMemory() ;
       compute_moment<type>(momentData, inputData,
-                           static_cast<int>(width*height),
-                           static_cast<int>(depth),
-                           static_cast<int>(size),
-                           op.getEpsilon()) ;
+                           width*height, depth, size,
+                           (type)op.getEpsilon()) ;
     }
 
     // Compute output.
@@ -273,10 +274,12 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
                            Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    Int height = input.getHeight() ;
+    Int width = input.getWidth() ;
+    Int depth = input.getDepth() ;
+    Int size = input.getSize() ;
+    Int WH = height * width ;
+
     auto derInputData = (type*)derInput.getMemory() ;
     auto derMultiplierData = (type*)derMultiplier.getMemory() ;
     auto derBiasData = (type*)derBias.getMemory() ;
@@ -284,13 +287,12 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
     auto inputData = (type const*)input.getMemory() ;
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto WH = height * width ;
 
     // Compute derMultipliers, derBiases, muz, and moments.
     compute_ders<type>(derMultiplierData, derBiasData,
                        momentData, inputData, derOutputData,
                        WH, depth, size,
-                       op.getEpsilon());
+                       (type)op.getEpsilon());
 
     // Compute derData.
     batch_normalize_backward<type>(derInputData,
@@ -317,22 +319,24 @@ struct BatchNormBackward<VLDT_CPU, dataType>
   {
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    Int height = input.getHeight() ;
+    Int width = input.getWidth() ;
+    Int depth = input.getDepth() ;
+    Int size = input.getSize() ;
+    Int WH = height * width ;
+
     auto derInputData = (type*)derInput.getMemory() ;
     auto derMultiplierData = (type*)derMultiplier.getMemory() ;
     auto derBiasData = (type*)derBias.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto WH = height * width ;
 
     // Get workspace if needed.
     Tensor ownMoment(moment) ;
     if (ownMoment.getMemory() == NULL) {
-      auto * buffer = (type*)op.getContext().getWorkspace(vl::VLDT_CPU, sizeof(type)*2*depth) ;
+      auto buffer = (type*)op.getContext().getWorkspace
+      (vl::VLDT_CPU, sizeof(type)*2*size_t(depth)) ;
       if (!buffer) {
         error = VLE_OutOfMemory ;
         goto done ;
@@ -347,7 +351,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
       compute_ders_and_moments<type>(derMultiplierData, derBiasData, momentData,
                                      inputData, derOutputData,
                                      WH, depth, size,
-                                     op.getEpsilon());
+                                     (type)op.getEpsilon());
 
       // Compute derData.
       batch_normalize_backward<type>(derInputData,

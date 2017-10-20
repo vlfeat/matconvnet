@@ -39,8 +39,8 @@ forward_backward
  type const* data,
  type const* grid,
  type const* derOutput,
- size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
- size_t inHeight, size_t inWidth, size_t inCardinality)
+ Int outHeight, Int outWidth, Int outDepth, Int outCardinality,
+ Int inHeight, Int inWidth, Int inCardinality)
 {
   vl::ErrorCode error = vl::VLE_Success ;
 
@@ -78,8 +78,8 @@ forward_backward
 
         py = type(0.5)*(py + type(1.0)) * (inHeight - 1) ;
         px = type(0.5)*(px + type(1.0)) * (inWidth - 1) ;
-        Int const sx = floor(px); // todo: check floor vs floorf
-        Int const sy = floor(py);
+        auto const sx = (Int)floor(px); // todo: check floor vs floorf
+        auto const sy = (Int)floor(py);
 
         type acc = 0 ;
         type dgridx = 0 ;
@@ -138,7 +138,7 @@ forward_backward
       derGrid -= 2 * outHeight * outWidth ;
     }
     // next image
-    if ((as_unsigned(n) + 1) % groupSize != 0) {
+    if ((as_unsigned(n) + 1) % as_unsigned(groupSize) != 0) {
       data -= inHeight * inWidth * outDepth ;
       derData -= inHeight * inWidth * outDepth ;
     }

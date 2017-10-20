@@ -24,7 +24,7 @@ using namespace vl::impl ;
 { \
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = op.context.setError(op.context.getCudaHelper().catchCudnnError(cudnnError, \
+error = op.getContext().setError(op.getContext().getCudaHelper().catchCudnnError(cudnnError, \
 STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
 goto done ; \
 } }
@@ -36,7 +36,7 @@ goto done ; \
 template<DataType dataType>
 struct BiasForwardCudnn
 {
-  vl::ErrorCode operator()(Bias & op,
+  vl::ErrorCode operator()(Bias const& op,
                            Tensor &output, double outputMult,
                            Tensor const &input, double inputMult,
                            Tensor const &bias, double biasMult)
@@ -53,7 +53,7 @@ struct BiasForwardCudnn
     cudnnHandle_t handle ;
 
     // Get CuDNN
-    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get output tensor descripotr
     assert(output) ;
@@ -62,10 +62,10 @@ struct BiasForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(outputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      DataTypeToCudnn<dataType>::dataType,
-                                     output.getSize(), // sizes
-                                     output.getDepth(),
-                                     output.getWidth(),
-                                     output.getHeight())) ;
+                                     (int)output.getSize(), // sizes
+                                     (int)output.getDepth(),
+                                     (int)output.getWidth(),
+                                     (int)output.getHeight())) ;
 
     if (bias) {
       CHECK(cudnnCreateTensorDescriptor(&biasDesc)) ;
@@ -74,12 +74,12 @@ struct BiasForwardCudnn
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
                                        1,
-                                       bias.getNumElements(),
+                                       (int)bias.getNumElements(),
                                        1,
                                        1)) ;
 
-      type alpha = biasMult ;
-      type beta = outputMult ;
+      auto alpha = static_cast<type>(biasMult) ;
+      auto beta = static_cast<type>(outputMult) ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_SAME_C,
@@ -103,13 +103,13 @@ struct BiasForwardCudnn
       CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
-                                       input.getSize(),
-                                       input.getDepth(),
-                                       input.getWidth(),
-                                       input.getHeight())) ;
+                                       (int)input.getSize(),
+                                       (int)input.getDepth(),
+                                       (int)input.getWidth(),
+                                       (int)input.getHeight())) ;
 
-      type alpha = inputMult ;
-      type beta = outputMult ;
+      auto alpha = static_cast<type>(biasMult) ;
+      auto beta = static_cast<type>(outputMult) ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_FULL_TENSOR,
@@ -131,7 +131,7 @@ struct BiasForwardCudnn
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (biasDescInitialized) { cudnnDestroyTensorDescriptor(biasDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 } ;
 
@@ -143,7 +143,7 @@ struct BiasForwardCudnn
 template<DataType dataType>
 struct BiasBackwardCudnn
 {
-  vl::ErrorCode operator()(Bias &op,
+  vl::ErrorCode operator()(Bias const &op,
                            Tensor &derInput, double derInputMult,
                            Tensor &derBias, double derBiasMult,
                            double inputMult, double biasMult,
@@ -162,7 +162,7 @@ struct BiasBackwardCudnn
     cudnnHandle_t handle ;
 
     // Get CuDNN
-    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Must have derOutput for all derivatives
     assert(derOutput) ;
@@ -171,10 +171,10 @@ struct BiasBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      DataTypeToCudnn<dataType>::dataType,
-                                     derOutput.getSize(), // sizes
-                                     derOutput.getDepth(),
-                                     derOutput.getWidth(),
-                                     derOutput.getHeight())) ;
+                                     (int)derOutput.getSize(), // sizes
+                                     (int)derOutput.getDepth(),
+                                     (int)derOutput.getWidth(),
+                                     (int)derOutput.getHeight())) ;
 
     // for derivatives w.r.t. bias
     if (derBias) {
@@ -184,12 +184,12 @@ struct BiasBackwardCudnn
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
                                        1,
-                                       derBias.getNumElements(),
+                                       (int)derBias.getNumElements(),
                                        1,
                                        1)) ;
 
-      type alpha = biasMult ;
-      type beta = derBiasMult ;
+      auto alpha = static_cast<type>(biasMult) ;
+      auto beta = static_cast<type>(derBiasMult) ;
       CHECK(cudnnConvolutionBackwardBias
             (handle,
              &alpha,
@@ -204,12 +204,12 @@ struct BiasBackwardCudnn
       CHECK(cudnnSetTensor4dDescriptor(derInputDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
-                                       derInput.getSize(),
-                                       derInput.getDepth(),
-                                       derInput.getWidth(),
-                                       derInput.getHeight())) ;
-      type alpha = inputMult ;
-      type beta = derInputMult ;
+                                       (int)derInput.getSize(),
+                                       (int)derInput.getDepth(),
+                                       (int)derInput.getWidth(),
+                                       (int)derInput.getHeight())) ;
+      auto alpha = static_cast<type>(biasMult) ;
+      auto beta = static_cast<type>(derBiasMult) ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_SAME_C,
@@ -230,6 +230,6 @@ struct BiasBackwardCudnn
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
     if (derBiasDescInitialized) { cudnnDestroyTensorDescriptor(derBiasDesc) ; }
     if (derInputDescInitialized) { cudnnDestroyTensorDescriptor(derInputDesc) ; }
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 } ;

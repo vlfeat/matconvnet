@@ -27,7 +27,7 @@ using namespace vl::impl ;
 namespace vl { namespace impl {
   template<vl::DataType dataType>
   vl::ErrorCode
-  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& op.context,
+  vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& op.getContext(),
                                                        Tensor output,
                                                        Tensor data,
                                                        Tensor grid)
@@ -37,7 +37,7 @@ namespace vl { namespace impl {
 
   template<vl::DataType dataType>
   vl::ErrorCode
-  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& op.context,
+  vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& op.getContext(),
                                                         Tensor derInputData,
                                                         Tensor derGrid,
                                                         Tensor data,
@@ -54,7 +54,7 @@ namespace vl { namespace impl {
 { \
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = op.context.setError(op.context.getCudaHelper().catchCudnnError(cudnnError, \
+error = op.getContext().setError(op.getContext().getCudaHelper().catchCudnnError(cudnnError, \
 STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__))) ; \
 goto done ; \
 } }
@@ -66,7 +66,7 @@ goto done ; \
 template<DataType dataType>
 struct BilinearSamplerForwardCudnn
 {
-  vl::ErrorCode operator()(BilinearSampler &op,
+  vl::ErrorCode operator()(BilinearSampler const &op,
                            Tensor &output,
                            Tensor const &input,
                            Tensor const &grid)
@@ -84,15 +84,15 @@ struct BilinearSamplerForwardCudnn
     bool samplerDescInitialized = false ;
 
     // get the sizes:
-    int inCardinality = input.getSize();
-    int inDepth = input.getDepth();
-    int inHeight = input.getHeight();
-    int inWidth = input.getWidth();
+    int inCardinality = (int)input.getSize();
+    int inDepth = (int)input.getDepth();
+    int inHeight = (int)input.getHeight();
+    int inWidth = (int)input.getWidth();
 
-    int outCardinality = output.getSize();
-    int outDepth = output.getDepth();
-    int outWidth = output.getWidth();
-    int outHeight = output.getHeight();
+    int outCardinality = (int)output.getSize();
+    int outDepth = (int)output.getDepth();
+    int outWidth = (int)output.getWidth();
+    int outHeight = (int)output.getHeight();
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = output.getDataType() ;
@@ -103,11 +103,11 @@ struct BilinearSamplerForwardCudnn
     cudnnHandle_t handle ;
 
     // get number of transforms/image == groupSize:
-    int groupSize = outCardinality / inCardinality ;
-    int dimOut[4] = { 1, outDepth, outWidth, outHeight } ; // one-image
+    int groupSize = (int)(outCardinality / inCardinality) ;
+    int dimOut[4] = { 1, (int)outDepth, (int)outWidth, (int)outHeight } ; // one-image
 
     // Get CuDNN
-    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descriptors:
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
@@ -169,7 +169,7 @@ struct BilinearSamplerForwardCudnn
     if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 };
 
@@ -181,7 +181,7 @@ template<DataType dataType>
 struct BilinearSamplerBackwardCudnn
 {
   vl::ErrorCode operator()
-  (BilinearSampler &op,
+  (BilinearSampler const &op,
    Tensor &derInput,
    Tensor &derGrid,
    Tensor const &input,
@@ -198,15 +198,15 @@ struct BilinearSamplerBackwardCudnn
     bool samplerDescInitialized = false ;
 
     // get the sizes:
-    int inCardinality = input.getSize();
-    int inDepth = input.getDepth();
-    int inHeight = input.getHeight();
-    int inWidth = input.getWidth();
+    int inCardinality = (int)derInput.getSize();
+    int inDepth = (int)derInput.getDepth();
+    int inHeight = (int)derInput.getHeight();
+    int inWidth = (int)derInput.getWidth();
 
-    int outCardinality = derOutput.getSize();
-    int outDepth = derOutput.getDepth();
-    int outWidth = derOutput.getWidth();
-    int outHeight = derOutput.getHeight();
+    int outCardinality = (int)derOutput.getSize();
+    int outDepth = (int)derOutput.getDepth();
+    int outWidth = (int)derOutput.getWidth();
+    int outHeight = (int)derOutput.getHeight();
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = derOutput.getDataType() ;
@@ -217,11 +217,11 @@ struct BilinearSamplerBackwardCudnn
     cudnnHandle_t handle ;
 
     // get number of transforms/image == groupSize:
-    int groupSize = outCardinality / inCardinality;
-    int dimOut[4] = { 1, outDepth, outWidth, outHeight };
+    int groupSize = (int)(outCardinality / inCardinality) ;
+    int dimOut[4] = { 1, (int)outDepth, (int)outWidth, (int)outHeight };
 
     // Get CuDNN
-    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
 
     // Get tensor descriptors:
@@ -258,9 +258,9 @@ struct BilinearSamplerBackwardCudnn
       type alpha = 1.0f ;
       type dataBeta = 1.0f ; // assuming that the derInputData has been initialized to zero
       type gridBeta = 0.0f ;
-      const Int dataOffset = inHeight * inWidth * inDepth ;
-      const Int gridOffset = 2 * outWidth * outHeight ;
-      const Int outOffset = outHeight * outWidth * outDepth ;
+      int const dataOffset = inHeight * inWidth * inDepth ;
+      int const gridOffset = 2 * outWidth * outHeight ;
+      int const outOffset = outHeight * outWidth * outDepth ;
       type const* data_ptr = (type const*) input.getMemory() ;
       type * derInputData_ptr = (type *) derInput.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;
@@ -294,7 +294,7 @@ struct BilinearSamplerBackwardCudnn
     if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 } ;
 

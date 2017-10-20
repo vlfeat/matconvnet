@@ -21,6 +21,8 @@ the terms of the BSD license (see the COPYING file).
 
 #include <cassert>
 
+using Int = vl::Int ;
+
 /* option codes */
 enum {
   opt_stride = 0,
@@ -72,14 +74,14 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  int poolWidth ;
-  int poolHeight ;
-  int strideX = 1 ;
-  int strideY = 1 ;
-  int padLeft = 0 ;
-  int padRight = 0 ;
-  int padTop = 0 ;
-  int padBottom = 0 ;
+  Int poolWidth ;
+  Int poolHeight ;
+  Int strideX = 1 ;
+  Int strideY = 1 ;
+  Int padLeft = 0 ;
+  Int padRight = 0 ;
+  Int padTop = 0 ;
+  Int padBottom = 0 ;
   auto method = vl::nn::Pooling::Max ;
   bool backMode = false ;
 
@@ -117,12 +119,12 @@ void mexFunction(int nout, mxArray *out[],
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            strideY = (int)mxGetPr(optarg)[0] ;
+            strideY = (Int)mxGetPr(optarg)[0] ;
             strideX = strideY ;
             break ;
           case 2:
-            strideY = (int)mxGetPr(optarg)[0] ;
-            strideX = (int)mxGetPr(optarg)[1] ;
+            strideY = (Int)mxGetPr(optarg)[0] ;
+            strideX = (Int)mxGetPr(optarg)[1] ;
             break ;
           default:
             mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
@@ -135,16 +137,16 @@ void mexFunction(int nout, mxArray *out[],
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            padLeft = (int)mxGetPr(optarg)[0] ;
+            padLeft = (Int)mxGetPr(optarg)[0] ;
             padRight = padLeft ;
             padTop = padLeft ;
             padBottom = padLeft ;
             break ;
           case 4:
-            padTop = (int)mxGetPr(optarg)[0] ;
-            padBottom = (int)mxGetPr(optarg)[1] ;
-            padLeft = (int)mxGetPr(optarg)[2] ;
-            padRight = (int)mxGetPr(optarg)[3] ;
+            padTop = (Int)mxGetPr(optarg)[0] ;
+            padBottom = (Int)mxGetPr(optarg)[1] ;
+            padLeft = (Int)mxGetPr(optarg)[2] ;
+            padRight = (Int)mxGetPr(optarg)[3] ;
             break ;
           default:
             mexErrMsgTxt("PAD has neither one nor four elements.") ;
@@ -201,12 +203,12 @@ void mexFunction(int nout, mxArray *out[],
   }
   switch (mxGetNumberOfElements(in[IN_SIZE])) {
     case 1:
-      poolHeight = mxGetPr(in[IN_SIZE])[0] ;
+      poolHeight = (Int)mxGetPr(in[IN_SIZE])[0] ;
       poolWidth = poolHeight ;
       break ;
     case 2:
-      poolHeight = mxGetPr(in[IN_SIZE])[0] ;
-      poolWidth = mxGetPr(in[IN_SIZE])[1] ;
+      poolHeight = (Int)mxGetPr(in[IN_SIZE])[0] ;
+      poolWidth = (Int)mxGetPr(in[IN_SIZE])[1] ;
       break ;
     default:
       mexErrMsgTxt("SIZE has neither one nor two elements.") ;
@@ -219,8 +221,8 @@ void mexFunction(int nout, mxArray *out[],
   if (poolHeight == 0 || poolWidth == 0) {
     mexErrMsgTxt("A dimension of the pooling SIZE is void.") ;
   }
-  if (data.getHeight() + (padTop+padBottom) < poolHeight ||
-      data.getWidth() + (padLeft+padRight) < poolWidth) {
+  if ((Int)data.getHeight() + (padTop+padBottom) < poolHeight ||
+      (Int)data.getWidth() + (padLeft+padRight) < poolWidth) {
     mexErrMsgTxt("The pooling window is larger than the DATA (including padding).") ;
   }
   if (padLeft < 0 ||
@@ -237,10 +239,19 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the output Shape */
-  vl::TensorShape outputShape((data.getHeight() + (padTop+padBottom) - poolHeight)/strideY + 1,
-                              (data.getWidth()  + (padLeft+padRight) - poolWidth)/strideX + 1,
-                              data.getDepth(),
-                              data.getSize()) ;
+  vl::ErrorCode error ;
+  vl::nn::Pooling op(context,
+                     poolHeight, poolWidth,
+                     strideY, strideX,
+                     padTop, padBottom, padLeft, padRight,
+                     method) ;
+
+  vl::TensorShape outputShape ;
+  op.forwardShape(outputShape, data);
+//  ((data.getHeight() + (padTop+padBottom) - poolHeight)/strideY + 1,
+//                              (data.getWidth()  + (padLeft+padRight) - poolWidth)/strideX + 1,
+//                              data.getDepth(),
+//                              data.getSize()) ;
 
   if (backMode && (derOutput != outputShape)) {
     mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;
@@ -286,13 +297,6 @@ void mexFunction(int nout, mxArray *out[],
   /* -------------------------------------------------------------- */
   /*                                                    Do the work */
   /* -------------------------------------------------------------- */
-
-  vl::ErrorCode error ;
-  vl::nn::Pooling op(context,
-                     poolHeight, poolWidth,
-                     strideY, strideX,
-                     padTop, padBottom, padLeft, padRight,
-                     method) ;
 
   if (!backMode) {
     error = op.forward(output, data) ;

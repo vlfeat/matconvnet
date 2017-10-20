@@ -25,20 +25,20 @@ namespace vl { namespace impl {
     forward(vl::Context& context,
             type* stacked,
             type const* data,
-            size_t height, size_t width, size_t depth,
-            size_t windowHeight, size_t windowWidth,
-            size_t strideY, size_t strideX,
-            size_t padTop, size_t padBottom, size_t padLeft, size_t padRight,
+            Int height, Int width, Int depth,
+            Int windowHeight, Int windowWidth,
+            Int strideY, Int strideX,
+            Int padTop, Int padBottom, Int padLeft, Int padRight,
             Int dilateY, Int dialteX) ;
 
     static vl::ErrorCode
     backward(vl::Context& context,
              type* data,
              type const* stacked,
-             size_t height, size_t width, size_t depth,
-             size_t windowHeight, size_t windowWidth,
-             size_t strideY, size_t strideX,
-             size_t padTop, size_t padBottom, size_t padLeft, size_t padRight,
+             Int height, Int width, Int depth,
+             Int windowHeight, Int windowWidth,
+             Int strideY, Int strideX,
+             Int padTop, Int padBottom, Int padLeft, Int padRight,
              Int dilateY, Int dilateX) ;
   } ;
 

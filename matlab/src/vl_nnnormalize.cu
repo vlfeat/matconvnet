@@ -20,6 +20,8 @@ the terms of the BSD license (see the COPYING file).
 
 #include <cassert>
 
+using Int = vl::Int ;
+
 /* option codes */
 enum {
   opt_verbose = 0
@@ -61,7 +63,7 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  size_t normDepth ;
+  Int normDepth ;
   double normAlpha ;
   double normKappa ;
   double normBeta ;
@@ -121,7 +123,7 @@ void mexFunction(int nout, mxArray *out[],
   {
     mexErrMsgTxt("PARAM is not a plain 4 vector.") ;
   }
-  normDepth = (size_t) mxGetPr(in[IN_PARAM])[0]  ;
+  normDepth = (Int)mxGetPr(in[IN_PARAM])[0]  ;
   normKappa = mxGetPr(in[IN_PARAM])[1]  ;
   normAlpha = mxGetPr(in[IN_PARAM])[2]  ;
   normBeta = mxGetPr(in[IN_PARAM])[3]  ;

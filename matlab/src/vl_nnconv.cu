@@ -27,6 +27,8 @@ the terms of the BSD license (see the COPYING file).
 #include <cassert>
 #include <math.h>
 
+using Int = vl::Int ;
+
 /* option codes */
 enum {
   opt_stride = 0,
@@ -87,15 +89,15 @@ enum {
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
-  int strideX = 1 ;
-  int strideY = 1 ;
-  int padLeft = 0 ;
-  int padRight = 0 ;
-  int padTop = 0 ;
-  int padBottom = 0 ;
-  int dilateY = 1 ;
-  int dilateX = 1 ;
-  int numFilterGroups = 1 ;
+  Int strideX = 1 ;
+  Int strideY = 1 ;
+  Int padLeft = 0 ;
+  Int padRight = 0 ;
+  Int padTop = 0 ;
+  Int padBottom = 0 ;
+  Int dilateY = 1 ;
+  Int dilateX = 1 ;
+  Int numFilterGroups = 1 ;
 
   bool backMode = false ;
   bool hasFilters = false ;
@@ -139,12 +141,12 @@ void mexFunction(int nout, mxArray *out[],
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            strideY = (int)mxGetPr(optarg)[0] ;
+            strideY = (Int)mxGetPr(optarg)[0] ;
             strideX = strideY ;
             break ;
           case 2:
-            strideY = (int)mxGetPr(optarg)[0] ;
-            strideX = (int)mxGetPr(optarg)[1] ;
+            strideY = (Int)mxGetPr(optarg)[0] ;
+            strideX = (Int)mxGetPr(optarg)[1] ;
             break ;
           default:
             vlmxError(VLMXE_IllegalArgument, "STRIDE has neither one nor two elements.") ;
@@ -157,16 +159,16 @@ void mexFunction(int nout, mxArray *out[],
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            padLeft = (int)mxGetPr(optarg)[0] ;
+            padLeft = (Int)mxGetPr(optarg)[0] ;
             padRight = padLeft ;
             padTop = padLeft ;
             padBottom = padLeft ;
             break ;
           case 4:
-            padTop = (int)mxGetPr(optarg)[0] ;
-            padBottom = (int)mxGetPr(optarg)[1] ;
-            padLeft = (int)mxGetPr(optarg)[2] ;
-            padRight = (int)mxGetPr(optarg)[3] ;
+            padTop = (Int)mxGetPr(optarg)[0] ;
+            padBottom = (Int)mxGetPr(optarg)[1] ;
+            padLeft = (Int)mxGetPr(optarg)[2] ;
+            padRight = (Int)mxGetPr(optarg)[3] ;
             break ;
           default:
             vlmxError(VLMXE_IllegalArgument, "PAD has neither one nor four elements.") ;
@@ -179,12 +181,12 @@ void mexFunction(int nout, mxArray *out[],
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            dilateY = (int)mxGetPr(optarg)[0] ;
+            dilateY = (Int)mxGetPr(optarg)[0] ;
             dilateX = dilateY ;
             break ;
           case 2:
-            dilateY = (int)mxGetPr(optarg)[0] ;
-            dilateX = (int)mxGetPr(optarg)[1] ;
+            dilateY = (Int)mxGetPr(optarg)[0] ;
+            dilateX = (Int)mxGetPr(optarg)[1] ;
             break ;
           default:
             vlmxError(VLMXE_IllegalArgument, "DILATE has neither one nor two elements.") ;
@@ -296,7 +298,7 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Get the filter shape */
   vl::TensorShape filtersShape(filters) ;
-  int equivalentNumFilters ;
+  Int equivalentNumFilters ;
   if (hasFilters) {
     if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getDepth() == 0) {
       vlmxError(VLMXE_IllegalArgument, "A dimension of FILTERS is void.") ;
@@ -322,8 +324,8 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the output shape */
-  int kernelExtentX = (filtersShape.getWidth() - 1)*dilateX + 1 ;
-  int kernelExtentY = (filtersShape.getHeight() - 1)*dilateY + 1 ;
+  Int kernelExtentX = (filtersShape.getWidth() - 1)*dilateX + 1 ;
+  Int kernelExtentY = (filtersShape.getHeight() - 1)*dilateY + 1 ;
 
   vl::TensorShape outputShape((data.getHeight() + (padTop+padBottom) - kernelExtentY)/strideY + 1,
                                 (data.getWidth()  + (padLeft+padRight) - kernelExtentX)/strideX + 1,

@@ -23,6 +23,8 @@ the terms of the BSD license (see the COPYING file).
 #include <cassert>
 #include <algorithm>
 
+using Int = vl::Int ;
+
 /* option codes */
 enum {
   opt_method = 0,
@@ -123,12 +125,12 @@ void mexFunction(int nout, mxArray *out[],
         }
         switch (mxGetNumberOfElements(optarg)) {
           case 1:
-            subdivisions[0] = mxGetPr(optarg)[0] ;
-            subdivisions[1] = mxGetPr(optarg)[0] ;
+            subdivisions[0] = (vl::Int)mxGetPr(optarg)[0] ;
+            subdivisions[1] = (vl::Int)mxGetPr(optarg)[0] ;
 
           case 2:
-            subdivisions[0] = mxGetPr(optarg)[0] ;
-            subdivisions[1] = mxGetPr(optarg)[1] ;
+            subdivisions[0] = (vl::Int)mxGetPr(optarg)[0] ;
+            subdivisions[1] = (vl::Int)mxGetPr(optarg)[1] ;
             break ;
 
           default:
@@ -183,7 +185,7 @@ void mexFunction(int nout, mxArray *out[],
     vlmxError(VLMXE_IllegalArgument, "DATA and DEROUTPUT do not have compatible formats.") ;
   }
 
-  size_t numROIs = rois.getNumElements() / 5 ;
+  Int numROIs = rois.getNumElements() / 5 ;
 
   if (! vl::areCompatible(data, rois)) {
     vlmxError(VLMXE_IllegalArgument, "DATA and ROI do not have compatible formats.") ;

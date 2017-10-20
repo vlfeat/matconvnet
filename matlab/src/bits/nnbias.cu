@@ -51,41 +51,39 @@ struct BiasForward
     // Broadcast add biasMult * bias.
     if (bias && biasMult != 0) {
       type const* allOnesMemory = (type*) op.getContext().getAllOnes
-      (deviceType, dataType, numOutputPixels) ;
+      (deviceType, dataType, (size_t)numOutputPixels) ;
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ; goto done ;
       }
 
-      for (size_t image = 0 ; image < output.getSize() ; ++image) {
+      for (Int image = 0 ; image < output.getSize() ; ++image) {
         auto outputOffset =
         (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
-
-        type alpha = outputMult ;
 
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          'n', 'n',
-         as_signed(numOutputPixels), as_signed(bias.getNumElements()), 1,
-         biasMult,
-         allOnesMemory, as_signed(numOutputPixels),
+         numOutputPixels, bias.getNumElements(), 1,
+         static_cast<type>(biasMult),
+         allOnesMemory, numOutputPixels,
          (type*)bias.getMemory(), 1,
-         alpha,
+         static_cast<type>(outputMult), // alpha
          (type*)output.getMemory() + outputOffset,
-         as_signed(numOutputPixels)) ;
+         numOutputPixels) ;
         if (error != VLE_Success) { goto done ; }
       }
     }
     else {
       error = vl::impl::operations<deviceType,type>::fill
-      ((type*)output.getMemory(), output.getNumElements(), 0) ;
+      ((type*)output.getMemory(), (size_t)output.getNumElements(), 0) ;
       if (error != VLE_Success) { goto done ; }
     }
 
     // Add inputMult * input.
     if (input && inputMult != 0) {
       error = vl::impl::blas<deviceType,dataType>::axpy
-      (op.getContext(),as_signed(output.getNumElements()),
-       inputMult,(type const*)input.getMemory(),1,
+      (op.getContext(),output.getNumElements(),
+       static_cast<type>(inputMult),(type const*)input.getMemory(),1,
        (type*)output.getMemory(),1) ;
       if (error != VLE_Success) { goto done ; }
     }
@@ -118,7 +116,7 @@ struct BiasBackward
     type const* allOnesMemory = NULL ;
     allOnesMemory = (type*) op.getContext().getAllOnes(deviceType,
                                                   dataType,
-                                                  numOutputPixels) ;
+                                                  (size_t)numOutputPixels) ;
     if (allOnesMemory == NULL) {
       error = op.getContext().getLastError() ;
       return VLE_OutOfMemory ;
@@ -128,19 +126,19 @@ struct BiasBackward
     if (derBias) {
       // Sum derOutput along the broadcast dimensions. These
       // are x,y, and image.
-      for (size_t image = 0 ; image < derOutput.getSize() ; ++image) {
+      for (Int image = 0 ; image < derOutput.getSize() ; ++image) {
         auto derOutputOffset =
         (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
 
         error = vl::impl::blas<deviceType,dataType>::
         gemv(op.getContext(),
              't',
-             as_signed(numOutputPixels),
-             as_signed(derOutput.getDepth()),
-             biasMult, // alpha
-             (type*)derOutput.getMemory() + derOutputOffset, as_signed(numOutputPixels),
+             numOutputPixels,
+             derOutput.getDepth(),
+             static_cast<type>(biasMult), // alpha
+             (type*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
              allOnesMemory, 1,
-             (image == 0) ? derBiasMult : 1.0, // beta
+             static_cast<type>((image == 0) ? derBiasMult : 1.0), // beta
              (type*)derBias.getMemory(), 1) ;
 
         if (error != vl::VLE_Success) { return error ; }
@@ -152,20 +150,20 @@ struct BiasBackward
       // Fill with zeros, scale, or leave unchanged.
       if (derInput == 0.0) {
         error = vl::impl::operations<deviceType,type>::fill
-        ((type*)derInput.getMemory(), derInput.getNumElements(), 0) ;
+        ((type*)derInput.getMemory(), (size_t)derInput.getNumElements(), 0) ;
       }
       else if (derInputMult != 1.0) {
         error = vl::impl::operations<deviceType,type>::copy
         ((type*)derInput.getMemory(),
          (type*)derInput.getMemory(),
-         derInput.getNumElements(), derInputMult) ;
+         (size_t)derInput.getNumElements(), static_cast<type>(derInputMult)) ;
       }
       if (error != VLE_Success) { goto done ; }
 
       // Add.
       error = vl::impl::blas<deviceType,dataType>::
-      axpy(op.getContext(),as_signed(derInput.getNumElements()),
-           inputMult,(type const*)derOutput.getMemory(),1,
+      axpy(op.getContext(),derInput.getNumElements(),
+           static_cast<type>(inputMult),(type const*)derOutput.getMemory(),1,
            (type*)derInput.getMemory(),1) ;
       if (error != VLE_Success) { goto done ; }
     }

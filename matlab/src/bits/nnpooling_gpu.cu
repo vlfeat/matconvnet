@@ -270,40 +270,41 @@ pooling_average_backward_kernel
 template<DataType dataType, Pooling::Method method>
 struct PoolingForwardGPU
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &output,
                            Tensor const &input)
   {
+    // Argument sanity check.
+    assert(output) ;
+    assert(input) ;
+    TensorShape outShape ;
+    op.forwardShape(outShape, input) ;
+    assert(outShape == output) ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto outputData = (type*)output.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
-    auto outputVolume = outputWidth * outputHeight * depth * size ;
+    Int outputVolume = output.getNumElements() ;
 
     if (method == Pooling::Max) {
       pooling_max_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (outputData, inputData,
-       outputHeight, outputWidth, outputVolume,
-       height, width,
-       op.poolHeight, op.poolWidth,
-       op.strideY, op.strideX,
-       op.padTop, op.padLeft);
+      <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      ((type*)output.getMemory(),
+       (type const*)input.getMemory(),
+       (int)output.getHeight(), (int)output.getWidth(), (int)output.getNumElements(),
+       (int)input.getHeight(), (int)input.getWidth(),
+       (int)op.getShape(0), (int)op.getShape(1),
+       (int)op.getStride(0), (int)op.getStride(1),
+       (int)op.getPadding(0), (int)op.getPadding(2));
     }
     else if (method == Pooling::Average) {
       pooling_average_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (outputData, inputData,
-       outputHeight, outputWidth, outputVolume,
-       height, width,
-       op.poolHeight, op.poolWidth,
-       op.strideY, op.strideX,
-       op.padTop, op.padLeft);
+      <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      ((type*)output.getMemory(),
+       (type const*)input.getMemory(),
+       (int)output.getHeight(), (int)output.getWidth(), (int)output.getNumElements(),
+       (int)input.getHeight(), (int)input.getWidth(),
+       (int)op.getShape(0), (int)op.getShape(1),
+       (int)op.getStride(0), (int)op.getStride(1),
+       (int)op.getPadding(0), (int)op.getPadding(2));
     }
     else {
       assert(false) ;
@@ -317,11 +318,11 @@ struct PoolingForwardGPU
 template<DataType dataType>
 struct PoolingForward<VLDT_GPU,dataType>
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor output,
                            Tensor input)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case Pooling::Max:
         return
         PoolingForwardGPU<dataType,Pooling::Max>
@@ -343,43 +344,46 @@ struct PoolingForward<VLDT_GPU,dataType>
 template<DataType dataType, Pooling::Method method>
 struct PoolingBackwardGPU
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &derOutput)
   {
+    // Argument sanity check.
+    assert(derInput) ;
+    assert(derOutput) ;
+    TensorShape outputShape ;
+    op.forwardShape(outputShape,derInput) ;
+    assert(derOutput == outputShape) ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto derInputData = (type*)derInput.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - op.poolWidth)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - op.poolHeight)/op.strideY + 1 ;
-    auto outputVolume = outputWidth * outputHeight * depth * size ;
-    auto inputVolume = width * height * size * depth ;
+    Int outputVolume = derOutput.getNumElements() ;
+    Int inputVolume = input.getNumElements() ;
 
     if (method == Pooling::Max) {
+      assert(input) ;
       pooling_max_backward_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derInputData, inputData, derOutputData,
-       outputHeight, outputWidth, outputVolume,
-       height, width,
-       op.poolHeight, op.poolWidth,
-       op.strideY, op.strideX,
-       op.padTop, op.padLeft);
+      <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      ((type*)derInput.getMemory(),
+       (type const*)input.getMemory(),
+       (type const*)derOutput.getMemory(),
+       (int)derOutput.getHeight(), (int)derOutput.getWidth(), (int)outputVolume,
+       (int)input.getHeight(), (int)input.getWidth(),
+       (int)op.getShape(0), (int)op.getShape(1),
+       (int)op.getStride(0), (int)op.getStride(1),
+       (int)op.getPadding(0), (int)op.getPadding(2));
     }
     else if (method == Pooling::Average) {
       pooling_average_backward_kernel<type>
-      <<< divideAndRoundUp(inputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derInputData, derOutputData, inputVolume,
-       outputHeight, outputWidth,
-       height, width, size * depth,
-       op.poolHeight, op.poolWidth,
-       op.strideY, op.strideX,
-       op.padTop, op.padLeft) ;
+      <<< divideAndRoundUp((unsigned)inputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      ((type*)derInput.getMemory(),
+       (type const*)derOutput.getMemory(),
+       (int)inputVolume,
+       (int)derOutput.getHeight(), (int)derOutput.getWidth(),
+       (int)input.getHeight(), (int)input.getWidth(), (int)(input.getDepth()*input.getSize()),
+       (int)op.getShape(0), (int)op.getShape(1),
+       (int)op.getStride(0), (int)op.getStride(1),
+       (int)op.getPadding(0), (int)op.getPadding(2)) ;
     }
     else {
       assert(false) ;
@@ -394,12 +398,12 @@ struct PoolingBackwardGPU
 template<DataType dataType>
 struct PoolingBackward<VLDT_GPU,dataType>
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &derOutput)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case Pooling::Max:
         return
         PoolingBackwardGPU<dataType,Pooling::Max>

@@ -62,14 +62,14 @@ accumulate(vl::Context & context,
 
   if (!inplace) {
     vl::impl::operations<deviceType,type>::
-      copy((type*)output.getMemory(), (type const*)a.getMemory(), n) ;
+      copy((type*)output.getMemory(), (type const*)a.getMemory(), (size_t)n) ;
   }
 
-  error = vl::impl::blas<deviceType,dataType>::scal(context, n, alpha,
+  error = vl::impl::blas<deviceType,dataType>::scal(context, n, static_cast<type>(alpha),
                                                     (type*)output.getMemory(), 1) ;
   if (error != vl::VLE_Success) { goto done ; }
 
-  error = vl::impl::blas<deviceType,dataType>::axpy(context, n, beta,
+  error = vl::impl::blas<deviceType,dataType>::axpy(context, n, static_cast<type>(beta),
                                                     (const type*)b.getMemory(), 1,
                                                     (type*)output.getMemory(), 1) ;
   if (error != vl::VLE_Success) { goto done ; }

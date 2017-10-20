@@ -15,7 +15,7 @@ the terms of the BSD license (see the COPYING file).
 #include <string.h>
 
 template<typename type> __global__ void
-fill_kernel (type * data, type value, size_t size)
+fill_kernel (type * data, size_t size, type value)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x ;
   if (index < size) data[index] = value ;
@@ -43,8 +43,8 @@ namespace vl { namespace impl {
         cudaMemcpy(dst, src, numElements * sizeof(type), cudaMemcpyDeviceToDevice) ;
       } else {
         copy_kernel <type>
-        <<<divideAndRoundUp(numElements, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-        (dst, src, numElements, mult) ;
+        <<< divideAndRoundUp((unsigned)numElements,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+        (dst, src, numElements, (type)mult) ;
         cudaError_t error = cudaGetLastError() ;
         if (error != cudaSuccess) {
           return VLE_Cuda ;
@@ -59,8 +59,8 @@ namespace vl { namespace impl {
          type value)
     {
       fill_kernel <type>
-      <<<divideAndRoundUp(numElements, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-      (dst, numElements, value) ;
+      <<< divideAndRoundUp((unsigned)numElements,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      (dst, numElements, (type)value) ;
 
       cudaError_t error = cudaGetLastError() ;
       if (error != cudaSuccess) {

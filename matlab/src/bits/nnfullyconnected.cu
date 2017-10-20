@@ -49,9 +49,9 @@ struct FullyConnectedForward
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.getContext(),
          't',
-         as_signed(filterVolume), as_signed(filter.getSize()),
+         filterVolume, filter.getSize(),
          alpha,
-         (type const*)filter.getMemory(), as_signed(filterVolume),
+         (type const*)filter.getMemory(), filterVolume,
          (type const*)input.getMemory(), 1,
          beta,
          (type*)output.getMemory(), 1) ;
@@ -61,21 +61,21 @@ struct FullyConnectedForward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          't', 'n',
-         as_signed(filter.getSize()),
-         as_signed(input.getSize()),
-         as_signed(filterVolume),
+         filter.getSize(),
+         input.getSize(),
+         filterVolume,
          alpha,
-         (type const*)filter.getMemory(), as_signed(filterVolume),
-         (type const*)input.getMemory(), as_signed(filterVolume),
+         (type const*)filter.getMemory(), filterVolume,
+         (type const*)input.getMemory(), filterVolume,
          beta,
-         (type*)output.getMemory(), as_signed(filter.getSize())) ;
+         (type*)output.getMemory(), filter.getSize()) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     } else {
       error = vl::impl::operations<deviceType,type>::copy
       ((type*)output.getMemory(),
        (type const*)input.getMemory(),
-       input.getNumElements()) ;
+       (size_t)input.getNumElements()) ;
     }
 
     if (bias) {
@@ -83,19 +83,19 @@ struct FullyConnectedForward
       type const* allOnesMemory = (type*)
       op.getContext().getAllOnes(deviceType,
                             dataType,
-                            input.getSize()) ;
+                            (size_t)input.getSize()) ;
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ;
         goto done ;
       }
       error = vl::impl::blas<deviceType,dataType>::gemm
       (op.getContext(), 'n', 'n',
-       as_signed(bias.getNumElements()), as_signed(input.getSize()), 1,
+       bias.getNumElements(), input.getSize(), 1,
        alpha,
-       (type*)bias.getMemory(), as_signed(bias.getNumElements()),
+       (type*)bias.getMemory(), bias.getNumElements(),
        allOnesMemory, 1,
        beta,
-       (type*)output.getMemory(), as_signed(bias.getNumElements())) ;
+       (type*)output.getMemory(), bias.getNumElements()) ;
       if (error != vl::VLE_Success) { goto done ; }
     }
   done:
@@ -131,14 +131,14 @@ struct FullyConnectedBackward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          'n', 't',
-         as_signed(filterVolume),
-         as_signed(filter.getSize()),
-         as_signed(input.getSize()),
+         filterVolume,
+         filter.getSize(),
+         input.getSize(),
          alpha,
-         (type*)input.getMemory(), as_signed(filterVolume),
-         (type*)derOutput.getMemory(), as_signed(filter.getSize()),
+         (type*)input.getMemory(), filterVolume,
+         (type*)derOutput.getMemory(), filter.getSize(),
          beta,
-         (type*)derFilter.getMemory(), as_signed(filterVolume)) ;
+         (type*)derFilter.getMemory(), filterVolume) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
 
@@ -146,28 +146,28 @@ struct FullyConnectedBackward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          'n', 'n',
-         as_signed(filterVolume),
-         as_signed(input.getSize()),
-         as_signed(filter.getSize()),
+         filterVolume,
+         input.getSize(),
+         filter.getSize(),
          alpha,
-         (type*)filter.getMemory(), as_signed(filterVolume),
-         (type*)derOutput.getMemory(), as_signed(filter.getSize()),
+         (type*)filter.getMemory(), filterVolume,
+         (type*)derOutput.getMemory(), filter.getSize(),
          beta,
-         (type*)derInput.getMemory(), as_signed(filterVolume)) ;
+         (type*)derInput.getMemory(), filterVolume) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     } else {
       vl::impl::operations<deviceType,type>::copy
       ((type*)derInput.getMemory(),
        (type const*)derOutput.getMemory(),
-       derOutput.getNumElements()) ;
+       (size_t)derOutput.getNumElements()) ;
     }
 
     if (derBias) {
       auto allOnesMemory = (type const*)
       op.getContext().getAllOnes(deviceType,
                             dataType,
-                            derOutput.getSize()) ;
+                            (size_t)derOutput.getSize()) ;
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ;
         goto done ;
@@ -177,11 +177,11 @@ struct FullyConnectedBackward
       (op.getContext(),
        'n', 't',
        1,
-       as_signed(derOutput.getDepth()),
-       as_signed(derOutput.getSize()),
+       derOutput.getDepth(),
+       derOutput.getSize(),
        alpha,
        (type*)allOnesMemory, 1,
-       (type*)derOutput.getMemory(), as_signed(derOutput.getDepth()),
+       (type*)derOutput.getMemory(), derOutput.getDepth(),
        beta,
        (type*)derBias.getMemory(), 1) ;
       if (error != vl::VLE_Success) { goto done ; }

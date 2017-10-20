@@ -120,12 +120,8 @@ namespace vl {
 
   /// Computes the smallest multiple of @a b which is greater
   /// or equal to @a a.
-  inline int divideAndRoundUp(int a, int b)
-  {
-    return (a + b - 1) / b ;
-  }
-
-  inline size_t divideAndRoundUp(size_t a, size_t b)
+  template<typename type>
+  inline type divideAndRoundUp(type a, type b)
   {
     return (a + b - 1) / b ;
   }
@@ -133,9 +129,9 @@ namespace vl {
   /// Compute the greatest common divisor g of non-negative integers
   /// @a a and @a b as well as two integers @a u and @a v such that
   /// $au + bv = g$ (Bezout's coefficients).
-  int gcd(int a, int b, int &u, int& v) ;
+  Int gcd(Int a, Int b, Int &u, Int& v) ;
 
-  /// Draw a Normally-distributed scalar
+  /// Draw a Normally-distributed scalar.
   double randn() ;
 
   /// Get realtime monotnic clock in microseconds
@@ -202,39 +198,39 @@ namespace vl {
   class TensorShape
   {
   public:
-    static constexpr size_t maxNumDimensions = 8 ;
+    static constexpr Int maxNumDimensions = 8 ;
 
     TensorShape() ;
     TensorShape(TensorShape const& t) ;
-    TensorShape(const std::initializer_list<size_t> &dims) ;
-    TensorShape(const std::vector<size_t> &dims) ;
-    TensorShape(size_t height, size_t width, size_t depth, size_t size) ;
-    TensorShape(size_t const * dimensions, size_t numDimensions) ;
+    TensorShape(const std::initializer_list<Int> &dims) ;
+    TensorShape(const std::vector<Int> &dims) ;
+    TensorShape(Int height, Int width, Int depth, Int size) ;
+    TensorShape(Int const * dimensions, Int numDimensions) ;
 
     void clear() ; // set to empty (numDimensions = 0)
-    void setDimension(size_t num, size_t dimension) ;
-    void setDimensions(size_t const * dimensions, size_t numDimensions) ;
-    void setHeight(size_t x) ;
-    void setWidth(size_t x) ;
-    void setDepth(size_t x) ;
-    void setSize(size_t x) ;
-    void reshape(size_t numDimensions) ; // squash or stretch to numDimensions
+    void setDimension(Int num, Int dimension) ;
+    void setDimensions(Int const * dimensions, Int numDimensions) ;
+    void setHeight(Int x) ;
+    void setWidth(Int x) ;
+    void setDepth(Int x) ;
+    void setSize(Int x) ;
+    void reshape(Int numDimensions) ; // squash or stretch to numDimensions
     void reshape(TensorShape const & shape) ; // same as operator=
 
-    size_t getDimension(size_t num) const ;
-    size_t const * getDimensions() const ;
-    size_t getNumDimensions() const ;
-    size_t getHeight() const ;
-    size_t getWidth() const ;
-    size_t getDepth() const ;
-    size_t getSize() const ;
+    Int getDimension(Int num) const ;
+    Int const * getDimensions() const ;
+    Int getNumDimensions() const ;
+    Int getHeight() const ;
+    Int getWidth() const ;
+    Int getDepth() const ;
+    Int getSize() const ;
 
-    size_t getNumElements() const ;
+    Int getNumElements() const ;
     bool isEmpty() const ;
 
   protected:
-    size_t dimensions [maxNumDimensions] ;
-    size_t numDimensions ;
+    Int dimensions [maxNumDimensions] ;
+    Int numDimensions ;
   } ;
 
   bool operator == (TensorShape const & a, TensorShape const & b) ;

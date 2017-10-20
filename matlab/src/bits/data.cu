@@ -36,17 +36,17 @@ using namespace vl ;
  * Helpers
  * ---------------------------------------------------------------- */
 
-int vl::gcd(int a, int b, int& u, int& v)
+Int vl::gcd(Int a, Int b, Int &u, Int &v)
 {
   assert(a >= 0) ;
   assert(b >= 0) ;
-  int u_ = 0 ;
-  int v_ = 1 ;
+  Int u_ = 0 ;
+  Int v_ = 1 ;
   u = 1 ;
   v = 0 ;
   while (b > 0) {
-    int tmp ;
-    int q = a / b ;
+    Int tmp ;
+    Int q = a / b ;
 
     tmp = b ;
     b = a - q*b ;
@@ -450,12 +450,12 @@ vl::Context::getAllOnes(DeviceType deviceType, DataType dataType, size_t size)
 #if ENABLE_GPU
         if (dataType == VLDT_Float) {
           setToOnes<float>
-            <<<divideAndRoundUp(size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-          ((float*)data, size) ;
+            <<<divideAndRoundUp((unsigned)size,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS>>>
+          ((float*)data, (int)size) ;
         } else {
           setToOnes<double>
-            <<<divideAndRoundUp(size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS>>>
-          ((double*)data, size) ;
+            <<<divideAndRoundUp((unsigned)size,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS>>>
+          ((double*)data, (int)size) ;
         }
         error = getCudaHelper().catchCudaError() ;
         break ;
@@ -495,7 +495,7 @@ vl::TensorShape::TensorShape(TensorShape const & t)
   }
 }
 
-vl::TensorShape::TensorShape(const std::initializer_list<size_t> &dims)
+vl::TensorShape::TensorShape(const std::initializer_list<Int> &dims)
 : numDimensions(0)
 {
   assert(dims.size() <= maxNumDimensions) ;
@@ -504,7 +504,7 @@ vl::TensorShape::TensorShape(const std::initializer_list<size_t> &dims)
   }
 }
 
-vl::TensorShape::TensorShape(const std::vector<size_t> &dims)
+vl::TensorShape::TensorShape(const std::vector<Int> &dims)
 : numDimensions(0)
 {
   assert(dims.size() <= maxNumDimensions) ;
@@ -514,7 +514,7 @@ vl::TensorShape::TensorShape(const std::vector<size_t> &dims)
 }
 
 
-vl::TensorShape::TensorShape(size_t height, size_t width, size_t depth, size_t size)
+vl::TensorShape::TensorShape(Int height, Int width, Int depth, Int size)
 : numDimensions(4)
 {
   dimensions[0] = height ;
@@ -528,21 +528,21 @@ void vl::TensorShape::clear()
   numDimensions = 0 ;
 }
 
-void vl::TensorShape::setDimensions(size_t const * newDimensions, size_t newNumDimensions)
+void vl::TensorShape::setDimensions(Int const * newDimensions, Int newNumDimensions)
 {
   assert(newNumDimensions  <= maxNumDimensions) ;
-  for (long unsigned k = 0 ; k < newNumDimensions ; ++k) {
+  for (Int k = 0 ; k < newNumDimensions ; ++k) {
     dimensions[k] = newDimensions[k] ;
   }
   numDimensions = newNumDimensions ;
 }
 
-void vl::TensorShape::setDimension(size_t num, size_t dimension)
+void vl::TensorShape::setDimension(Int num, Int dimension)
 {
   assert(num + 1 <= maxNumDimensions) ;
   if (num + 1 > numDimensions) {
-    size_t x = (getNumElements() > 0) ;
-    for (size_t k = numDimensions ; k < num ; ++k) {
+    Int x = (getNumElements() > 0) ;
+    for (Int k = numDimensions ; k < num ; ++k) {
       dimensions[k] = x ;
     }
     numDimensions = num + 1 ;
@@ -550,7 +550,7 @@ void vl::TensorShape::setDimension(size_t num, size_t dimension)
   dimensions[num] = dimension ;
 }
 
-size_t vl::TensorShape::getDimension(size_t num) const
+Int vl::TensorShape::getDimension(Int num) const
 {
   if (num + 1 > numDimensions) {
     return 1 ;
@@ -558,57 +558,57 @@ size_t vl::TensorShape::getDimension(size_t num) const
   return dimensions[num] ;
 }
 
-size_t vl::TensorShape::getNumDimensions() const
+Int vl::TensorShape::getNumDimensions() const
 {
   return numDimensions ;
 }
 
-size_t const * vl::TensorShape::getDimensions() const
+Int const * vl::TensorShape::getDimensions() const
 {
   return dimensions ;
 }
 
-size_t vl::TensorShape::getNumElements() const
+Int vl::TensorShape::getNumElements() const
 {
   if (numDimensions == 0) {
     return 0 ;
   }
-  size_t n = 1 ;
+  Int n = 1 ;
   for (unsigned k = 0 ; k < numDimensions ; ++k) { n *= dimensions[k] ; }
   return n ;
 }
 
-size_t vl::TensorShape::getHeight() const { return getDimension(0) ; }
-size_t vl::TensorShape::getWidth() const { return getDimension(1) ; }
-size_t vl::TensorShape::getDepth() const { return getDimension(2) ; }
-size_t vl::TensorShape::getSize() const { return getDimension(3) ; }
+Int vl::TensorShape::getHeight() const { return getDimension(0) ; }
+Int vl::TensorShape::getWidth() const { return getDimension(1) ; }
+Int vl::TensorShape::getDepth() const { return getDimension(2) ; }
+Int vl::TensorShape::getSize() const { return getDimension(3) ; }
 
-void vl::TensorShape::setHeight(size_t x) { setDimension(0,x) ; }
-void vl::TensorShape::setWidth(size_t x) { setDimension(1,x) ; }
-void vl::TensorShape::setDepth(size_t x) { setDimension(2,x) ; }
-void vl::TensorShape::setSize(size_t x) { setDimension(3,x) ; }
+void vl::TensorShape::setHeight(Int x) { setDimension(0,x) ; }
+void vl::TensorShape::setWidth(Int x) { setDimension(1,x) ; }
+void vl::TensorShape::setDepth(Int x) { setDimension(2,x) ; }
+void vl::TensorShape::setSize(Int x) { setDimension(3,x) ; }
 bool vl::TensorShape::isEmpty() const { return getNumElements() == 0 ; }
 
 bool vl::operator== (vl::TensorShape const & a, vl::TensorShape const & b)
 {
-  size_t n = a.getNumDimensions() ;
+  Int n = a.getNumDimensions() ;
   if (b.getNumDimensions() != n) { return false ; }
-  size_t const * adims = a.getDimensions() ;
-  size_t const * bdims = b.getDimensions() ;
+  Int const * adims = a.getDimensions() ;
+  Int const * bdims = b.getDimensions() ;
   for (unsigned k =0 ; k < a.getNumDimensions() ; ++k) {
     if (adims[k] != bdims[k]) { return false ; }
   }
   return true ;
 }
 
-void vl::TensorShape::reshape(size_t newNumDimensions)
+void vl::TensorShape::reshape(Int newNumDimensions)
 {
   assert(newNumDimensions <= maxNumDimensions) ;
-  size_t n = getNumElements() ;
+  Int n = getNumElements() ;
   if (newNumDimensions > 0) {
     setDimension(newNumDimensions - 1, 1) ;
     numDimensions = newNumDimensions ;
-    size_t m = getNumElements() ;
+    Int m = getNumElements() ;
     if (m) {
       dimensions[newNumDimensions - 1] *= (n / m) ;
     } else if (n == 0) {

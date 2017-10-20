@@ -122,27 +122,26 @@ int ceildiv_cpu(int a, int b)
 
 #if 0
 template <typename T> void
-im2row_backward_kernel_fake(
-int index,
+im2row_backward_kernel_fake(int index,
                             T* data,
-                       T const* stacked,
-                       const int numPatchesX,
-                       const int numPatchesY,
-                       const int dataVolume,
-                       const int width,
-                       const int height,
-                       const int depth,
-                       const int windowWidth,
-                       const int windowHeight,
-                       const int strideX,
-                       const int strideY,
-                       const int padLeft,
-                       const int padTop,
-                       const int dilateX,
-                       const int dilateY,
-                       const int gcdx, const int gcdy,
-                       const int xbar, const int ybar,
-                       const int ubar, const int vbar)
+                            T const* stacked,
+                            const int numPatchesX,
+                            const int numPatchesY,
+                            const int dataVolume,
+                            const int width,
+                            const int height,
+                            const int depth,
+                            const int windowWidth,
+                            const int windowHeight,
+                            const int strideX,
+                            const int strideY,
+                            const int padLeft,
+                            const int padTop,
+                            const int dilateX,
+                            const int dilateY,
+                            const int gcdx, const int gcdy,
+                            const int xbar, const int ybar,
+                            const int ubar, const int vbar)
 {
  // int index = 143 ;
   if (index < dataVolume)
@@ -337,7 +336,7 @@ int index,
 
 template <typename T> __global__ void
 im2row_backward_kernel(T* data,
-                        T const* stacked,
+                       T const* stacked,
                        const int numPatchesX,
                        const int numPatchesY,
                        const int dataVolume,
@@ -533,40 +532,39 @@ namespace vl { namespace impl {
     forward(Context & context,
             type* stacked,
             type const* data,
-            size_t width,
-            size_t height,
-            size_t depth,
-            size_t windowWidth,
-            size_t windowHeight,
-            size_t strideX,
-            size_t strideY,
-            size_t padLeft,
-            size_t padRight,
-            size_t padTop,
-            size_t padBottom,
-            int dilateX,
-            int dilateY)
+            Int width,
+            Int height,
+            Int depth,
+            Int windowWidth,
+            Int windowHeight,
+            Int strideX,
+            Int strideY,
+            Int padLeft,
+            Int padRight,
+            Int padTop,
+            Int padBottom,
+            Int dilateX,
+            Int dilateY)
     {
-      /* Each kernel instance copies a feature dimension of a patch */
-
-      int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
-      int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
-      int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
-      int numPatchSlices = numPatchesX * numPatchesY * depth ;
+      // Each kernel instance copies a feature dimension of a patch.
+      Int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
+      Int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
+      Int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
+      Int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
+      Int numPatchSlices = numPatchesX * numPatchesY * depth ;
 
       im2row_forward_kernel<type>
-      <<< divideAndRoundUp(numPatchSlices, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp((unsigned)numPatchSlices,VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (stacked,
        data,
-       numPatchesX,
-       numPatchesY,
-       numPatchSlices,
-       width, height,
-       windowWidth, windowHeight,
-       strideX, strideY,
-       padLeft, padTop,
-       dilateX, dilateY) ;
+       (int)numPatchesX,
+       (int)numPatchesY,
+       (int)numPatchSlices,
+       (int)width, (int)height,
+       (int)windowWidth, (int)windowHeight,
+       (int)strideX, (int)strideY,
+       (int)padLeft, (int)padTop,
+       (int)dilateX, (int)dilateY) ;
 
       return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
     }
@@ -579,41 +577,37 @@ namespace vl { namespace impl {
     backward(Context & context,
              type* data,
              type const* stacked,
-             size_t width,
-             size_t height,
-             size_t depth,
-             size_t windowWidth,
-             size_t windowHeight,
-             size_t strideX,
-             size_t strideY,
-             size_t padLeft,
-             size_t padRight,
-             size_t padTop,
-             size_t padBottom,
-             int dilateX,
-             int dilateY)
+             Int width,
+             Int height,
+             Int depth,
+             Int windowWidth,
+             Int windowHeight,
+             Int strideX,
+             Int strideY,
+             Int padLeft,
+             Int padRight,
+             Int padTop,
+             Int padBottom,
+             Int dilateX,
+             Int dilateY)
     {
-      /*
-       Each kernel integrates all contributions to a particular element
-       of data.
-       */
+      // Each kernel Integrates all contributions to a particular element of data.
+      Int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
+      Int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
+      Int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
+      Int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
+      Int dataVolume = width * height * depth ;
 
-      int windowExtentX = (windowWidth - 1)*dilateX + 1 ;
-      int windowExtentY = (windowHeight - 1)*dilateY + 1 ;
-      int numPatchesX = (width + (padLeft + padRight) - windowExtentX)/strideX + 1 ;
-      int numPatchesY = (height + (padTop + padBottom) - windowExtentY)/strideY + 1 ;
-      int dataVolume = width * height * depth ;
+      Int xbar ;
+      Int ubar ;
+      Int gcdx = vl::gcd(strideX, dilateX, xbar, ubar) ;
 
-      int xbar ;
-      int ubar ;
-      int gcdx = vl::gcd(strideX, dilateX, xbar, ubar) ;
-
-      int ybar ;
-      int vbar ;
-      int gcdy = vl::gcd(strideY, dilateY, ybar, vbar) ;
+      Int ybar ;
+      Int vbar ;
+      Int gcdy = vl::gcd(strideY, dilateY, ybar, vbar) ;
 
 #if 0
-      for (int i = 0 ; i < dataVolume ; ++i) {
+      for (Int i = 0 ; i < dataVolume ; ++i) {
       im2row_backward_kernel_fake<type>
       (i,
        data,
@@ -631,18 +625,18 @@ namespace vl { namespace impl {
 #endif
 
       im2row_backward_kernel<type>
-      <<< divideAndRoundUp(dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+      <<< divideAndRoundUp((unsigned)dataVolume, VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
       (data,
        stacked,
-       numPatchesX,
-       numPatchesY,
-       dataVolume,
-       width, height, depth,
-       windowWidth, windowHeight,
-       strideX, strideY,
-       padLeft, padTop,
-       dilateX, dilateY,
-       gcdx, gcdy, xbar, ybar, ubar, vbar) ;
+       (int)numPatchesX,
+       (int)numPatchesY,
+       (int)dataVolume,
+       (int)width, (int)height, (int)depth,
+       (int)windowWidth, (int)windowHeight,
+       (int)strideX, (int)strideY,
+       (int)padLeft, (int)padTop,
+       (int)dilateX, (int)dilateY,
+       (int)gcdx, (int)gcdy, (int)xbar, (int)ybar, (int)ubar, (int)vbar) ;
 
       return context.setError(context.getCudaHelper().catchCudaError(__func__)) ;
     }

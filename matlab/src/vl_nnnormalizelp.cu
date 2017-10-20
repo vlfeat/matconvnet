@@ -238,7 +238,7 @@ void mexFunction(int nout, mxArray *out[],
               returnNormsMode?"returned":"discared") ;
     mexPrintf("vl_nnnormalizelp: epsilon: %g, exponent: %g\n", epsilon, exponent) ;
     mexPrintf("vl_nnnormalizelp: dimensions: [", epsilon, exponent) ;
-    for (int i = 0 ; i < dimensions.size() ; ++i) {
+    for (size_t i = 0 ; i < dimensions.size() ; ++i) {
       mexPrintf(i == 0 ? "%d" : " %d", dimensions[i] + 1) ;
     }
     mexPrintf("]\n") ;

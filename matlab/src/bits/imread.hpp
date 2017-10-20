@@ -19,17 +19,17 @@ namespace vl {
 
   struct ImageShape
   {
-    size_t height ;
-    size_t width ;
-    size_t depth ;
+    Int height ;
+    Int width ;
+    Int depth ;
 
     ImageShape() ;
-    ImageShape(size_t height, size_t width, size_t depth) ;
+    ImageShape(Int height, Int width, Int depth) ;
     ImageShape(ImageShape const & im) ;
     ImageShape & operator = (ImageShape const & im) ;
     bool operator == (ImageShape const & im) ;
 
-    size_t getNumElements() const ;
+    Int getNumElements() const ;
     void clear() ;
   } ;
 

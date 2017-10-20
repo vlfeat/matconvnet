@@ -41,6 +41,8 @@ the terms of the BSD license (see the COPYING file).
 #include <sstream>
 #include <thread>
 
+using Int = vl::Int ;
+
 /**
  \file vl_tmove.cu
  
@@ -171,13 +173,13 @@ static VLMXErrorCode vlmxParseString(std::string & name, mxArray const * arg)
 
 static VLMXErrorCode vlmxParseTensorShape(vl::TensorShape & shape, mxArray const * arg)
 {
-  size_t dimensions [32] ;
+  vl::Int dimensions [32] ;
   if (!vlmxIsVector(arg, -1) || !vlmxIsPlain(arg)) {
     return VLMXE_IllegalArgument ;
   }
-  int nd = mxGetNumberOfElements(arg) ;
-  for (int k = 0 ; k < nd ; ++k) { dimensions[k] = (size_t)mxGetPr(arg)[k] ; }
-  shape.setDimensions(dimensions, nd) ;
+  auto nd = mxGetNumberOfElements(arg) ;
+  for (decltype(nd) k = 0 ; k < nd ; ++k) { dimensions[k] = (vl::Int)mxGetPr(arg)[k] ; }
+  shape.setDimensions(dimensions, (vl::Int)nd) ;
   return VLMXE_Success ;
 }
 
@@ -271,7 +273,7 @@ SharedTensorDescriptor::operator=(SharedTensorDescriptor const & tensor)
 
 void SharedTensorDescriptor::init(vl::DeviceType newDeviceType,
                                   vl::DataType newDataType,
-                                  vl::TensorShape const & newShape)
+                                  vl::TensorShape const &newShape)
 {
   assert(newDeviceType == vl::VLDT_CPU || newDeviceType == vl::VLDT_GPU) ;
   assert(newDataType == vl::VLDT_Float || newDataType == vl::VLDT_Double) ;
@@ -285,14 +287,12 @@ void SharedTensorDescriptor::finalize()
 
 size_t SharedTensorDescriptor::getSizeInBytes() const
 {
-  return shape.getNumElements() * getDataTypeSizeInBytes(dataType) ;
+  return (size_t)shape.getNumElements() * getDataTypeSizeInBytes(dataType) ;
 }
 
-/* ---------------------------------------------------------------- */
-/*                                                SharedTensorSpace */
-/* ---------------------------------------------------------------- */
-
-#pragma mark -
+// ----------------------------------------=--------------------------
+/// MARK: - SharedTensorSpace
+// -------------------------------------------------------------------
 
 // SharedTensorSpace holds a list of tensors that can be accumulated
 // between different processes.
@@ -312,16 +312,16 @@ public:
 
   vl::ErrorCode mexInit(mxArray const *mexDescriptor) ;
   void finalize() ;
-  vl::ErrorCode attach(std::string const & prefix, int lab, int numLabs) ;
-  vl::ErrorCode attachPeer(int lab) ;
+  vl::ErrorCode attach(std::string const & prefix, Int lab, Int numLabs) ;
+  vl::ErrorCode attachPeer(Int lab) ;
 
   void mexPrint() const ;
   void dump() const ;
 
 private:
   bool initialized ;
-  int lab ;
-  int numLabs ;
+  Int lab ;
+  Int numLabs ;
 
   enum SharedTensorState {
     ready,
@@ -362,7 +362,7 @@ private:
 
   struct SharedTensorPeerInstance
   {
-    int lab ;
+    Int lab ;
     SharedTensorState state ;
     size_t transaction ;
     size_t finalTransaction ;
@@ -377,7 +377,7 @@ private:
   } ;
   typedef std::vector<std::vector<SharedTensorPeerInstance> > peerTensors_t ;
   peerTensors_t peerTensors ;
-  SharedTensorPeerInstance & getPeerTensor(int tensorIndex, int lab) ;
+  SharedTensorPeerInstance & getPeerTensor(size_t tensorIndex, Int lab) ;
 
   // Shared CPU memory
   void * memoryMap ;
@@ -454,35 +454,35 @@ vl::ErrorCode SharedTensorSpace::mexInit(mxArray const *descriptor)
     mexErrMsgTxt("DESCRIPTOR does not have three or four columns.") ;
   }
 
-  size_t numTensors = mxGetM(descriptor) ;
+  Int numTensors = (Int)mxGetM(descriptor) ;
   size_t offset = 0 ;
   size_t const alignFactor = 16 ;
   bool useGPU = false ;
 
-  for (int i = 0 ; i < numTensors ; ++i) {
+  for (Int i = 0 ; i < numTensors ; ++i) {
     VLMXErrorCode error ;
     vl::DeviceType deviceType = vl::VLDT_CPU ;
     vl::DataType dataType ;
     vl::TensorShape shape ;
     std::string name ;
 
-    error = vlmxParseDataType(dataType, mxGetCell(descriptor, 0*numTensors + i)) ;
+    error = vlmxParseDataType(dataType, mxGetCell(descriptor, mwIndex(0*numTensors + i))) ;
     if (error != VLMXE_Success) {
       vlmxError(error, "DESCRIPTOR{%d,1} is not a valid data type.", i+1) ;
     }
 
-    error = vlmxParseTensorShape(shape, mxGetCell(descriptor, 1*numTensors + i)) ;
+    error = vlmxParseTensorShape(shape, mxGetCell(descriptor, mwIndex(1*numTensors + i))) ;
     if (error != VLMXE_Success) {
       vlmxError(error, "DESCRIPTOR{%d,2} is not a valid tensor shape.", i+1) ;
     }
 
-    error = vlmxParseString(name, mxGetCell(descriptor, 2*numTensors + i)) ;
+    error = vlmxParseString(name, mxGetCell(descriptor, mwIndex(2*numTensors + i))) ;
     if (error != VLMXE_Success) {
       vlmxError(error, "DESCRIPTOR{%d,3} is not a valid tensor name.", i+1) ;
     }
 
     if (mxGetN(descriptor) == 4) {
-      error = vlmxParseDeviceType(deviceType, mxGetCell(descriptor, 3*numTensors + i)) ;
+      error = vlmxParseDeviceType(deviceType, mxGetCell(descriptor, mwIndex(3*numTensors + i))) ;
       if (error != VLMXE_Success) {
         vlmxError(error, "DESCRIPTOR{%d,4} is not a valid device type name.", i+1) ;
       }
@@ -514,8 +514,8 @@ vl::ErrorCode SharedTensorSpace::mexInit(mxArray const *descriptor)
 
   // Size of the memory allocated for one lab (with a copy of all tensors).
   memoryMapName = "/mcn" ;
-  size_t const pageSize = getpagesize() ;
-  memoryMapLabStride = vl::divideAndRoundUp(offset, pageSize) * pageSize ;
+  auto pageSize = (size_t)getpagesize() ;
+  memoryMapLabStride = vl::divideAndRoundUp((size_t)offset, pageSize) * pageSize ;
   memoryMapSize = 0 ;
 
 #if ENABLE_GPU
@@ -533,10 +533,9 @@ vl::ErrorCode SharedTensorSpace::mexInit(mxArray const *descriptor)
 // tensor and process index.
 
 SharedTensorSpace::SharedTensorPeerInstance &
-SharedTensorSpace::getPeerTensor(int tensorIndex, int lab)
+SharedTensorSpace::getPeerTensor(size_t tensorIndex, Int lab)
 {
-  std::vector<SharedTensorPeerInstance>::iterator PT
-  = std::find(peerTensors[tensorIndex].begin(), peerTensors[tensorIndex].end(), lab) ;
+  auto PT = std::find(peerTensors[tensorIndex].begin(), peerTensors[tensorIndex].end(), lab) ;
   assert(PT != peerTensors[tensorIndex].end()) ;
   return *PT ;
 }
@@ -545,9 +544,9 @@ SharedTensorSpace::getPeerTensor(int tensorIndex, int lab)
 /// for inter-process data transfers containing all tensors,
 /// and the GPU dispatch memory.
 
-vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int numLabs)
+vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, Int lab, Int numLabs)
 {
-  int error ;
+  Int error ;
   this->lab = lab ;
   this->numLabs = numLabs ;
 
@@ -574,7 +573,7 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
   }
 
   // Open/create the shared memory file descriptor.
-  memoryMapSize = memoryMapLabStride * numLabs ;
+  memoryMapSize = memoryMapLabStride * (size_t)numLabs ;
   memoryMapFD = shm_open(memoryMapName.c_str(),
                          (lab == 0 ? O_CREAT:0)| O_RDWR, S_IRUSR | S_IWUSR) ;
   if (memoryMapFD == -1) {
@@ -586,7 +585,7 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
 
   // The root process set the size of the shared memory.
   if (lab == 0) {
-    if (ftruncate(memoryMapFD, memoryMapSize) == -1) {
+    if (ftruncate(memoryMapFD, (off_t)memoryMapSize) == -1) {
       LOGERROR << "truncate failed because " << strerror(errno) ;
       return vl::VLE_OutOfMemory ;
     }
@@ -613,10 +612,11 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
 #if ENABLE_GPU
   size_t maxGPUTensorSize = 0 ;
 #endif
-  for (int t = 0 ; t < tensors.size() ; ++t) {
+  for (size_t t = 0 ; t < tensors.size() ; ++t) {
+    assert(lab >= 0) ;
     tensors[t].cpuMemory = (char*)memoryMap
     + tensors[t].memoryMapOffset
-    + lab * memoryMapLabStride ;
+    + (size_t)lab * memoryMapLabStride ;
 #if ENABLE_GPU
     if (tensors[t].descriptor.deviceType == vl::VLDT_GPU) {
       // Lazy allocation (to allow inplace operations).
@@ -677,20 +677,20 @@ vl::ErrorCode SharedTensorSpace::attach(std::string const & prefix, int lab, int
   return vl::VLE_Success ;
 }
 
-// attachPeer
 vl::ErrorCode
-SharedTensorSpace::attachPeer(int lab)
+SharedTensorSpace::attachPeer(Int lab)
 {
+  assert(lab >= 0) ;
   if (peerTensors.size() != tensors.size()) {
     peerTensors.resize(tensors.size()) ;
   }
-  for (int t = 0 ; t < tensors.size() ; ++t) {
+  for (size_t t = 0 ; t < tensors.size() ; ++t) {
     SharedTensorPeerInstance peerTensor ;
     peerTensor.lab = lab ;
     peerTensor.state = SharedTensorSpace::ready ;
     peerTensor.mappedCpuMemory = (char*)memoryMap
     + tensors[t].memoryMapOffset
-    + lab * memoryMapLabStride ;
+    + (size_t)lab * memoryMapLabStride ;
     peerTensor.accumulated = false ;
     peerTensors[t].push_back(peerTensor) ;
   }
@@ -770,7 +770,7 @@ void SharedTensorSpace::finalize()
 // For debugging
 void SharedTensorSpace::dump() const
 {
-  for (int tensorIndex = 0 ; tensorIndex < tensors.size() ; ++tensorIndex) {
+  for (size_t tensorIndex = 0 ; tensorIndex < tensors.size() ; ++tensorIndex) {
     SharedTensorInstance const & T = tensors[tensorIndex] ;
     char const * stateString ;
 
@@ -784,7 +784,7 @@ void SharedTensorSpace::dump() const
     LOG(0)<<"\tState: " << stateString ;
     LOG(0)<<"\ttransaction: "<<T.transaction ;
     if (peerTensors.size() > tensorIndex) {
-      for (int p = 0 ; p < peerTensors[tensorIndex].size() ; ++p) {
+      for (size_t p = 0 ; p < peerTensors[tensorIndex].size() ; ++p) {
         SharedTensorPeerInstance const & PT = peerTensors[tensorIndex][p] ;
         switch (PT.state) {
         case ready: stateString="ready" ; break ;
@@ -804,7 +804,7 @@ void SharedTensorSpace::mexPrint() const
   mexPrintf("\tlab %d of %d\n", lab, numLabs) ;
   mexPrintf("\tshared memory: '%s', %d bytes mapped at address: 0x%zx\n",
             memoryMapName.c_str(),memoryMapSize,memoryMap) ;
-  for (int tensorIndex = 0 ; tensorIndex < tensors.size() ; ++tensorIndex) {
+  for (size_t tensorIndex = 0 ; tensorIndex < tensors.size() ; ++tensorIndex) {
     SharedTensorInstance const & T = tensors[tensorIndex] ;
     mexPrintf("\tTensor '%s'\n", T.name.c_str()) ;
     mexPrintf("\t\t[") ;
@@ -818,7 +818,7 @@ void SharedTensorSpace::mexPrint() const
     mexPrintf("\t\tGPU address: 0x%zx\n", T.gpuMemory) ;
 
     if (peerTensors.size() > tensorIndex) {
-      for (int p = 0 ; p < peerTensors[tensorIndex].size() ; ++p) {
+      for (size_t p = 0 ; p < peerTensors[tensorIndex].size() ; ++p) {
         SharedTensorPeerInstance const & PT = peerTensors[tensorIndex][p] ;
         mexPrintf("\t\tPeer instance %d\n", p) ;
         mexPrintf("\t\t\tlab: %0d\n", PT.lab) ;
@@ -849,8 +849,8 @@ public:
 
   /// Initialize the instance \a lab of \a numLabs pools. The function
   /// timesout.
-  vl::ErrorCode init(std::string const & prefix, int lab,
-                     int numLabs, SharedTensorSpace * space) ;
+  vl::ErrorCode init(std::string const & prefix, Int lab,
+                     Int numLabs, SharedTensorSpace * space) ;
 
   /// Gracefully shutdown the connection with the other processes,
   /// waiting for them to finish updating as needed. After this, the
@@ -889,8 +889,8 @@ public:
 private:
   bool initialized ;
   std::string prefix ;
-  int lab ;
-  int numLabs ;
+  Int lab ;
+  Int numLabs ;
   size_t timeoutInterval ;
   SharedTensorSpace * sharedSpace ;
 
@@ -949,8 +949,8 @@ private:
     vl::ErrorCode init() ;
     void finalize() ;
     vl::ErrorCode shutdown() ;
-    vl::ErrorCode beginTransaction(int tensorIndex) ;
-    vl::ErrorCode waitTensor(int tensorIndex) ;
+    vl::ErrorCode beginTransaction(size_t tensorIndex) ;
+    vl::ErrorCode waitTensor(size_t tensorIndex) ;
 
     std::mutex mutable mutex ;
 
@@ -967,11 +967,11 @@ private:
     // Peer processes.
     struct Peer
     {
-      int lab ;
+      Int lab ;
       int socketFD ;
       bool cudaCanAccessPeer ; //cudaDeviceCanAccessPeer
       bool shutdownRequested ;
-      Peer(int lab)
+      Peer(Int lab)
         : lab(lab), socketFD(-1),
           cudaCanAccessPeer(false),
           shutdownRequested(false)
@@ -996,11 +996,11 @@ private:
     void disconnect() ;
     vl::ErrorCode handshake() ;
     vl::ErrorCode loop() ;
-    vl::ErrorCode send(Message &msg, int to) ;
-    vl::ErrorCode receive(Message &msg, int from, int timeout = -1) ;
-    vl::ErrorCode handleAccumulateChildren(int tensorIndex) ;
-    vl::ErrorCode handleWaitParent(int tensorIndex) ;
-    vl::ErrorCode handleWaitChildren(int tensorIndex) ;
+    vl::ErrorCode send(Message &msg, Int to) ;
+    vl::ErrorCode receive(Message &msg, Int from, Int timeout = -1) ;
+    vl::ErrorCode handleAccumulateChildren(size_t tensorIndex) ;
+    vl::ErrorCode handleWaitParent(size_t tensorIndex) ;
+    vl::ErrorCode handleWaitChildren(size_t tensorIndex) ;
   } supervisor ;
 } ;
 
@@ -1016,7 +1016,8 @@ ProcessPool::~ProcessPool()
   finalize() ;
 }
 
-vl::ErrorCode ProcessPool::init(std::string const & newPrefix, int newLab, int newNumLabs, SharedTensorSpace * newSharedSpace)
+vl::ErrorCode ProcessPool::init(std::string const & newPrefix, Int newLab,
+                                Int newNumLabs, SharedTensorSpace * newSharedSpace)
 {
   vl::ErrorCode error ;
 
@@ -1100,7 +1101,7 @@ void ProcessPool::mexPush(std::string const & name,
   }
 
   // Wait until the tensor is in ready state
-  vl::ErrorCode error = supervisor.waitTensor(T - sharedSpace->tensors.begin()) ;
+  vl::ErrorCode error = supervisor.waitTensor(size_t(T - sharedSpace->tensors.begin())) ;
   if (error != vl::VLE_Success) {
     vlmxError(VLMXE_Execution, "Timeout or disconnected while waiting for tensor '%s' to become ready.", T->name.c_str()) ;
   }
@@ -1149,7 +1150,7 @@ void ProcessPool::mexPush(std::string const & name,
     }
 #endif
   }
-  supervisor.beginTransaction(T - sharedSpace->tensors.begin()) ;
+  supervisor.beginTransaction(size_t(T - sharedSpace->tensors.begin())) ;
 }
 
 mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
@@ -1166,7 +1167,7 @@ mxArray * ProcessPool::mexPull(std::string const & name, bool inplace)
   }
 
   // Wait until the tensor is in ready state
-  vl::ErrorCode error = supervisor.waitTensor(T - sharedSpace->tensors.begin()) ;
+  vl::ErrorCode error = supervisor.waitTensor(size_t(T - sharedSpace->tensors.begin())) ;
   if (error != vl::VLE_Success) {
     vlmxError(VLMXE_Execution, "Timeout or disconnected while waiting for tensor '%s' to become ready.", T->name.c_str()) ;
   }
@@ -1224,6 +1225,10 @@ if (verbosity < level) { } \
 else vl::Logger().getStream() \
 <<"[info] "<<__func__<<"::lab "<<pool.lab<<"::"
 
+inline int ffs_driver(int x) { return ffs(x) ; }
+inline long ffs_driver(long x) { return ffsl(x) ; }
+inline long long ffs_driver(long long x) { return ffsll(x) ; }
+
 void ProcessPool::Supervisor::threadEntryPoint(void * thing)
 {
   ((ProcessPool::Supervisor*)thing)->entryPoint() ;
@@ -1235,17 +1240,17 @@ vl::ErrorCode ProcessPool::Supervisor::init()
   finalize() ;
 
   // Infer parent and children labs.
-  int bit = ffs(pool.lab) - 1 ;
-  if (bit == -1) { bit = 31 ; }
+  Int bit = ffs_driver(pool.lab) - 1 ;
+  if (bit == -1) { bit = (Int)log2((float)8*sizeof(Int)) - 1 ; }
 
-  int parent = pool.lab & (~(1 << bit)) ;
+  Int parent = pool.lab & (~(1 << bit)) ;
   if (parent != pool.lab) {
     // peers[0] always contain the parent (except for root)
     peers.push_back(Peer(parent)) ;
   }
 
-  for (int k = 0 ; k < bit ; ++k) {
-    int child = pool.lab | (1 << k) ;
+  for (Int k = 0 ; k < bit ; ++k) {
+    Int child = pool.lab | (1 << k) ;
     if (child < pool.numLabs) {
       // Which peers[] gets which children is determined later
       // during hadshake based on the random connection order.
@@ -1318,14 +1323,14 @@ vl::ErrorCode ProcessPool::Supervisor::shutdown()
   return vl::VLE_Success ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::beginTransaction(int tensorIndex)
+vl::ErrorCode ProcessPool::Supervisor::beginTransaction(size_t tensorIndex)
 {
   vl::ErrorCode error = vl::VLE_Success ;
   SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
 
   T.transaction ++ ;
   T.numChildrenToAccumulate = 0 ;
-  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+  for (auto p = size_t(pool.lab > 0) ; p < peers.size() ; ++p) {
     SharedTensorSpace::SharedTensorPeerInstance & PT = pool.sharedSpace->peerTensors[tensorIndex][p] ;
     PT.accumulated = false ;
     T.numChildrenToAccumulate += 1;
@@ -1342,7 +1347,7 @@ vl::ErrorCode ProcessPool::Supervisor::beginTransaction(int tensorIndex)
   return error ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
+vl::ErrorCode ProcessPool::Supervisor::waitTensor(size_t tensorIndex)
 {
   SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
   size_t start = vl::getTime() ;
@@ -1359,7 +1364,7 @@ vl::ErrorCode ProcessPool::Supervisor::waitTensor(int tensorIndex)
   return vl::VLE_Success ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::send(Message & msg, int to)
+vl::ErrorCode ProcessPool::Supervisor::send(Message & msg, Int to)
 {
   // Find connection to peer.
   peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), to) ;
@@ -1367,22 +1372,22 @@ vl::ErrorCode ProcessPool::Supervisor::send(Message & msg, int to)
 
   // Add complementery information to the message.
   msg.session = session ;
-  msg.from = pool.lab ;
-  msg.to = to ;
+  msg.from = (int16_t)pool.lab ;
+  msg.to = (int16_t)to ;
 
   // Send all bytes.
-  int bytesWritten = 0 ;
-  int status ;
+  size_t bytesWritten = 0 ;
   char * nextByte = (char*)&msg ;
   while (bytesWritten < sizeof(msg)) {
-    status = write(rel->socketFD, nextByte, sizeof(msg) - bytesWritten) ;
-    if (status == -1) {
+    auto status = write(rel->socketFD, nextByte, sizeof(msg) - bytesWritten) ;
+    if (status < 0) {
       LOGERROR
       << "could not send message to " << to
       << " because '" << strerror(errno) << '\'' ;
       return vl::VLE_Unknown ;
+    } else {
+      bytesWritten += (size_t)status ;
     }
-    bytesWritten += status ;
   }
 
   LOG(3)
@@ -1394,11 +1399,11 @@ vl::ErrorCode ProcessPool::Supervisor::send(Message & msg, int to)
   return vl::VLE_Success ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, int from, int timeout)
+vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, Int from, Int timeout)
 {
   size_t waited = 0 ; // us
   size_t const pollInterval = 1000 ; // us
-  if (timeout < 0) { timeout = pool.timeoutInterval ; } // us
+  if (timeout < 0) { timeout = (Int)pool.timeoutInterval ; } // us
 
   // find connection to peer
   peers_t::const_iterator rel = std::find(peers.begin(), peers.end(), from) ;
@@ -1406,11 +1411,10 @@ vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, int from, int time
 
   // receive all bytes
   {
-    int bytesRead = 0 ;
-    int status ;
+    size_t bytesRead = 0 ;
     char * nextByte = (char*)&msg ;
     while (bytesRead < sizeof(msg)) {
-      status = read(rel->socketFD, nextByte, sizeof(msg) - bytesRead) ;
+      auto status = read(rel->socketFD, nextByte, sizeof(msg) - bytesRead) ;
       if (status == 0 || status == -1) {
         if (status == 0 || errno == EAGAIN) {
           if (timeout == 0 && bytesRead == 0) {
@@ -1436,7 +1440,7 @@ vl::ErrorCode ProcessPool::Supervisor::receive(Message & msg, int from, int time
         }
         return vl::VLE_Unknown ;
       }
-      bytesRead += status ;
+      bytesRead += (size_t)status ;
     }
   }
 
@@ -1504,7 +1508,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
 
     // Get a UNID comain socket.
     snprintf(socketName, sizeof(socketName)/sizeof(socketName[0]),
-             "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), pool.lab) ;
+             "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), (int)pool.lab) ;
     socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
     if (socketFD == -1) {
       LOGERROR
@@ -1536,7 +1540,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
     }
 
     // Start listening for children connections
-    result = listen(socketFD, numChildren) ;
+    result = listen(socketFD, (int)numChildren) ;
     if (result == -1) {
       LOGERROR
       << "cannot listen to socket " << socketName
@@ -1548,7 +1552,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
     fcntl(socketFD, F_SETFL, fcntl(socketFD, F_GETFL, 0) | O_NONBLOCK);
 
     // Accept one connection per child.
-    for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+    for (auto p = size_t(pool.lab > 0) ; p < peers.size() ; ++p) {
       peers[p].socketFD = -1 ;
       for (;;) {
         peers[p].socketFD = accept(socketFD, NULL, NULL) ;
@@ -1576,7 +1580,7 @@ vl::ErrorCode ProcessPool::Supervisor::connect()
   // Connect parent.
   if (pool.lab > 0) {
     snprintf(socketName, sizeof(socketName)/sizeof(socketName[0]),
-             "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), peers[0].lab) ;
+             "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), (int)peers[0].lab) ;
 
     for (;;) {
       peers[0].socketFD = socket(AF_UNIX, SOCK_STREAM, 0) ;
@@ -1632,7 +1636,7 @@ void ProcessPool::Supervisor::disconnect()
   // Lock for entire duration of disconnect()
   std::lock_guard<std::mutex> lock(mutex) ;
 
-  for (int p = 0 ; p < peers.size() ; ++p) {
+  for (size_t p = 0 ; p < peers.size() ; ++p) {
     if (peers[p].socketFD != -1) {
       close(peers[p].socketFD) ;
       peers[p].socketFD = -1 ;
@@ -1646,7 +1650,7 @@ void ProcessPool::Supervisor::disconnect()
 
   char socketName [256] ;
   snprintf(socketName, sizeof(socketName)/sizeof(socketName[0]),
-           "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), pool.lab) ;
+           "/%s/%s-socket-%02d", P_tmpdir, pool.prefix.c_str(), (int)pool.lab) ;
   unlink(socketName) ;
 
   for (int t = 1 ; t >= 0 ; --t) {
@@ -1705,9 +1709,9 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
   }
 
   // send message to all children
-  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+  for (auto p = size_t(pool.lab > 0) ; p < peers.size() ; ++p) {
     msg.type = Message::init ;
-    error = send(msg,peers[p].lab) ;
+    error = send(msg, peers[p].lab) ;
     if (error != vl::VLE_Success) {
       LOGERROR << "could not send a message to a child" ;
       goto done ;
@@ -1715,8 +1719,8 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
   }
 
   // receive message from all children
-  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
-    error = receive(msg,peers[p].lab) ;
+  for (auto p = size_t(pool.lab > 0) ; p < peers.size() ; ++p) {
+    error = receive(msg, peers[p].lab) ;
     if (error != vl::VLE_Success || msg.type != Message::initDone) {
       error = vl::VLE_Unknown ;
       goto done ;
@@ -1727,7 +1731,7 @@ vl::ErrorCode ProcessPool::Supervisor::handshake()
   }
 
   // register peer tensors in the same order as peer[]
-  for (int p = 0 ; p < peers.size() ; ++p) {
+  for (size_t p = 0 ; p < peers.size() ; ++p) {
     pool.sharedSpace->attachPeer(peers[p].lab) ;
   }
 
@@ -1787,17 +1791,16 @@ void ProcessPool::Supervisor::entryPoint()
   disconnect() ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::handleAccumulateChildren(int tensorIndex)
+vl::ErrorCode ProcessPool::Supervisor::handleAccumulateChildren(size_t tensorIndex)
 {
   vl::ErrorCode error = vl::VLE_Success ;
   SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
 
   // Search for children ready to be be accumulated.
-  for (int p = (pool.lab > 0) ; p < peers.size() && error == vl::VLE_Success ; ++p)
+  for (auto p = size_t(pool.lab > 0) ; p < peers.size() && error == vl::VLE_Success ; ++p)
   {
-    int peerLab = peers[p].lab ;
-    SharedTensorSpace::SharedTensorPeerInstance & PT
-    = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
+    Int peerLab = peers[p].lab ;
+    auto &PT = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
 
     bool thisChildReadyForAccumulation =
       PT.transaction == T.transaction &&
@@ -1965,24 +1968,24 @@ vl::ErrorCode ProcessPool::Supervisor::handleAccumulateChildren(int tensorIndex)
 
     T.state = SharedTensorSpace::waitParent ;
     if (pool.lab > 0) {
-      int parentLab = peers[0].lab ;
+      Int parentLab = peers[0].lab ;
       pool.sharedSpace->getPeerTensor(tensorIndex, parentLab).state = SharedTensorSpace::waitParent ;
       Message msg ;
       msg.type = Message::tensorStateChange ;
-      msg.tensorId = tensorIndex ;
+      msg.tensorId = (uint32_t)tensorIndex ;
       msg.tensorState = T.state ;
       msg.transaction = T.transaction ;
-      error = send(msg, parentLab) ;
+      error = send(msg, (int)parentLab) ;
     }
   }
 
   return error ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
+vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(size_t tensorIndex)
 {
   vl::ErrorCode error = vl::VLE_Success ;
-  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+  SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[(size_t)tensorIndex] ;
 
   // Check if parent finished updating. If so, we can copy its value here
   // and notify the children to copy us by switching to waitParent state and
@@ -1990,9 +1993,8 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
   // as these peers will switch to that upon being notified.
 
   if (pool.lab > 0) {
-    int parentLab = peers[0].lab ;
-    SharedTensorSpace::SharedTensorPeerInstance & PT
-    = pool.sharedSpace->getPeerTensor(tensorIndex, parentLab) ;
+    Int parentLab = peers[0].lab ;
+    auto &PT = pool.sharedSpace->getPeerTensor(tensorIndex, parentLab) ;
     bool parentDone = (PT.transaction == T.transaction &&
                        PT.state == SharedTensorSpace::waitChildren) ;
     if (!parentDone) {
@@ -2062,15 +2064,14 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
   // Notify the parent that we are done copying its data and the children than we are waiting
   // on them to copy our data.
   T.state = SharedTensorSpace::waitChildren ;
-  for (int p = 0 ; p < peers.size() ; ++p) {
-    int peerLab = peers[p].lab ;
-    SharedTensorSpace::SharedTensorPeerInstance & PT
-    = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
+  for (size_t p = 0 ; p < peers.size() ; ++p) {
+    Int peerLab = peers[p].lab ;
+    auto &PT = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
     PT.state = (pool.lab > 0 && p == 0) ? SharedTensorSpace::ready : SharedTensorSpace::waitChildren ;
     Message msg ;
     msg.type = Message::tensorStateChange ;
     msg.transaction = T.transaction ;
-    msg.tensorId = tensorIndex ;
+    msg.tensorId = (uint32_t)tensorIndex ;
     msg.tensorState = (pool.lab > 0 && p == 0) ? SharedTensorSpace::ready : SharedTensorSpace::waitChildren ;
     error = send(msg, peerLab) ;
   }
@@ -2078,7 +2079,7 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitParent(int tensorIndex)
   return error ;
 }
 
-vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(int tensorIndex)
+vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(size_t tensorIndex)
 {
   vl::ErrorCode error = vl::VLE_Success ;
   SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
@@ -2089,10 +2090,9 @@ vl::ErrorCode ProcessPool::Supervisor::handleWaitChildren(int tensorIndex)
   // as these peers will switch to that upon being notified.
 
   bool allChildrenDone = true ;
-  for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
-    int peerLab = peers[p].lab ;
-    SharedTensorSpace::SharedTensorPeerInstance & PT
-    = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
+  for (size_t p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+    Int peerLab = peers[p].lab ;
+    auto &PT = pool.sharedSpace->getPeerTensor(tensorIndex, peerLab) ;
     bool thisChildDone =((PT.transaction == T.transaction &&
                           PT.state == SharedTensorSpace::ready) ||
                           PT.transaction > T.transaction) ;
@@ -2128,8 +2128,8 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
   size_t lastHeartbeat = vl::getTime() ;
 
   struct pollfd * polls = new struct pollfd [peers.size() + 1] ;
-  for (int p = 0 ; p < peers.size() ; ++p) {
-    polls[p].fd = peers[p].socketFD ;
+  for (size_t p = 0 ; p < peers.size() ; ++p) {
+    polls[p].fd = peers[(size_t)p].socketFD ;
     polls[p].events = POLLIN | POLLHUP | POLLERR | POLLNVAL ;
   }
   polls[peers.size()].fd = pipeFD[0] ;
@@ -2147,7 +2147,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
     }
 
     // Wait for incoming messages or a timeout.
-    pollStatus = poll(polls, peers.size() + 1, pollInterval) ;
+    pollStatus = poll(polls, (nfds_t)(peers.size() + 1), (int)pollInterval) ;
     if (pollStatus < 0) {
       error = vl::VLE_Unknown ;
       continue ;
@@ -2167,7 +2167,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
     }
 
     // Check for messages from other processes.
-    for (int p = 0 ; p < peers.size() && error == vl::VLE_Success ; ++ p)
+    for (size_t p = 0 ; p < peers.size() && error == vl::VLE_Success ; ++ p)
     {
       // Check for communication errors.
       if (polls[p].revents & (POLLHUP | POLLERR | POLLNVAL)) {
@@ -2183,7 +2183,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
       Message msg ;
       error = receive(msg, peers[p].lab) ;
       if (error != vl::VLE_Success) {
-        LOGERROR << "error while receiving a message from lab " << peers[p].lab ;
+        LOGERROR << "error while receiving a message from lab " << peers[(size_t)p].lab ;
         break ;
       }
 
@@ -2219,7 +2219,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
           int sourcePeer = msg.from ;
           if (msg.finalTransaction <  T.finalTransaction) {
             T.finalTransaction = msg.finalTransaction ;
-            for (int q = 0 ; q < peers.size() ; ++q) {
+            for (size_t q = 0 ; q < peers.size() ; ++q) {
               if (sourcePeer == peers[q].lab) continue ;
               error = send(msg, peers[q].lab) ;
               if (error != vl::VLE_Success) {
@@ -2243,10 +2243,10 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 
     // Check all tensors for actions. Keep updating each tensor until its
     // state does not change anymore.
-    for (int tensorIndex = 0 ; tensorIndex < pool.sharedSpace->tensors.size() && error == vl::VLE_Success ; ++tensorIndex)
+    for (size_t tensorIndex = 0 ; tensorIndex < pool.sharedSpace->tensors.size() && error == vl::VLE_Success ; ++tensorIndex)
     {
       SharedTensorSpace::SharedTensorState currentState ;
-      SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[tensorIndex] ;
+      SharedTensorSpace::SharedTensorInstance & T = pool.sharedSpace->tensors[(size_t)tensorIndex] ;
       do {
 
         currentState = T.state ;
@@ -2285,15 +2285,15 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
 
     if (shutdownRequested && (state == running) && (error == vl::VLE_Success)) {
       LOG(3) << "sending final transaction for all tensors" ;
-      for (int i = 0 ; i < pool.sharedSpace->tensors.size() ; ++i) {
-        SharedTensorSpace::SharedTensorInstance & tensor = pool.sharedSpace->tensors[i] ;
+      for (size_t i = 0 ; i < pool.sharedSpace->tensors.size() ; ++i) {
+        SharedTensorSpace::SharedTensorInstance & tensor = pool.sharedSpace->tensors[(size_t)i] ;
         if (tensor.finalTransaction > tensor.transaction) {
           tensor.finalTransaction = tensor.transaction ;
           Message msg ;
           msg.type = Message::tensorFinalTransaction ;
-          msg.tensorId = i ;
+          msg.tensorId = (uint32_t)i ;
           msg.finalTransaction = tensor.finalTransaction ;
-          for (int p = 0 ; p < peers.size() ; ++p) {
+          for (size_t p = 0 ; p < (int)peers.size() ; ++p) {
             error = send(msg, peers[p].lab) ;
             if (error != vl::VLE_Success) {
               LOGERROR
@@ -2310,7 +2310,7 @@ vl::ErrorCode ProcessPool::Supervisor::loop()
     if (shutdownRequested && (state == running) && (error == vl::VLE_Success)) {
       // Check if the children are also in shutdown mode
       bool allDone = true ;
-      for (int p = (pool.lab > 0) ; p < peers.size() ; ++p) {
+      for (auto p = size_t(pool.lab > 0) ; p < peers.size() ; ++p) {
         allDone &= peers[p].shutdownRequested ;
       }
       if (allDone) {
@@ -2371,8 +2371,8 @@ void mexFunction(int nout, mxArray *out[],
   std::string prefix = "mcn" ;
   mxArray const * arg ;
   vl::ErrorCode error = vl::VLE_Success ;
-  size_t labIndex = 0 ;
-  size_t numLabs = 0 ;
+  Int labIndex = 0 ;
+  Int numLabs = 0 ;
 
   verbosity = 0 ;
 
@@ -2399,14 +2399,14 @@ void mexFunction(int nout, mxArray *out[],
     if (!vlmxIsPlainScalar(in[2])) {
       vlmxError(VLMXE_IllegalArgument, "LABINDEX is not a plain scalar.") ;
     }
-    labIndex = mxGetScalar(in[2]) ;
+    labIndex = (Int)mxGetScalar(in[2]) ;
     if (labIndex < 1) {
       vlmxError(VLMXE_IllegalArgument, "LABINDEX must be an integer greater than 0.") ;
     }
     if (!vlmxIsPlainScalar(in[3])) {
       vlmxError(VLMXE_IllegalArgument, "NUMLABS is not a plain scalar.") ;
     }
-    numLabs = mxGetScalar(in[3]) ;
+    numLabs = (Int)mxGetScalar(in[3]) ;
     if (numLabs < labIndex) {
       vlmxError(VLMXE_IllegalArgument, "NUMLABS must be an integer greater or equal to LABINDEX.") ;
     }
@@ -2474,7 +2474,7 @@ void mexFunction(int nout, mxArray *out[],
 
       // Initialize shared space. mexInit() may thorow a MEX error;
       // the auto_ptr should avoid a leak in this case.
-      std::auto_ptr<SharedTensorSpace> sharedSpace(new SharedTensorSpace()) ;
+      auto sharedSpace = std::auto_ptr<SharedTensorSpace>(new SharedTensorSpace()) ;
       sharedSpace->mexInit(arg) ;
 
       // Initialize the pool, including attaching the shared space.

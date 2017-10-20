@@ -19,24 +19,21 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <sm_20_atomic_functions.h>
 
+using Int = vl::Int ;
+
 // -------------------------------------------------------------------
 //                                                             Helpers
 // -------------------------------------------------------------------
 
 template<typename T>
 struct Geom {
-  int subdivisions[2] ;
+  int subdivisions[2] ; // GPU uses int not Int
   T transform[6] ;
-  Geom(std::array<int,2> const &subdivisions, std::array<double,6> const &transform)
+  Geom(std::array<Int,2> const &subdivisions, std::array<double,6> const &transform)
   {
-    this->subdivisions[0] = subdivisions[0] ;
-    this->subdivisions[1] = subdivisions[1] ;
-    this->transform[0] = transform[0] ;
-    this->transform[1] = transform[1] ;
-    this->transform[2] = transform[2] ;
-    this->transform[3] = transform[3] ;
-    this->transform[4] = transform[4] ;
-    this->transform[5] = transform[5] ;
+    this->subdivisions[0] = (int)subdivisions[0] ;
+    this->subdivisions[1] = (int)subdivisions[1] ;
+    for (size_t i = 0 ; i < 6 ; ++i) this->transform[i] = (T)transform[i] ;
   }
 } ;
 
@@ -252,41 +249,27 @@ roipooling_max_backward_kernel
 template<DataType dataType, ROIPooling::Method method>
 struct ROIPoolingForwardGPU
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor &output,
                            Tensor const &input,
                            Tensor const &rois)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto numROIs = rois.getNumElements() / 5 ;
-    auto outputData = (type*)output.getMemory() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto numChannels = input.getDepth() ;
-    auto size = input.getSize() ;
-    auto roisData = (type const*)rois.getMemory() ;
-    size_t outputVolume = op.subdivisions[0] * op.subdivisions[1] * numChannels * numROIs ;
+    Int numROIs = rois.getNumElements() / 5 ;
+    Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getDepth() * numROIs ;
 
-    if (method == ROIPooling::Max) {
-      roipooling_max_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
-      (outputData,
-       inputData, height, width, numChannels, size,
-       roisData, numROIs,
-       Geom<type>(op.subdivisions,op.transform)) ;
+    auto func = roipooling_max_kernel<type> ;
+    if (method == ROIPooling::Average) {
+      func = roipooling_average_kernel<type> ;
     }
-    else if (method == ROIPooling::Average) {
-      roipooling_average_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
-      (outputData,
-       inputData, height, width, numChannels, size,
-       roisData, numROIs,
-       Geom<type>(op.subdivisions,op.transform)) ;
-    }
-    else {
-      assert(false) ;
-    }
+    else { assert(method == ROIPooling::Max) ; }
+
+    func <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    ((type*)output.getMemory(),
+     (type const*)input.getMemory(),
+     (int)input.getHeight(),(int)input.getWidth(),(int)input.getDepth(),(int)input.getSize(),
+     (type const*)rois.getMemory(), (int)numROIs,
+     Geom<type>(op.getSubdivisions(),op.getTransform())) ;
 
     cudaError_t status = cudaPeekAtLastError() ;
     return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
@@ -296,12 +279,12 @@ struct ROIPoolingForwardGPU
 template<DataType dataType>
 struct ROIPoolingForward<VLDT_GPU,dataType>
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor pooled,
                            Tensor input,
                            Tensor rois)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case ROIPooling::Max:
         return ROIPoolingForwardGPU<dataType,ROIPooling::Max>
         ()(op,pooled,input,rois) ;
@@ -320,45 +303,30 @@ struct ROIPoolingForward<VLDT_GPU,dataType>
 template<DataType dataType, ROIPooling::Method method>
 struct ROIPoolingBackwardGPU
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &rois,
                            Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto numROIs = rois.getNumElements() / 5 ;
-    auto derInputData = (type*)derInput.getMemory() ;
-    auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto numChannels = input.getDepth() ;
-    auto size = input.getSize() ;
-    auto roisData = (type const*)rois.getMemory() ;
-    size_t outputVolume = op.subdivisions[0] * op.subdivisions[1] * numChannels * numROIs ;
+    Int numROIs = rois.getNumElements() / 5 ;
+    Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getDepth() * numROIs ;
 
-    if (method == ROIPooling::Max) {
-      roipooling_max_backward_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derInputData, inputData,
-       height, width, numChannels, size,
-       roisData, numROIs,
-       derOutputData,
-       Geom<type>(op.subdivisions,op.transform)) ;
+    auto func = roipooling_max_backward_kernel<type> ;
+    if (method == ROIPooling::Average) {
+      func = roipooling_average_backward_kernel<type> ;
     }
-    else if (method == ROIPooling::Average) {
-      roipooling_average_backward_kernel<type>
-      <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (derInputData, inputData,
-       height, width, numChannels, size,
-       roisData, numROIs,
-       derOutputData,
-       Geom<type>(op.subdivisions,op.transform)) ;
-    }
-    else {
-      assert(false) ;
-    }
+    else { assert(method == ROIPooling::Max) ; }
+
+    func <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    ((type*)derInput.getMemory(),
+     (type const*)input.getMemory(),
+     (int)input.getHeight(), (int)input.getWidth(), (int)input.getDepth(), (int)input.getSize(),
+     (type const*)rois.getMemory(), (int)numROIs,
+     (type const*)derOutput.getMemory(),
+     Geom<type>(op.getSubdivisions(),op.getTransform())) ;
+
     cudaError_t status = cudaPeekAtLastError() ;
     return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
   }
@@ -367,13 +335,13 @@ struct ROIPoolingBackwardGPU
 template<DataType dataType>
 struct ROIPoolingBackward<VLDT_GPU,dataType>
 {
-  vl::ErrorCode operator()(ROIPooling &op,
+  vl::ErrorCode operator()(ROIPooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &rois,
                            Tensor const &derOutput)
   {
-    switch (op.method) {
+    switch (op.getMethod()) {
       case ROIPooling::Max:
         return ROIPoolingBackwardGPU<dataType,ROIPooling::Max>
         ()(op,derInput,input,rois,derOutput) ;

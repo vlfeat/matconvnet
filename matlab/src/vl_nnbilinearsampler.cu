@@ -22,6 +22,8 @@ the terms of the BSD license (see the COPYING file).
 
 #include <cassert>
 
+using Int = vl::Int ;
+
 /* option codes */
 enum {
   opt_verbose = 0,
@@ -139,20 +141,20 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Basic compatibility of shape */
-  const int inHeight = data.getHeight(); // spatial dimension 1
-  const int inWidth = data.getWidth(); // spatial dimension 2
-  const int inDepth = data.getDepth(); // number of channels
-  const int inBatch = data.getSize(); // batch-size
+  const Int inHeight = data.getHeight(); // spatial dimension 1
+  const Int inWidth = data.getWidth(); // spatial dimension 2
+  const Int inDepth = data.getDepth(); // number of channels
+  const Int inBatch = data.getSize(); // batch-size
 
   /* Grid dimensions: note that the grid uses the first dimension as channels */
-  const int gridHeight = grid.getWidth(); // *OUTPUT* spatial dimension
-  const int gridWidth = grid.getDepth(); // *OUTPUT* spatial dimension 2
-  const int gridDepth = grid.getHeight(); // number of channels :: should be 2
-  const int gridBatch = grid.getSize(); // should be DIVISIBLE by inBatch
+  const Int gridHeight = grid.getWidth(); // *OUTPUT* spatial dimension
+  const Int gridWidth = grid.getDepth(); // *OUTPUT* spatial dimension 2
+  const Int gridDepth = grid.getHeight(); // number of channels :: should be 2
+  const Int gridBatch = grid.getSize(); // should be DIVISIBLE by inBatch
 
   if (gridDepth != 2) {
     char msg[200];
-    sprintf(msg, "GRID has %d channels; expected 2.\n", gridDepth);
+    sprintf(msg, "GRID has %d channels; expected 2.\n", (int)gridDepth);
     mexErrMsgTxt(msg) ;
   }
 

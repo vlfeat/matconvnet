@@ -35,35 +35,36 @@ struct SubsampleForward<vl::VLDT_CPU, dataType>
                            Tensor &output,
                            Tensor const &input)
   {
+    // Argument sanity check.
     assert(output) ;
     assert(input) ;
-
-    typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = input.getWidth() ;
-    auto height = input.getHeight() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
-    auto inputData = (type*)input.getMemory() ;
-    auto outputData = (type*)output.getMemory() ;
-
     TensorShape outShape ;
     op.forwardShape(outShape, input) ;
     assert(outShape == output) ;
-    Int outputHeight = as_signed(output.getHeight()) ;
-    Int outputWidth = as_signed(output.getWidth()) ;
+
+    typedef typename vl::DataTypeTraits<dataType>::type type ;
+    Int width = input.getWidth() ;
+    Int height = input.getHeight() ;
+    Int depth = input.getDepth() ;
+    Int size = input.getSize() ;
+    auto inputData = (type*)input.getMemory() ;
+    auto outputData = (type*)output.getMemory() ;
+
+    Int outputHeight = output.getHeight() ;
+    Int outputWidth = output.getWidth() ;
     Int strideY = op.getStride(0) ;
     Int strideX = op.getStride(1) ;
     Int padTop = op.getPadding(0) ;
     Int padLeft = op.getPadding(2) ;
 
-    for (size_t z = 0; z < depth * size ; ++z) {
-      for (Int x = 0; x < as_signed(outputWidth) ; ++x) {
-        for (Int y = 0; y < as_signed(outputHeight) ; ++y) {
+    for (Int z = 0; z < depth * size ; ++z) {
+      for (Int x = 0; x < outputWidth ; ++x) {
+        for (Int y = 0; y < outputHeight ; ++y) {
           auto x1 = x * strideX - padLeft ;
           auto y1 = y * strideY - padTop ;
           type value = 0 ;
-          if (x1 >= 0 && x1 < as_signed(width) && y1 >= 0 && y1 < as_signed(height)) {
-            value = inputData[x1 * as_signed(height) + y1] ;
+          if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
+            value = inputData[x1 * height + y1] ;
           }
           outputData[x * outputHeight + y] = value ;
         }
@@ -93,14 +94,14 @@ struct SubsampleAndBiasForward
     if (error != VLE_Success) { return error ; }
 
     auto numOutputPixels = output.getHeight() * output.getWidth() ;
-    type const* allOnesMemory = (type*) op.getContext().getAllOnes(deviceType, dataType, numOutputPixels) ;
+    type const* allOnesMemory = (type*) op.getContext().getAllOnes(deviceType, dataType, (size_t)numOutputPixels) ;
 
     if (allOnesMemory == NULL) {
       error = op.getContext().getLastError() ;
       goto done ;
     }
 
-    for (size_t image = 0 ; image < input.getSize() ; ++image) {
+    for (Int image = 0 ; image < input.getSize() ; ++image) {
       auto outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
       if (biases) {
         type alpha = 1 ;
@@ -108,13 +109,13 @@ struct SubsampleAndBiasForward
         error = vl::impl::blas<deviceType, dataType>::gemm
         (op.getContext(),
          'n', 'n',
-         as_signed(numOutputPixels),
-         as_signed(biases.getNumElements()), 1,
+         numOutputPixels,
+         biases.getNumElements(), 1,
          alpha,
-         allOnesMemory, as_signed(numOutputPixels),
+         allOnesMemory, numOutputPixels,
          (type*)biases.getMemory(), 1,
          beta,
-         (type*)output.getMemory() + outputOffset, as_signed(numOutputPixels)) ;
+         (type*)output.getMemory() + outputOffset, numOutputPixels) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     }
@@ -149,23 +150,23 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
     TensorShape outShape ;
     op.forwardShape(outShape, derInput) ;
     assert(outShape == derOutput) ;
-    Int outputHeight = as_signed(derOutput.getHeight()) ;
-    Int outputWidth = as_signed(derOutput.getWidth()) ;
+    Int outputHeight = derOutput.getHeight() ;
+    Int outputWidth = derOutput.getWidth() ;
     Int strideY = op.getStride(0) ;
     Int strideX = op.getStride(1) ;
     Int padTop = op.getPadding(0) ;
     Int padLeft = op.getPadding(2) ;
 
-    memset(derInputData, 0, sizeof(type) * width * height * depth * size) ;
+    memset(derInputData, 0, sizeof(type) * size_t(width * height * depth * size)) ;
 
     for (size_t z = 0; z < depth * size; ++z) {
       for (Int px = 0; px < outputWidth; ++px) {
         for (Int py  = 0; py < outputHeight; ++py) {
           auto x1 = px * strideX - padLeft ;
           auto y1 = py * strideY - padTop ;
-          if (x1 >= 0 && x1 < as_signed(width) && y1 >= 0 && y1 < as_signed(height)) {
-            derInputData[x1 * as_signed(height) + y1]
-            = derOutputData[px * as_signed(outputHeight) + py] ;
+          if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height) {
+            derInputData[x1 * height + y1]
+            = derOutputData[px * outputHeight + py] ;
           }
         }
       }
@@ -198,23 +199,23 @@ struct SubsampleAndBiasBackward
     // Compute derBiases.
     if (derBiases) {
       auto numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
-      type const* allOnesMemory = (type*) op.getContext().getAllOnes(deviceType, dataType, numOutputPixels) ;
+      type const* allOnesMemory = (type*) op.getContext().getAllOnes(deviceType, dataType, (size_t)numOutputPixels) ;
 
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ;
         goto done ;
       }
 
-      for (size_t image = 0 ; image < derInput.getSize() ; ++image) {
+      for (Int image = 0 ; image < derInput.getSize() ; ++image) {
         auto derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
         type alpha = 1 ;
         type beta = (image > 0) ; // Avoids having to clear derOutputs first.
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.getContext(),
          't',
-         as_signed(numOutputPixels), as_signed(derOutput.getDepth()),
+         numOutputPixels, derOutput.getDepth(),
          alpha,
-         (type const*)derOutput.getMemory() + derOutputOffset, as_signed(numOutputPixels),
+         (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
          allOnesMemory, 1,
          beta,
          (type*)derBiases.getMemory(), 1) ;
@@ -257,17 +258,17 @@ vl::ErrorCode
 Subsample::forwardShape(vl::TensorShape &output, vl::TensorShape const& input) const
 {
   output = TensorShape() ; // null
-  if (as_signed(input.getNumDimensions()) < getNumSpatialDimensions()) {
+  if (input.getNumDimensions() < getNumSpatialDimensions()) {
     return VLE_IllegalArgument ;
   }
   output = input ;
   for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    auto odim = convLikeSizeHelper(as_signed(input.getDimensions()[d]),
+    auto odim = convLikeSizeHelper(input.getDimensions()[d],
                                    1,
                                    getStride(d),
                                    {getPadding(2*d),getPadding(2*d+1)},
                                    1) ;
-    output.setDimension(as_unsigned(d), as_unsigned(odim)) ;
+    output.setDimension(d, odim) ;
   }
   return VLE_Success ;
 }

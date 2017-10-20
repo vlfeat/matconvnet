@@ -24,7 +24,7 @@ using namespace vl::impl ;
 { \
 cudnnError = x ; \
 if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = op.context.setError(op.context.getCudaHelper().catchCudnnError(cudnnError, \
+error = op.getContext().setError(op.getContext().getCudaHelper().catchCudnnError(cudnnError, \
 STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
 goto done ; \
 } }
@@ -36,7 +36,7 @@ goto done ; \
 template<DataType dataType>
 struct PoolingForwardCudnn
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &output,
                            Tensor const &input)
   {
@@ -51,10 +51,10 @@ struct PoolingForwardCudnn
     bool inputDescInitialized = false ;
     bool poolingDescInitialized = false ;
 
-    if (op.padLeft != op.padRight) return vl::VLE_Unsupported ;
-    if (op.padTop != op.padBottom) return vl::VLE_Unsupported ;
+    if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
+    if (op.getPadding(0) != op.getPadding(1)) return vl::VLE_Unsupported ;
 
-    if (op.method == Pooling::Average && (op.padLeft > 0 | op.padRight > 0)) {
+    if (op.getMethod() == Pooling::Average && (op.getPadding(2) > 0 | op.getPadding(3) > 0)) {
       // CuDNN bug? Skip.
       return vl::VLE_Unsupported ;
     }
@@ -68,7 +68,7 @@ struct PoolingForwardCudnn
     cudnnHandle_t handle ;
 
     // Get CuDNN.
-    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descriptors.
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
@@ -76,29 +76,29 @@ struct PoolingForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(outputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     output.getSize(),
-                                     output.getDepth(),
-                                     output.getWidth(),
-                                     output.getHeight())) ;
+                                     (int)output.getSize(),
+                                     (int)output.getDepth(),
+                                     (int)output.getWidth(),
+                                     (int)output.getHeight())) ;
 
     CHECK(cudnnCreateTensorDescriptor(&inputDesc)) ;
     inputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptor(inputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     input.getSize(),
-                                     input.getDepth(),
-                                     input.getWidth(),
-                                     input.getHeight())) ;
+                                     (int)input.getSize(),
+                                     (int)input.getDepth(),
+                                     (int)input.getWidth(),
+                                     (int)input.getHeight())) ;
 
     CHECK(cudnnCreatePoolingDescriptor(&poolingDesc)) ;
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
-                                      (op.method == Pooling::Average) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      (op.getMethod() == Pooling::Average) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
                                       IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
-                                      op.poolWidth, op.poolHeight,
-                                      op.padLeft, op.padTop,
-                                      op.strideX, op.strideY)) ;
+                                      (int)op.getShape(1), (int)op.getShape(0),
+                                      (int)op.getPadding(2), (int)op.getPadding(0),
+                                      (int)op.getStride(1), (int)op.getStride(0))) ;
 
     // Apply operator.
     {
@@ -117,7 +117,7 @@ struct PoolingForwardCudnn
     if (poolingDescInitialized) { cudnnDestroyPoolingDescriptor(poolingDesc) ; }
     if (inputDescInitialized) { cudnnDestroyTensorDescriptor(inputDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.context.passError(error, "nnpooling_cudnn::forward") ;
+    return op.getContext().passError(error, "nnpooling_cudnn::forward") ;
   }
 } ;
 
@@ -128,7 +128,7 @@ struct PoolingForwardCudnn
 template<DataType dataType>
 struct PoolingBackwardCudnn
 {
-  vl::ErrorCode operator()(Pooling &op,
+  vl::ErrorCode operator()(Pooling const &op,
                            Tensor &derInput,
                            Tensor const &input,
                            Tensor const &derOutput)
@@ -146,10 +146,10 @@ struct PoolingBackwardCudnn
     bool inputDescInitialized = false ;
     bool poolingDescInitialized = false ;
 
-    if (op.padLeft != op.padRight) return vl::VLE_Unsupported ;
-    if (op.padTop != op.padBottom) return vl::VLE_Unsupported ;
+    if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
+    if (op.getPadding(0) != op.getPadding(1)) return vl::VLE_Unsupported ;
 
-    if (op.method == Pooling::Average && (op.padLeft > 0 | op.padRight > 0)) {
+    if (op.getMethod() == Pooling::Average && (op.getPadding(2) > 0 | op.getPadding(3) > 0)) {
       // CuDNN bug? Skip.
       return vl::VLE_Unsupported ;
     }
@@ -163,8 +163,8 @@ struct PoolingBackwardCudnn
     Tensor output ;
 
     // CuDNN requires the output of the layer, so we recompute it here.
-    size_t outputDataSize = derOutput.getNumElements() * sizeof(type) ;
-    type * outputData = (type*)op.context.getWorkspace
+    size_t outputDataSize = (size_t)derOutput.getNumElements() * sizeof(type) ;
+    type * outputData = (type*)op.getContext().getWorkspace
     (vl::VLDT_GPU, outputDataSize) ;
     if (outputData == NULL) {
       error = VLE_OutOfMemory ;
@@ -177,7 +177,7 @@ struct PoolingBackwardCudnn
     }
 
     // Get CuDNN.
-    CHECK(op.context.getCudaHelper().getCudnnHandle(&handle)) ;
+    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descripotrs.
     CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
@@ -185,29 +185,29 @@ struct PoolingBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     derOutput.getSize(),
-                                     derOutput.getDepth(),
-                                     derOutput.getWidth(),
-                                     derOutput.getHeight())) ;
+                                     (int)derOutput.getSize(),
+                                     (int)derOutput.getDepth(),
+                                     (int)derOutput.getWidth(),
+                                     (int)derOutput.getHeight())) ;
 
     CHECK(cudnnCreateTensorDescriptor(&inputDesc)) ;
     inputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptor(inputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     input.getSize(),
-                                     input.getDepth(),
-                                     input.getWidth(),
-                                     input.getHeight())) ;
+                                     (int)input.getSize(),
+                                     (int)input.getDepth(),
+                                     (int)input.getWidth(),
+                                     (int)input.getHeight())) ;
 
     CHECK(cudnnCreatePoolingDescriptor(&poolingDesc)) ;
     poolingDescInitialized = true ;
     CHECK(cudnnSetPooling2dDescriptor(poolingDesc,
-                                      (op.method == Pooling::Average) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
+                                      (op.getMethod() == Pooling::Average) ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING : CUDNN_POOLING_MAX,
                                       IF_CUDNN_GE5(CUDNN_NOT_PROPAGATE_NAN COMMA)
-                                      op.poolWidth, op.poolHeight,
-                                      op.padLeft, op.padTop,
-                                      op.strideX, op.strideY)) ;
+                                      (int)op.getShape(1), (int)op.getShape(0),
+                                      (int)op.getPadding(2), (int)op.getPadding(0),
+                                      (int)op.getStride(1), (int)op.getStride(0))) ;
 
     // Apply operator.
     {
@@ -228,7 +228,7 @@ struct PoolingBackwardCudnn
     if (poolingDescInitialized) { cudnnDestroyPoolingDescriptor(poolingDesc) ; }
     if (inputDescInitialized) { cudnnDestroyTensorDescriptor(inputDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return op.context.passError(error, __func__) ;
+    return op.getContext().passError(error, __func__) ;
   }
 } ;
 

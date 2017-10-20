@@ -22,9 +22,9 @@ the terms of the BSD license (see the COPYING file).
 #include <cuda.h>
 #include <cublas_v2.h>
 #if __CUDA_ARCH__ >= 200
-#define VL_CUDA_NUM_THREADS 1024
+constexpr unsigned int VL_CUDA_NUM_THREADS = 1024UL ;
 #else
-#define VL_CUDA_NUM_THREADS 512
+constexpr unsigned int VL_CUDA_NUM_THREADS = 512UL ;
 #endif
 
 #ifdef ENABLE_CUDNN

@@ -26,6 +26,8 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/datamex.hpp"
 #include "bits/mexutils.h"
 
+using Int = vl::Int ;
+
 static int verbosity = 0 ;
 
 /* option codes */
@@ -143,15 +145,15 @@ public:
     bool borrowed ;
     vl::MexTensor cpuArray ;
     vl::MexTensor gpuArray ;
-    int index ;
+    Int index ;
 
-    size_t outputWidth ;
-    size_t outputHeight ;
-    size_t outputNumChannels ;
-    size_t cropWidth ;
-    size_t cropHeight ;
-    size_t cropOffsetX ;
-    size_t cropOffsetY ;
+    Int outputWidth ;
+    Int outputHeight ;
+    Int outputNumChannels ;
+    Int cropWidth ;
+    Int cropHeight ;
+    Int cropOffsetX ;
+    Int cropOffsetY ;
     bool flip ;
     vl::impl::ImageResizeFilter::FilterType filterType ;
 
@@ -186,7 +188,7 @@ public:
   vl::ErrorCode registerItem(std::string const & name) ;
 
   size_t getNumberOfItems() const ;
-  Item * getItem(int index) ;
+  Item * getItem(size_t index) ;
   void clear() ;
   void sync() const ;
   vl::ErrorCode prefetch() ;
@@ -194,7 +196,7 @@ public:
 
   void setGpuMode(bool gpu) ;
   void setPackingMethod(PackingMethod method) ;
-  void setResizeMethod(ResizeMethod method, int height, int width) ;
+  void setResizeMethod(ResizeMethod method, Int height, Int width) ;
 
   void setAverage(double average []) ;
   void setAverageImage(float const * image) ;
@@ -218,13 +220,13 @@ private:
   bool quit ;
   typedef std::vector<Item*> items_t ;
   items_t items ;
-  int nextItem ;
-  int numReturnedItems ;
+  Int nextItem ;
+  Int numReturnedItems ;
 
   enum PackingMethod packingMethod ;
   enum ResizeMethod resizeMethod ;
-  int resizeHeight ;
-  int resizeWidth ;
+  Int resizeHeight ;
+  Int resizeWidth ;
   bool gpuMode ;
 
   double average [3] ;
@@ -310,7 +312,7 @@ size_t Batch::getNumberOfItems() const
   return items.size() ;
 }
 
-Batch::Item * Batch::getItem(int index)
+Batch::Item * Batch::getItem(size_t index)
 {
   return items[index] ;
 }
@@ -382,7 +384,7 @@ Batch::Item * Batch::borrowNextItem()
   while (true) {
     if (quit) { return NULL ; }
     if (nextItem < items.size()) {
-      Item * item = items[nextItem] ;
+      Item * item = items[(size_t)nextItem] ;
       if (item->state != Item::ready) {
         item->borrowed = true ;
         nextItem ++  ;
@@ -406,7 +408,7 @@ void Batch::returnItem(Batch::Item * item)
     cudaError_t cerror ;
     cerror = cudaMemcpyAsync (gpuPack.getMemory(),
                               cpuPinnedPack,
-                              gpuPack.getNumElements() * sizeof(float),
+                              (size_t)gpuPack.getNumElements() * sizeof(float),
                               cudaMemcpyHostToDevice,
                               cudaStream) ;
     if (cerror != cudaSuccess) {
@@ -431,8 +433,8 @@ void Batch::setAverageImage(float const * image)
     return ;
   }
   assert (resizeMethod == fixedSize) ;
-  averageImage = (float*)malloc(sizeof(float) * resizeHeight * resizeWidth * 3) ;
-  memcpy(averageImage, image, sizeof(float) * resizeHeight * resizeWidth * 3) ;
+  averageImage = (float*)malloc(sizeof(float) * size_t(resizeHeight * resizeWidth * 3)) ;
+  memcpy(averageImage, image, sizeof(float) * size_t(resizeHeight * resizeWidth * 3)) ;
 }
 
 void Batch::clear()
@@ -444,12 +446,12 @@ void Batch::clear()
   nextItem = (int)items.size() ;
 
   // Wait for all thread to return their items
-  for (int i = 0 ; i < items.size() ; ++i) {
+  for (size_t i = 0 ; i < (size_t)items.size() ; ++i) {
     while (items[i]->borrowed) {
       waitCompletion.wait(lock) ;
     }
   }
-  for (int i = 0 ; i < items.size() ; ++i) {
+  for (size_t i = 0 ; i < (size_t)items.size() ; ++i) {
     delete items[i] ;
   }
   items.clear() ;
@@ -518,7 +520,7 @@ void Batch::setGpuMode(bool gpu)
   gpuMode = gpu ;
 }
 
-void Batch::setResizeMethod(Batch::ResizeMethod method, int height, int width)
+void Batch::setResizeMethod(Batch::ResizeMethod method, Int height, Int width)
 {
   resizeMethod = method ;
   resizeHeight = height ;
@@ -596,12 +598,12 @@ vl::ErrorCode Batch::prefetch()
   // In packing mode, preallocate all memory here.
   if (packingMethod == singleArray) {
     assert(resizeMethod == fixedSize) ;
-    vl::TensorShape shape(resizeHeight, resizeWidth, 3, getNumberOfItems()) ;
+    vl::TensorShape shape(resizeHeight, resizeWidth, 3, (Int)getNumberOfItems()) ;
     if (gpuMode) {
 #if ENABLE_GPU
       gpuPack.init(vl::VLDT_GPU, vl::VLDT_Float, shape) ;
       gpuPack.makePersistent() ;
-      size_t memSize = shape.getNumElements() * sizeof(float) ;
+      size_t memSize = (size_t)shape.getNumElements() * sizeof(float) ;
       if (cpuPinnedPackSize < memSize) {
         if (cpuPinnedPack) {
           cudaFreeHost(cpuPinnedPack) ;
@@ -620,7 +622,7 @@ vl::ErrorCode Batch::prefetch()
   nextItem = 0 ;
   numReturnedItems = 0 ;
 
-  for (int i = 0 ; i < getNumberOfItems() ; ++ i) {
+  for (size_t i = 0 ; i < getNumberOfItems() ; ++ i) {
     Batch::Item * item = getItem(i) ;
     if (item->error == vl::VLE_Success) {
       if (verbosity >= 2) {
@@ -634,12 +636,12 @@ vl::ErrorCode Batch::prefetch()
     // the same as the input image, or with a fixed size for the shortest side,
     // or a fixed size for both sides.
 
-    int outputHeight ;
-    int outputWidth ;
+    Int outputHeight ;
+    Int outputWidth ;
     double cropHeight ;
     double cropWidth ;
-    int dx ;
-    int dy ;
+    Int dx ;
+    Int dy ;
 
     switch (resizeMethod) {
       case noResize:
@@ -735,7 +737,7 @@ vl::ErrorCode Batch::prefetch()
     item->saturationShift = (float)(1. + saturationDeviation * (2.*(double)rand()/RAND_MAX - 1.)) ;
     item->contrastShift = (float)(1. + contrastDeviation * (2.*(double)rand()/RAND_MAX - 1.)) ;
     {
-      int numChannels = (int)item->outputNumChannels ;
+      Int numChannels = item->outputNumChannels ;
       double w [3] ;
       for (int i = 0 ; i < numChannels ; ++i) { w[i] = vl::randn() ; }
       for (int i = 0 ; i < numChannels ; ++i) {
@@ -881,10 +883,10 @@ void ReaderTask::entryPoint()
         }
 
         // Read full image.
-        float * inputPixels = (float*)getBuffer(0,
-                                                item->shape.height *
-                                                item->shape.width *
-                                                item->shape.depth * sizeof(float)) ;
+        float * inputPixels = (float*)getBuffer
+        (0, size_t(item->shape.height *
+                   item->shape.width *
+                   item->shape.depth) * sizeof(float)) ;
         item->error = reader->readPixels(inputPixels, item->name.c_str()) ;
         if (item->error != vl::VLE_Success) {
           snprintf(item->errorMessage, sizeof(item->errorMessage), "%s", reader->getLastErrorMessage()) ;
@@ -892,10 +894,11 @@ void ReaderTask::entryPoint()
         }
 
         // Crop.
-        float * temp = (float*)getBuffer(1,
-                                         item->outputHeight *
-                                         item->shape.width *
-                                         item->shape.depth * sizeof(float)) ;
+        float * temp = (float*)getBuffer
+        (1,
+         size_t(item->outputHeight *
+                item->shape.width *
+                item->shape.depth) * sizeof(float)) ;
 
         vl::impl::imageResizeVertical(temp, inputPixels,
                                       item->outputHeight,
@@ -919,17 +922,17 @@ void ReaderTask::entryPoint()
 
         // Postprocess colors.
         {
-          size_t inputNumChannels = item->shape.depth ;
-          size_t K = item->outputNumChannels ;
-          size_t n = item->outputHeight*item->outputWidth ;
+          Int inputNumChannels = item->shape.depth ;
+          Int K = item->outputNumChannels ;
+          Int n = item->outputHeight*item->outputWidth ;
           if (batch->averageImage) {
             // If there is an average image, then subtract it now.
             // Grayscale images are expanded here to color if needed.
             // Withouth an average image,
             // they are expanded later.
 
-            for (size_t k = inputNumChannels ; k < K ; ++k) {
-              ::memcpy(outputPixels + n*k, outputPixels, sizeof(float) * n) ;
+            for (Int k = inputNumChannels ; k < K ; ++k) {
+              ::memcpy(outputPixels + n*k, outputPixels, sizeof(float) * size_t(n)) ;
             }
 
             vl::impl::blas<vl::VLDT_CPU,vl::VLDT_Float>::axpy
@@ -943,11 +946,11 @@ void ReaderTask::entryPoint()
           }
           float dv [3] ;
           float * channels [3] ;
-          for (int k = 0 ; k < K ; ++k) {
+          for (Int k = 0 ; k < K ; ++k) {
             channels[k] = outputPixels + n * k ;
           }
-          for (int k = 0 ; k < inputNumChannels ; ++k) {
-            dv[k] = item->brightnessShift[k] - batch->average[k] ;
+          for (Int k = 0 ; k < inputNumChannels ; ++k) {
+            dv[k] = (float)item->brightnessShift[k] - (float)batch->average[k] ;
             if (item->contrastShift != 1.) {
               double mu = 0. ;
               float const * pixel = channels[k] ;
@@ -959,11 +962,11 @@ void ReaderTask::entryPoint()
           }
           {
             float mu = 0.f ;
-            for (int k = 0 ; k < inputNumChannels ; ++k) {
+            for (Int k = 0 ; k < inputNumChannels ; ++k) {
               mu += dv[k] ;
             }
             float a = item->saturationShift ;
-            float b = (1. - item->saturationShift) / inputNumChannels ;
+            float b = float((1. - item->saturationShift) / inputNumChannels) ;
             for (int k = 0 ; k < inputNumChannels ; ++k) {
               dv[k] = a * dv[k] + b * mu ;
             }
@@ -1011,7 +1014,7 @@ void ReaderTask::entryPoint()
           cudaError_t cerror ;
           cerror = cudaMemcpyAsync (item->gpuArray.getMemory(),
                                     outputPixels,
-                                    item->gpuArray.getNumElements() * sizeof(float),
+                                    (size_t)item->gpuArray.getNumElements() * sizeof(float),
                                     cudaMemcpyHostToDevice,
                                     batch->cudaStream) ;
           if (cerror != cudaSuccess) {
@@ -1084,7 +1087,7 @@ void atExit()
     batch.finalize() ;
     batchIsInitialized = false ;
   }
-  for (int r = 0 ; r < readers.size() ; ++r) {
+  for (size_t r = 0 ; r < readers.size() ; ++r) {
     readers[r]->finalize() ;
     delete readers[r] ;
   }
@@ -1107,8 +1110,8 @@ void mexFunction(int nout, mxArray *out[],
 
   Batch::PackingMethod packingMethod = Batch::individualArrays ;
   Batch::ResizeMethod resizeMethod = Batch::noResize ;
-  int resizeWidth = -1 ;
-  int resizeHeight = -1 ;
+  Int resizeWidth = -1 ;
+  Int resizeHeight = -1 ;
   vl::ErrorCode error ;
 
   double average [3] = {0.} ;
@@ -1367,7 +1370,7 @@ void mexFunction(int nout, mxArray *out[],
   // Prepare reader tasks.
   for (size_t r = readers.size() ; r < requestedNumThreads ; ++r) {
     readers.push_back(new ReaderTask()) ;
-    vl::ErrorCode error = readers[r]->init(&batch, r) ;
+    vl::ErrorCode error = readers[r]->init(&batch, (int)r) ;
     if (error != vl::VLE_Success) {
       vlmxError(VLMXE_Execution, "Could not create the requested number of threads") ;
     }
@@ -1376,7 +1379,7 @@ void mexFunction(int nout, mxArray *out[],
   // Extract filenames as strings.
   bool sameAsPrefeteched = true ;
   std::vector<std::string> filenames ;
-  for (int i = 0 ; i < (int)mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
+  for (size_t i = 0 ; i < (int)mxGetNumberOfElements(in[IN_FILENAMES]) ; ++i) {
     mxArray* filenameArray = mxGetCell(in[IN_FILENAMES], i) ;
     if (!vlmxIsString(filenameArray,-1)) {
       vlmxError(VLMXE_IllegalArgument, "FILENAMES contains an entry that is not a string.") ;
@@ -1427,7 +1430,7 @@ void mexFunction(int nout, mxArray *out[],
 
     batch.setFilterType(filterType) ;
 
-    for (int i = 0 ; i < filenames.size() ; ++ i) {
+    for (size_t i = 0 ; i < filenames.size() ; ++ i) {
       batch.registerItem(filenames[i]) ;
     }
 
@@ -1451,7 +1454,7 @@ void mexFunction(int nout, mxArray *out[],
     case Batch::individualArrays:
       out[OUT_IMAGES] = mxCreateCellArray(mxGetNumberOfDimensions(in[IN_FILENAMES]),
                                           mxGetDimensions(in[IN_FILENAMES])) ;
-      for (int i = 0 ; i < batch.getNumberOfItems() ; ++i) {
+      for (size_t i = 0 ; i < batch.getNumberOfItems() ; ++i) {
         Batch::Item * item = batch.getItem(i) ;
         if (item->error != vl::VLE_Success) {
           vlmxWarning(VLMXE_Execution, "could not read image '%s' because '%s'",

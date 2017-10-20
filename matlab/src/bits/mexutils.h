@@ -440,13 +440,13 @@ vlmxCompareToStringI(mxArray const * array, char const  * string)
    Since tolower has an int argument, characters must be unsigned
    otherwise will be sign-extended when converted to int.
    */
-  while (n && tolower((unsigned)*s1) == tolower(*s2)) {
+  while (n && tolower(*s1) == tolower(*s2)) {
     if (*s2 == 0) return 1 ; /* s2 terminated on 0, but s1 did not terminate yet */
     s1 ++ ;
     s2 ++ ;
     n -- ;
   }
-  return tolower(n ? (unsigned)*s1 : 0) - tolower(*s2) ;
+  return tolower(n ? *s1 : 0) - tolower(*s2) ;
 }
 
 /** @brief Case insensitive string equality test with array

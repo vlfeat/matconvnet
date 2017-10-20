@@ -54,8 +54,8 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
 
   // intermediate buffer
   char unsigned * pixels = NULL ;
-  size_t bytesPerPixel = 0 ;
-  size_t bytesPerRow = 0 ;
+  Int bytesPerPixel = 0 ;
+  Int bytesPerRow = 0 ;
 
   // Core graphics
   CGBitmapInfo bitmapInfo = 0 ;
@@ -88,9 +88,9 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
   sourceColorSpaceRef = CGImageGetColorSpace(imageRef) ;
   check(sourceColorSpaceRef) ;
 
-  shape.width = CGImageGetWidth(imageRef);
-  shape.height = CGImageGetHeight(imageRef);
-  shape.depth = CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
+  shape.width = (Int)CGImageGetWidth(imageRef);
+  shape.height = (Int)CGImageGetHeight(imageRef);
+  shape.depth = (Int)CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
   check(shape.depth == 1 || shape.depth == 3) ;
 
   // decode image to L (8 bits per pixel) or RGBA (32 bits per pixel)
@@ -116,12 +116,13 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
   check(colorSpaceRef) ;
 
   bytesPerRow = shape.width * bytesPerPixel ;
-  pixels = (char unsigned*)malloc(shape.height * bytesPerRow) ;
+  pixels = (char unsigned*)malloc(size_t(shape.height * bytesPerRow)) ;
   check(pixels) ;
 
   contextRef = CGBitmapContextCreate(pixels,
-                                     shape.width, shape.height,
-                                     8, bytesPerRow,
+                                     (size_t)shape.width,
+                                     (size_t)shape.height,
+                                     8, (size_t)bytesPerRow,
                                      colorSpaceRef,
                                      bitmapInfo) ;
   check(contextRef) ;
@@ -133,10 +134,10 @@ vl::ImageReader::readPixels(float * memory, const char * fileName)
     Image image(shape, memory) ;
     switch (shape.depth) {
       case 3:
-        vl::impl::imageFromPixels<impl::pixelFormatRGBA>(image, pixels, as_signed(shape.width * bytesPerPixel)) ;
+        vl::impl::imageFromPixels<impl::pixelFormatRGBA>(image, pixels, shape.width * bytesPerPixel) ;
         break ;
       case 1:
-        vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, as_signed(shape.width * bytesPerPixel)) ;
+        vl::impl::imageFromPixels<impl::pixelFormatL>(image, pixels, shape.width * bytesPerPixel) ;
         break ;
     }
   }
@@ -181,9 +182,9 @@ vl::ImageReader::readShape(vl::ImageShape & shape, const char * fileName)
   sourceColorSpaceRef = CGImageGetColorSpace(imageRef) ;
   check(sourceColorSpaceRef) ;
 
-  shape.width = CGImageGetWidth(imageRef);
-  shape.height = CGImageGetHeight(imageRef);
-  shape.depth = CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
+  shape.width = (Int)CGImageGetWidth(imageRef);
+  shape.height = (Int)CGImageGetHeight(imageRef);
+  shape.depth = (Int)CGColorSpaceGetNumberOfComponents(sourceColorSpaceRef) ;
   check(shape.depth == 1 || shape.depth == 3) ;
 
 done:

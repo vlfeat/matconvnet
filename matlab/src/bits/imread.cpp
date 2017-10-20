@@ -13,11 +13,13 @@ the terms of the BSD license (see the COPYING file).
 #include "imread.hpp"
 #include <cstring>
 
+using Int = vl::Int ;
+
 vl::ImageShape::ImageShape()
 : height(0), width(0), depth(0)
 { }
 
-vl::ImageShape::ImageShape(size_t height, size_t width, size_t depth)
+vl::ImageShape::ImageShape(Int height, Int width, Int depth)
 : height(height), width(width), depth(depth)
 { }
 
@@ -41,7 +43,7 @@ bool vl::ImageShape::operator == (vl::ImageShape const & im)
   (depth == im.depth) ;
 }
 
-size_t vl::ImageShape::getNumElements() const
+Int vl::ImageShape::getNumElements() const
 {
   return height*width*depth ;
 }

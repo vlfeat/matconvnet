@@ -21,8 +21,8 @@ the terms of the BSD license (see the COPYING file).
 
 struct GPUVisitPattern
 {
-  size_t normsVolume ;
-  size_t inputVolume ;
+  int normsVolume ;
+  int inputVolume ;
   int dims [4] {1,1,1,1} ;
   int strides [4] {0,0,0,0} ;
   int ndims [4] {1,1,1,1} ;
@@ -32,45 +32,45 @@ struct GPUVisitPattern
 GPUVisitPattern getGPUVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 {
   // Compute tensor geometry.
-  int n = input.getNumDimensions() ;
-  auto inputDimensions = std::vector<size_t>(input.getDimensions(),
-                                             input.getDimensions() + n) ;
+  int n = (int)input.getNumDimensions() ;
+  auto inputDimensions = std::vector<int>(input.getDimensions(),
+                                          input.getDimensions() + n) ;
 
   assert(n <= 4) ; // Todo: relax.
 
-  size_t inputVolume = 1 ;
-  size_t normsVolume = 1 ;
-  auto dims = std::vector<Int>{} ;
-  auto steps = std::vector<Int>{} ;
-  auto ndims = std::vector<Int>{} ;
-  auto nstrides = std::vector<Int>{} ;
+  int inputVolume = 1 ;
+  int normsVolume = 1 ;
+  auto dims = std::vector<int>{} ;
+  auto steps = std::vector<int>{} ;
+  auto ndims = std::vector<int>{} ;
+  auto nstrides = std::vector<int>{} ;
 
   // Find out how to traverse the reduced results as the input is
   // scanned from first to last element.
   for (int d = 0 ; d < n ; ++d) {
     bool squashed =
-    (find(op.selectedDimensions.begin(), op.selectedDimensions.end(), d) !=
-     op.selectedDimensions.end()) ;
+    (find(begin(op.getSelectedDimensions()),
+          end(op.getSelectedDimensions()), d) != end(op.getSelectedDimensions())) ;
 
     if (squashed) {
-      dims.push_back(inputDimensions[d]) ;
+      dims.push_back(inputDimensions[(size_t)d]) ;
       steps.push_back(inputVolume) ;
     } else {
-      ndims.push_back(inputDimensions[d]) ;
+      ndims.push_back(inputDimensions[(size_t)d]) ;
       nstrides.push_back(inputVolume) ;
-      normsVolume *= inputDimensions[d] ;
+      normsVolume *= inputDimensions[(size_t)d] ;
     }
-    inputVolume *= inputDimensions[d] ;
+    inputVolume *= inputDimensions[(size_t)d] ;
   }
 
   //cout << steps.size() << " " << inputVolume << endl ;
   
-  for (int d = steps.size() ; d < 5 ; ++d) {
+  for (int d = (int)steps.size() ; d < 5 ; ++d) {
     steps.push_back(inputVolume) ;
     dims.push_back(1) ;
   }
   for (int d = 3 ; d >= 0 ; d--) {
-    steps[d+1] -= steps[d] * dims[d] ;
+    steps[size_t(d+1)] -= steps[(size_t)d] * dims[(size_t)d] ;
   }
 
   GPUVisitPattern vp ;
@@ -278,7 +278,7 @@ computeDerInput(type * derInputData,
 template<vl::DataType dataType, bool givenNorms>
 struct NormalizeLpForwardGPU
 {
-  vl::ErrorCode operator()(NormalizeLp & op,
+  vl::ErrorCode operator()(NormalizeLp const &op,
                            Tensor &output,
                            typename NormAgrument<givenNorms>::type norms,
                            Tensor const &input)
@@ -295,21 +295,21 @@ struct NormalizeLpForwardGPU
       normsData = (type*)norms.getMemory() ;
     }
     else {
-      normsData = (type*)op.context.getWorkspace
-      (vl::VLDT_GPU, vp.normsVolume * sizeof(type)) ;
+      normsData = (type*)op.getContext().getWorkspace
+      (vl::VLDT_GPU, (size_t)vp.normsVolume * sizeof(type)) ;
     }
 
     // Accumulate norms.
     if (!givenNorms) {
       computeNorms<type>
-      <<< divideAndRoundUp(vp.normsVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (normsData,inputData,op.exponent,op.epsilon,vp) ;
+      <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      (normsData,inputData,(type)op.getExponent(),(type)op.getEpsilon(),vp) ;
     }
 
     // Divide by them.
     type * outputData = (type*)output.getMemory() ;
     divideByNorms<type>
-    <<< divideAndRoundUp(vp.normsVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+    <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     (outputData,inputData,normsData,vp) ;
 
     //cout << "n vol " << vp.normsVolume << endl ;
@@ -334,7 +334,7 @@ struct NormalizeLpForwardWithNorms<vl::VLDT_GPU, dataType>
 template<vl::DataType dataType, bool givenNorms>
 struct NormalizeLpBackwardGPU
 {
-  vl::ErrorCode operator()(NormalizeLp &op,
+  vl::ErrorCode operator()(NormalizeLp const &op,
                            Tensor &derInput,
                            typename NormAgrument<givenNorms>::type norms,
                            Tensor const &input,
@@ -346,7 +346,7 @@ struct NormalizeLpBackwardGPU
     auto vp = getGPUVisitPatternForInput(op,input) ;
 
     // Get buffers.
-    size_t workspaceSize = vp.normsVolume * sizeof(type) ;
+    size_t workspaceSize = (size_t)vp.normsVolume * sizeof(type) ;
     type const * inputData = (type const*)input.getMemory() ;
     type * normsData ;
     if (norms) {
@@ -356,7 +356,7 @@ struct NormalizeLpBackwardGPU
       normsData = 0 ;
       workspaceSize *= 2 ;
     }
-    type * scratchData = (type*)op.context.getWorkspace(vl::VLDT_GPU, workspaceSize) ;
+    type * scratchData = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize) ;
     if (normsData == NULL) {
       normsData = scratchData + vp.normsVolume ;
     }
@@ -364,21 +364,21 @@ struct NormalizeLpBackwardGPU
     // Accumulate norms.
     if (!givenNorms) {
       computeNorms<type>
-      <<< divideAndRoundUp(vp.normsVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-      (normsData,inputData,op.exponent,op.epsilon,vp) ;
+      <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+      (normsData,inputData,(type)op.getExponent(),(type)op.getEpsilon(),vp) ;
     }
 
     // Compute sum(derOutput .* input).
     type const* derOutputData = (type const*)derOutput.getMemory() ;
     computeSum<type>
-    <<< divideAndRoundUp(vp.normsVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
+    <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     (scratchData,inputData,derOutputData,vp) ;
 
     // Compute derInputs.
     type * derInputData = (type*)derInput.getMemory() ;
     computeDerInput<type>
-    <<< divideAndRoundUp(vp.normsVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-    (derInputData,inputData,normsData,derOutputData,scratchData,op.exponent,vp) ;
+    <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    (derInputData,inputData,normsData,derOutputData,scratchData,(type)op.getExponent(),vp) ;
 
     return vl::VLE_Success ;
   }

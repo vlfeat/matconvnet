@@ -124,22 +124,23 @@ normalize_backward_kernel
 template<vl::DataType dataType>
 struct LRNForward<vl::VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(vl::nn::LRN &op,
+  vl::ErrorCode operator()(vl::nn::LRN const &op,
                            vl::Tensor &output,
                            vl::Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = output.getWidth() ;
-    auto height = output.getHeight() ;
-    auto depth = output.getDepth() ;
-    auto size = output.getSize() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto outputData = (type*)output.getMemory() ;
+    auto volume = input.getNumElements() ;
 
     normalize_forward_kernel<type>
-    <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-    (outputData, inputData, width, height, depth, size,
-     op.normDepth, op.kappa, op.alpha, op.beta) ;
+    <<< divideAndRoundUp((unsigned)volume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    ((type*)output.getMemory(),
+     (type const*)input.getMemory() ,
+     (int)output.getWidth(), (int)output.getHeight(),
+     (int)output.getDepth(), (int)output.getSize(),
+     (int)op.getNormDepth(),
+     (type)op.getKappa(),
+     (type)op.getAlpha(),
+     (type)op.getBeta()) ;
 
     cudaError_t status = cudaPeekAtLastError() ;
     return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
@@ -153,24 +154,25 @@ struct LRNForward<vl::VLDT_GPU, dataType>
 template<vl::DataType dataType>
 struct LRNBackward<vl::VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(vl::nn::LRN &op,
+  vl::ErrorCode operator()(vl::nn::LRN const &op,
                            vl::Tensor &derInput,
                            vl::Tensor const &input,
                            vl::Tensor const &derOutput)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = derOutput.getWidth() ;
-    auto height = derOutput.getHeight() ;
-    auto depth = derOutput.getDepth() ;
-    auto size = derOutput.getSize() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto derOutputData = (type const*)derOutput.getMemory() ;
-    auto derInputData = (type*)derInput.getMemory() ;
+    auto volume = derOutput.getNumElements() ;
 
     normalize_backward_kernel<type >
-    <<< divideAndRoundUp(width*height*size, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-    (derInputData, inputData, derOutputData, width, height, depth, size,
-     op.normDepth, op.kappa, op.alpha, op.beta) ;
+    <<< divideAndRoundUp((unsigned)volume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    ((type*)derInput.getMemory(),
+     (type const*)input.getMemory(),
+     (type const*)derOutput.getMemory(),
+     (int)derOutput.getWidth(), (int)derOutput.getHeight(),
+     (int)derOutput.getDepth(), (int)derOutput.getSize(),
+     (int)op.getNormDepth(),
+     (type)op.getKappa(),
+     (type)op.getAlpha(),
+     (type)op.getBeta()) ;
 
     cudaError_t status = cudaPeekAtLastError() ;
     return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;

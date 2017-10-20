@@ -108,31 +108,32 @@ struct PoolingForwardCPU
                            Tensor const &input)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    Int height = input.getHeight() ;
+    Int width = input.getWidth() ;
+    Int depth = input.getDepth() ;
+    Int size = input.getSize() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
     TensorShape outputShape ;
     op.forwardShape(outputShape, input) ;
-    auto outputHeight = as_signed(outputShape.getDimensions()[0]) ;
-    auto outputWidth = as_signed(outputShape.getDimensions()[1]) ;
+    assert(output == outputShape) ;
+    Int outputHeight = outputShape.getDimensions()[0] ;
+    Int outputWidth = outputShape.getDimensions()[1] ;
 
-    for (Int z = 0; z < as_signed(depth * size) ; ++z) {
+    for (Int z = 0; z < depth * size ; ++z) {
       for (Int x = 0; x < outputWidth ; ++x) {
         for (Int y = 0; y < outputHeight ; ++y) {
           Int y1 = y * op.getStride(0) - op.getPadding(0) ;
           Int x1 = x * op.getStride(1) - op.getPadding(2) ;
-          Int y2 = std::min(y1 + op.getShape(0), as_signed(height)) ;
-          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          Int y2 = std::min(y1 + op.getShape(0), height) ;
+          Int x2 = std::min(x1 + op.getShape(1), width) ;
           y1 = std::max(y1, 0L) ;
           x1 = std::max(x1, 0L) ;
           Accumulator acc(y2 - y1, x2 - x1) ;
-          for (auto u = x1 ; u < x2 ; ++u) {
-            for (auto v = y1 ; v < y2 ; ++v) {
-              acc.accumulate_forward(inputData[u * as_signed(height) + v]) ;
+          for (Int u = x1 ; u < x2 ; ++u) {
+            for (Int v = y1 ; v < y2 ; ++v) {
+              acc.accumulate_forward(inputData[u * height + v]) ;
             }
           }
           outputData[x * outputHeight + y] = acc.done_forward() ;
@@ -193,20 +194,20 @@ struct PoolingBackwardCPU
     auto outputHeight = outputShape.getDimensions()[0] ;
     auto outputWidth = outputShape.getDimensions()[1] ;
 
-    for (Int z = 0; z < as_signed(depth * size) ; ++z) {
-      for (Int x = 0; x < as_signed(outputWidth) ; ++x) {
-        for (Int y = 0; y < as_signed(outputHeight) ; ++y) {
+    for (Int z = 0; z < depth * size ; ++z) {
+      for (Int x = 0; x < outputWidth ; ++x) {
+        for (Int y = 0; y < outputHeight ; ++y) {
           Int y1 = y * op.getStride(0) - op.getPadding(0) ;
           Int x1 = x * op.getStride(1) - op.getPadding(2) ;
-          Int y2 = std::min(y1 + op.getShape(0), as_signed(height)) ;
-          Int x2 = std::min(x1 + op.getShape(1), as_signed(width)) ;
+          Int y2 = std::min(y1 + op.getShape(0), height) ;
+          Int x2 = std::min(x1 + op.getShape(1), width) ;
           y1 = std::max(y1, 0L) ;
           x1 = std::max(x1, 0L) ;
-          Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * as_signed(outputHeight) + y]) ;
+          Accumulator acc(y2 - y1, x2 - x1, derOutputData[x * outputHeight + y]) ;
           for (Int u = x1 ; u < x2 ; ++u) {
             for (Int v = y1 ; v < y2 ; ++v) {
-              acc.accumulate_backward(&inputData[u * as_signed(height) + v],
-                                      &derInputData[u * as_signed(height) + v]) ;
+              acc.accumulate_backward(&inputData[u * height + v],
+                                      &derInputData[u * height + v]) ;
             }
           }
           acc.done_backward() ;
@@ -308,17 +309,17 @@ Pooling::forwardShape(TensorShape& output,
                       TensorShape const& input) const
 {
   output = TensorShape() ; // null
-  if (as_signed(input.getNumDimensions()) < getNumSpatialDimensions()) {
+  if (input.getNumDimensions() < getNumSpatialDimensions()) {
     return VLE_IllegalArgument ;
   }
   output = input ;
   for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    auto odim = convLikeSizeHelper(as_signed(input.getDimensions()[d]),
+    auto odim = convLikeSizeHelper(input.getDimensions()[d],
                                    getShape(d),
                                    getStride(d),
                                    {getPadding(2*d),getPadding(2*d+1)},
                                    1) ;
-    output.setDimension(as_unsigned(d), as_unsigned(odim)) ;
+    output.setDimension(d, odim) ;
   }
   return VLE_Success ;
 }

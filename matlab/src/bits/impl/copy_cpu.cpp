@@ -29,7 +29,7 @@ namespace vl { namespace impl {
       } else {
         auto end = src + numElements ;
         while (src != end) {
-          *dst++ = mult * (*src++) ;
+          *dst++ = static_cast<type>(mult) * (*src++) ;
         }
       }
       return VLE_Success ;

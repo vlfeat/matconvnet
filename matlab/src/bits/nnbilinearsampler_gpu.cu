@@ -188,9 +188,9 @@ __global__ void grid_backward_kernel
 }
 
 /** get the number of threads (1D) and blocks (2D). **/
-vl::ErrorCode get_launch_params(const int& N, int& nTh, int& nGx, int& nGy)
+vl::ErrorCode get_launch_params(Int const& N, Int& nTh, Int& nGx, Int& nGy)
 {
-  nGx = vl::divideAndRoundUp(N, VL_CUDA_NUM_THREADS);
+  nGx = (int)vl::divideAndRoundUp((unsigned)N,VL_CUDA_NUM_THREADS);
   if (nGx == 1) {
     nTh = N;
     nGy = 1;
@@ -199,7 +199,7 @@ vl::ErrorCode get_launch_params(const int& N, int& nTh, int& nGx, int& nGy)
     if (nGx <= MAX_GRID_DIM) {
       nGy = 1;
     } else {
-      nGy = vl::divideAndRoundUp(nGx, MAX_GRID_DIM);
+      nGy = vl::divideAndRoundUp(nGx, (Int)MAX_GRID_DIM);
       nGx = MAX_GRID_DIM;
       if (nGy > MAX_GRID_DIM) {
         // the following print statement is probably not
@@ -223,8 +223,8 @@ forward_backward_gpu
  type const* data,
  type const* grid,
  type const* derOutput,
- size_t outHeight, size_t outWidth, size_t outDepth, size_t outCardinality,
- size_t inHeight, size_t inWidth, size_t inCardinality)
+ Int outHeight, Int outWidth, Int outDepth, Int outCardinality,
+ Int inHeight, Int inWidth, Int inCardinality)
 {
   //bool backward = backwardData || backwardGrid ;
   // common conditions
@@ -246,38 +246,41 @@ forward_backward_gpu
   // }
 
   // setup and launch the kernel for DER-DATA:
-  int nTh, nGx, nGy;
-  const int outVolume = outHeight * outWidth * outDepth * outCardinality ;
+  Int nTh, nGx, nGy;
+  Int outVolume = outHeight * outWidth * outDepth * outCardinality ;
   vl::ErrorCode volume_ok = get_launch_params(outVolume, nTh, nGx, nGy);
-  if (volume_ok != vl::VLE_Success) { return volume_ok;}
+  if (volume_ok != vl::VLE_Success) { return volume_ok; }
 
-  dim3  gridDim(nGx,nGy); // grid-dimensions
+  dim3 gridDim((unsigned)nGx,(unsigned)nGy); // grid-dimensions
   forward_backward_kernel <type, backwardData>
-    <<< gridDim, nTh >>> (output,
-                          derInputData,
-                          data,
-                          grid,
-                          derOutput,
-                          outHeight, outWidth, outDepth, outCardinality,
-                          inHeight, inWidth, inCardinality) ;
+    <<< gridDim, (unsigned)nTh >>>
+  (output,
+   derInputData,
+   data,
+   grid,
+   derOutput,
+   (int)outHeight, (int)outWidth, (int)outDepth, (int)outCardinality,
+   (int)inHeight, (int)inWidth, (int)inCardinality) ;
 
   cudaError_t status = cudaPeekAtLastError() ;
   if (status != cudaSuccess) { return vl::VLE_Cuda; }
 
   if (backwardGrid) {
     // setup and launch kernel for DER-GRID:
-    const int outN = outHeight * outWidth * outCardinality;
+    auto const outN = outHeight * outWidth * outCardinality;
     volume_ok = get_launch_params(outN, nTh, nGx, nGy);
     if (volume_ok != vl::VLE_Success) { return volume_ok;}
 
-    gridDim.x = nGx; gridDim.y = nGy; // grid-dimensions
+    gridDim.x = (unsigned)nGx;
+    gridDim.y = (unsigned)nGy;
     grid_backward_kernel <type>
-    <<< gridDim, nTh >>>  ( derGrid,
-                            data, grid,
-                            derOutput,
-                            outHeight, outWidth, outDepth, outCardinality,
-                            inHeight, inWidth, inCardinality ) ;    
-  status = cudaPeekAtLastError() ;
+    <<< gridDim, (unsigned)nTh >>>
+    (derGrid,
+     data, grid,
+     derOutput,
+     (int)outHeight, (int)outWidth, (int)outDepth, (int)outCardinality,
+     (int)inHeight, (int)inWidth, (int)inCardinality ) ;
+    status = cudaPeekAtLastError() ;
   }
   // catch any errors:
   return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
@@ -291,27 +294,20 @@ template<DataType dataType>
 struct BilinearSamplerForward<VLDT_GPU,dataType>
 {
   vl::ErrorCode operator()
-  (BilinearSampler &op,
+  (BilinearSampler const &op,
    Tensor &output,
    Tensor const &input,
    Tensor const &grid)
   {
     typedef typename DataTypeTraits<dataType>::type type ;
-    auto outHeight = output.getHeight() ;
-    auto outWidth = output.getWidth() ;
-    auto outDepth = output.getDepth() ;
-    auto outCardinality = output.getSize() ;
-    auto inHeight = input.getHeight() ;
-    auto inWidth = input.getWidth() ;
-    auto inCardinality = input.getSize() ;
-    auto outputData = (type*)output.getMemory() ;
-    auto inputData = (type const*)input.getMemory() ;
-    auto gridData = (type const*)grid.getMemory() ;
-
     return forward_backward_gpu<type, false, false>
-    (op.context, outputData, NULL, NULL, inputData, gridData, NULL,
-     outHeight, outWidth, outDepth, outCardinality,
-     inHeight, inWidth,inCardinality) ;
+    (op.getContext(),
+     (type*)output.getMemory(), NULL, NULL,
+     (type const*)input.getMemory(),
+     (type const*)grid.getMemory(), NULL,
+     (int)output.getHeight(), (int)output.getWidth(),
+     (int)output.getDepth(), (int)output.getSize(),
+     (int)input.getHeight(), (int)input.getWidth(), (int)input.getSize()) ;
   }
 } ;
 
@@ -322,7 +318,7 @@ struct BilinearSamplerForward<VLDT_GPU,dataType>
 #undef DISPATCH
 #define DISPATCH(bwData, bwGrid) \
 error = forward_backward_gpu<type, bwData, bwGrid> \
-    (op.context, NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
+    (op.getContext(), NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
      outHeight, outWidth, outDepth, outCardinality, \
      inHeight, inWidth,inCardinality) ;
 
@@ -330,7 +326,7 @@ template<DataType dataType>
 struct BilinearSamplerBackward<VLDT_GPU,dataType>
 {
   vl::ErrorCode operator()
-  (BilinearSampler &op,
+  (BilinearSampler const &op,
    Tensor &derInput,
    Tensor &derGrid,
    Tensor const &input,

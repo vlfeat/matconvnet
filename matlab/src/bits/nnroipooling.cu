@@ -34,7 +34,7 @@ template<DeviceType deviceType, DataType dataType> struct ROIPoolingBackward ;
 template <typename type>
 struct acc_max
 {
-  inline acc_max(int poolHeight, int poolWidth, type derOutput = 0)
+  inline acc_max(Int poolHeight, Int poolWidth, type derOutput = 0)
   :
   value(-std::numeric_limits<type>::infinity()),
   derOutput(derOutput),
@@ -69,7 +69,7 @@ struct acc_max
 template <typename type>
 struct acc_sum
 {
-  inline acc_sum(int poolHeight, int poolWidth, type derOutput = 0)
+  inline acc_sum(Int poolHeight, Int poolWidth, type derOutput = 0)
   :
   value(0),
   scale(type(1)/type(poolHeight*poolWidth)),
@@ -108,17 +108,17 @@ struct ROIPoolingForwardCPU
                            Tensor const &rois)
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto numROIs = rois.getNumElements() / 5 ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    Int numROIs = rois.getNumElements() / 5 ;
+    Int height = input.getHeight() ;
+    Int width = input.getWidth() ;
+    Int depth = input.getDepth() ;
+    Int size = input.getSize() ;
     auto roisData = (type const*)rois.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto pooledData = (type*)pooled.getMemory() ;
 
     // For each ROI R = [t x1 y1 x2 y2].
-    for (int roi = 0; roi < (int)numROIs; ++roi) {
+    for (Int roi = 0; roi < numROIs; ++roi) {
 
       // Apply scale and offset to each ROI coordinate.
       type u1_ = roisData[5 * roi + 1] ;
@@ -127,44 +127,43 @@ struct ROIPoolingForwardCPU
       type v2_ = roisData[5 * roi + 4] ;
 
       auto const& tf = op.getTransform() ;
-      type u1 = tf[0] * u1_ + tf[2] * v1_ + tf[4] ;
-      type v1 = tf[1] * u1_ + tf[3] * v1_ + tf[5] ;
-      type u2 = tf[0] * u2_ + tf[2] * v2_ + tf[4] ;
-      type v2 = tf[1] * u2_ + tf[3] * v2_ + tf[5] ;
+      type u1 = (type)tf[0] * u1_ + (type)tf[2] * v1_ + (type)tf[4] ;
+      type v1 = (type)tf[1] * u1_ + (type)tf[3] * v1_ + (type)tf[5] ;
+      type u2 = (type)tf[0] * u2_ + (type)tf[2] * v2_ + (type)tf[4] ;
+      type v2 = (type)tf[1] * u2_ + (type)tf[3] * v2_ + (type)tf[5] ;
 
       // First and last pixel of each ROI (rounded
       // for compatibility with the Caffe definition).
-      int roi_image   = (int)roisData[5 * roi + 0];
-      int roi_start_h = (int)::round(v1) - 1 ;
-      int roi_start_w = (int)::round(u1) - 1 ;
-      int roi_end_h   = (int)::round(v2) - 1 ;
-      int roi_end_w   = (int)::round(u2) - 1 ;
-      int roi_height  = std::max(roi_end_h - roi_start_h + 1, 1) ;
-      int roi_width   = std::max(roi_end_w - roi_start_w + 1, 1) ;
+      Int roi_image   = (Int)roisData[5 * roi + 0];
+      Int roi_start_h = (Int)::round(v1) - 1 ;
+      Int roi_start_w = (Int)::round(u1) - 1 ;
+      Int roi_end_h   = (Int)::round(v2) - 1 ;
+      Int roi_end_w   = (Int)::round(u2) - 1 ;
+      Int roi_height  = std::max(roi_end_h - roi_start_h + 1, Int(1)) ;
+      Int roi_width   = std::max(roi_end_w - roi_start_w + 1, Int(1)) ;
 
-      roi_image = std::min(std::max(roi_image - 1,0), (int)size - 1) ;
-      type const * data_offset = inputData + (roi_image * as_signed(depth))
-      * as_signed(width*height) ;
+      roi_image = std::min(std::max(roi_image - 1,Int(0)), size - 1) ;
+      type const * data_offset = inputData + (roi_image * depth) * (width*height) ;
 
-      type bin_size_h = (double)roi_height / op.getSubdivisions()[0] ;
-      type bin_size_w = (double)roi_width / op.getSubdivisions()[1] ;
+      type bin_size_h = (type)roi_height / op.getSubdivisions()[0] ;
+      type bin_size_w = (type)roi_width / op.getSubdivisions()[1] ;
 
       // For each feature channel.
-      for (int z = 0; z < as_signed(depth); ++z) {
+      for (Int z = 0; z < depth; ++z) {
 
         // For each column of tiles.
-        for (int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
-          int wstart = (int)floor(((type)pw) * bin_size_w) ;
-          int wend = (int)ceil(((type)(pw + 1)) * bin_size_w) ;
-          wstart = std::min(std::max(wstart + roi_start_w, 0), (int)width) ;
-          wend = std::min(std::max(wend + roi_start_w, 0), (int)width) ;
+        for (Int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
+          Int wstart = (Int)floor(((type)pw) * bin_size_w) ;
+          Int wend = (Int)ceil(((type)(pw + 1)) * bin_size_w) ;
+          wstart = std::min(std::max(wstart + roi_start_w, Int(0)), width) ;
+          wend = std::min(std::max(wend + roi_start_w, Int(0)), width) ;
 
           // For each tile in a column.
-          for (int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
-            int hstart = (int)floor(((type)ph) * bin_size_h) ;
-            int hend = (int)ceil(((type)(ph + 1)) * bin_size_h) ;
-            hstart = std::min(std::max(hstart + roi_start_h, 0), (int)height) ;
-            hend = std::min(std::max(hend + roi_start_h, 0), (int)height) ;
+          for (Int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
+            Int hstart = (Int)floor(((type)ph) * bin_size_h) ;
+            Int hend = (Int)ceil(((type)(ph + 1)) * bin_size_h) ;
+            hstart = std::min(std::max(hstart + roi_start_h, Int(0)), height) ;
+            hend = std::min(std::max(hend + roi_start_h, Int(0)), height) ;
 
             bool is_empty = (hend <= hstart) || (wend <= wstart);
 
@@ -173,9 +172,9 @@ struct ROIPoolingForwardCPU
             }
             else {
               Accumulator acc(hend - hstart, wend - wstart) ;
-              for (int w = wstart ; w < wend; ++w) {
-                for (int h = hstart ; h < hend; ++h) {
-                  auto const index = w * as_signed(height) + h ;
+              for (Int w = wstart ; w < wend; ++w) {
+                for (Int h = hstart ; h < hend; ++h) {
+                  auto const index = w * height + h ;
                   acc.accumulate_forward(data_offset[index]) ;
                 }
               }
@@ -236,7 +235,7 @@ struct ROIPoolingBackwardCPU
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
 
-    memset(derInputData, 0, derInput.getNumElements() * sizeof(type)) ;
+    memset(derInputData, 0, (size_t)derInput.getNumElements() * sizeof(type)) ;
 
     // For each ROI R = [t x1 y1 x2 y2].
     for (size_t roi = 0; roi < numROIs ; ++roi) {
@@ -248,49 +247,49 @@ struct ROIPoolingBackwardCPU
       type v2_ = roisData[5 * roi + 4] ;
 
       auto const& tf = op.getTransform() ;
-      type u1 = tf[0] * u1_ + tf[2] * v1_ + tf[4] ;
-      type v1 = tf[1] * u1_ + tf[3] * v1_ + tf[5] ;
-      type u2 = tf[0] * u2_ + tf[2] * v2_ + tf[4] ;
-      type v2 = tf[1] * u2_ + tf[3] * v2_ + tf[5] ;
+      type u1 = (type)tf[0] * u1_ + (type)tf[2] * v1_ + (type)tf[4] ;
+      type v1 = (type)tf[1] * u1_ + (type)tf[3] * v1_ + (type)tf[5] ;
+      type u2 = (type)tf[0] * u2_ + (type)tf[2] * v2_ + (type)tf[4] ;
+      type v2 = (type)tf[1] * u2_ + (type)tf[3] * v2_ + (type)tf[5] ;
 
       // First and last pixel of each ROI (rounded
       // for compatibility with the Caffe definition).
-      int roi_image   = (int)roisData[5 * roi + 0];
-      int roi_start_h = (int)::round(v1) - 1 ;
-      int roi_start_w = (int)::round(u1) - 1 ;
-      int roi_end_h   = (int)::round(v2) - 1 ;
-      int roi_end_w   = (int)::round(u2) - 1 ;
-      int roi_height = std::max(roi_end_h - roi_start_h + 1, 1) ;
-      int roi_width = std::max(roi_end_w - roi_start_w + 1, 1) ;
+      Int roi_image   = (Int)roisData[5 * roi + 0];
+      Int roi_start_h = (Int)::round(v1) - 1 ;
+      Int roi_start_w = (Int)::round(u1) - 1 ;
+      Int roi_end_h   = (Int)::round(v2) - 1 ;
+      Int roi_end_w   = (Int)::round(u2) - 1 ;
+      Int roi_height = std::max(roi_end_h - roi_start_h + 1, Int(1)) ;
+      Int roi_width = std::max(roi_end_w - roi_start_w + 1, Int(1)) ;
 
-      roi_image = std::min(std::max(roi_image - 1,0), (int)size - 1) ;
-      type const * data_offset = inputData + roi_image * as_signed(depth*width*height) ;
-      type * derInputData_offset = derInputData + roi_image * as_signed(depth*width*height) ;
+      roi_image = std::min(std::max(roi_image - 1,Int(0)), size - 1) ;
+      type const * data_offset = inputData + roi_image * (depth*width*height) ;
+      type * derInputData_offset = derInputData + roi_image * (depth*width*height) ;
 
-      const type bin_size_h = (double)roi_height / op.getSubdivisions()[0] ;
-      const type bin_size_w = (double)roi_width / op.getSubdivisions()[1] ;
+      const type bin_size_h = (type)roi_height / op.getSubdivisions()[0] ;
+      const type bin_size_w = (type)roi_width / op.getSubdivisions()[1] ;
 
       // For each feature channel.
-      for (int z = 0; z < (int)depth; ++z) {
+      for (Int z = 0; z < depth; ++z) {
 
         // For each column of tiles.
-        for (int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
-          int wstart = (int)floor(((type)pw) * bin_size_w) ;
-          int wend = (int)ceil(((type)(pw + 1)) * bin_size_w) ;
-          wstart = std::min(std::max(wstart + roi_start_w, 0), (int)width) ;
-          wend = std::min(std::max(wend + roi_start_w, 0), (int)width) ;
+        for (Int pw = 0; pw < op.getSubdivisions()[1]; ++pw) {
+          Int wstart = (Int)floor(((type)pw) * bin_size_w) ;
+          Int wend = (Int)ceil(((type)(pw + 1)) * bin_size_w) ;
+          wstart = std::min(std::max(wstart + roi_start_w, Int(0)), width) ;
+          wend = std::min(std::max(wend + roi_start_w, Int(0)), width) ;
 
           // For each tile in a column.
-          for (int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
-            int hstart = (int)floor(((type)ph) * bin_size_h) ;
-            int hend = (int)ceil(((type)(ph + 1)) * bin_size_h) ;
-            hstart = std::min(std::max(hstart + roi_start_h, 0), (int)height) ;
-            hend = std::min(std::max(hend + roi_start_h, 0), (int)height) ;
+          for (Int ph = 0; ph < op.getSubdivisions()[0]; ++ph) {
+            Int hstart = (Int)floor(((type)ph) * bin_size_h) ;
+            Int hend = (Int)ceil(((type)(ph + 1)) * bin_size_h) ;
+            hstart = std::min(std::max(hstart + roi_start_h, Int(0)), height) ;
+            hend = std::min(std::max(hend + roi_start_h, Int(0)), height) ;
 
             Accumulator acc(hend - hstart, wend - wstart, *derOutputData++) ;
-            for (int w = wstart; w < wend; ++w) {
-              for (int h = hstart; h < hend; ++h) {
-                auto const index = w * as_signed(height) + h ;
+            for (Int w = wstart; w < wend; ++w) {
+              for (Int h = hstart; h < hend; ++h) {
+                auto const index = w * height + h ;
                 acc.accumulate_backward(&data_offset[index],
                                         &derInputData_offset[index]) ;
               }

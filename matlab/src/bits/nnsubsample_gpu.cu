@@ -102,35 +102,30 @@ __global__ void subsample_backward_kernel
 template<vl::DataType dataType>
 struct SubsampleForward<vl::VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(Subsample &op,
+  vl::ErrorCode operator()(Subsample const &op,
                            Tensor &output,
                            Tensor const &input)
   {
+    // Argument sanity check.
     assert(output) ;
     assert(input) ;
+    TensorShape os ;
+    op.forwardShape(os, input) ;
+    assert(os == output) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = input.getWidth() ;
-    auto height = input.getHeight() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
-    auto inputData = (type*)input.getMemory() ;
-    auto outputData = (type*)output.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - 1)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - 1)/op.strideY + 1 ;
-    auto outputVolume = outputWidth * outputHeight * depth * size ;
-
-    assert(outputWidth == output.getWidth()) ;
-    assert(outputHeight == output.getHeight()) ;
+    Int outputVolume = output.getNumElements() ;
 
     subsample_forward_kernel<type>
-    <<< divideAndRoundUp(outputVolume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-    (outputData, inputData,
-     outputHeight, outputWidth, outputVolume,
-     height, width,
-     op.strideY, op.strideX,
-     op.padTop, op.padLeft);
-    return op.context.setError(op.context.getCudaHelper().catchCudaError(__func__)) ;
+    <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    ((type*)output.getMemory(),
+     (type const*)input.getMemory(),
+     (int)output.getHeight(), (int)output.getWidth(), (int)output.getNumElements(),
+     (int)input.getHeight(), (int)input.getWidth(),
+     (int)op.getStride(0), (int)op.getStride(1),
+     (int)op.getPadding(0), (int)op.getPadding(2));
+
+    return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(__func__)) ;
   }
 } ;
 
@@ -138,35 +133,29 @@ struct SubsampleForward<vl::VLDT_GPU, dataType>
 template<vl::DataType dataType>
 struct SubsampleBackward<vl::VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(Subsample &op,
+  vl::ErrorCode operator()(Subsample const &op,
                            Tensor &derInput,
                            Tensor const &derOutput)
   {
+    // Argument sanity check.
     assert(derInput) ;
     assert(derOutput) ;
+    TensorShape os ;
+    op.forwardShape(os, derInput) ;
+    assert(os == derOutput) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto width = derInput.getWidth() ;
-    auto height = derInput.getHeight() ;
-    auto depth = derInput.getDepth() ;
-    auto size = derInput.getSize() ;
-    auto volume = width * height * depth * size ;
-    auto derInputData = (type*)derInput.getMemory() ;
-    auto derOutputData = (type*)derOutput.getMemory() ;
-    auto outputWidth = (width + (op.padLeft + op.padRight) - 1)/op.strideX + 1 ;
-    auto outputHeight = (height + (op.padTop + op.padBottom) - 1)/op.strideY + 1 ;
-
-    assert(outputWidth == derOutput.getWidth()) ;
-    assert(outputHeight == derOutput.getHeight()) ;
+    Int volume = derInput.getNumElements() ;
 
     subsample_backward_kernel<type>
-    <<< divideAndRoundUp(volume, (size_t)VL_CUDA_NUM_THREADS), VL_CUDA_NUM_THREADS >>>
-    (derInputData,
-     derOutputData,
-     outputHeight, outputWidth, volume,
-     height, width,
-     op.strideY, op.strideX,
-     op.padTop, op.padLeft);
-    return op.context.setError(op.context.getCudaHelper().catchCudaError(__func__)) ;
+    <<< divideAndRoundUp((unsigned)volume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
+    ((type*)derInput.getMemory(),
+     (type const*)derOutput.getMemory(),
+     (int)derOutput.getHeight(), (int)derOutput.getWidth(), (int)volume,
+     (int)derInput.getHeight() , (int)derInput.getWidth() ,
+     (int)op.getStride(0), (int)op.getStride(1),
+     (int)op.getPadding(0), (int)op.getPadding(2)) ;
+
+    return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(__func__)) ;
   }
 } ;
