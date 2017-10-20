@@ -124,7 +124,7 @@ compute_ders_and_moments(T * derMultipliers,
     }
   }
 
-  T mass = WH*num;
+  T mass = (T)(WH*num) ;
   for(Int i = 0; i < depth; ++i) {
     T mean = moments[i] / mass ;
     T sigma2 = std::max((T).0, moments[i + depth]/mass - mean*mean) ;
@@ -147,14 +147,14 @@ batch_normalize_backward(T * derData,
                          Int depth,
                          Int num)
 {
-  T mass = WH*num;
-  for (Int channel = 0; channel < depth; ++channel ) {
+  T mass = (T)(WH*num) ;
+  for (Int channel = 0; channel < depth; ++channel) {
     T mean = moments[channel] ;
     T sigma = moments[channel + depth] ;
 
-    T muz = derBiases[channel]/mass;
+    T muz = derBiases[channel]/mass ;
     T G1 = multipliers[channel]/sigma ;
-    T G2 = G1 * derMultipliers[channel]/(mass*sigma);
+    T G2 = G1 * derMultipliers[channel]/(mass*sigma) ;
 
     for (Int element = 0; element < num; ++element){
       for (Int wh = 0; wh < WH; ++wh){

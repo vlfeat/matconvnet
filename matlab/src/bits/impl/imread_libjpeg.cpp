@@ -135,7 +135,7 @@ vl::ImageReader::Impl::readPixels(float * memory, char const * filename)
   while(decompressor.output_scanline < shape.height) {
     jpeg_read_scanlines(&decompressor,
                         scanlines + decompressor.output_scanline,
-                        shape.height - decompressor.output_scanline);
+                        (JDIMENSION)shape.height - decompressor.output_scanline);
   }
   {
     Image image(shape, memory) ;

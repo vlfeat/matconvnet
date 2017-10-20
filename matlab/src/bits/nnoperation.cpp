@@ -7,6 +7,7 @@
 //
 
 #include "nnoperation.hpp"
+#include <algorithm>
 
 using namespace vl ;
 using namespace vl::nn ;

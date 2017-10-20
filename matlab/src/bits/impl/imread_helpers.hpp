@@ -432,8 +432,8 @@ namespace vl { namespace impl {
        Find reverse mapping u = alpha v + beta where v is in the target
        domain and u in the source domain.
        */
-      float alpha = (float)cropWidth / outputWidth ;
-      float beta = 0.5f * (alpha - 1) + cropOffset ;
+      float alpha = (float)cropWidth / (float)outputWidth ;
+      float beta = 0.5f * (alpha - 1) + (float)cropOffset ;
       float filterSupport = (float)filterSize ;
 
       /* 
@@ -459,7 +459,7 @@ namespace vl { namespace impl {
         /* for uniformity we assume that the sum is non-zero for
          u - filterSize/2 <= k < u + filterSize/2
          so that there are always filerWidth elements to sum on */
-        float u = alpha * v + beta ;
+        float u = alpha * (float)v + beta ;
         float mass = 0 ;
         auto skip = filterSize ;
 
@@ -468,7 +468,7 @@ namespace vl { namespace impl {
         for (Int r = 0 ; r < filterSize ; ++r) {
           Int k = r + starts[v] ;
           float h ;
-          float delta = u - k ;
+          float delta = u - (float)k ;
           if (alpha > 1) {
             delta /= alpha ;
           }

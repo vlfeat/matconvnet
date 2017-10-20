@@ -449,16 +449,16 @@ void vl::print(char const * str, vl::MexTensor const & tensor)
   const char * units ;
   const char * type ;
   if (size < 1024) {
-    scaled = size ;
+    scaled =(double)size ;
     units = "B" ;
   } else if (size < 1024*1024) {
-    scaled = size / 1024.0 ;
+    scaled = (double)size / 1024.0 ;
     units = "KB" ;
   } else if (size < 1024*1024*1024) {
-    scaled = size / (1024.0 * 1024.0) ;
+    scaled = (double)size / (1024.0 * 1024.0) ;
     units = "MB" ;
   } else {
-    scaled = size / (1024.0 * 1024.0 * 1024.0) ;
+    scaled = (double)size / (1024.0 * 1024.0 * 1024.0) ;
     units = "GB" ;
   }
   const char * dev = "" ;

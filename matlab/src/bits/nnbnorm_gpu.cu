@@ -950,7 +950,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
     }
 
     // Normalize moments.
-    type mass = planeArea*size;
+    type mass = (type)(planeArea*size);
     normalize_moments
     <<< divideAndRoundUp((unsigned)numChannels,blockSize),blockSize >>>
     (momentData, (unsigned)numChannels, (type)mass, (type)op.getEpsilon()) ;
@@ -1064,7 +1064,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
     }
 
     // Normalize derMultiplier and derBias.
-    type mass = planeArea*size;
+    type mass = (type)(planeArea*size) ;
     normalize_ders<type>
     <<< divideAndRoundUp((unsigned)numChannels,blockSize),blockSize >>>
     (derMultiplierData, derBiasData, momentData,
@@ -1185,7 +1185,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
     }
 
     // Normalize derMultiplier and derBias.
-    type mass = planeArea*size;
+    type mass = (type)(planeArea*size);
     normalize_ders_and_moments<type>
     <<< divideAndRoundUp((unsigned)numChannels,blockSize),blockSize >>>
     (derMultiplierData, derBiasData, momentData,

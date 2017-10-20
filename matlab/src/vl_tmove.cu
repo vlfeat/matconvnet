@@ -4,7 +4,7 @@
  **/
 
 /*
-Copyright (C) 2016 Andrea Vedaldi.
+Copyright (C) 2016-17  Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -40,6 +40,8 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <sstream>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 using Int = vl::Int ;
 

@@ -16,9 +16,11 @@ the terms of the BSD license (see the COPYING file).
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include <thread>
 #include <cstdlib>
 #include <cassert>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #include "bits/impl/blashelper.hpp"
 #include "bits/imread.hpp"
@@ -650,11 +652,11 @@ vl::ErrorCode Batch::prefetch()
         break ;
 
       case resizeShortestSide: {
-        double scale1 = (double)resizeHeight / item->shape.width ;
-        double scale2 = (double)resizeHeight / item->shape.height ;
+        double scale1 = (double)resizeHeight / (double)item->shape.width ;
+        double scale2 = (double)resizeHeight / (double)item->shape.height ;
         double scale = std::max(scale1, scale2) ;
-        outputHeight = (int)std::max(1.0, round(scale * item->shape.height)) ;
-        outputWidth = (int)std::max(1.0, round(scale * item->shape.width)) ;
+        outputHeight = (int)std::max(1.0, round(scale * (double)item->shape.height)) ;
+        outputWidth = (int)std::max(1.0, round(scale * (double)item->shape.width)) ;
         break ;
       }
 
@@ -669,8 +671,8 @@ vl::ErrorCode Batch::prefetch()
       double anisotropyRatio = 1.0 ;
       if (minCropAnisotropy == 0 || maxCropAnisotropy == 0) {
         // Stretch crop to have the same shape as the input.
-        double inputAspect = (double)item->shape.width / item->shape.height ;
-        double outputAspect = (double)outputWidth / outputHeight ;
+        double inputAspect = (double)item->shape.width / (double)item->shape.height ;
+        double outputAspect = (double)outputWidth / (double)outputHeight ;
         anisotropyRatio = inputAspect / outputAspect ;
       } else {
         double z = (double)rand() / RAND_MAX ;
@@ -678,14 +680,14 @@ vl::ErrorCode Batch::prefetch()
         double b = log(minCropAnisotropy) ;
         anisotropyRatio = exp(z * (b - a) + a) ;
       }
-      cropWidth = outputWidth * sqrt(anisotropyRatio) ;
-      cropHeight = outputHeight / sqrt(anisotropyRatio) ;
+      cropWidth = (double)outputWidth * sqrt((double)anisotropyRatio) ;
+      cropHeight = (double)outputHeight / sqrt((double)anisotropyRatio) ;
     }
 
     // Determine the crop size.
     {
-      double scale = std::min(item->shape.width / cropWidth,
-                              item->shape.height / cropHeight) ;
+      double scale = std::min((double)item->shape.width / cropWidth,
+                              (double)item->shape.height / cropHeight) ;
       double z = (double)rand() / RAND_MAX ;
 #if 1
       double a = maxCropSize * maxCropSize ;
@@ -966,7 +968,7 @@ void ReaderTask::entryPoint()
               mu += dv[k] ;
             }
             float a = item->saturationShift ;
-            float b = float((1. - item->saturationShift) / inputNumChannels) ;
+            float b = float((1. - item->saturationShift) / (double)inputNumChannels) ;
             for (int k = 0 ; k < inputNumChannels ; ++k) {
               dv[k] = a * dv[k] + b * mu ;
             }
@@ -976,7 +978,7 @@ void ReaderTask::entryPoint()
             float v [3] ;
             if (K == 3 && inputNumChannels == 3) {
               float const a = item->contrastShift * item->saturationShift ;
-              float const b = item->contrastShift * (1.f - item->saturationShift) / K ;
+              float const b = item->contrastShift * (1.f - item->saturationShift) / (float)K ;
               while (channels[0] != end) {
                 float mu = 0.f ;
                 v[0] = *channels[0] ; mu += v[0] ;
@@ -988,7 +990,7 @@ void ReaderTask::entryPoint()
               }
             } else if (K == 3 && inputNumChannels == 1) {
               float const a = item->contrastShift * item->saturationShift ;
-              float const b = item->contrastShift * (1.f - item->saturationShift) / K ;
+              float const b = item->contrastShift * (1.f - item->saturationShift) / (float)K ;
               while (channels[0] != end) {
                 float mu = 0.f ;
                 v[0] = *channels[0] ; mu += v[0] ;

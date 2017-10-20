@@ -20,7 +20,7 @@ the terms of the BSD license (see the COPYING file).
 using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;
-using namespace std ;
+//using namespace std ;
 
 template<DeviceType deviceType, DataType dataType> struct PoolingForward ;
 template<DeviceType deviceType, DataType dataType> struct PoolingBackward ;
