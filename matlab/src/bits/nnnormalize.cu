@@ -146,7 +146,7 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = output.getWidth() ;
     Int height = output.getHeight() ;
-    Int depth = output.getNumChannels() ;
+    Int numChannels = output.getNumChannels() ;
     Int cardinality = output.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
@@ -163,20 +163,20 @@ struct LRNForward<vl::VLDT_CPU, dataType>
           type const* x = data + w + h * width ;
           type* y = output + w + h * width ;
           type acc = 0 ;
-          for (t = -m2 ; t < (signed)depth ; ++t) {
+          for (t = -m2 ; t < numChannels ; ++t) {
             type ap = 0 ;
             type am = 0 ;
             if (t-m1-1 >= 0) { am = xat(t-m1-1) ; }
-            if (t+m2 < depth) { ap = xat(t+m2) ; }
+            if (t+m2 < numChannels) { ap = xat(t+m2) ; }
             acc += ap*ap - am*am ;
-            if (0 <= t && t < depth) {
+            if (0 <= t && t < numChannels) {
               yat(t) = xat(t) * fast_pow(kappa + alpha * acc, -beta) ;
             }
           }
         }
       }
-      data += width*height*depth ;
-      output += width*height*depth ;
+      data += width*height*numChannels ;
+      output += width*height*numChannels ;
     }
 #else
     type * acc = (type*) calloc(sizeof(type), as_unsigned(width*height)) ;
@@ -186,30 +186,30 @@ struct LRNForward<vl::VLDT_CPU, dataType>
 
     for (Int k = 0 ; k < cardinality ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
-      for (t = -m2 ; t < (signed)depth ; ++t) {
+      for (t = -m2 ; t < numChannels ; ++t) {
         auto tm = t - m1 - 1 ;
         auto tp = t + m2 ;
         type const* xam = inputData + offset * (t-m1-1) ;
         type const* xap = inputData + offset * (t+m2) ;
         type *end = acc + width*height ;
-        if (0 <= tm && tp < depth) {
+        if (0 <= tm && tp < numChannels) {
           for(type *xacc = acc ; xacc != end ; ++xacc, ++xam, ++xap) {
             type am = *xam ;
             type ap = *xap ;
             *xacc += ap*ap - am*am ;
           }
-        } else if (0 > tm && tp < depth) {
+        } else if (0 > tm && tp < numChannels) {
           for(type *xacc = acc ; xacc != end ; ++xacc, ++xap) {
             type ap = *xap ;
             *xacc += ap*ap ;
           }
-        } else if (0 <= tm && tp >= depth) {
+        } else if (0 <= tm && tp >= numChannels) {
           for(type *xacc = acc ; xacc != end ; ++xacc, ++xam) {
             type am = *xam ;
             *xacc -= am*am ;
           }
         }
-        if (0 <= t && t < depth) {
+        if (0 <= t && t < numChannels) {
           type const* xx = inputData + offset * t ;
           type * xy = outputData + offset * t ;
           for(type *xacc = acc ; xacc != end ; ++xacc, ++xx, ++xy) {
@@ -217,8 +217,8 @@ struct LRNForward<vl::VLDT_CPU, dataType>
           }
         }
       }
-      inputData += width*height*depth ;
-      outputData += width*height*depth ;
+      inputData += width*height*numChannels ;
+      outputData += width*height*numChannels ;
     }
     free(acc) ;
 #endif
@@ -241,7 +241,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = derOutput.getWidth() ;
     Int height = derOutput.getHeight() ;
-    Int depth = derOutput.getNumChannels() ;
+    Int numChannels = derOutput.getNumChannels() ;
     Int cardinality = derOutput.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
@@ -262,22 +262,22 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
           T* y = output + w + h * width ;
           type const* z = derOutput + w + h * width ;
           type acc = 0 ;
-          for (t = 0 ; t < (signed)depth ; ++t) {
+          for (t = 0 ; t < numChannels ; ++t) {
             yat(t) = 0 ;
           }
-          for (t = -m2 ; t < (signed)depth ; ++t) {
+          for (t = -m2 ; t < numChannels ; ++t) {
             int q1 = t-m1 ;
             int q2 = t+m2 ;
             type ap = 0 ;
             type am = 0 ;
             if (t-m1-1 >= 0) { am = xat(t-m1-1) ; } else { q1 = 0 ; }
-            if (t+m2 < depth) { ap = xat(t+m2) ; } else { q2 = depth - 1 ; }
+            if (t+m2 < numChannels) { ap = xat(t+m2) ; } else { q2 = numChannels - 1 ; }
             acc += ap*ap - am*am ;
             type L = kappa + alpha * acc ;
             type Lbeta = fast_pow(L, -beta) ;
             type Lbeta1 = Lbeta / L ;
 
-            if (0 <= t && t < depth) {
+            if (0 <= t && t < numChannels) {
               yat(t) += zat(t) * Lbeta ;
               for (q = q1 ; q <= q2 ; ++ q) {
                 yat(q) -= zat(t) * xat(t) * xat(q) * ab2 * Lbeta1 ;
@@ -286,20 +286,20 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
           }
         }
       }
-      data += width*height*depth ;
-      output += width*height*depth ;
-      derOutput += width*height*depth ;
+      data += width*height*numChannels ;
+      output += width*height*numChannels ;
+      derOutput += width*height*numChannels ;
     }
 #else
     type * restrict acc = (type*) malloc(sizeof(type) * as_unsigned(width*height)) ;
-    type * restrict acc2 = (type*) malloc(sizeof(type) * as_unsigned(width*height*depth)) ;
+    type * restrict acc2 = (type*) malloc(sizeof(type) * as_unsigned(width*height*numChannels)) ;
     auto alpha = static_cast<type>(op.getAlpha()) ;
     auto kappa = static_cast<type>(op.getKappa()) ;
     auto beta = static_cast<type>(op.getBeta()) ;
 
     for (Int k = 0 ; k < cardinality ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
-      for (t = -m2 ; t < depth ; ++t) {
+      for (t = -m2 ; t < numChannels ; ++t) {
         /*
          Compue the square of the input data x.^2 summed in the normalization window. This is done
          incrementally, by updating the previous normalization window sum.
@@ -311,18 +311,18 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
           type const* restrict datap_ = inputData + offset * tp ;
           type *end = acc + width*height ;
 
-          if (0 <= tm && tp < depth) {
+          if (0 <= tm && tp < numChannels) {
             for(type * restrict acc_ = acc ; acc_ != end ; ++acc_, ++datap_, ++datam_) {
               type am = *datam_ ;
               type ap = *datap_ ;
               *acc_ += ap*ap - am*am ;
             }
-          } else if (0 > tm && tp < depth) {
+          } else if (0 > tm && tp < numChannels) {
             for(type * restrict acc_ = acc ; acc_ != end ; ++acc_, ++datap_) {
               type ap = *datap_ ;
               *acc_ += ap*ap ;
             }
-          } else if (0 <= tm && tp >= depth) {
+          } else if (0 <= tm && tp >= numChannels) {
             for(type * restrict acc_ = acc ; acc_ != end ; ++acc_, ++datam_) {
               type am = *datam_ ;
               *acc_ -= am*am ;
@@ -334,7 +334,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
          Compute the arguments of the summation in the derivative
          expression, storing them into acc2.
          */
-        if (0 <= t && t < depth) {
+        if (0 <= t && t < numChannels) {
           type const* restrict data_ = inputData + offset * t ;
           type const* restrict derOutput_ = derOutputData + offset * t ;
           type * restrict output_ = derInputData + offset * t ;
@@ -356,7 +356,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
        Integrate along feature channels in acc2, summing plane t-1 to
        plane t.
        */
-      for (t = 1 ; t < (signed)depth ; ++t) {
+      for (t = 1 ; t < numChannels ; ++t) {
         type * restrict acc2_ = acc2 + t * offset ;
         type const* restrict src_ = acc2_ - offset ;
         type const* end = acc2_ + offset ;
@@ -369,9 +369,9 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
        Compute summation in the derivative expression from the integral
        just obtained.
        */
-      for (t = 0 ; t < (signed)depth ; ++t) {
+      for (t = 0 ; t < numChannels ; ++t) {
         auto q1 = t - m2 - 1 ;
-        auto q2 = ((t + m1) <= depth - 1) ? t + m1 : depth - 1 ;
+        auto q2 = ((t + m1) <= numChannels - 1) ? t + m1 : numChannels - 1 ;
         type const* restrict acc22_ = acc2 + offset * q2 ;
         type const* restrict acc21_ = acc2 + offset * q1 ;
         type const* restrict data_  = inputData + offset * t ;
@@ -387,9 +387,9 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
           }
         }
       }
-      inputData += width*height*depth ;
-      derInputData += width*height*depth ;
-      derOutputData += width*height*depth ;
+      inputData += width*height*numChannels ;
+      derInputData += width*height*numChannels ;
+      derOutputData += width*height*numChannels ;
     }
     free(acc) ;
     free(acc2) ;
