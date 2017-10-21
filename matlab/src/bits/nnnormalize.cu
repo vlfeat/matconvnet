@@ -57,11 +57,10 @@ inline double fast_pow(double x, double y)
   double const pexp3 = 0.079441541679836 ;
   double const pexp2 = 0.227411277760219 ;
   double const pexp1 = 0.693147180559945 ;
-  typedef long long int int_t;
-  const int_t offset = 1023LL << 52 ;
+  const int64_t offset = 1023LL << 52 ;
 
-  int_t ix = *(int_t*)&x - offset ;
-  int_t imx = (ix & ((1LL<<52)-1LL)) + offset;
+  int64_t ix = *(int64_t*)&x - offset ;
+  int64_t imx = (ix & ((1LL<<52)-1LL)) + offset;
   double fx = (double)(ix >> 52) ;
   double mx = *((double*)&imx) - 1 ;
   double mx2 = mx*mx ;
@@ -77,7 +76,7 @@ inline double fast_pow(double x, double y)
   // double tz = fz + rz ;
 
   //  mexPrintf("%g %g -- ix %ld imx %ld fx %g mx %g t %g\n", x,y, ix,imx, fx, mx, t) ;
-  *((int_t*)&z) = (int_t)(tz * (1LL<<52)) + offset ;
+  *((int64_t*)&z) = (int64_t)(tz * (1LL<<52)) + offset ;
   //z = exp(t * log(2.0)) ;
   return z ;
 }
@@ -85,10 +84,9 @@ inline double fast_pow(double x, double y)
 inline double fast_pow(double a, double b)
 {
   double z ;
-  typedef long long int int_t;
-  const int_t offset = 1023L << 52 ;
-  int_t ai = *((int_t*)&a) ;
-  *((int_t*)&z) = (int_t)(b * (ai - offset)) + offset ;
+  const int64_t offset = 1023L << 52 ;
+  int64_t ai = *((int64_t*)&a) ;
+  *((int64_t*)&z) = (int64_t)(b * (ai - offset)) + offset ;
   return z ;
 }
 #endif
@@ -103,11 +101,10 @@ inline float fast_pow(float x, float y)
   float const pexp3 = 0.079441541679836F ;
   float const pexp2 = 0.227411277760219F ;
   float const pexp1 = 0.693147180559945F ;
-  typedef int int_t;
-  const int_t offset = 127 << 23 ;
+  const int32_t offset = 127 << 23 ;
 
-  int_t ix = *(int_t*)&x - offset ;
-  int_t imx = (ix & ((1<<23)-1)) + offset;
+  int32_t ix = *(int32_t*)&x - offset ;
+  int32_t imx = (ix & ((1<<23)-1)) + offset;
   float fx = (float)(ix >> 23) ;
   float mx = *((float*)&imx) - 1 ;
   float mx2 = mx*mx ;
@@ -120,17 +117,16 @@ inline float fast_pow(float x, float y)
   float rz3 = rz2*rz ;
   float tz = fz + rz*pexp1 + rz2*pexp2 + rz3*pexp3 ;
 
-  *((int_t*)&z) = (int_t)(tz * (1<<23)) + offset ;
+  *((int32_t*)&z) = (int32_t)(tz * (1<<23)) + offset ;
   return z ;
 }
 #else
 inline float fast_pow(float a, float b)
 {
   float z ;
-  typedef int int_t;
-  const int_t offset = 127 << 23 ;
-  int_t ai = *((int_t*)&a) ;
-  *((int_t*)&z) = (int_t)(b * (ai - offset)) + offset ;
+  const int32_t offset = 127 << 23 ;
+  int32_t ai = *((int32_t*)&a) ;
+  *((int32_t*)&z) = (int32_t)(b * (ai - offset)) + offset ;
   return z ;
 }
 #endif
@@ -151,7 +147,7 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     Int width = output.getWidth() ;
     Int height = output.getHeight() ;
     Int depth = output.getNumChannels() ;
-    Int num = output.getCardinality() ;
+    Int cardinality = output.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
@@ -161,7 +157,7 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     Int offset = width*height ;
 
 #ifndef VL_NNNORMALIZE_FAST
-    for (int k = 0 ; k < num ; ++k) {
+    for (int k = 0 ; k < cardinality ; ++k) {
       for (int h = 0 ; h < height ; ++h) {
         for (int w = 0 ; w < width ; ++w) {
           type const* x = data + w + h * width ;
@@ -188,7 +184,7 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     auto kappa = static_cast<type>(op.getKappa()) ;
     auto beta = static_cast<type>(op.getBeta()) ;
 
-    for (Int k = 0 ; k < num ; ++k) {
+    for (Int k = 0 ; k < cardinality ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
       for (t = -m2 ; t < (signed)depth ; ++t) {
         auto tm = t - m1 - 1 ;
@@ -246,7 +242,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     Int width = derOutput.getWidth() ;
     Int height = derOutput.getHeight() ;
     Int depth = derOutput.getNumChannels() ;
-    Int num = derOutput.getCardinality() ;
+    Int cardinality = derOutput.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
     auto derInputData = (type*)derInput.getMemory() ;
@@ -259,7 +255,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
 
 #ifndef VL_NNNORMALIZE_FAST
     int q ;
-    for (int k = 0 ; k < num ; ++k) {
+    for (int k = 0 ; k < cardinality ; ++k) {
       for (int h = 0 ; h < height ; ++h) {
         for (int w = 0 ; w < width ; ++w) {
           type const* x = data + w + h * width ;
@@ -301,7 +297,7 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     auto kappa = static_cast<type>(op.getKappa()) ;
     auto beta = static_cast<type>(op.getBeta()) ;
 
-    for (Int k = 0 ; k < num ; ++k) {
+    for (Int k = 0 ; k < cardinality ; ++k) {
       memset(acc, 0, sizeof(type) * as_unsigned(width*height)) ;
       for (t = -m2 ; t < depth ; ++t) {
         /*
