@@ -256,7 +256,7 @@ struct ROIPoolingForwardGPU
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int numROIs = rois.getNumElements() / 5 ;
-    Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getDepth() * numROIs ;
+    Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getNumChannels() * numROIs ;
 
     auto func = roipooling_max_kernel<type> ;
     if (method == ROIPooling::Average) {
@@ -267,7 +267,7 @@ struct ROIPoolingForwardGPU
     func <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     ((type*)output.getMemory(),
      (type const*)input.getMemory(),
-     (int)input.getHeight(),(int)input.getWidth(),(int)input.getDepth(),(int)input.getSize(),
+     (int)input.getHeight(),(int)input.getWidth(),(int)input.getNumChannels(),(int)input.getCardinality(),
      (type const*)rois.getMemory(), (int)numROIs,
      Geom<type>(op.getSubdivisions(),op.getTransform())) ;
 
@@ -311,7 +311,7 @@ struct ROIPoolingBackwardGPU
   {
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int numROIs = rois.getNumElements() / 5 ;
-    Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getDepth() * numROIs ;
+    Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getNumChannels() * numROIs ;
 
     auto func = roipooling_max_backward_kernel<type> ;
     if (method == ROIPooling::Average) {
@@ -322,7 +322,7 @@ struct ROIPoolingBackwardGPU
     func <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     ((type*)derInput.getMemory(),
      (type const*)input.getMemory(),
-     (int)input.getHeight(), (int)input.getWidth(), (int)input.getDepth(), (int)input.getSize(),
+     (int)input.getHeight(), (int)input.getWidth(), (int)input.getNumChannels(), (int)input.getCardinality(),
      (type const*)rois.getMemory(), (int)numROIs,
      (type const*)derOutput.getMemory(),
      Geom<type>(op.getSubdivisions(),op.getTransform())) ;

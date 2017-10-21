@@ -111,8 +111,8 @@ struct ROIPoolingForwardCPU
     Int numROIs = rois.getNumElements() / 5 ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int depth = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     auto roisData = (type const*)rois.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto pooledData = (type*)pooled.getMemory() ;
@@ -228,8 +228,8 @@ struct ROIPoolingBackwardCPU
     Int numROIs = rois.getNumElements() / 5 ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int depth = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     
     auto derInputData = (type*)derInput.getMemory() ;
     auto roisData = (type const*)rois.getMemory() ;

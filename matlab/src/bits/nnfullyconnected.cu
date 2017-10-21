@@ -43,13 +43,13 @@ struct FullyConnectedForward
     type beta = 0 ;
 
     if (filter) {
-      auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
-      if (input.getSize() == 1) {
+      auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getNumChannels() ;
+      if (input.getCardinality() == 1) {
         /* one image in the stack */
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.getContext(),
          't',
-         filterVolume, filter.getSize(),
+         filterVolume, filter.getCardinality(),
          alpha,
          (type const*)filter.getMemory(), filterVolume,
          (type const*)input.getMemory(), 1,
@@ -61,14 +61,14 @@ struct FullyConnectedForward
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          't', 'n',
-         filter.getSize(),
-         input.getSize(),
+         filter.getCardinality(),
+         input.getCardinality(),
          filterVolume,
          alpha,
          (type const*)filter.getMemory(), filterVolume,
          (type const*)input.getMemory(), filterVolume,
          beta,
-         (type*)output.getMemory(), filter.getSize()) ;
+         (type*)output.getMemory(), filter.getCardinality()) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
     } else {
@@ -83,14 +83,14 @@ struct FullyConnectedForward
       type const* allOnesMemory = (type*)
       op.getContext().getAllOnes(deviceType,
                             dataType,
-                            (size_t)input.getSize()) ;
+                            (size_t)input.getCardinality()) ;
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ;
         goto done ;
       }
       error = vl::impl::blas<deviceType,dataType>::gemm
       (op.getContext(), 'n', 'n',
-       bias.getNumElements(), input.getSize(), 1,
+       bias.getNumElements(), input.getCardinality(), 1,
        alpha,
        (type*)bias.getMemory(), bias.getNumElements(),
        allOnesMemory, 1,
@@ -125,18 +125,18 @@ struct FullyConnectedBackward
     type beta = 0 ;
 
     if (filter) {
-      auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+      auto filterVolume = filter.getHeight() * filter.getWidth() * filter.getNumChannels() ;
 
       if (derFilter) {
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
          'n', 't',
          filterVolume,
-         filter.getSize(),
-         input.getSize(),
+         filter.getCardinality(),
+         input.getCardinality(),
          alpha,
          (type*)input.getMemory(), filterVolume,
-         (type*)derOutput.getMemory(), filter.getSize(),
+         (type*)derOutput.getMemory(), filter.getCardinality(),
          beta,
          (type*)derFilter.getMemory(), filterVolume) ;
         if (error != vl::VLE_Success) { goto done ; }
@@ -147,11 +147,11 @@ struct FullyConnectedBackward
         (op.getContext(),
          'n', 'n',
          filterVolume,
-         input.getSize(),
-         filter.getSize(),
+         input.getCardinality(),
+         filter.getCardinality(),
          alpha,
          (type*)filter.getMemory(), filterVolume,
-         (type*)derOutput.getMemory(), filter.getSize(),
+         (type*)derOutput.getMemory(), filter.getCardinality(),
          beta,
          (type*)derInput.getMemory(), filterVolume) ;
         if (error != vl::VLE_Success) { goto done ; }
@@ -167,7 +167,7 @@ struct FullyConnectedBackward
       auto allOnesMemory = (type const*)
       op.getContext().getAllOnes(deviceType,
                             dataType,
-                            (size_t)derOutput.getSize()) ;
+                            (size_t)derOutput.getCardinality()) ;
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ;
         goto done ;
@@ -177,11 +177,11 @@ struct FullyConnectedBackward
       (op.getContext(),
        'n', 't',
        1,
-       derOutput.getDepth(),
-       derOutput.getSize(),
+       derOutput.getNumChannels(),
+       derOutput.getCardinality(),
        alpha,
        (type*)allOnesMemory, 1,
-       (type*)derOutput.getMemory(), derOutput.getDepth(),
+       (type*)derOutput.getMemory(), derOutput.getNumChannels(),
        beta,
        (type*)derBias.getMemory(), 1) ;
       if (error != vl::VLE_Success) { goto done ; }

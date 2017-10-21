@@ -45,8 +45,8 @@ struct SubsampleForward<vl::VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = input.getWidth() ;
     Int height = input.getHeight() ;
-    Int depth = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     auto inputData = (type*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
@@ -101,8 +101,8 @@ struct SubsampleAndBiasForward
       goto done ;
     }
 
-    for (Int image = 0 ; image < input.getSize() ; ++image) {
-      auto outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
+    for (Int image = 0 ; image < input.getCardinality() ; ++image) {
+      auto outputOffset = (output.getHeight()*output.getWidth()*output.getNumChannels()) * image ;
       if (biases) {
         type alpha = 1 ;
         type beta = 1 ;
@@ -141,8 +141,8 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto width = derInput.getWidth() ;
     auto height = derInput.getHeight() ;
-    auto depth = derInput.getDepth() ;
-    auto size = derInput.getSize() ;
+    auto depth = derInput.getNumChannels() ;
+    auto size = derInput.getCardinality() ;
     auto derInputData = (type*)derInput.getMemory() ;
     auto derOutputData = (type*)derOutput.getMemory() ;
 
@@ -206,14 +206,14 @@ struct SubsampleAndBiasBackward
         goto done ;
       }
 
-      for (Int image = 0 ; image < derInput.getSize() ; ++image) {
-        auto derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+      for (Int image = 0 ; image < derInput.getCardinality() ; ++image) {
+        auto derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getNumChannels()) * image ;
         type alpha = 1 ;
         type beta = (image > 0) ; // Avoids having to clear derOutputs first.
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.getContext(),
          't',
-         numOutputPixels, derOutput.getDepth(),
+         numOutputPixels, derOutput.getNumChannels(),
          alpha,
          (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
          allOnesMemory, 1,

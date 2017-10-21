@@ -300,7 +300,7 @@ void mexFunction(int nout, mxArray *out[],
   vl::TensorShape filtersShape(filters) ;
   Int equivalentNumFilters ;
   if (hasFilters) {
-    if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getDepth() == 0) {
+    if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getNumChannels() == 0) {
       vlmxError(VLMXE_IllegalArgument, "A dimension of FILTERS is void.") ;
     }
     if (data.getHeight() + (padTop+padBottom) < (filters.getHeight() - 1)*dilateY + 1 ||
@@ -308,19 +308,19 @@ void mexFunction(int nout, mxArray *out[],
       vlmxError(VLMXE_IllegalArgument, "FILTERS are larger than the DATA (including padding).") ;
     }
     /* grouped filters */
-    numFilterGroups = data.getDepth() / filters.getDepth() ;
-    if (numFilterGroups * filters.getDepth() != data.getDepth()) {
+    numFilterGroups = data.getNumChannels() / filters.getNumChannels() ;
+    if (numFilterGroups * filters.getNumChannels() != data.getNumChannels()) {
       vlmxError(VLMXE_IllegalArgument, "The FILTERS depth does not divide the DATA depth.") ;
     }
-    if (filters.getSize() % numFilterGroups != 0) {
+    if (filters.getCardinality() % numFilterGroups != 0) {
       vlmxError(VLMXE_IllegalArgument, "The number of filter groups does not divide the number of filters.") ;
     }
-    equivalentNumFilters = filters.getSize() ;
+    equivalentNumFilters = filters.getCardinality() ;
   } else {
     /* empty filters -> pretend the identity filter bank */
-    filtersShape = vl::TensorShape(1, 1, data.getDepth(), data.getDepth()) ;
+    filtersShape = vl::TensorShape(1, 1, data.getNumChannels(), data.getNumChannels()) ;
     numFilterGroups = 1 ;
-    equivalentNumFilters = data.getDepth() ;
+    equivalentNumFilters = data.getNumChannels() ;
   }
 
   /* Get the output shape */
@@ -330,7 +330,7 @@ void mexFunction(int nout, mxArray *out[],
   vl::TensorShape outputShape((data.getHeight() + (padTop+padBottom) - kernelExtentY)/strideY + 1,
                                 (data.getWidth()  + (padLeft+padRight) - kernelExtentX)/strideX + 1,
                                 equivalentNumFilters,
-                                data.getSize()) ;
+                                data.getCardinality()) ;
 
   if (backMode && (derOutput != outputShape)) {
     vlmxError(VLMXE_IllegalArgument, "DEROUTPUT dimensions are incompatible with X and FILTERS.") ;
@@ -338,7 +338,7 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Check the biases sizes */
   if (hasBiases) {
-    if (biases.getNumElements() != filtersShape.getSize()) {
+    if (biases.getNumElements() != filtersShape.getCardinality()) {
       vlmxError(VLMXE_IllegalArgument, "The number of elements of BIASES is not the same as the number of filters.") ;
     }
   }

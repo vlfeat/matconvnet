@@ -76,8 +76,8 @@ struct PoolingForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(outputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)output.getSize(),
-                                     (int)output.getDepth(),
+                                     (int)output.getCardinality(),
+                                     (int)output.getNumChannels(),
                                      (int)output.getWidth(),
                                      (int)output.getHeight())) ;
 
@@ -86,8 +86,8 @@ struct PoolingForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(inputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)input.getSize(),
-                                     (int)input.getDepth(),
+                                     (int)input.getCardinality(),
+                                     (int)input.getNumChannels(),
                                      (int)input.getWidth(),
                                      (int)input.getHeight())) ;
 
@@ -185,8 +185,8 @@ struct PoolingBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)derOutput.getSize(),
-                                     (int)derOutput.getDepth(),
+                                     (int)derOutput.getCardinality(),
+                                     (int)derOutput.getNumChannels(),
                                      (int)derOutput.getWidth(),
                                      (int)derOutput.getHeight())) ;
 
@@ -195,8 +195,8 @@ struct PoolingBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(inputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)input.getSize(),
-                                     (int)input.getDepth(),
+                                     (int)input.getCardinality(),
+                                     (int)input.getNumChannels(),
                                      (int)input.getWidth(),
                                      (int)input.getHeight())) ;
 

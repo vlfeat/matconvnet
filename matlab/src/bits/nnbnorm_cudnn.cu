@@ -116,8 +116,8 @@ struct BatchNormForwardWithMomentCudnn
     CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)input.getSize(),
-                                     (int)input.getDepth(),
+                                     (int)input.getCardinality(),
+                                     (int)input.getNumChannels(),
                                      (int)input.getWidth(),
                                      (int)input.getHeight())) ;
 
@@ -126,10 +126,10 @@ struct BatchNormForwardWithMomentCudnn
     CHECK(cudnnSetTensor4dDescriptor(momentDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     1, (int)input.getDepth(), 1, 1)) ;
+                                     1, (int)input.getNumChannels(), 1, 1)) ;
 
     // Allocate workspace.
-    workspaceSize = (size_t)input.getDepth() ;
+    workspaceSize = (size_t)input.getNumChannels() ;
     workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
     // Run CuDNN batch normalization implementation.
@@ -137,13 +137,13 @@ struct BatchNormForwardWithMomentCudnn
       type alpha = 1.0f ;
       type beta = 0.0f ;
       type * meanMemory = moment ? (type*)moment.getMemory() : workspace ;
-      type * stdMemory = meanMemory + input.getDepth() ;
+      type * stdMemory = meanMemory + input.getNumChannels() ;
       type * varMemory = workspace ;
 
       auto blockSize = VL_CUDA_NUM_THREADS ;
       std_to_var<type>
-      <<< divideAndRoundUp((unsigned)input.getDepth(),blockSize),blockSize >>>
-      (varMemory, stdMemory, (unsigned)input.getDepth(), (type)CUDNN_BN_MIN_EPSILON) ;
+      <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
+      (varMemory, stdMemory, (unsigned)input.getNumChannels(), (type)CUDNN_BN_MIN_EPSILON) ;
 
       CHECK(cudnnBatchNormalizationForwardInference
             (handle,
@@ -204,8 +204,8 @@ struct BatchNormForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)input.getSize(),
-                                     (int)input.getDepth(),
+                                     (int)input.getCardinality(),
+                                     (int)input.getNumChannels(),
                                      (int)input.getWidth(),
                                      (int)input.getHeight())) ;
 
@@ -214,7 +214,7 @@ struct BatchNormForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(momentDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     1, (int)input.getDepth(), 1, 1)) ;
+                                     1, (int)input.getNumChannels(), 1, 1)) ;
 
     // Run CuDNN batch normalization implementation.
     {
@@ -225,9 +225,9 @@ struct BatchNormForwardCudnn
 
       if (moment) {
         meanMemory = (type*)moment.getMemory()  ;
-        varMemory = meanMemory + input.getDepth() ;
+        varMemory = meanMemory + input.getNumChannels() ;
         vl::impl::operations<vl::VLDT_GPU,type>::fill
-        (meanMemory, 2 * size_t(input.getDepth()) * sizeof(type), 0) ;
+        (meanMemory, 2 * size_t(input.getNumChannels()) * sizeof(type), 0) ;
       }
 
       CHECK(cudnnBatchNormalizationForwardTraining
@@ -252,8 +252,8 @@ struct BatchNormForwardCudnn
 
         auto blockSize = VL_CUDA_NUM_THREADS ;
         inverse<type>
-        <<< divideAndRoundUp((unsigned)input.getDepth(),blockSize),blockSize >>>
-        (varMemory, (unsigned)input.getDepth()) ;
+        <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
+        (varMemory, (unsigned)input.getNumChannels()) ;
       }
     }
 
@@ -319,8 +319,8 @@ struct BatchNormBackwardWithMomentCudnn
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)derOutput.getSize(), // sizes
-                                     (int)derOutput.getDepth(),
+                                     (int)derOutput.getCardinality(), // sizes
+                                     (int)derOutput.getNumChannels(),
                                      (int)derOutput.getWidth(),
                                      (int)derOutput.getHeight())) ;
 
@@ -329,8 +329,8 @@ struct BatchNormBackwardWithMomentCudnn
     CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)input.getSize(),
-                                     (int)input.getDepth(),
+                                     (int)input.getCardinality(),
+                                     (int)input.getNumChannels(),
                                      (int)input.getWidth(),
                                      (int)input.getHeight())) ;
 
@@ -339,26 +339,26 @@ struct BatchNormBackwardWithMomentCudnn
     CHECK(cudnnSetTensor4dDescriptor(momentDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     1, (int)input.getDepth(), 1, 1)) ;
+                                     1, (int)input.getNumChannels(), 1, 1)) ;
 
 
     // Scrarch space to provide moments in CuDNN format.
-    workspaceSize = (size_t)derInput.getDepth() ;
+    workspaceSize = (size_t)derInput.getNumChannels() ;
     workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
     {
       type alpha = 1.0f ;
       type beta = 0.0f ;
       type * meanMemory = (type*)moment.getMemory() ;
-      type * stdMemory = meanMemory + input.getDepth() ;
+      type * stdMemory = meanMemory + input.getNumChannels() ;
       type * istdMemory = workspace ;
 
       // The CuDNN manual describes the varMemory output above
       // as inverse variance, but it is the inverse standard deviation instead.
       auto blockSize = VL_CUDA_NUM_THREADS ;
       inverse<type>
-      <<< divideAndRoundUp((unsigned)input.getDepth(),blockSize),blockSize >>>
-      (istdMemory, stdMemory, (unsigned)input.getDepth()) ;
+      <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
+      (istdMemory, stdMemory, (unsigned)input.getNumChannels()) ;
 
       CHECK(cudnnBatchNormalizationBackward
             (handle,
@@ -433,8 +433,8 @@ struct BatchNormBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     (int)derOutput.getSize(), // sizes
-                                     (int)derOutput.getDepth(),
+                                     (int)derOutput.getCardinality(), // sizes
+                                     (int)derOutput.getNumChannels(),
                                      (int)derOutput.getWidth(),
                                      (int)derOutput.getHeight())) ;
 
@@ -443,14 +443,14 @@ struct BatchNormBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(momentDesc,
                                      CUDNN_TENSOR_NCHW,
                                      cudnnDataType,
-                                     1, (int)input.getDepth(), 1, 1)) ;
+                                     1, (int)input.getNumChannels(), 1, 1)) ;
 
     // Compute moment using CuDNN. Unfortunately CuDNN does not expose
     // the values of the moment in the backward pass, so we need to run
     // the forward code to get them.
 
     volume = (size_t)derInput.getNumElements() ;
-    workspaceSize = (moment ? 0 : size_t(2 * derInput.getDepth()) + volume) ;
+    workspaceSize = (moment ? 0 : size_t(2 * derInput.getNumChannels()) + volume) ;
     workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
     {
@@ -458,7 +458,7 @@ struct BatchNormBackwardCudnn
       type beta = 0.0f ;
       type * outMemory = workspace ;
       type * meanMemory = moment ? (type*)moment.getMemory() : workspace + volume ;
-      type * varMemory = meanMemory + input.getDepth() ;
+      type * varMemory = meanMemory + input.getNumChannels() ;
 
       CHECK(cudnnBatchNormalizationForwardTraining
             (handle,
@@ -490,8 +490,8 @@ struct BatchNormBackwardCudnn
       // as inverse variance, but it is the inverse standard deviation instead.
       auto blockSize = VL_CUDA_NUM_THREADS ;
       inverse<type>
-      <<< divideAndRoundUp((unsigned)input.getDepth(),blockSize),blockSize >>>
-      (varMemory, (unsigned)input.getDepth()) ;
+      <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
+      (varMemory, (unsigned)input.getNumChannels()) ;
     }
 
     // Finish.

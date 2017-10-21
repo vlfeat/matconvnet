@@ -165,11 +165,11 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
 
     auto outHeight = output.getHeight() ;
     auto outWidth = output.getWidth() ;
-    auto outDepth = output.getDepth() ;
-    auto outCardinality = output.getSize() ;
+    auto outDepth = output.getNumChannels() ;
+    auto outCardinality = output.getCardinality() ;
     auto inHeight = input.getHeight() ;
     auto inWidth = input.getWidth() ;
-    auto inCardinality = input.getSize() ;
+    auto inCardinality = input.getCardinality() ;
     auto outputData = (type*)output.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto gridData = (type const*)grid.getMemory() ;
@@ -205,11 +205,11 @@ struct BilinearSamplerBackward<VLDT_CPU,dataType>
     typedef typename DataTypeTraits<dataType>::type type ;
     auto outHeight = derOutput.getHeight() ;
     auto outWidth = derOutput.getWidth() ;
-    auto outDepth = derOutput.getDepth() ;
-    auto outCardinality = derOutput.getSize() ;
+    auto outDepth = derOutput.getNumChannels() ;
+    auto outCardinality = derOutput.getCardinality() ;
     auto inHeight = input.getHeight() ;
     auto inWidth = input.getWidth() ;
-    auto inCardinality = input.getSize() ;
+    auto inCardinality = input.getCardinality() ;
     auto derInputData = (type*)derInput.getMemory() ;
     auto derGridData = (type*)derGrid.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;

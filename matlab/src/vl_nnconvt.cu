@@ -272,7 +272,7 @@ void mexFunction(int nout, mxArray *out[],
   /* Get the filter shape */
   vl::TensorShape filtersShape(filters) ;
 
-  if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getDepth() == 0) {
+  if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getNumChannels() == 0) {
     mexErrMsgTxt("A dimension of FILTERS is void.") ;
   }
 
@@ -280,18 +280,18 @@ void mexFunction(int nout, mxArray *out[],
   if (numFilterGroups < 1) {
     mexErrMsgTxt("NUMGROUPS is less than 1.") ;
   }
-  if (filters.getSize() % numFilterGroups != 0) {
+  if (filters.getCardinality() % numFilterGroups != 0) {
     mexErrMsgTxt("The number of filter groups does not divide the filter bank depth (fourth dimension of FILTERS).") ;
   }
-  if (filters.getSize() != data.getDepth()) {
+  if (filters.getCardinality() != data.getNumChannels()) {
     mexErrMsgTxt("The filter bank depth (fourth dimension of FILTERS) is not the same as the data depth (third dimension of X).") ;
   }
 
   /* Get the output Shapeetry */
   vl::TensorShape outputShape((data.getHeight()-1)*upsampleY - (cropTop+cropBottom) + filtersShape.getHeight(),
                                 (data.getWidth()-1)*upsampleX  - (cropLeft+cropRight) + filtersShape.getWidth(),
-                                filtersShape.getDepth() * numFilterGroups,
-                                data.getSize()) ;
+                                filtersShape.getNumChannels() * numFilterGroups,
+                                data.getCardinality()) ;
 
   if (outputShape.getHeight() < 1 || outputShape.getWidth() < 1) {
     mexErrMsgTxt("The output array is empty due to CROP being too large.") ;
@@ -303,7 +303,7 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Check the biases sizes */
   if (hasBiases) {
-    if (biases.getNumElements() != outputShape.getDepth()) {
+    if (biases.getNumElements() != outputShape.getNumChannels()) {
       mexErrMsgTxt("The number of elements of BIASES is not the same as the dimenison of the filters.") ;
     }
   }

@@ -222,8 +222,8 @@ namespace vl {
     Int getNumDimensions() const ;
     Int getHeight() const ;
     Int getWidth() const ;
-    Int getDepth() const ;
-    Int getSize() const ;
+    Int getNumChannels() const ;
+    Int getCardinality() const ;
 
     Int getNumElements() const ;
     bool isEmpty() const ;

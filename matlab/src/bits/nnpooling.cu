@@ -110,8 +110,8 @@ struct PoolingForwardCPU
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int depth = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
@@ -183,8 +183,8 @@ struct PoolingBackwardCPU
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    auto depth = input.getNumChannels() ;
+    auto size = input.getCardinality() ;
     auto derInputData = (type*)derInput.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;

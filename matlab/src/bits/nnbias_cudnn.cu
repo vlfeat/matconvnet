@@ -62,8 +62,8 @@ struct BiasForwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(outputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      DataTypeToCudnn<dataType>::dataType,
-                                     (int)output.getSize(), // sizes
-                                     (int)output.getDepth(),
+                                     (int)output.getCardinality(),
+                                     (int)output.getNumChannels(),
                                      (int)output.getWidth(),
                                      (int)output.getHeight())) ;
 
@@ -103,8 +103,8 @@ struct BiasForwardCudnn
       CHECK(cudnnSetTensor4dDescriptor(dataDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
-                                       (int)input.getSize(),
-                                       (int)input.getDepth(),
+                                       (int)input.getCardinality(),
+                                       (int)input.getNumChannels(),
                                        (int)input.getWidth(),
                                        (int)input.getHeight())) ;
 
@@ -171,8 +171,8 @@ struct BiasBackwardCudnn
     CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
                                      CUDNN_TENSOR_NCHW,
                                      DataTypeToCudnn<dataType>::dataType,
-                                     (int)derOutput.getSize(), // sizes
-                                     (int)derOutput.getDepth(),
+                                     (int)derOutput.getCardinality(),
+                                     (int)derOutput.getNumChannels(),
                                      (int)derOutput.getWidth(),
                                      (int)derOutput.getHeight())) ;
 
@@ -204,8 +204,8 @@ struct BiasBackwardCudnn
       CHECK(cudnnSetTensor4dDescriptor(derInputDesc,
                                        CUDNN_TENSOR_NCHW,
                                        DataTypeToCudnn<dataType>::dataType,
-                                       (int)derInput.getSize(),
-                                       (int)derInput.getDepth(),
+                                       (int)derInput.getCardinality(),
+                                       (int)derInput.getNumChannels(),
                                        (int)derInput.getWidth(),
                                        (int)derInput.getHeight())) ;
       auto alpha = static_cast<type>(biasMult) ;

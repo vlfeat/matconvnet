@@ -78,8 +78,8 @@ namespace vl { namespace impl {
 //    }
 //
 //    if (tensor.getNumDimensions() <= 4) {
-//      size_t size = tensor.getSize() ;
-//      size_t depth = tensor.getDepth() ;
+//      size_t size = tensor.getCardinality() ;
+//      size_t depth = tensor.getNumChannels() ;
 //      size_t width = tensor.getWidth() ;
 //      size_t height = tensor.getHeight() ;
 //      cudnnError = cudnnSetTensor4dDescriptorExt(descriptor,

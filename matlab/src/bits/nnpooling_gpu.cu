@@ -380,7 +380,7 @@ struct PoolingBackwardGPU
        (type const*)derOutput.getMemory(),
        (int)inputVolume,
        (int)derOutput.getHeight(), (int)derOutput.getWidth(),
-       (int)input.getHeight(), (int)input.getWidth(), (int)(input.getDepth()*input.getSize()),
+       (int)input.getHeight(), (int)input.getWidth(), (int)(input.getNumChannels()*input.getCardinality()),
        (int)op.getShape(0), (int)op.getShape(1),
        (int)op.getStride(0), (int)op.getStride(1),
        (int)op.getPadding(0), (int)op.getPadding(2)) ;

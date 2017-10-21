@@ -202,7 +202,7 @@ void mexFunction(int nout, mxArray *out[],
   /* Get the output geometry */
   vl::TensorShape outputShape(subdivisions[0],
                               subdivisions[1],
-                              dataShape.getDepth(),
+                              dataShape.getNumChannels(),
                               numROIs) ;
 
   vl::TensorShape derOutputShape = derOutput.getShape();

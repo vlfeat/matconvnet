@@ -88,10 +88,10 @@ struct ConvolutionForward
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
-    Int numGroups = input.getDepth() / filter.getDepth() ;
-    Int numFiltersPerGroup = filter.getSize() / numGroups ;
+    Int numGroups = input.getNumChannels() / filter.getNumChannels() ;
+    Int numFiltersPerGroup = filter.getCardinality() / numGroups ;
     Int numOutputPixels = output.getHeight() * output.getWidth() ;
-    Int filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+    Int filterVolume = filter.getHeight() * filter.getWidth() * filter.getNumChannels() ;
     Int tempVolume = numOutputPixels * filterVolume * numGroups ;
 
     type* tempMemory = (type*) op.getContext().getWorkspace
@@ -105,16 +105,16 @@ struct ConvolutionForward
       goto done ;
     }
 
-    for (Int image = 0 ; image < input.getSize() ; ++image) {
+    for (Int image = 0 ; image < input.getCardinality() ; ++image) {
 
-      auto dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
-      auto outputOffset = (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
+      auto dataOffset = (input.getHeight()*input.getWidth()*input.getNumChannels()) * image ;
+      auto outputOffset = (output.getHeight()*output.getWidth()*output.getNumChannels()) * image ;
 
       error = vl::impl::im2row<deviceType,type>::forward
       (op.getContext(),
        tempMemory,
        (type*)input.getMemory() + dataOffset,
-       input.getHeight(), input.getWidth(), input.getDepth(),
+       input.getHeight(), input.getWidth(), input.getNumChannels(),
        filter.getHeight(), filter.getWidth(),
        op.getStride(0),
        op.getStride(1),
@@ -211,16 +211,16 @@ struct ConvolutionBackward
     if (derInput) {
       // for derivative w.r.t. data
       assert(filter) ;
-      numGroups = derInput.getDepth() / filter.getDepth() ;
-      filterVolume = filter.getHeight() * filter.getWidth() * filter.getDepth() ;
+      numGroups = derInput.getNumChannels() / filter.getNumChannels() ;
+      filterVolume = filter.getHeight() * filter.getWidth() * filter.getNumChannels() ;
     }
     else if (derFilter) {
       // for derivative w.r.t. filter
       assert(input) ;
-      numGroups = input.getDepth() / derFilter.getDepth() ;
-      filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getDepth() ;
+      numGroups = input.getNumChannels() / derFilter.getNumChannels() ;
+      filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getNumChannels() ;
     }
-    numFiltersPerGroup = derOutput.getDepth() / numGroups ;
+    numFiltersPerGroup = derOutput.getNumChannels() / numGroups ;
 
     // get scratch space
     tempVolume = numOutputPixels * filterVolume * numGroups ;
@@ -232,9 +232,9 @@ struct ConvolutionBackward
       }
     }
 
-    for (Int image = 0 ; image < derOutput.getSize() ; ++image) {
+    for (Int image = 0 ; image < derOutput.getCardinality() ; ++image) {
 
-      Int derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+      Int derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getNumChannels()) * image ;
 
       /* compute derInput dz/dbias */
       if (derBias) {
@@ -244,7 +244,7 @@ struct ConvolutionBackward
         error = vl::impl::blas<deviceType,dataType>::gemv
         (op.getContext(),
          't',
-         numOutputPixels, derOutput.getDepth(),
+         numOutputPixels, derOutput.getNumChannels(),
          alpha, /* alpha */
          (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
          allOnesMemory, 1,
@@ -256,7 +256,7 @@ struct ConvolutionBackward
       /* compute derInpu dz/dx */
       if (derInput) {
         // has derInpu, derOutput, filter
-        Int derInpuOffset = (derInput.getHeight()*derInput.getWidth()*derInput.getDepth()) * image ;
+        Int derInpuOffset = (derInput.getHeight()*derInput.getWidth()*derInput.getNumChannels()) * image ;
         for (Int g = 0 ; g < numGroups ; ++ g) {
           Int filterGrpOffset = filterVolume * numFiltersPerGroup * g ;
           Int tempGrpOffset = numOutputPixels * filterVolume * g ;
@@ -278,7 +278,7 @@ struct ConvolutionBackward
         (op.getContext(),
          (type*)derInput.getMemory() + derInpuOffset,
          tempMemory,
-         derInput.getHeight(), derInput.getWidth(), derInput.getDepth(),
+         derInput.getHeight(), derInput.getWidth(), derInput.getNumChannels(),
          filter.getHeight(), filter.getWidth(),
          op.getStride(0),
          op.getStride(1),
@@ -294,12 +294,12 @@ struct ConvolutionBackward
       /* compute derFilter dz/dF */
       if (derFilter) {
         // has derFilter, derOutput, data
-        Int dataOffset = (input.getHeight()*input.getWidth()*input.getDepth()) * image ;
+        Int dataOffset = (input.getHeight()*input.getWidth()*input.getNumChannels()) * image ;
         error = vl::impl::im2row<deviceType,type>::forward
         (op.getContext(),
          (type*)tempMemory,
          (type*)input.getMemory() + dataOffset,
-         input.getHeight(), input.getWidth(), input.getDepth(),
+         input.getHeight(), input.getWidth(), input.getNumChannels(),
          derFilter.getHeight(), derFilter.getWidth(),
          op.getStride(0),
          op.getStride(1),
@@ -351,12 +351,12 @@ struct ConvolutionTransposeForward
    vl::Tensor const &bias)
   {
     vl::ErrorCode error = VLE_Success ;
-    Int dataOffset = input.getHeight()*input.getWidth()*input.getDepth() ;
-    Int outputOffset = output.getHeight()*output.getWidth()*output.getDepth() ;
+    Int dataOffset = input.getHeight()*input.getWidth()*input.getNumChannels() ;
+    Int outputOffset = output.getHeight()*output.getWidth()*output.getNumChannels() ;
 
     // we need to process this down per image as nnconv_backward would otherwise
     // accumulate everything into a single feature field in the output
-    for (Int image = 0 ; image < input.getSize() ; ++image) {
+    for (Int image = 0 ; image < input.getCardinality() ; ++image) {
       Tensor inputSlice(input) ;
       Tensor outputSlice(output) ;
 

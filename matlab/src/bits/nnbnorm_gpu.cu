@@ -832,8 +832,8 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int numChannels = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int numChannels = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     auto outputData = (type*)output.getMemory() ;
     auto momentData = (type const*)moment.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -879,8 +879,8 @@ struct BatchNormForward<VLDT_GPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int numChannels = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int numChannels = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
 
     auto outputData = (type*)output.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -990,8 +990,8 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
 
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int numChannels = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int numChannels = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
 
     auto derInputData = (type*)derInput.getMemory() ;
     auto derBiasData = (type*)derBias.getMemory() ;
@@ -1103,8 +1103,8 @@ struct BatchNormBackward<VLDT_GPU, dataType>
 
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int numChannels = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int numChannels = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     Int planeArea = height * width ;
     Int numPlanes = numChannels * size ;
 

@@ -250,8 +250,8 @@ void mexFunction(int nout, mxArray *out[],
   op.forwardShape(outputShape, data);
 //  ((data.getHeight() + (padTop+padBottom) - poolHeight)/strideY + 1,
 //                              (data.getWidth()  + (padLeft+padRight) - poolWidth)/strideX + 1,
-//                              data.getDepth(),
-//                              data.getSize()) ;
+//                              data.getNumChannels(),
+//                              data.getCardinality()) ;
 
   if (backMode && (derOutput != outputShape)) {
     mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;

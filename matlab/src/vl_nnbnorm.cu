@@ -185,16 +185,16 @@ void mexFunction(int nout, mxArray *out[],
 
   /* Get the filter geometry */
   vl::TensorShape multipliersGeom(multipliers) ;
-  if (multipliersGeom.getHeight() != data.getDepth()) {
+  if (multipliersGeom.getHeight() != data.getNumChannels()) {
     mexErrMsgTxt("The MULTIPLIERS size does not match the DATA depth.") ;
   }
   vl::TensorShape biasesGeom(biases);
-  if (biasesGeom.getHeight() != data.getDepth()) {
+  if (biasesGeom.getHeight() != data.getNumChannels()) {
     mexErrMsgTxt("The BIASES size does not match the DATA depth.") ;
   }
   if (givenMomentsMode) {
     vl::TensorShape momentsGeom(moments) ;
-    if (momentsGeom.getNumElements() != 2*data.getDepth()) {
+    if (momentsGeom.getNumElements() != 2*data.getNumChannels()) {
       mexErrMsgTxt("The MOMENTS size does not match the DATA depth.") ;
     }
   }
@@ -208,7 +208,7 @@ void mexFunction(int nout, mxArray *out[],
   vl::MexTensor derBiases(context) ;
 
   if (returnMomentsMode & !givenMomentsMode) {
-    vl::TensorShape momentsGeom(data.getDepth(), 2, 1, 1) ;
+    vl::TensorShape momentsGeom(data.getNumChannels(), 2, 1, 1) ;
     moments.init(deviceType, dataType, momentsGeom) ;
   }
 

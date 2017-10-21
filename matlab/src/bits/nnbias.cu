@@ -56,9 +56,9 @@ struct BiasForward
         error = op.getContext().getLastError() ; goto done ;
       }
 
-      for (Int image = 0 ; image < output.getSize() ; ++image) {
+      for (Int image = 0 ; image < output.getCardinality() ; ++image) {
         auto outputOffset =
-        (output.getHeight()*output.getWidth()*output.getDepth()) * image ;
+        (output.getHeight()*output.getWidth()*output.getNumChannels()) * image ;
 
         error = vl::impl::blas<deviceType,dataType>::gemm
         (op.getContext(),
@@ -126,15 +126,15 @@ struct BiasBackward
     if (derBias) {
       // Sum derOutput along the broadcast dimensions. These
       // are x,y, and image.
-      for (Int image = 0 ; image < derOutput.getSize() ; ++image) {
+      for (Int image = 0 ; image < derOutput.getCardinality() ; ++image) {
         auto derOutputOffset =
-        (derOutput.getHeight()*derOutput.getWidth()*derOutput.getDepth()) * image ;
+        (derOutput.getHeight()*derOutput.getWidth()*derOutput.getNumChannels()) * image ;
 
         error = vl::impl::blas<deviceType,dataType>::
         gemv(op.getContext(),
              't',
              numOutputPixels,
-             derOutput.getDepth(),
+             derOutput.getNumChannels(),
              static_cast<type>(biasMult), // alpha
              (type*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
              allOnesMemory, 1,

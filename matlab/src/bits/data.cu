@@ -580,8 +580,8 @@ Int vl::TensorShape::getNumElements() const
 
 Int vl::TensorShape::getHeight() const { return getDimension(0) ; }
 Int vl::TensorShape::getWidth() const { return getDimension(1) ; }
-Int vl::TensorShape::getDepth() const { return getDimension(2) ; }
-Int vl::TensorShape::getSize() const { return getDimension(3) ; }
+Int vl::TensorShape::getNumChannels() const { return getDimension(2) ; }
+Int vl::TensorShape::getCardinality() const { return getDimension(3) ; }
 
 void vl::TensorShape::setHeight(Int x) { setDimension(0,x) ; }
 void vl::TensorShape::setWidth(Int x) { setDimension(1,x) ; }

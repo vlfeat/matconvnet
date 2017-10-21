@@ -150,8 +150,8 @@ struct LRNForward<vl::VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = output.getWidth() ;
     Int height = output.getHeight() ;
-    Int depth = output.getDepth() ;
-    Int num = output.getSize() ;
+    Int depth = output.getNumChannels() ;
+    Int num = output.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto outputData = (type*)output.getMemory() ;
 
@@ -245,8 +245,8 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = derOutput.getWidth() ;
     Int height = derOutput.getHeight() ;
-    Int depth = derOutput.getDepth() ;
-    Int num = derOutput.getSize() ;
+    Int depth = derOutput.getNumChannels() ;
+    Int num = derOutput.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
     auto derInputData = (type*)derInput.getMemory() ;

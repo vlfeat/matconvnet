@@ -143,14 +143,14 @@ void mexFunction(int nout, mxArray *out[],
   /* Basic compatibility of shape */
   const Int inHeight = data.getHeight(); // spatial dimension 1
   const Int inWidth = data.getWidth(); // spatial dimension 2
-  const Int inDepth = data.getDepth(); // number of channels
-  const Int inBatch = data.getSize(); // batch-size
+  const Int inNumChannels = data.getNumChannels(); // number of channels
+  const Int inBatch = data.getCardinality(); // batch-size
 
   /* Grid dimensions: note that the grid uses the first dimension as channels */
   const Int gridHeight = grid.getWidth(); // *OUTPUT* spatial dimension
-  const Int gridWidth = grid.getDepth(); // *OUTPUT* spatial dimension 2
+  const Int gridWidth = grid.getNumChannels(); // *OUTPUT* spatial dimension 2
   const Int gridDepth = grid.getHeight(); // number of channels :: should be 2
-  const Int gridBatch = grid.getSize(); // should be DIVISIBLE by inBatch
+  const Int gridBatch = grid.getCardinality(); // should be DIVISIBLE by inBatch
 
   if (gridDepth != 2) {
     char msg[200];
@@ -163,7 +163,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the output Shape */
-  vl::TensorShape outputShape(gridHeight, gridWidth, inDepth, gridBatch);
+  vl::TensorShape outputShape(gridHeight, gridWidth, inNumChannles, gridBatch);
   if (backMode && (derOutput != outputShape)) {
     mexErrMsgTxt("DEROUTPUT dimensions are incompatible with DATA and GRID.") ;
   }

@@ -182,8 +182,8 @@ struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    auto depth = input.getNumChannels() ;
+    auto size = input.getCardinality() ;
     auto outputData = (type*)output.getMemory() ;
     auto momentData = (type const*)moment.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -222,8 +222,8 @@ struct BatchNormForward<VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
-    auto depth = input.getDepth() ;
-    auto size = input.getSize() ;
+    auto depth = input.getNumChannels() ;
+    auto size = input.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
 
     // Compute the moments.
@@ -276,8 +276,8 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int depth = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     Int WH = height * width ;
 
     auto derInputData = (type*)derInput.getMemory() ;
@@ -321,8 +321,8 @@ struct BatchNormBackward<VLDT_CPU, dataType>
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
-    Int depth = input.getDepth() ;
-    Int size = input.getSize() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
     Int WH = height * width ;
 
     auto derInputData = (type*)derInput.getMemory() ;
