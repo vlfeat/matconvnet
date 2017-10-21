@@ -163,7 +163,7 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   /* Get the output Shape */
-  vl::TensorShape outputShape(gridHeight, gridWidth, inNumChannles, gridBatch);
+  vl::TensorShape outputShape(gridHeight, gridWidth, inNumChannels, gridBatch);
   if (backMode && (derOutput != outputShape)) {
     mexErrMsgTxt("DEROUTPUT dimensions are incompatible with DATA and GRID.") ;
   }

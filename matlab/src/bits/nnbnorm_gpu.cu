@@ -833,7 +833,7 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int numChannels = input.getNumChannels() ;
-    Int size = input.getCardinality() ;
+    Int cardinality = input.getCardinality() ;
     auto outputData = (type*)output.getMemory() ;
     auto momentData = (type const*)moment.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -841,19 +841,19 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
     auto biasData = (type const*)bias.getMemory() ;
 
     Int planeArea = height * width ;
-    Int numPlanes = numChannels * size ;
+    Int numPlanes = numChannels * cardinality ;
 
     // Compute number compute chunks.
     unsigned blockSize = getBlockSize(planeArea) ;
     //unsigned L = 10000 * blockSize ;
-    //unsigned numBlocksPerChannel = (planeArea * size + L - 1) / L ;
-    //numBlocksPerChannel = std::min(numBlocksPerChannel, size) ;
+    //unsigned numBlocksPerChannel = (planeArea * cardinality + L - 1) / L ;
+    //numBlocksPerChannel = std::min(numBlocksPerChannel, cardinality) ;
     //numBlocksPerChannel = std::min(numBlocksPerChannel, 65536 / numChannels) ;
     //numBlocksPerChannel = std::max(numBlocksPerChannel, 1) ;
     unsigned numBlocksPerChannel = 1  ;
     unsigned numBlocks = (unsigned)numChannels * numBlocksPerChannel ;
     assert(numBlocksPerChannel >= 1) ;
-    assert(numBlocksPerChannel <= size) ;
+    assert(numBlocksPerChannel <= cardinality) ;
     assert(numBlocks <= 65536) ;
 
     batch_normalize_forward <<<numBlocks, blockSize>>>
@@ -880,7 +880,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int numChannels = input.getNumChannels() ;
-    Int size = input.getCardinality() ;
+    Int cardinality = input.getCardinality() ;
 
     auto outputData = (type*)output.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -888,13 +888,13 @@ struct BatchNormForward<VLDT_GPU, dataType>
     auto biasData = (type const*)bias.getMemory() ;
 
     Int planeArea = height * width ;
-    Int numPlanes = numChannels * size ;
+    Int numPlanes = numChannels * cardinality ;
 
     // Compute number compute chunks.
     unsigned blockSize = getBlockSize(planeArea) ;
     //unsigned L = 10000 * blockSize ;
-    //unsigned numBlocksPerChannel = (planeArea * size + L - 1) / L ;
-    //numBlocksPerChannel = min(numBlocksPerChannel, size) ;
+    //unsigned numBlocksPerChannel = (planeArea * cardinality + L - 1) / L ;
+    //numBlocksPerChannel = min(numBlocksPerChannel, cardinality) ;
     //numBlocksPerChannel = min(numBlocksPerChannel, 65536 / numChannels) ;
     //numBlocksPerChannel = max(numBlocksPerChannel, 1) ;
     unsigned numBlocksPerChannel = 1  ;
@@ -950,7 +950,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
     }
 
     // Normalize moments.
-    type mass = (type)(planeArea*size);
+    type mass = (type)(planeArea*cardinality);
     normalize_moments
     <<< divideAndRoundUp((unsigned)numChannels,blockSize),blockSize >>>
     (momentData, (unsigned)numChannels, (type)mass, (type)op.getEpsilon()) ;
@@ -991,7 +991,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int numChannels = input.getNumChannels() ;
-    Int size = input.getCardinality() ;
+    Int cardinality = input.getCardinality() ;
 
     auto derInputData = (type*)derInput.getMemory() ;
     auto derBiasData = (type*)derBias.getMemory() ;
@@ -1003,13 +1003,13 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
     auto derOutputData = (type const*)derOutput.getMemory() ;
 
     Int planeArea = height * width ;
-    Int numPlanes = numChannels * size ;
+    Int numPlanes = numChannels * cardinality ;
 
     // Compute number compute chunks.
     unsigned blockSize = getBlockSize(planeArea) ;
     //Int L = 10000 * blockSize ;
-    //Int numBlocksPerChannel = (planeArea * size + L - 1) / L ;
-    //numBlocksPerChannel = std::min(numBlocksPerChannel, size) ;
+    //Int numBlocksPerChannel = (planeArea * cardinality + L - 1) / L ;
+    //numBlocksPerChannel = std::min(numBlocksPerChannel, cardinality) ;
     //numBlocksPerChannel = std::min(numBlocksPerChannel, 65536 / numChannels) ;
     //numBlocksPerChannel = std::max(numBlocksPerChannel, 1) ;
     unsigned numBlocksPerChannel = 1  ;
@@ -1064,7 +1064,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
     }
 
     // Normalize derMultiplier and derBias.
-    type mass = (type)(planeArea*size) ;
+    type mass = (type)(planeArea*cardinality) ;
     normalize_ders<type>
     <<< divideAndRoundUp((unsigned)numChannels,blockSize),blockSize >>>
     (derMultiplierData, derBiasData, momentData,
@@ -1104,9 +1104,9 @@ struct BatchNormBackward<VLDT_GPU, dataType>
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int numChannels = input.getNumChannels() ;
-    Int size = input.getCardinality() ;
+    Int cardinality = input.getCardinality() ;
     Int planeArea = height * width ;
-    Int numPlanes = numChannels * size ;
+    Int numPlanes = numChannels * cardinality ;
 
     auto derInputData = (type*)derInput.getMemory() ;
     auto derBiasData = (type*)derBias.getMemory() ;
@@ -1119,8 +1119,8 @@ struct BatchNormBackward<VLDT_GPU, dataType>
     // Compute number compute chunks.
     unsigned blockSize = getBlockSize(planeArea) ;
     //unsigned L = 10000 * blockSize ;
-    //unsigned numBlocksPerChannel = (planeArea * size + L - 1) / L ;
-    //numBlocksPerChannel = min(numBlocksPerChannel, size) ;
+    //unsigned numBlocksPerChannel = (planeArea * cardinality + L - 1) / L ;
+    //numBlocksPerChannel = min(numBlocksPerChannel, cardinality) ;
     //numBlocksPerChannel = min(numBlocksPerChannel, 65536 / numChannels) ;
     //numBlocksPerChannel = max(numBlocksPerChannel, 1) ;
     unsigned numBlocksPerChannel = 1  ;
@@ -1185,7 +1185,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
     }
 
     // Normalize derMultiplier and derBias.
-    type mass = (type)(planeArea*size);
+    type mass = (type)(planeArea*cardinality);
     normalize_ders_and_moments<type>
     <<< divideAndRoundUp((unsigned)numChannels,blockSize),blockSize >>>
     (derMultiplierData, derBiasData, momentData,

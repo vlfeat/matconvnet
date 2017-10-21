@@ -90,7 +90,7 @@ struct BilinearSamplerForwardCudnn
     int inWidth = (int)input.getWidth();
 
     int outCardinality = (int)output.getCardinality();
-    int outDepth = (int)output.getNumChannels();
+    int outNumChannels = (int)output.getNumChannels();
     int outWidth = (int)output.getWidth();
     int outHeight = (int)output.getHeight();
 
@@ -104,7 +104,7 @@ struct BilinearSamplerForwardCudnn
 
     // get number of transforms/image == groupSize:
     int groupSize = (int)(outCardinality / inCardinality) ;
-    int dimOut[4] = { 1, (int)outDepth, (int)outWidth, (int)outHeight } ; // one-image
+    int dimOut[4] = { 1, (int)outNumChannels, (int)outWidth, (int)outHeight } ; // one-image
 
     // Get CuDNN
     CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
@@ -114,8 +114,8 @@ struct BilinearSamplerForwardCudnn
     outputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
                                        cudnnDataType,
-                                       1, outDepth, outWidth, outHeight, // sizes: n,c,w,h
-                                       outHeight * outWidth * outDepth, //strides
+                                       1, outNumChannels, outWidth, outHeight, // sizes: n,c,w,h
+                                       outHeight * outWidth * outNumChannels, //strides
                                        outHeight * outWidth,
                                        outHeight,
                                        1)) ;
@@ -144,7 +144,7 @@ struct BilinearSamplerForwardCudnn
       type beta = 0.0f ;
       const Int dataOffset = inHeight * inWidth * inNumChannels ;
       const Int gridOffset = 2 * outWidth * outHeight ;
-      const Int outOffset = outHeight * outWidth * outDepth ;
+      const Int outOffset = outHeight * outWidth * outNumChannels ;
       type const* data_ptr = (type const*) input.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;
       type * out_ptr = (type *) output.getMemory() ;
@@ -203,7 +203,7 @@ struct BilinearSamplerBackwardCudnn
     int inWidth = (int)derInput.getWidth();
 
     int outCardinality = (int)derOutput.getCardinality();
-    int outDepth = (int)derOutput.getNumChannels();
+    int outNumChannels = (int)derOutput.getNumChannels();
     int outWidth = (int)derOutput.getWidth();
     int outHeight = (int)derOutput.getHeight();
 
@@ -217,7 +217,7 @@ struct BilinearSamplerBackwardCudnn
 
     // Get number of transforms/image == groupSize.
     int groupSize = (int)(outCardinality / inCardinality) ;
-    int dimOut[4] = { 1, (int)outDepth, (int)outWidth, (int)outHeight };
+    int dimOut[4] = { 1, (int)outNumChannels, (int)outWidth, (int)outHeight };
 
     // Get CuDNN.
     CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
@@ -227,8 +227,8 @@ struct BilinearSamplerBackwardCudnn
     derOutputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
                                        cudnnDataType,
-                                       1, outDepth, outWidth, outHeight, // sizes: n,c,w,h
-                                       outHeight * outWidth * outDepth, //strides
+                                       1, outNumChannels, outWidth, outHeight, // sizes: n,c,w,h
+                                       outHeight * outWidth * outNumChannels, //strides
                                        outHeight * outWidth,
                                        outHeight,
                                        1)) ;
@@ -258,7 +258,7 @@ struct BilinearSamplerBackwardCudnn
       type gridBeta = 0.0f ;
       int const dataOffset = inHeight * inWidth * inNumChannels ;
       int const gridOffset = 2 * outWidth * outHeight ;
-      int const outOffset = outHeight * outWidth * outDepth ;
+      int const outOffset = outHeight * outWidth * outNumChannels ;
       type const* data_ptr = (type const*) input.getMemory() ;
       type * derInputData_ptr = (type *) derInput.getMemory() ;
       type const* grid_ptr = (type const*) grid.getMemory() ;

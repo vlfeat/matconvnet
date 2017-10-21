@@ -42,25 +42,25 @@ __global__ void forward_backward_kernel
  type const* data,
  type const* grid,
  type const* derOutput,
- int outHeight, int outWidth, int outDepth, int outCardinality,
+ int outHeight, int outWidth, int outNumChannels, int outCardinality,
  int inHeight, int inWidth, int inCardinality)
 {
   const int offset = getGlobalIdx_2D_1D();
-  const int nOut = outWidth * outHeight * outDepth * outCardinality ;
+  const int nOut = outWidth * outHeight * outNumChannels * outCardinality ;
   if (offset >= nOut) { return ; }
   bool backward = backwardData;
 
   // get the index of the output image, feature channel, and pixel
   int k = offset ;
   int c = k / (outHeight * outWidth) ; 
-  int n = c / outDepth ; // out image index
+  int n = c / outNumChannels ; // out image index
   k %= (outHeight * outWidth) ; // out spatial index
-  c %= outDepth ; // out channel index
+  c %= outNumChannels ; // out channel index
 
   // get the index of the input image
   int groupSize = outCardinality / inCardinality ; // num of transformations/image
   int nInputImage = n / groupSize ; // index of the input image
-  int inputOffset = (inHeight * inWidth)*(outDepth * nInputImage + c) ; // location of the start of the input image
+  int inputOffset = (inHeight * inWidth)*(outNumChannels * nInputImage + c) ; // location of the start of the input image
   int gridOffset = 2 * ((outHeight * outWidth) * n + k) ; //+ 1;    // location of the first grid coordinate for this output pixel
   //int gridOffset = 2*k+1 ;
 
@@ -123,7 +123,7 @@ __global__ void grid_backward_kernel
  type const* data,
  type const* grid,
  type const* derOutput,
- int outHeight, int outWidth, int outDepth, int outCardinality,
+ int outHeight, int outWidth, int outNumChannels, int outCardinality,
  int inHeight, int inWidth, int inCardinality)
 {
   const int offset = getGlobalIdx_2D_1D();
@@ -142,7 +142,7 @@ __global__ void grid_backward_kernel
   // get the index of the input image
   const int groupSize = outCardinality / inCardinality ; // num of transformations/image
   const int nInputImage = n / groupSize ; // index of the input image
-  const int inputOffset = inHeight * inWidth * outDepth * nInputImage ; // location of the start of the input image
+  const int inputOffset = inHeight * inWidth * outNumChannels * nInputImage ; // location of the start of the input image
 
   // get the grid for this output image
   type py = grid[gridOffset + 0] ;
@@ -156,7 +156,7 @@ __global__ void grid_backward_kernel
   type dgridx = 0 ;
   type dgridy = 0 ;
   data += inputOffset ;
-  derOutput += k + n * outWidth * outHeight * outDepth ;
+  derOutput += k + n * outWidth * outHeight * outNumChannels ;
 
   if (-1 <= sy && sy < inHeight && -1 <= sx && sx < inWidth) {
     // get the interpolation weights
@@ -174,7 +174,7 @@ __global__ void grid_backward_kernel
         }
         const type wwx = (2*i-1) * ( (1-j)*(1-wx) + j*wx ) ;
         const type wwy = (2*j-1) * ( (1-i)*(1-wy) + i*wy ) ;
-        for (int ic=0; ic < outDepth; ic++) {
+        for (int ic=0; ic < outNumChannels; ic++) {
           const type dy = derOutput[ic * outHeight * outWidth];
           const type x = data[ssy  +  ssx * inHeight  +  ic * inHeight * inWidth];
           dgridy += wwx * dy * x ;
@@ -223,7 +223,7 @@ forward_backward_gpu
  type const* data,
  type const* grid,
  type const* derOutput,
- Int outHeight, Int outWidth, Int outDepth, Int outCardinality,
+ Int outHeight, Int outWidth, Int outNumChannels, Int outCardinality,
  Int inHeight, Int inWidth, Int inCardinality)
 {
   //bool backward = backwardData || backwardGrid ;
@@ -242,12 +242,12 @@ forward_backward_gpu
   assert(!backwardGrid || data) ;
 
   // if (backwardData) {
-  //   //memset(derInputData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
+  //   //memset(derInputData, 0, inHeight * inWidth * outNumChannels * inCardinality * sizeof(type)) ;
   // }
 
   // setup and launch the kernel for DER-DATA:
   Int nTh, nGx, nGy;
-  Int outVolume = outHeight * outWidth * outDepth * outCardinality ;
+  Int outVolume = outHeight * outWidth * outNumChannels * outCardinality ;
   vl::ErrorCode volume_ok = get_launch_params(outVolume, nTh, nGx, nGy);
   if (volume_ok != vl::VLE_Success) { return volume_ok; }
 
@@ -259,7 +259,7 @@ forward_backward_gpu
    data,
    grid,
    derOutput,
-   (int)outHeight, (int)outWidth, (int)outDepth, (int)outCardinality,
+   (int)outHeight, (int)outWidth, (int)outNumChannels, (int)outCardinality,
    (int)inHeight, (int)inWidth, (int)inCardinality) ;
 
   cudaError_t status = cudaPeekAtLastError() ;
@@ -278,7 +278,7 @@ forward_backward_gpu
     (derGrid,
      data, grid,
      derOutput,
-     (int)outHeight, (int)outWidth, (int)outDepth, (int)outCardinality,
+     (int)outHeight, (int)outWidth, (int)outNumChannels, (int)outCardinality,
      (int)inHeight, (int)inWidth, (int)inCardinality ) ;
     status = cudaPeekAtLastError() ;
   }
@@ -319,7 +319,7 @@ struct BilinearSamplerForward<VLDT_GPU,dataType>
 #define DISPATCH(bwData, bwGrid) \
 error = forward_backward_gpu<type, bwData, bwGrid> \
     (op.getContext(), NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
-     outHeight, outWidth, outDepth, outCardinality, \
+     outHeight, outWidth, outNumChannels, outCardinality, \
      inHeight, inWidth,inCardinality) ;
 
 template<DataType dataType>
@@ -336,7 +336,7 @@ struct BilinearSamplerBackward<VLDT_GPU,dataType>
     typedef typename DataTypeTraits<dataType>::type type ;
     auto outHeight = derOutput.getHeight() ;
     auto outWidth = derOutput.getWidth() ;
-    auto outDepth = derOutput.getNumChannels() ;
+    auto outNumChannels = derOutput.getNumChannels() ;
     auto outCardinality = derOutput.getCardinality() ;
     auto inHeight = input.getHeight() ;
     auto inWidth = input.getWidth() ;

@@ -183,7 +183,7 @@ struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
     auto depth = input.getNumChannels() ;
-    auto size = input.getCardinality() ;
+    auto cardinality = input.getCardinality() ;
     auto outputData = (type*)output.getMemory() ;
     auto momentData = (type const*)moment.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
@@ -197,7 +197,7 @@ struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
       type bias = biasData[channel];
       type coefficient = multiplierData[channel] / sigma ;
 
-      for(decltype(size) element = 0; element < size; ++element) {
+      for(decltype(cardinality) element = 0; element < cardinality; ++element) {
         for(decltype(WH) wh = 0; wh < WH; ++wh){
           auto offset = wh + channel * WH + element * depth * WH ;
           outputData[offset] = coefficient * (inputData[offset] - mean) + bias ;
@@ -223,7 +223,7 @@ struct BatchNormForward<VLDT_CPU, dataType>
     auto height = input.getHeight() ;
     auto width = input.getWidth() ;
     auto depth = input.getNumChannels() ;
-    auto size = input.getCardinality() ;
+    auto cardinality = input.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
 
     // Compute the moments.
@@ -241,7 +241,7 @@ struct BatchNormForward<VLDT_CPU, dataType>
     {
       auto momentData = (type*)ownMoment.getMemory() ;
       compute_moment<type>(momentData, inputData,
-                           width*height, depth, size,
+                           width*height, depth, cardinality,
                            (type)op.getEpsilon()) ;
     }
 
@@ -277,7 +277,7 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int depth = input.getNumChannels() ;
-    Int size = input.getCardinality() ;
+    Int cardinality = input.getCardinality() ;
     Int WH = height * width ;
 
     auto derInputData = (type*)derInput.getMemory() ;
@@ -291,7 +291,7 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
     // Compute derMultipliers, derBiases, muz, and moments.
     compute_ders<type>(derMultiplierData, derBiasData,
                        momentData, inputData, derOutputData,
-                       WH, depth, size,
+                       WH, depth, cardinality,
                        (type)op.getEpsilon());
 
     // Compute derData.
@@ -299,7 +299,7 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
                                    momentData, inputData,
                                    multiplierData,
                                    derMultiplierData, derBiasData, derOutputData,
-                                   WH, depth, size);
+                                   WH, depth, cardinality);
     return VLE_Success ;
   }
 } ;
@@ -322,7 +322,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int depth = input.getNumChannels() ;
-    Int size = input.getCardinality() ;
+    Int cardinality = input.getCardinality() ;
     Int WH = height * width ;
 
     auto derInputData = (type*)derInput.getMemory() ;
@@ -350,7 +350,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
       // Compute derMultipliers, derBiases, and moments.
       compute_ders_and_moments<type>(derMultiplierData, derBiasData, momentData,
                                      inputData, derOutputData,
-                                     WH, depth, size,
+                                     WH, depth, cardinality,
                                      (type)op.getEpsilon());
 
       // Compute derData.
@@ -358,7 +358,7 @@ struct BatchNormBackward<VLDT_CPU, dataType>
                                      momentData, inputData,
                                      multiplierData,
                                      derMultiplierData, derBiasData, derOutputData,
-                                     WH, depth, size);
+                                     WH, depth, cardinality);
     }
   done:;
     return error ;

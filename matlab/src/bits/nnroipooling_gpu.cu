@@ -45,7 +45,7 @@ struct Bounds {
 template<typename T>
 __device__ __forceinline__ static Bounds
 getBounds(int outputIndex,
-          int height, int width, int numChannels, int size,
+          int height, int width, int numChannels, int cardinality,
           const T* rois, int numROIs,
           Geom<T> geom)
 {
@@ -86,7 +86,7 @@ getBounds(int outputIndex,
   T bin_size_h = (T)roi_height / geom.subdivisions[0] ;
   T bin_size_w = (T)roi_width / geom.subdivisions[1] ;
 
-  roi_image = min(max(roi_image - 1,0), (int)size - 1) ;
+  roi_image = min(max(roi_image - 1,0), (int)cardinality - 1) ;
   b.offset = (roi_image * numChannels + pc) * (width*height) ;
 
   b.wstart = (int)floor(((T)pw) * bin_size_w) ;
@@ -111,7 +111,7 @@ getBounds(int outputIndex,
 template<typename T> __global__ void
 roipooling_average_kernel
 (T* output,
- const T* data, int height, int width, int numChannels, int size,
+ const T* data, int height, int width, int numChannels, int cardinality,
  const T* rois, int numROIs,
  Geom<T> geom)
 {
@@ -119,7 +119,7 @@ roipooling_average_kernel
   int outputVolume = geom.subdivisions[0] * geom.subdivisions[1] * numChannels * numROIs;
   if (outputIndex < outputVolume) {
     Bounds b = getBounds<T>(outputIndex,
-                            height,width,numChannels,size,
+                            height,width,numChannels,cardinality,
                             rois,numROIs,
                             geom) ;
     data += b.offset ;
@@ -142,7 +142,7 @@ roipooling_average_kernel
 template<typename T> __global__ void
 roipooling_max_kernel
 (T* output,
- const T* data, int height, int width, int numChannels, int size,
+ const T* data, int height, int width, int numChannels, int cardinality,
  const T* rois, int numROIs,
  Geom<T> geom)
 {
@@ -150,7 +150,7 @@ roipooling_max_kernel
   int outputVolume = geom.subdivisions[0] * geom.subdivisions[1] * numChannels * numROIs ;
   if (outputIndex < outputVolume) {
     Bounds b = getBounds<T>(outputIndex,
-                            height,width,numChannels,size,
+                            height,width,numChannels,cardinality,
                             rois,numROIs,
                             geom) ;
     data += b.offset ;
@@ -176,7 +176,7 @@ roipooling_max_kernel
 template<typename T> __global__ void
 roipooling_average_backward_kernel
 (T* derData,
- const T* data, int height, int width, int numChannels, int size,
+ const T* data, int height, int width, int numChannels, int cardinality,
  const T* rois, int numROIs,
  const T* derOutput,
  Geom<T> geom)
@@ -186,7 +186,7 @@ roipooling_average_backward_kernel
   if (outputIndex < outputVolume) {
 
     Bounds b = getBounds<T>(outputIndex,
-                            height,width,numChannels,size,
+                            height,width,numChannels,cardinality,
                             rois,numROIs,
                             geom) ;
     data += b.offset ;
@@ -208,7 +208,7 @@ roipooling_average_backward_kernel
 template<typename T> __global__ void
 roipooling_max_backward_kernel
 (T* derData,
- const T* data, int height, int width, int numChannels, int size,
+ const T* data, int height, int width, int numChannels, int cardinality,
  const T* rois, int numROIs,
  const T* derOutput,
  Geom<T> geom)
@@ -219,7 +219,7 @@ roipooling_max_backward_kernel
   if (outputIndex < outputVolume) {
 
     Bounds b = getBounds<T>(outputIndex,
-                            height,width,numChannels,size,
+                            height,width,numChannels,cardinality,
                             rois,numROIs,
                             geom) ;
     if (! b.isEmpty) {

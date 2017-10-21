@@ -39,7 +39,7 @@ forward_backward
  type const* data,
  type const* grid,
  type const* derOutput,
- Int outHeight, Int outWidth, Int outDepth, Int outCardinality,
+ Int outHeight, Int outWidth, Int outNumChannels, Int outCardinality,
  Int inHeight, Int inWidth, Int inCardinality)
 {
   vl::ErrorCode error = vl::VLE_Success ;
@@ -64,13 +64,13 @@ forward_backward
 
   // don't need these -- as already being initialized with zeros in the mex file:
   // if (backwardData) {
-  //   memset(derData, 0, inHeight * inWidth * outDepth * inCardinality * sizeof(type)) ;
+  //   memset(derData, 0, inHeight * inWidth * outNumChannels * inCardinality * sizeof(type)) ;
   // }
   // if (backwardGrid) {
   //   memset(derGrid, 0, 2 * outHeight * outWidth * outCardinality * sizeof(type)) ;
   // }
   for (Int n = 0 ; n < (signed)outCardinality ; ++n) {
-    for (Int c = 0 ; c < (signed)outDepth ; ++c) {
+    for (Int c = 0 ; c < (signed)outNumChannels ; ++c) {
       type const * end = grid + 2 * outWidth * outHeight ;
       while (grid < end) {
         type py = *grid++ ;
@@ -139,8 +139,8 @@ forward_backward
     }
     // next image
     if ((as_unsigned(n) + 1) % as_unsigned(groupSize) != 0) {
-      data -= inHeight * inWidth * outDepth ;
-      derData -= inHeight * inWidth * outDepth ;
+      data -= inHeight * inWidth * outNumChannels ;
+      derData -= inHeight * inWidth * outNumChannels ;
     }
     grid += 2 * outHeight * outWidth ;
     derGrid += 2 * outHeight * outWidth ;
@@ -165,7 +165,7 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
 
     auto outHeight = output.getHeight() ;
     auto outWidth = output.getWidth() ;
-    auto outDepth = output.getNumChannels() ;
+    auto outNumChannels = output.getNumChannels() ;
     auto outCardinality = output.getCardinality() ;
     auto inHeight = input.getHeight() ;
     auto inWidth = input.getWidth() ;
@@ -176,7 +176,7 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
 
     return forward_backward<type, false, false>
     (op.getContext(), outputData, NULL, NULL, inputData, gridData, NULL,
-     outHeight, outWidth, outDepth, outCardinality,
+     outHeight, outWidth, outNumChannels, outCardinality,
      inHeight, inWidth, inCardinality) ;
   }
 } ;
@@ -188,7 +188,7 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
 #define DISPATCH(bwData, bwGrid) \
 error = forward_backward<type, bwData, bwGrid> \
 (op.getContext(), NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
-outHeight, outWidth, outDepth, outCardinality, \
+outHeight, outWidth, outNumChannels, outCardinality, \
 inHeight, inWidth,inCardinality) ;
 
 template<DataType dataType>
@@ -205,7 +205,7 @@ struct BilinearSamplerBackward<VLDT_CPU,dataType>
     typedef typename DataTypeTraits<dataType>::type type ;
     auto outHeight = derOutput.getHeight() ;
     auto outWidth = derOutput.getWidth() ;
-    auto outDepth = derOutput.getNumChannels() ;
+    auto outNumChannels = derOutput.getNumChannels() ;
     auto outCardinality = derOutput.getCardinality() ;
     auto inHeight = input.getHeight() ;
     auto inWidth = input.getWidth() ;

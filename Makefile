@@ -258,6 +258,9 @@ matlab/mex/.build/bits/impl/imread_quartz.o : matlab/src/bits/impl/imread_helper
 matlab/mex/.build/bits/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
 matlab/mex/.build/bits/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
 
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_cudnn.cu
+
+
 # --------------------------------------------------------------------
 #                                                    Compilation rules
 # --------------------------------------------------------------------

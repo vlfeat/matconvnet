@@ -238,7 +238,7 @@
 		2D7A6F741D8C53D0008F8B22 /* nnroipooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnroipooling.cu; path = matlab/src/bits/nnroipooling.cu; sourceTree = "<group>"; };
 		2D7A6F761D8C53D0008F8B22 /* vl_nnroipool.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = vl_nnroipool.cu; path = matlab/src/vl_nnroipool.cu; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		2D7A6F771D8C58B4008F8B22 /* vl_nnroipool.m */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; name = vl_nnroipool.m; path = matlab/vl_nnroipool.m; sourceTree = "<group>"; };
-    2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling.cu; path = matlab/src/bits/nnpooling.cu; sourceTree = "<group>"; };
+		2D7B112D1A88F0FF00A3D8A0 /* nnpooling.cu */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = nnpooling.cu; path = matlab/src/bits/nnpooling.cu; sourceTree = "<group>"; };
 		2D7B112E1A88F0FF00A3D8A0 /* nnpooling.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = nnpooling.hpp; path = matlab/src/bits/nnpooling.hpp; sourceTree = "<group>"; };
 		2D7B11311A88F12000A3D8A0 /* nnpooling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnpooling.cpp; path = matlab/src/bits/nnpooling.cpp; sourceTree = "<group>"; };
 		2D7B11331A8AC81E00A3D8A0 /* nnfullyconnected.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nnfullyconnected.cpp; path = matlab/src/bits/nnfullyconnected.cpp; sourceTree = "<group>"; };
@@ -924,8 +924,8 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
-				CUDNNROOT = "$(HOME)/share/cudnn-v5.1";
+				CUDAROOT = "/Developer/NVIDIA/CUDA-9.0";
+				CUDNNROOT = "$(HOME)/share/cudnn-v7.0-cuda9";
 				DEBUG = YES;
 				DEVELOPER_BIN_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
 				DEVELOPER_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
@@ -953,7 +953,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MATLABROOT = /Applications/MATLAB_R2017b.app;
 				MEX = "$(MATLABROOT)/bin/mex";
-				MEXCUDACONFIG = "local/nvcc_clang++_2017b.xml";
+				MEXCUDACONFIG = "local/nvcc_clang++_2017b-cuda9.xml";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = /Applications/Xcode7.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk;
@@ -985,8 +985,8 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
-				CUDAROOT = "/Developer/NVIDIA/CUDA-8.0";
-				CUDNNROOT = "$(HOME)/share/cudnn-v5.1";
+				CUDAROOT = "/Developer/NVIDIA/CUDA-9.0";
+				CUDNNROOT = "$(HOME)/share/cudnn-v7.0-cuda9";
 				DEBUG = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPER_BIN_DIR = /Applications/Xcode7.3.1.app/Contents/Developer;
@@ -1008,7 +1008,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MATLABROOT = /Applications/MATLAB_R2017b.app;
 				MEX = "$(MATLABROOT)/bin/mex";
-				MEXCUDACONFIG = "local/nvcc_clang++_2017b.xml";
+				MEXCUDACONFIG = "local/nvcc_clang++_2017b-cuda9.xml";
 				MEXEXT = "$(MATLABROOT)/bin/mexext";
 				SDKROOT = /Applications/Xcode7.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk;
 			};
@@ -1032,6 +1032,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				CUDAROOT = "";
 				EXECUTABLE_PREFIX = lib;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -1045,6 +1046,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				CUDAROOT = "";
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

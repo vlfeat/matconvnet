@@ -1341,7 +1341,7 @@ void mexFunction(int nout, mxArray *out[],
     if (averageImage.getNumDimensions() != 3 ||
         averageImage.getHeight() != resizeHeight ||
         averageImage.getWidth() != resizeWidth ||
-        averageImage.getNumChannels() !=3) {
+        averageImage.getNumChannels() != 3) {
       vlmxError(VLMXE_IllegalArgument, "The average image is not a RESIZEHEIGHT x RESIZEWIDTH x 3 array.") ;
     }
   }
