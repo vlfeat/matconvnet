@@ -111,7 +111,7 @@ inline float fast_pow(float x, float y)
   float mx3 = mx2*mx ;
   float t = y * (fx + mx*plog1 + mx2*plog2 + mx3*plog3) ;
 
-  float fz = floor(t) ;
+  float fz = floorf(t) ;
   float rz = t - fz ;
   float rz2 = rz*rz ;
   float rz3 = rz2*rz ;

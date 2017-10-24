@@ -16,6 +16,7 @@ the terms of the BSD license (see the COPYING file).
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include "impl/compat.h"
 
@@ -33,11 +34,19 @@ the terms of the BSD license (see the COPYING file).
 #define VL_M_PI 3.14159265358979323846
 #define VL_M_PI_F 3.14159265358979323846f
 
+#define VLERR(code,message) \
+getContext().passError(code,message)
+
+#define VLLOG(op,level) \
+if ((op).getContext().getLogLevel() < level) { } \
+else (op).getContext().getLogger().getStream()
+
 namespace vl {
 
+  /// Basic integral type.
   typedef ptrdiff_t Int ;
   
-  /// Error codes
+  /// Error codes.
   enum ErrorCode {
     VLE_Success = 0,
     VLE_Unsupported,
@@ -47,23 +56,25 @@ namespace vl {
     VLE_OutOfMemory,
     VLE_OutOfGPUMemeory,
     VLE_IllegalArgument,
-    VLE_Unknown,
     VLE_Timeout,
     VLE_NoData,
     VLE_IllegalMessage,
-    VLE_Interrupted
+    VLE_Interrupted,
+    VLE_TensorShapeMismatch,
+    VLE_TensorTypeMismatch,
+    VLE_Unknown,
   } ;
 
-  /// Get an error message for a given code
+  /// Get an error message for a given code.
   const char * getErrorMessage(ErrorCode error) ;
 
-  /// Type of device: CPU or GPU
+  /// Type of device: CPU or GPU.
   enum DeviceType {
     VLDT_CPU = 0,
     VLDT_GPU
   }  ;
 
-  /// Type of data (char, float, double, ...)
+  /// Type of data (char, float, double, ...).
   enum DataType {
     VLDT_Char,
     VLDT_Float,
@@ -84,25 +95,41 @@ namespace vl {
     return static_cast<typename std::make_unsigned<T>::type >(x) ;
   }
 
+  /// Convert a DataType code to a C++ type.
   template <vl::DataType dataType> struct DataTypeTraits { } ;
   template <> struct DataTypeTraits<VLDT_Char> {
     typedef char type ;
     static constexpr std::size_t size = sizeof(char) ;
+    static constexpr auto name = "char" ;
   } ;
   template <> struct DataTypeTraits<VLDT_Float> {
     typedef float type ;
     static constexpr std::size_t size = sizeof(float) ;
+    static constexpr auto name = "float" ;
   } ;
   template <> struct DataTypeTraits<VLDT_Double> {
     typedef double type ;
     static constexpr std::size_t size = sizeof(double) ;
+    static constexpr auto name = "double" ;
   } ;
 
+
+  /// Convert a DataType code to a C++ type.
+  template <vl::DeviceType deviceType> struct DeviceTypeTraits { } ;
+  template <> struct DeviceTypeTraits<VLDT_CPU> {
+    static constexpr auto name = "CPU" ;
+  } ;
+  template <> struct DeviceTypeTraits<VLDT_GPU> {
+    static constexpr auto name = "GPU" ;
+  } ;
+
+  /// Convert a C++ type to a DataType code.
   template <typename type> struct BuiltinToDataType {} ;
   template <> struct BuiltinToDataType<char> { enum { dataType = VLDT_Char } ; } ;
   template <> struct BuiltinToDataType<float> { enum { dataType = VLDT_Float } ; } ;
   template <> struct BuiltinToDataType<double> { enum { dataType = VLDT_Double } ; } ;
 
+  /// Get the size of a datat type in bytes.
   inline size_t getDataTypeSizeInBytes(DataType dataType) {
     switch (dataType) {
       case VLDT_Char:   return DataTypeTraits<VLDT_Char>::size ;
@@ -134,7 +161,7 @@ namespace vl {
   /// Draw a Normally-distributed scalar.
   double randn() ;
 
-  /// Get realtime monotnic clock in microseconds
+  /// Get the value of the realtime clock in microseconds.
   size_t getTime() ;
 
   namespace impl {
@@ -156,6 +183,32 @@ namespace vl {
     } ;
   }
 
+  template<class T>
+  class pretty_helper
+  {
+  public:
+    pretty_helper(T const& object) : object(object) { }
+    T const& get() const { return object ; }
+  private:
+    T const& object ;
+  } ;
+
+  template<class T>
+  pretty_helper<T> pretty(T const & vec) {
+    return {vec} ;
+  }
+
+  template<class T>
+  std::ostream & operator << (std::ostream& os, pretty_helper<std::vector<T>> const& x) {
+    auto const& vec = x.get() ;
+    os << "[" ;
+    for (auto i = begin(vec) ; i != end(vec) ; ++i) {
+      os << *i ;
+      if (i + 1 != end(vec)) os << " " ;
+    }
+    return os << "]" ;
+  }
+  
   /* -----------------------------------------------------------------
    * Context
    * -------------------------------------------------------------- */
@@ -166,6 +219,21 @@ namespace vl {
     Context() ;
     ~Context() ;
 
+    class Logger {
+    public:
+      std::ostringstream& getStream() { return logStream ; }
+      ~Logger() {
+        context.log(logStream.str()) ;
+      }
+    private:
+      friend class Context ;
+      Logger(Context &context) : context(context) { }
+      Logger(Logger &&x) : context(x.context), logStream(std::move(x.logStream)) { }
+
+      Context& context ;
+      std::ostringstream logStream ;
+    } ;
+
     void * getWorkspace(DeviceType device, size_t size) ;
     void clearWorkspace(DeviceType device) ;
     void * getAllOnes(DeviceType device, DataType type, size_t size) ;
@@ -174,6 +242,14 @@ namespace vl {
 
     void clear() ; // do a reset
     void invalidateGpu() ; // drop CUDA memory and handles
+
+    void setLogLevel(int level) ;
+    int getLogLevel() const ;
+    void log(std::string const& message) ;
+    void clearLog() ;
+    std::string const& getLastLoggedMessage() const ;
+    std::vector<std::string> const& getLogbook() const ;
+    Logger getLogger() ;
 
     vl::ErrorCode passError(vl::ErrorCode error, char const * message = NULL) ;
     vl::ErrorCode setError(vl::ErrorCode error, char const * message = NULL) ;
@@ -187,6 +263,8 @@ namespace vl {
 
     ErrorCode lastError ;
     std::string lastErrorMessage ;
+    std::vector<std::string> logbook ;
+    int logLevel ;
 
     CudaHelper * cudaHelper ;
   } ;
@@ -218,8 +296,9 @@ namespace vl {
     void reshape(TensorShape const & shape) ; // same as operator=
 
     Int getDimension(Int num) const ;
-    Int const * getDimensions() const ;
+    Int const * getDimensionsAsPtr() const ;
     Int getNumDimensions() const ;
+    std::vector<Int> getDimensions() const ;
     Int getHeight() const ;
     Int getWidth() const ;
     Int getNumChannels() const ;

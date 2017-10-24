@@ -134,6 +134,95 @@ struct dispatch_cudnn
   }
 } ;
 
+// -------------------------------------------------------------------
+//                                          Check tensor compatibility
+// -------------------------------------------------------------------
+
+  // Check that all the arguments are tensor of the same data and device
+  // type (e.g. all FLOAT GPU tensors). Skip any tensor which is
+  // either empty or null (forgotten) as these denote missing arguments
+  // or only store shape information.
+  static inline
+  std::tuple<bool, bool, vl::DeviceType, vl::DataType>
+  check_tensor_compatibility_impl(vl::Tensor const &t) {
+    if (t.isEmpty()) {
+      return {true,false,VLDT_CPU,VLDT_Float} ; // CPU/Float are placeholder values
+    } else {
+      return {true,true,t.getDeviceType(),t.getDataType()} ;
+    }
+  }
+
+  template <typename ... Types>
+  static inline
+  std::tuple<bool, bool, vl::DeviceType, vl::DataType>
+  check_tensor_compatibility_impl(vl::Tensor const &t, Types& ... args) {
+    auto result = check_tensor_compatibility_impl(args...) ;
+    if (t.isEmpty() || t.isNull()) {
+      return result ;
+    } else {
+      if (!std::get<1>(result)) {
+        // No non-empty tensor found so far.
+        return {true,true,t.getDeviceType(),t.getDataType()} ;
+      } else {
+        // There was a non-empty tensor before.
+        bool compatible = std::get<0>(result)
+        && (t.getDeviceType() == std::get<2>(result))
+        && (t.getDataType() == std::get<3>(result)) ;
+        return {compatible,true,std::get<2>(result),std::get<3>(result)} ;
+      }
+    }
+  }
+
+  template <typename ... Types>
+  static inline
+  bool check_tensor_compatibility(Types& ... args) {
+    auto result = check_tensor_compatibility_impl(args...) ;
+    return std::get<0>(result) ;
+  }
+
+template <template <vl::DeviceType deviceType, vl::DataType dataType> class C>
+struct check_tensor_compat
+{
+  template <class B, typename ... Types>
+  vl::ErrorCode operator()(B& base, Types& ... args)
+  {
+    vl::ErrorCode error ;
+    tensor_type tt = findTensorType(args...) ;
+#if ENABLE_GPU
+    if (tt.deviceType == VLDT_GPU) {
+      switch (tt.dataType) {
+        case vl::VLDT_Float:
+          error = C<vl::VLDT_GPU,vl::VLDT_Float>()(base,args...) ;
+          break ;
+#if ENABLE_DOUBLE
+        case vl::VLDT_Double:
+          error = C<vl::VLDT_GPU,vl::VLDT_Double>()(base,args...) ;
+          break ;
+#endif
+        default: assert(false) ;
+      }
+      if (error == vl::VLE_Cuda) {
+        base.getContext().setError
+        (base.getContext().getCudaHelper().catchCudaError("GPU")) ;
+      }
+      return base.getContext().passError(error, __func__) ;
+    }
+#endif
+    switch (tt.dataType) {
+      case vl::VLDT_Float:
+        error = C<vl::VLDT_CPU,vl::VLDT_Float>()(base,args...) ;
+        break ;
+#if ENABLE_DOUBLE
+      case vl::VLDT_Double:
+        error = C<vl::VLDT_CPU,vl::VLDT_Double>()(base,args...) ;
+        break ;
+#endif
+      default: assert(false) ;
+    }
+    return base.getContext().passError(error, __func__) ;
+  }
+} ;
+
 } }
 
 #endif

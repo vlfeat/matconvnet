@@ -32,8 +32,8 @@ using Int = vl::Int ;
 /* option codes */
 enum {
   opt_stride = 0,
-  opt_pad,
-  opt_dilate,
+  opt_padding,
+  opt_dilation,
   opt_verbose,
   opt_no_der_data,
   opt_no_der_filters,
@@ -45,10 +45,12 @@ enum {
 } ;
 
 /* options */
-VLMXOption  options [] = {
+VLMXOption options [] = {
   {"Stride",                1,   opt_stride                },
-  {"Pad",                   1,   opt_pad                   },
-  {"Dilate",                1,   opt_dilate                },
+  {"Pad",                   1,   opt_padding               },
+  {"Padding",               1,   opt_padding               },
+  {"Dilate",                1,   opt_dilation              },
+  {"Dilation",              1,   opt_dilation              },
   {"Verbose",               0,   opt_verbose               },
   {"NoDerData",             0,   opt_no_der_data           },
   {"NoDerFilters",          0,   opt_no_der_filters        },
@@ -74,6 +76,17 @@ void atExit()
   context.clear() ;
 }
 
+#define CHECK(x) \
+if (x != vl::VLE_Success) { \
+  vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ; \
+}
+
+#define ERR(code,message) \
+context.passError(code,message)
+
+#define CHECK2(x) \
+{ vl::ErrorCode err = (x) ; if (x != vl::VLE_Success) { return err ; } }
+
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -86,9 +99,210 @@ enum {
   OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIASES, OUT_END
 } ;
 
+vl::ErrorCode performConvolution(vl::Context& contetx,
+                                 int nout, mxArray *out[],
+                                 int nin, mxArray const *in[])
+{
+  bool backMode = false ;
+  bool hasFilters = false ;
+  bool hasBiases = false ;
+  bool computeDerData = true ;
+  bool computeDerFilters = true ;
+  bool computederBiases = true ;
+
+  int verbosity = 0 ;
+  int opt ;
+  int next = IN_END ;
+  mxArray const *optarg ;
+
+  context.setLogLevel(verbosity) ;
+  context.clearLog() ;
+  vl::nn::Convolution op(context) ;
+
+  if (nin < 3) {
+    return ERR(vl::VLE_IllegalArgument, "There are less than three arguments.") ;
+  }
+
+  if (nin > 3 && vlmxIsString(in[3],-1)) {
+    next = 3 ;
+    backMode = 0 ;
+  } else {
+    backMode = (nin >= 4) ;
+  }
+
+  while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
+    switch (opt) {
+      case opt_verbose :
+        ++ verbosity ;
+        context.setLogLevel(verbosity) ;
+        break ;
+
+      case opt_stride : {
+        std::vector<Int> stride ;
+        if (context.parse(stride,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set STRIDE:") ;
+        }
+        CHECK2(op.setStride(stride)) ;
+        break ;
+      }
+
+      case opt_padding : {
+        std::vector<Int> padding ;
+        if (context.parse(padding,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set PADDING:") ;
+        }
+        CHECK2(op.setPadding(padding)) ;
+        break ;
+      }
+
+      case opt_dilation: {
+        std::vector<Int> dilation ;
+        if (context.parse(dilation,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set DILATION:") ;
+        }
+        CHECK2(op.setDilation(dilation)) ;
+        break ;
+      }
+
+      case opt_no_der_data : computeDerData = false ; break ;
+      case opt_no_der_filters : computeDerFilters = false ; break ;
+      case opt_no_der_biases : computederBiases = false ; break ;
+
+      case opt_no_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(false) ;
+#endif
+        break ;
+
+      case opt_cudnn :
+#if ENABLE_CUDNN
+        context.getCudaHelper().setCudnnEnabled(true) ;
+#endif
+        break ;
+
+      case opt_cudnn_workspace_limit :
+      {
+#if ENABLE_CUDNN
+        double x ;
+        if (!vlmxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
+          ERR(vl::VLE_IllegalArgument, "CudnnWorkSpaceLimit is not a non-negative scalar.") ;
+        }
+        context.getCudaHelper().setCudnnConvolutionFwdPreference
+        ((x==mxGetInf() ?
+          CUDNN_CONVOLUTION_FWD_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        context.getCudaHelper().setCudnnConvolutionBwdFilterPreference
+        ((x==mxGetInf() ?
+          CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        context.getCudaHelper().setCudnnConvolutionBwdDataPreference
+        ((x==mxGetInf() ?
+          CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
+          CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
+         (size_t)x) ;
+        break ;
+#endif
+      }
+      default: break ;
+    }
+  }
+
+  vl::MexTensor data(context) ;
+  vl::MexTensor filters(context) ;
+  vl::MexTensor biases(context) ;
+
+  data.init(in[IN_DATA]) ;
+  data.reshape(4) ;
+
+  filters.init(in[IN_FILTERS]) ;
+  filters.reshape(4) ;
+
+  biases.init(in[IN_BIASES]) ;
+
+  {
+    if (!backMode) {
+      // Forward mode.
+      vl::DeviceType deviceType = data.getDeviceType() ;
+      vl::DataType dataType = data.getDataType() ;
+
+      // Compute the size of the output tensor.
+      vl::TensorShape outputShape ;
+      CHECK(op.forwardShape(outputShape,data,filters,biases)) ;
+
+      // Initialize output tensor.
+      vl::MexTensor output(context) ;
+      output.init(deviceType, dataType, outputShape) ;
+
+      // Perform calculation.
+      CHECK(op.forward(output,0,data,1,filters,biases)) ;
+
+      // Return results.
+      out[OUT_RESULT] = output.relinquish() ;
+    }
+    else {
+      // Backward mode.
+      vl::MexTensor derOutput(context) ;
+      derOutput.init(in[IN_DEROUTPUT]) ;
+      derOutput.reshape(4) ;
+      vl::DeviceType deviceType = derOutput.getDeviceType() ;
+      vl::DataType dataType = derOutput.getDataType() ;
+
+      // Compute the size of the output tensor.
+      vl::TensorShape outputShape ;
+      CHECK(op.forwardShape(outputShape,data,filters,biases)) ;
+
+      // Initialize the tensors to be returned.
+      vl::MexTensor derData(context) ;
+      if (computeDerData) {
+        derData.init(deviceType, dataType, data.getShape()) ;
+      }
+
+      vl::MexTensor derFilters(context) ;
+      if (computeDerFilters && hasFilters) {
+        derFilters.init(deviceType, dataType, filters.getShape()) ;
+      }
+
+      vl::MexTensor derBiases(context) ;
+      if (computederBiases && hasBiases) {
+        derBiases.init(deviceType, dataType, biases.getShape()) ;
+      }
+
+      // Perform calculation.
+      CHECK(op.backward(derData,derBiases,derFilters,data,filters,derOutput)) ;
+
+      // Return results.
+      out[OUT_RESULT] = derData.relinquish() ;
+      out[OUT_DERFILTERS] = derFilters.relinquish() ;
+      out[OUT_DERBIASES] = derBiases.relinquish() ;
+    }
+
+    return vl::VLE_Success ;
+  }
+}
+
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
+  mexAtExit(atExit) ;
+  vl::ErrorCode error = performConvolution(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnconv\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
+    }
+    context.setLogLevel(0) ;
+  }
+
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
+  }
+  return ;
+}
+
+#if 0
   Int strideX = 1 ;
   Int strideY = 1 ;
   Int padLeft = 0 ;
@@ -265,6 +479,79 @@ void mexFunction(int nout, mxArray *out[],
     derOutput.reshape(4) ;
   }
 
+  {
+    vl::ErrorCode error ;
+    context.setLogLevel(verbosity) ;
+    context.clearLog() ;
+
+    vl::nn::Convolution op(context,
+                           strideY, strideX,
+                           padTop, padBottom, padLeft, padRight,
+                           dilateY, dilateX);
+
+    if (!backMode) {
+      // Forward mode.
+      vl::DeviceType deviceType = data.getDeviceType() ;
+      vl::DataType dataType = data.getDataType() ;
+
+      // Compute the size of the output tensor.
+      vl::TensorShape outputShape ;
+      CHECK(op.forwardShape(outputShape,data,filters,biases)) ;
+
+      // Initialize output tensor.
+      vl::MexTensor output(context) ;
+      output.init(deviceType, dataType, outputShape) ;
+
+      // Perform calculation.
+      CHECK(op.forward(output,0,data,1,filters,biases)) ;
+
+      // Return results.
+      out[OUT_RESULT] = output.relinquish() ;
+    }
+    else {
+      // Backward mode.
+      vl::DeviceType deviceType = derOutput.getDeviceType() ;
+      vl::DataType dataType = derOutput.getDataType() ;
+
+      // Compute the size of the output tensor.
+      vl::TensorShape outputShape ;
+      CHECK(op.forwardShape(outputShape,data,filters,biases)) ;
+
+      // Initialize the tensors to be returned.
+      vl::MexTensor derData(context) ;
+      if (computeDerData) {
+        derData.init(deviceType, dataType, data.getShape()) ;
+      }
+
+      vl::MexTensor derFilters(context) ;
+      if (computeDerFilters && hasFilters) {
+        derFilters.init(deviceType, dataType, filters.getShape()) ;
+      }
+
+      vl::MexTensor derBiases(context) ;
+      if (computederBiases && hasBiases) {
+        derBiases.init(deviceType, dataType, biases.getShape()) ;
+      }
+
+      // Perform calculation.
+      CHECK(op.backward(derData,derBiases,derFilters,data,filters,derOutput)) ;
+
+      // Return results.
+      out[OUT_RESULT] = derData.relinquish() ;
+      out[OUT_DERFILTERS] = derFilters.relinquish() ;
+      out[OUT_DERBIASES] = derBiases.relinquish() ;
+    }
+
+    if (verbosity) {
+      mexPrintf("vl_nnconv\n") ;
+      for (auto const & str : context.getLogbook()) {
+        mexPrintf("\t%s", str.c_str()) ;
+      }
+      context.setLogLevel(0) ;
+    }
+    return ;
+  }
+
   hasFilters = !filters.isEmpty() ;
   hasBiases = !biases.isEmpty() ;
 
@@ -300,7 +587,9 @@ void mexFunction(int nout, mxArray *out[],
   vl::TensorShape filtersShape(filters) ;
   Int equivalentNumFilters ;
   if (hasFilters) {
-    if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getNumChannels() == 0) {
+    if (filtersShape.getHeight() == 0 ||
+        filtersShape.getWidth() == 0 ||
+        filtersShape.getNumChannels() == 0) {
       vlmxError(VLMXE_IllegalArgument, "A dimension of FILTERS is void.") ;
     }
     if (data.getHeight() + (padTop+padBottom) < (filters.getHeight() - 1)*dilateY + 1 ||
@@ -503,3 +792,4 @@ doneok:
     out[OUT_RESULT] = output.relinquish() ;
   }
 }
+#endif

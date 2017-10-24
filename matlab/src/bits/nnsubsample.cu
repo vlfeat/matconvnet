@@ -263,7 +263,7 @@ Subsample::forwardShape(vl::TensorShape &output, vl::TensorShape const& input) c
   }
   output = input ;
   for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    auto odim = convLikeSizeHelper(input.getDimensions()[d],
+    auto odim = convLikeSizeHelper(input.getDimension(d),
                                    1,
                                    getStride(d),
                                    {getPadding(2*d),getPadding(2*d+1)},

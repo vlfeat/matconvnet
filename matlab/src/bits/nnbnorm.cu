@@ -66,7 +66,7 @@ compute_moment(T * moments,
     T mean = moments[i] / mass ;
     T sigma2 = std::max((T).0, moments[i + numChannels]/mass - mean*mean) ;
     moments[i] = mean ;
-    moments[i + numChannels] = sqrt(sigma2 + epsilon);
+    moments[i + numChannels] = std::sqrt(sigma2 + (T)epsilon);
   }
 }
 
@@ -128,7 +128,7 @@ compute_ders_and_moments(T * derMultipliers,
   for(Int i = 0; i < numChannels; ++i) {
     T mean = moments[i] / mass ;
     T sigma2 = std::max((T).0, moments[i + numChannels]/mass - mean*mean) ;
-    T sigma = sqrt(sigma2 + epsilon);
+    T sigma = std::sqrt(sigma2 + (T)epsilon);
     moments[i] = mean ;
     moments[i + numChannels] = sigma ;
     derMultipliers[i] = (derMultipliers[i] - mean*derBiases[i]) / sigma;

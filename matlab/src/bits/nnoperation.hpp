@@ -45,6 +45,14 @@ namespace vl { namespace nn {
       return stride[as_unsigned(index)] ;
     }
 
+    std::vector<Int> getStrides() const {
+      return {begin(stride), begin(stride)+numSpatialDimensions} ;
+    }
+
+    std::vector<Int> getPaddings() const {
+      return {begin(padding), begin(padding)+2*numSpatialDimensions} ;
+    }
+
   private:
     Int numSpatialDimensions ;
     std::array<Int, vl::Tensor::maxNumDimensions> stride ;

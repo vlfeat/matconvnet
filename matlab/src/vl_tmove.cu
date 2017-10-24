@@ -21,7 +21,7 @@ the terms of the BSD license (see the COPYING file).
 
 #include "bits/impl/blashelper.hpp"
 
-#include <cassert>
+
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -35,6 +35,8 @@ the terms of the BSD license (see the COPYING file).
 #include <sys/un.h>
 #include <sys/socket.h>
 
+#include <cassert>
+#include <cmath>
 #include <memory>
 #include <vector>
 #include <algorithm>
@@ -811,7 +813,7 @@ void SharedTensorSpace::mexPrint() const
     mexPrintf("\tTensor '%s'\n", T.name.c_str()) ;
     mexPrintf("\t\t[") ;
     for (int k = 0 ; k < T.descriptor.shape.getNumDimensions() ; ++k) {
-      mexPrintf(" %d", T.descriptor.shape.getDimensions()[k]) ;
+      mexPrintf(" %d", T.descriptor.shape.getDimension(k)) ;
     }
     mexPrintf("] %s %s\n",
               T.descriptor.dataType == vl::VLDT_Double?"double":"single",

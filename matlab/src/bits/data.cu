@@ -88,11 +88,14 @@ vl::getErrorMessage(ErrorCode error)
     "cuBLAS error",
     "out of memory error",
     "out of GPU memory error",
+    "illegal argument error",
+    "timeout error",
+    "missing data arror",
+    "illegal message error",
+    "interrupted error",
+    "tensor shape mismatch error",
+    "tensor type mismatch error",
     "unknown error",
-    "timeout",
-    "no data",
-    "illegal message",
-    "interrupted"
   } ;
   if (error < VLE_Success || error > VLE_Unknown) {
     error = VLE_Unknown ;
@@ -267,7 +270,8 @@ vl::impl::Buffer::invalidateGpu()
 
 vl::Context::Context()
 :
-lastError(vl::VLE_Success), lastErrorMessage(), cudaHelper(NULL)
+lastError(vl::VLE_Success), lastErrorMessage(), cudaHelper(NULL),
+logLevel(0)
 { }
 
 vl::CudaHelper &
@@ -281,6 +285,12 @@ vl::Context::getCudaHelper()
   abort() ;
 #endif
   return *cudaHelper ;
+}
+
+vl::Context::Logger
+vl::Context::getLogger()
+{
+  return Logger(*this) ;
 }
 
 void vl::Context::clear()
@@ -334,7 +344,7 @@ vl::Context::passError(vl::ErrorCode error, char const* description)
 {
   if (error != vl::VLE_Success) {
     if (description) {
-      lastErrorMessage = std::string(description) + ": " + lastErrorMessage ;
+      lastErrorMessage = std::string(description) + " " + lastErrorMessage ;
     }
   }
   return error ;
@@ -386,6 +396,46 @@ std::string const&
 vl::Context::getLastErrorMessage() const
 {
   return lastErrorMessage ;
+}
+
+void
+vl::Context::setLogLevel(int level)
+{
+  logLevel = level ;
+}
+
+int
+vl::Context::getLogLevel() const
+{
+  return logLevel ;
+}
+
+void
+vl::Context::log(std::string const &message)
+{
+  logbook.push_back(message) ;
+}
+
+std::string const&
+vl::Context::getLastLoggedMessage() const
+{
+  static std::string const noMessage("No Message") ;
+  if (logbook.empty()) {
+    return noMessage ;
+  }
+  return logbook.back() ;
+}
+
+std::vector<std::string> const&
+vl::Context::getLogbook() const
+{
+  return logbook ;
+}
+
+void
+vl::Context::clearLog()
+{
+  logbook.clear() ;
 }
 
 /* -------------------------------------------------------------------
@@ -563,9 +613,14 @@ Int vl::TensorShape::getNumDimensions() const
   return numDimensions ;
 }
 
-Int const * vl::TensorShape::getDimensions() const
+Int const * vl::TensorShape::getDimensionsAsPtr() const
 {
   return dimensions ;
+}
+
+std::vector<Int> vl::TensorShape::getDimensions() const
+{
+  return {dimensions, dimensions + numDimensions} ;
 }
 
 Int vl::TensorShape::getNumElements() const
@@ -593,10 +648,8 @@ bool vl::operator== (vl::TensorShape const & a, vl::TensorShape const & b)
 {
   Int n = a.getNumDimensions() ;
   if (b.getNumDimensions() != n) { return false ; }
-  Int const * adims = a.getDimensions() ;
-  Int const * bdims = b.getDimensions() ;
-  for (unsigned k =0 ; k < a.getNumDimensions() ; ++k) {
-    if (adims[k] != bdims[k]) { return false ; }
+  for (unsigned k = 0 ; k < a.getNumDimensions() ; ++k) {
+    if (a.getDimension(k) != b.getDimension(k)) { return false ; }
   }
   return true ;
 }

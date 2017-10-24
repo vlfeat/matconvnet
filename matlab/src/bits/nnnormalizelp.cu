@@ -43,8 +43,8 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 {
   // Compute tensor geometry.
   auto n = (size_t)input.getNumDimensions() ;
-  auto inputDimensions = std::vector<size_t>(input.getDimensions(),
-                                             input.getDimensions() + n) ;
+  auto inputDimensions = std::vector<size_t>(begin(input.getDimensions()),
+                                             end(input.getDimensions())) ;
 
   assert(n <= 4) ; // Todo: relax (just extend the for loops below).
 
@@ -126,7 +126,7 @@ void computeNorms(NormalizeLp const & op,
 
   // Root norm.
   for (Int i = 0 ; i < vp.normsVolume ; ++i) {
-    normsData[i] = pow(normsData[i] + epsilon, static_cast<type>(1.0)/exponent) ;
+    normsData[i] = std::pow(normsData[i] + (type)epsilon, static_cast<type>(1.0/exponent)) ;
   }
 }
 
@@ -270,7 +270,7 @@ struct NormalizeLpBackwardCPU
           for (Int i1 = 0 ; i1 < vp.stepPeriods[2] ; ++i1) {
             for (Int i0 = 0 ; i0 < vp.stepPeriods[1] ; ++i0) {
               auto n = *npt ;
-              *dipt = (*dopt) / n - (*spt) * pow(*ipt, exponent-1) / pow(n,exponent+1) ;
+              *dipt = (*dopt) / n - (*spt) * std::pow(*ipt, exponent-1) / std::pow(n,exponent+1) ;
 
               dipt ++ ;
               ipt ++ ;

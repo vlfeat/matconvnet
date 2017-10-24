@@ -22,29 +22,43 @@ ConvolutionLike::ConvolutionLike(Context& context, Int numSpatialDimensions)
 
 vl::ErrorCode ConvolutionLike::setStride(vector<Int> const& stride)
 {
-  // There must one stride per spatial dimension.
-  if (Int(stride.size()) != numSpatialDimensions) {
-    return VLE_IllegalArgument ;
-  }
   // Stride must be positive.
-  if (any_of(begin(stride),begin(stride)+numSpatialDimensions,[](Int x){return x <= 0;})) {
-    return VLE_IllegalArgument ;
+  if (any_of(begin(stride),end(stride),[](Int x){return x <= 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "An element of STRIDE is less than 1.") ;
   }
-  copy(begin(stride),begin(stride)+numSpatialDimensions,begin(this->stride)) ;
+  // There must one stride per spatial dimension.
+  if (Int(stride.size()) == numSpatialDimensions) {
+    copy(begin(stride),end(stride),begin(this->stride)) ;
+  }
+  else if (stride.size() == 1) {
+    this->stride.fill(stride[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "STRIDE is neither scalar nor has the same cardinality as the number of spatial dimensions.") ;
+  }
   return VLE_Success ;
 }
 
 vl::ErrorCode ConvolutionLike::setPadding(vector<Int> const& padding)
 {
-  // There must two padding values per spatial dimension.
-  if (Int(padding.size()) != 2*numSpatialDimensions) {
-    return VLE_IllegalArgument ;
-  }
   // Padding must be non-negative.
-  if (any_of(begin(padding),begin(padding)+2*numSpatialDimensions,[](Int x){return x < 0;})) {
-    return VLE_IllegalArgument ;
+  if (any_of(begin(padding),end(padding),[](Int x){return x < 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "An element of PADDING is less than 0.") ;
   }
-  copy(begin(padding),begin(padding)+2*numSpatialDimensions,begin(this->padding)) ;
+  // There must one stride per spatial dimension.
+  if (Int(padding.size()) == 2*numSpatialDimensions) {
+    copy(begin(padding),end(padding),begin(this->stride)) ;
+  }
+  else if (padding.size() == 1) {
+    this->padding.fill(stride[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "PADDING is neither scalar nor has the cardinality of twice the number of spatial dimensions.") ;
+  }
   return VLE_Success ;
 }
 

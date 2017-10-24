@@ -32,9 +32,9 @@ struct GPUVisitPattern
 GPUVisitPattern getGPUVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 {
   // Compute tensor geometry.
-  int n = (int)input.getNumDimensions() ;
-  auto inputDimensions = std::vector<int>(input.getDimensions(),
-                                          input.getDimensions() + n) ;
+  Int n = input.getNumDimensions() ;
+  auto inputDimensions = std::vector<int>(begin(input.getDimensions()),
+                                          end(input.getDimensions())) ;
 
   assert(n <= 4) ; // Todo: relax.
 
@@ -47,7 +47,7 @@ GPUVisitPattern getGPUVisitPatternForInput(NormalizeLp const & op, vl::Tensor in
 
   // Find out how to traverse the reduced results as the input is
   // scanned from first to last element.
-  for (int d = 0 ; d < n ; ++d) {
+  for (Int d = 0 ; d < n ; ++d) {
     bool squashed =
     (find(begin(op.getSelectedDimensions()),
           end(op.getSelectedDimensions()), d) != end(op.getSelectedDimensions())) ;
