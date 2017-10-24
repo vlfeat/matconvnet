@@ -137,6 +137,11 @@ isArrayOwner(false)
 mxArray *
 vl::MexTensor::relinquish()
 {
+  if (array == NULL)  {
+    assert(isEmpty()) ;
+    // Return a representation of an empty array.
+    return mxCreateNumericMatrix(0,0,mxDOUBLE_CLASS,mxREAL) ;
+  }
   if (isArrayOwner) {
     isArrayOwner = false ;
     return (mxArray*) array ;
@@ -473,8 +478,8 @@ void vl::print(char const * str, vl::MexTensor const & tensor)
     default: type = "uknown type" ;
   }
   mexPrintf("%s[", str) ;
-  for (int k = 0 ; k < tensor.getNumDimensions() ; ++k) {
-    mexPrintf("%d ", dimensions[k]) ;
+  for (Int k = 0 ; k < tensor.getNumDimensions() ; ++k) {
+    mexPrintf("%d ", tensor.getDimension(k)) ;
   }
   mexPrintf("| %s %.1f%s %s]\n",
             type,

@@ -85,6 +85,11 @@ struct ConvolutionForward
     assert(filter) ;
     assert(input.getNumDimensions() <= 4) ; // Todo: generalize.
 
+    VLLOG(op,1)
+    << "ConvolutionForward: BLAS, "
+    << DeviceTypeTraits<deviceType>::name << ", "
+    << DataTypeTraits<dataType>::name ;
+
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
@@ -182,6 +187,10 @@ struct ConvolutionBackward
    Tensor const &filter,
    Tensor const &derOutput)
   {
+    VLLOG(op,1)
+    << "ConvolutionBackward: BLAS, "
+    << DeviceTypeTraits<deviceType>::name << ", "
+    << DataTypeTraits<dataType>::name ;
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -199,9 +208,11 @@ struct ConvolutionBackward
 
     if (derBias) {
       // for derivative w.r.t. bias
-      allOnesMemory = (type*) op.getContext().getAllOnes(deviceType,
-                                                 dataType,
-                                                 as_unsigned(numOutputPixels)) ;
+      allOnesMemory = (type*) op.getContext().getAllOnes
+      (deviceType,
+       dataType,
+       as_unsigned(numOutputPixels)) ;
+
       if (allOnesMemory == NULL) {
         error = op.getContext().getLastError() ;
         goto done ;
@@ -330,7 +341,6 @@ struct ConvolutionBackward
         }
       }
     }
-
   done:
     return op.getContext().passError(error, __func__) ;
   }
@@ -438,7 +448,6 @@ struct ConvolutionTransposeBackward
       Tensor null ;
       error = vl::nn::Bias(op.getContext()).backward(null,0,derBias,0,0,1,derOutput) ;
     }
-
   done:
     return error ;
   }
@@ -464,7 +473,6 @@ Convolution::Convolution(Context &context,
   setDilation({dilateY, dilateX}) ;
 }
 
-
 Convolution::Convolution(Context &context)
 : ConvolutionLike(context)
 {
@@ -474,17 +482,120 @@ Convolution::Convolution(Context &context)
 vl::ErrorCode
 Convolution::setDilation(vector<Int> const& dilation)
 {
-  // There must one stride per spatial dimension.
-  if (Int(dilation.size()) != getNumSpatialDimensions()) {
-    return VLE_IllegalArgument ;
-  }
   // Dilation must be positive.
-  if (any_of(begin(dilation),begin(dilation)+getNumSpatialDimensions(),
-             [](Int x){return x <= 0;})) {
-    return VLE_IllegalArgument ;
+  if (any_of(begin(dilation),end(dilation),[](Int x){return x <= 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "Convolution: a dilation parameter is not positive.") ;
   }
-  copy(begin(dilation),begin(dilation)+getNumSpatialDimensions(),
-       begin(this->dilation)) ;
+
+  // There must one dilation per spatial dimension.
+  if (Int(dilation.size()) == getNumSpatialDimensions()) {
+    copy(begin(dilation),end(dilation),begin(this->dilation)) ;
+  }
+  else if (dilation.size() == 1) {
+    this->dilation.fill(dilation[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "DILATION is neither scalar nor has the same cardinality as the number of spatial dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+Convolution::forwardShape(TensorShape &output,
+                          TensorShape const& input,
+                          TensorShape const& filter,
+                          TensorShape const& bias) const
+{
+  output.clear() ;
+
+  // The input tensor cannot be empty.
+  if (input.isEmpty()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "Convolution: the INPUT tensor is empty.") ;
+  }
+
+  // We pretend all tensors have an infinite number of dimensions,
+  // potentially singleton.
+  Int ns = getNumSpatialDimensions() ;
+
+  // The tensors should have ns+2 dimensions. Todo: we may relax that by implicitly
+  // folding the excess dimensions.
+  if (input.getNumDimensions() > ns + 2) {
+    return getContext().setError(VLE_TensorShapeMismatch,
+                                 "Convolution: INPUT has too many dimensions.") ;
+  }
+  if (filter.getNumDimensions() > ns + 2) {
+    return getContext().setError(VLE_TensorShapeMismatch,
+                                 "Convolution: FILTER has too many dimensions.") ;
+  }
+
+  // Check the filters.
+  bool hasFilter = !filter.isEmpty() ;
+  if (hasFilter) {
+    Int inputNumChannels = input.getDimension(ns)  ;
+    Int filterNumChannels = filter.getDimension(ns) ;
+    Int numFilters = filter.getDimension(ns+1) ;
+    Int numGroups = inputNumChannels / filterNumChannels ;
+    if (numGroups * filterNumChannels != inputNumChannels) {
+      output = TensorShape() ; // set to null
+      return getContext().setError
+      (VLE_TensorShapeMismatch,
+       "Convolution: the number of channels of FILTER does not divide the one of INPUT.") ;
+    }
+    Int numFiltersPerGroup = numFilters / numGroups ;
+    if (numFiltersPerGroup * numGroups != numFilters) {
+      return  getContext().setError
+      (VLE_TensorShapeMismatch,
+       "Convolution: the number of filters in the bank is not divisible by the number of filter groups.") ;
+    }
+    for (Int d = 0 ; d < ns ; ++d) {
+      Int odim = convLikeSizeHelper(input.getDimension(d),
+                                    filter.getDimension(d),
+                                    getStride(d),
+                                    {getPadding(2*d),getPadding(2*d+1)},
+                                    getDilation(d)) ;
+      if (odim <= 0) {
+        output.clear() ;
+        return  getContext().setError
+        (VLE_TensorShapeMismatch,
+         "Convolution: the spatial dimensions of INPUT are too small for FILTER and the convolution parameters.") ;
+      }
+      output.setDimension(d,odim) ;
+    }
+    output.setDimension(ns, numFilters) ;
+    output.setDimension(ns+1, input.getDimension(ns+1)) ;
+  } else {
+    // Bias / subsample mode.
+    output = input ;
+    for (Int d = 0 ; d < ns ; ++d) {
+      Int odim = convLikeSizeHelper(input.getDimension(d),
+                                    1,
+                                    getStride(d),
+                                    {getPadding(2*d),getPadding(2*d+1)},
+                                    1) ;
+      if (odim <= 0) {
+        output.clear() ;
+        return  getContext().setError
+        (VLE_TensorShapeMismatch,
+         "Convolution: the spatial dimensions of INPUT are too small for the convolution parameters.") ;
+      }
+      output.setDimension(d,odim) ;
+    }
+  }
+
+  // Check the bias.
+  bool hasBias = !bias.isEmpty() ;
+  if (hasBias) {
+    if (bias.getNumElements() != output.getNumChannels()) {
+      output.clear() ;
+      return  getContext().setError
+      (VLE_TensorShapeMismatch,
+       "Convolution: BIAS does not have a number of element equal to the number of output feature channels.") ;
+    }
+  }
+
   return VLE_Success ;
 }
 
@@ -494,36 +605,72 @@ Convolution::forward(Tensor &output, double outputMult,
                      Tensor const& filter,
                      Tensor const& bias)
 {
+  ErrorCode error ;
+
+  // Validate arguments.
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape, input, filter, bias)) != VLE_Success) {
+    return error ;
+  }
+  if (output != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "Convolution: OUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (!input.isEmpty() && input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "Convolution: INPUT is not an empty tensor, but it has no data either.") ;
+  }
+  if (!output.isEmpty() && output.isNull()) {
+    return  getContext().setError
+    (VLE_IllegalArgument,
+     "Convolution: OUTPUT is not an empty tensor, but it has no data either.") ;
+  }
+  if (!filter.isEmpty() && filter.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "Convolution: FILTER is not an empty tensor, but it has no data either.") ;
+  }
+  if (!bias.isNull() && bias.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "Convolution: BIAS is not an empty tensor, but it has no data either.") ;
+  }
+  if (!check_tensor_compatibility(output,input,filter,bias)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "Convolution: the tensors have mismatching data or device type.") ;
+  }
+
+  VLLOG(*this,1)
+  << "Convolution: forward"
+  << " stride=" << pretty(getStrides())
+  << " padding=" << pretty(getPaddings())
+  << " dilation=" << pretty(getDilations()) ;
+
+  VLLOG(*this,1)
+  << "Convolution: input=" << pretty(input.getDimensions())
+  << " filter=" << pretty(filter.getDimensions())
+  << " bias=" << pretty(bias.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  // Do the work.
   return dispatch_cudnn<
   ConvolutionForward,
   ConvolutionForwardCudnn>()
   (*this,output,outputMult,input,inputMult,filter,bias) ;
 }
 
-vl::ErrorCode
-Convolution::forwardShape(TensorShape &output,
-                          TensorShape const& input,
-                          TensorShape const& filter)
-{
-  output = TensorShape() ; // null
-  if (input.getNumDimensions() != filter.getNumDimensions()) {
-    return VLE_IllegalArgument ;
-  }
-  if (input.getNumDimensions() < getNumSpatialDimensions()) {
-    return VLE_IllegalArgument ;
-  }
-  output = input ;
-  for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    Int odim = convLikeSizeHelper(input.getDimension(d),
-                                  filter.getDimension(d),
-                                  getStride(d),
-                                  {getPadding(2*d),getPadding(2*d+1)},
-                                  getDilation(d)) ;
-    output.setDimension(d,odim) ;
-  }
-  return VLE_Success ;
-}
-
+/// * `derOutput` must be a non-empty, non-null tensor.
+///
+/// * `derInput`, `derFiler`, and `derBias` must be as in the forward call, or be
+///   emtpy in order to skip the computation of the corresponding derivative.
+///
+/// * `input` and `filter` should be as in the forward call. As an optimization,
+///   if `derInput` is not requested, `filter` can be null (forgotten) and
+///   if `derFilter` is not requested, then `input` can be forgotten.
+///
 vl::ErrorCode
 Convolution::backward(Tensor &derInput,
                       Tensor &derFilter,
@@ -532,6 +679,96 @@ Convolution::backward(Tensor &derInput,
                       Tensor const &filter,
                       Tensor const &derOutput)
 {
+  ErrorCode error ;
+
+  // Check that all tensors have the same type.
+  if (!check_tensor_compatibility(derInput,derFilter,derBias,input,filter,derOutput)) {
+    return getContext().passError(VLE_IllegalArgument, "ConvolutionBackward:") ;
+  }
+
+  // Check that we have the output derivative.
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape, input, filter, TensorShape())) != VLE_Success) {
+    return error ;
+  }
+  if (derOutput != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "ConvolutionBackward: DEROUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (derOutput.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionBackward: DEROUTPUT is null.") ;
+  }
+
+  // If the input derivatives are requested, check that we have what we need.
+  if (!derInput.isEmpty()) {
+    if (derInput.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERINPUT requested, but the output tensor is null.") ;
+    }
+    if (static_cast<TensorShape>(derInput) != static_cast<TensorShape>(input)) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERINPUT requested, but its size is not the same as INPUT.") ;
+    }
+    if (!filter.isEmpty() && filter.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERINPUT requested, but FILTER is a non-empty null tensor.") ;
+    }
+  }
+
+  // If the filter derivatives are requested, check that we have what we need.
+  if (!derFilter.isEmpty()) {
+    if (derFilter.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERFILTER requested, but the output tensor is null.") ;
+    }
+    if (static_cast<TensorShape>(derFilter) != static_cast<TensorShape>(derFilter)) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERFILTER requested, but its size is not the same as FILTER.") ;
+    }
+    if (input.isEmpty() || input.isNull()) {
+      return getContext().setError(VLE_IllegalArgument,
+                   "ConvolutionBackward: DERFILTER requested, but INPUT is missing.") ;
+    }
+  }
+
+  // If the bias derivaties are requested, check that we have what we need.
+  if (!derBias.isEmpty()) {
+    if (derBias.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERBIAS requested, but the output tensor is null.") ;
+    }
+    if (derBias.getNumElements() != input.getNumChannels()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERBIAS requested, but it has an incorrect size.") ;
+    }
+  }
+
+  VLLOG(*this,1)
+  << "Convolution: backward"
+  << " stride=" << pretty(getStrides())
+  << " padding=" << pretty(getPaddings())
+  << " dilation=" << pretty(getDilations()) ;
+
+  VLLOG(*this,1)
+  << "Convolution: input=" << pretty(input.getDimensions())
+  << " filter=" << pretty(filter.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  VLLOG(*this,1)
+  << "Convolution: derInput=" << pretty(derInput.getDimensions())
+  << " derFilter=" << pretty(derFilter.getDimensions())
+  << " derBias=" << pretty(derBias.getDimensions()) ;
+
   return dispatch_cudnn<
   ConvolutionBackward,
   ConvolutionBackwardCudnn>()

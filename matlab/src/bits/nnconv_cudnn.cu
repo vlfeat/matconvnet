@@ -73,6 +73,11 @@ struct ConvolutionForwardCudnn
     if (filter.getHeight() > input.getHeight()) return vl::VLE_Unsupported ;
     if (filter.getWidth() > input.getWidth()) return vl::VLE_Unsupported ;
 
+    VLLOG(op,1)
+    << "ConvolutionForward: CuDNN, "
+    << DeviceTypeTraits<VLDT_GPU>::name << ", "
+    << DataTypeTraits<dataType>::name ;
+
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
     vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
@@ -332,6 +337,11 @@ struct ConvolutionBackwardCudnn
     if (op.getDilation(1) != 1 || op.getDilation(0) != 1) return vl::VLE_Unsupported ;
     if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
     if (op.getPadding(0) != op.getPadding(1)) return vl::VLE_Unsupported ;
+
+    VLLOG(op,1)
+    << "ConvolutionBackward: CuDNN, "
+    << DeviceTypeTraits<VLDT_GPU>::name << ", "
+    << DataTypeTraits<dataType>::name ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
     vl::ErrorCode error = vl::VLE_Success ;

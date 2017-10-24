@@ -20,6 +20,7 @@ the terms of the BSD license (see the COPYING file).
 #endif
 
 #include "data.hpp"
+#include "mexutils.h"
 
 namespace vl {
 
@@ -30,6 +31,15 @@ namespace vl {
   public:
     MexContext() ;
     ~MexContext() ;
+
+    ErrorCode parse(std::vector<Int>& vec, mxArray const* array) {
+      if (!vlmxIsPlainMatrix(array,-1,-1)) {
+        return setError(vl::VLE_IllegalArgument, "Not a plain vector.") ;
+      }
+      vec = std::move(std::vector<Int>{
+        mxGetPr(array), mxGetPr(array) + mxGetNumberOfElements(array)}) ;
+      return VLE_Success ;
+    }
 
   protected:
 #if ENABLE_GPU
@@ -75,6 +85,10 @@ namespace vl {
   void print(char const * str, MexTensor const & tensor) ;
 
   void mexThrowError(Context const& context, vl::ErrorCode error) ;
+
+
+
+
 }
 
 

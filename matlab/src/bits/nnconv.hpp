@@ -39,7 +39,8 @@ namespace vl { namespace nn {
 
     vl::ErrorCode forwardShape(vl::TensorShape &output,
                                vl::TensorShape const& input,
-                               vl::TensorShape const& filter) ;
+                               vl::TensorShape const& filter,
+                               vl::TensorShape const& bias) const ;
 
     vl::ErrorCode backward(vl::Tensor &derInput,
                            vl::Tensor &derFilter,
@@ -58,6 +59,10 @@ namespace vl { namespace nn {
     Int getDilation(Int index) const {
       assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
       return dilation[as_unsigned(index)] ;
+    }
+
+    std::vector<Int> getDilations() const {
+      return {begin(dilation), begin(dilation)+getNumSpatialDimensions()} ;
     }
 
   private:
@@ -83,6 +88,10 @@ namespace vl { namespace nn {
                            vl::Tensor const &filter,
                            vl::Tensor const &derOutput);
 
+    Int getNumSpatialDimensions() const {
+      return numSpatialDimensions ;
+    }
+
     Int getCrop(Int index) const {
       assert(0 <= index && index < 2*as_signed(vl::Tensor::maxNumDimensions)) ;
       return crop[as_unsigned(index)] ;
@@ -91,6 +100,14 @@ namespace vl { namespace nn {
     Int getUpsample(Int index) const {
       assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
       return upsample[as_unsigned(index)] ;
+    }
+
+    std::vector<Int> getCrops() const {
+      return {begin(crop), begin(crop)+getNumSpatialDimensions()} ;
+    }
+
+    std::vector<Int> getUpsamples() const {
+      return {begin(upsample), begin(upsample)+getNumSpatialDimensions()} ;
     }
 
   private:
