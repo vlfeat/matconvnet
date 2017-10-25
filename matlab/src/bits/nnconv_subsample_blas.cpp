@@ -1,29 +1,3 @@
-// @file nnsubsample.cu
-// @brief Subsampling block
-// @author Andrea Vedaldi
-
-/*
-Copyright (C) 2014-17 Andrea Vedaldi and Karel Lenc.
-All rights reserved.
-
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
-*/
-
-#include "nnsubsample.hpp"
-#include "impl/dispatcher.hpp"
-#include "impl/blashelper.hpp"
-#include <cassert>
-#include <cstring>
-
-using namespace std ;
-using namespace vl ;
-using namespace vl::nn ;
-using namespace vl::impl ;
-
-template<vl::DeviceType deviceType, vl::DataType dataType> struct SubsampleForward ;
-template<vl::DeviceType deviceType, vl::DataType dataType> struct SubsampleBackward ;
-
 // -------------------------------------------------------------------
 //                                                             Forward
 // -------------------------------------------------------------------
@@ -31,16 +5,14 @@ template<vl::DeviceType deviceType, vl::DataType dataType> struct SubsampleBackw
 template<vl::DataType dataType>
 struct SubsampleForward<vl::VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(Subsample const &op,
+  vl::ErrorCode operator()(Convolution const &op,
                            Tensor &output,
                            Tensor const &input)
   {
-    // Argument sanity check.
-    assert(output) ;
-    assert(input) ;
-    TensorShape outShape ;
-    op.forwardShape(outShape, input) ;
-    assert(outShape == output) ;
+    VLLOG(op,1)
+    << "SubsampleForward: MCN, "
+    << DeviceTypeTraits<VLDT_CPU>::name << ", "
+    << DataTypeTraits<dataType>::name ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = input.getWidth() ;
@@ -79,13 +51,15 @@ struct SubsampleForward<vl::VLDT_CPU, dataType>
 template<vl::DeviceType deviceType, vl::DataType dataType>
 struct SubsampleAndBiasForward
 {
-  vl::ErrorCode operator()(Subsample const &op,
+  vl::ErrorCode operator()(Convolution const &op,
                            Tensor &output,
                            Tensor const &input,
                            Tensor const &biases)
   {
-    assert(output) ;
-    assert(input) ;
+    VLLOG(op,1)
+    << "SubsampleAndBiasForward: BLAS, "
+    << DeviceTypeTraits<deviceType>::name << ", "
+    << DataTypeTraits<dataType>::name ;
 
     vl::ErrorCode error ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -131,10 +105,15 @@ struct SubsampleAndBiasForward
 template<vl::DataType dataType>
 struct SubsampleBackward<vl::VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(Subsample const &op,
+  vl::ErrorCode operator()(Convolution const &op,
                            Tensor &derInput,
                            Tensor const &derOutput)
   {
+    VLLOG(op,1)
+    << "SubsampleBackward: MCN, "
+    << DeviceTypeTraits<VLDT_CPU>::name << ", "
+    << DataTypeTraits<dataType>::name ;
+
     assert(derInput) ;
     assert(derOutput) ;
 
@@ -146,10 +125,6 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
     auto derInputData = (type*)derInput.getMemory() ;
     auto derOutputData = (type*)derOutput.getMemory() ;
 
-    // Check argument compatibility
-    TensorShape outShape ;
-    op.forwardShape(outShape, derInput) ;
-    assert(outShape == derOutput) ;
     Int outputHeight = derOutput.getHeight() ;
     Int outputWidth = derOutput.getWidth() ;
     Int strideY = op.getStride(0) ;
@@ -180,11 +155,16 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
 template<vl::DeviceType deviceType, vl::DataType dataType>
 struct SubsampleAndBiasBackward
 {
-  vl::ErrorCode operator()(vl::nn::Subsample const &op,
-                           vl::Tensor derInput,
-                           vl::Tensor derBiases,
-                           vl::Tensor derOutput)
+  vl::ErrorCode operator()(Convolution const &op,
+                           Tensor derInput,
+                           Tensor derBiases,
+                           Tensor derOutput)
   {
+    VLLOG(op,1)
+    << "SubsampleAndBiasBackward: BLAS, "
+    << DeviceTypeTraits<deviceType>::name << ", "
+    << DataTypeTraits<dataType>::name ;
+
     assert(derOutput) ;
 
     vl::ErrorCode error = VLE_Success ;
@@ -227,56 +207,3 @@ struct SubsampleAndBiasBackward
     return op.getContext().passError(error, __func__) ;
   }
 } ;
-
-// -------------------------------------------------------------------
-//                                                              Driver
-// -------------------------------------------------------------------
-
-#if ENABLE_GPU
-#include "nnsubsample_gpu.cu"
-#endif
-
-Subsample::Subsample(vl::Context &context,
-                     Int strideY, Int strideX,
-                     Int padTop, Int padBottom,
-                     Int padLeft, Int padRight)
-: ConvolutionLike(context,2)
-{
-  setStride({strideY, strideX}) ;
-  setPadding({padTop, padBottom, padLeft, padRight}) ;
-}
-
-vl::ErrorCode
-Subsample::forwardWithBias(vl::Tensor &output,
-                           vl::Tensor const &input,
-                           vl::Tensor const &biases) const
-{
-  return dispatch<SubsampleAndBiasForward>()(*this,output,input,biases) ;
-}
-
-vl::ErrorCode
-Subsample::forwardShape(vl::TensorShape &output, vl::TensorShape const& input) const
-{
-  output = TensorShape() ; // null
-  if (input.getNumDimensions() < getNumSpatialDimensions()) {
-    return VLE_IllegalArgument ;
-  }
-  output = input ;
-  for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    auto odim = convLikeSizeHelper(input.getDimension(d),
-                                   1,
-                                   getStride(d),
-                                   {getPadding(2*d),getPadding(2*d+1)},
-                                   1) ;
-    output.setDimension(d, odim) ;
-  }
-  return VLE_Success ;
-}
-
-vl::ErrorCode
-Subsample::backwardWithBias(vl::Tensor &derInput,
-                            vl::Tensor &derBiases,
-                            vl::Tensor const &derOutput) const
-{
-  return dispatch<SubsampleAndBiasBackward>()(*this,derInput,derBiases,derOutput) ;
-}

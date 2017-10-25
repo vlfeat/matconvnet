@@ -1,27 +1,6 @@
-// @file nnsubsample_gpu.cu
-// @brief Subsampling block implementation (GPU)
-// @author Andrea Vedaldi
-// @author Karel Lenc
-
-/*
-Copyright (C) 2014-16 Andrea Vedaldi and Karel Lenc.
-All rights reserved.
-
-This file is part of the VLFeat library and is made available under
-the terms of the BSD license (see the COPYING file).
-*/
-
-#include "nnsubsample.hpp"
-#include "datacu.hpp"
-#include <cassert>
-#include <float.h>
-#include <iostream>
-
 #ifndef ENABLE_GPU
-#error "subsample_gpu.cu cannot be compiled without GPU support"
+#error "nnconv_subsample_gpu.cu cannot be compiled without GPU support"
 #endif
-
-using namespace vl ;
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -102,16 +81,14 @@ __global__ void subsample_backward_kernel
 template<vl::DataType dataType>
 struct SubsampleForward<vl::VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(Subsample const &op,
+  vl::ErrorCode operator()(Convolution const &op,
                            Tensor &output,
                            Tensor const &input)
   {
-    // Argument sanity check.
-    assert(output) ;
-    assert(input) ;
-    TensorShape os ;
-    op.forwardShape(os, input) ;
-    assert(os == output) ;
+    VLLOG(op,1)
+    << "SubsampleForward: MCN, "
+    << DeviceTypeTraits<VLDT_GPU>::name << ", "
+    << DataTypeTraits<dataType>::name ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int outputVolume = output.getNumElements() ;
@@ -133,16 +110,14 @@ struct SubsampleForward<vl::VLDT_GPU, dataType>
 template<vl::DataType dataType>
 struct SubsampleBackward<vl::VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(Subsample const &op,
+  vl::ErrorCode operator()(Convolution const &op,
                            Tensor &derInput,
                            Tensor const &derOutput)
   {
-    // Argument sanity check.
-    assert(derInput) ;
-    assert(derOutput) ;
-    TensorShape os ;
-    op.forwardShape(os, derInput) ;
-    assert(os == derOutput) ;
+    VLLOG(op,1)
+    << "SubsampleBackward: MCN, "
+    << DeviceTypeTraits<VLDT_GPU>::name << ", "
+    << DataTypeTraits<dataType>::name ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int volume = derInput.getNumElements() ;
@@ -159,3 +134,4 @@ struct SubsampleBackward<vl::VLDT_GPU, dataType>
     return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(__func__)) ;
   }
 } ;
+

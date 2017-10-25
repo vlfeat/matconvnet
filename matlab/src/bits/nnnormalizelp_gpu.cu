@@ -33,8 +33,7 @@ GPUVisitPattern getGPUVisitPatternForInput(NormalizeLp const & op, vl::Tensor in
 {
   // Compute tensor geometry.
   Int n = input.getNumDimensions() ;
-  auto inputDimensions = std::vector<int>(begin(input.getDimensions()),
-                                          end(input.getDimensions())) ;
+  auto const& inputDimensions = input.getDimensions() ;
 
   assert(n <= 4) ; // Todo: relax.
 

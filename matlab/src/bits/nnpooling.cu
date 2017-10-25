@@ -118,8 +118,8 @@ struct PoolingForwardCPU
     TensorShape outputShape ;
     op.forwardShape(outputShape, input) ;
     assert(output == outputShape) ;
-    Int outputHeight = outputShape.getDimensions()[0] ;
-    Int outputWidth = outputShape.getDimensions()[1] ;
+    Int outputHeight = outputShape.getDimension(0) ;
+    Int outputWidth = outputShape.getDimension(1) ;
 
     for (Int z = 0; z < depth * size ; ++z) {
       for (Int x = 0; x < outputWidth ; ++x) {
@@ -191,8 +191,8 @@ struct PoolingBackwardCPU
 
     TensorShape outputShape ;
     op.forwardShape(outputShape, input) ;
-    auto outputHeight = outputShape.getDimensions()[0] ;
-    auto outputWidth = outputShape.getDimensions()[1] ;
+    auto outputHeight = outputShape.getDimension(0) ;
+    auto outputWidth = outputShape.getDimension(1) ;
 
     for (Int z = 0; z < depth * size ; ++z) {
       for (Int x = 0; x < outputWidth ; ++x) {

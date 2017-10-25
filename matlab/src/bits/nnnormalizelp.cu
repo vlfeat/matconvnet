@@ -43,8 +43,7 @@ VisitPattern getVisitPatternForInput(NormalizeLp const & op, vl::Tensor input)
 {
   // Compute tensor geometry.
   auto n = (size_t)input.getNumDimensions() ;
-  auto inputDimensions = std::vector<size_t>(begin(input.getDimensions()),
-                                             end(input.getDimensions())) ;
+  auto const & inputDimensions = input.getDimensions() ;
 
   assert(n <= 4) ; // Todo: relax (just extend the for loops below).
 

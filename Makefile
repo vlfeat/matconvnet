@@ -187,7 +187,6 @@ cpp_src+=matlab/src/bits/nnoperation.$(ext)
 cpp_src+=matlab/src/bits/nnconv.$(ext)
 cpp_src+=matlab/src/bits/nnbias.$(ext)
 cpp_src+=matlab/src/bits/nnfullyconnected.$(ext)
-cpp_src+=matlab/src/bits/nnsubsample.$(ext)
 cpp_src+=matlab/src/bits/nnpooling.$(ext)
 cpp_src+=matlab/src/bits/nnnormalize.$(ext)
 cpp_src+=matlab/src/bits/nnnormalizelp.$(ext)
@@ -195,7 +194,7 @@ cpp_src+=matlab/src/bits/nnbnorm.$(ext)
 cpp_src+=matlab/src/bits/nnbilinearsampler.$(ext)
 cpp_src+=matlab/src/bits/nnroipooling.$(ext)
 mex_src+=matlab/src/vl_nnconv.$(ext)
-mex_src+=matlab/src/vl_nnconvt.$(ext)
+#mex_src+=matlab/src/vl_nnconvt.$(ext)
 mex_src+=matlab/src/vl_nnpool.$(ext)
 mex_src+=matlab/src/vl_nnnormalize.$(ext)
 mex_src+=matlab/src/vl_nnnormalizelp.$(ext)
@@ -258,8 +257,10 @@ matlab/mex/.build/bits/impl/imread_quartz.o : matlab/src/bits/impl/imread_helper
 matlab/mex/.build/bits/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
 matlab/mex/.build/bits/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
 
-matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_cudnn.cu
-
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_cudnn.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_blas.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_subsample_blas.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_subsample_gpu.cpp
 
 # --------------------------------------------------------------------
 #                                                    Compilation rules

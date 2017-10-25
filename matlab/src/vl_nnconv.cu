@@ -16,8 +16,6 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/mexutils.h"
 #include "bits/datamex.hpp"
 #include "bits/nnconv.hpp"
-#include "bits/nnfullyconnected.hpp"
-#include "bits/nnsubsample.hpp"
 
 #if ENABLE_GPU
 #include "bits/datacu.hpp"
