@@ -49,7 +49,7 @@ classdef Loss < dagnn.ElementWise
         derInputs{3} = [];
       end
       
-      derInputs{1} = vl_nnloss(inputs{1}, inputs{2}, derOutputs{1}, 'loss', obj.loss, obj.opts{:}) ;
+      derInputs{1} = vl_nnloss(inputs{1}, inputs{2}, derOutputs{1}, 'loss', obj.loss, 'InstanceWeights', weights, obj.opts{:}) ;
       derInputs{2} = [] ;
       derParams = {} ;
     end
