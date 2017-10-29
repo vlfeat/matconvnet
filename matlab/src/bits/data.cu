@@ -287,12 +287,6 @@ vl::Context::getCudaHelper()
   return *cudaHelper ;
 }
 
-vl::Context::Logger
-vl::Context::getLogger()
-{
-  return Logger(*this) ;
-}
-
 void vl::Context::clear()
 {
 #ifndef NDEBUG

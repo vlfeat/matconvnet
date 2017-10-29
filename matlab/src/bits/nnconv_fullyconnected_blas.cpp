@@ -84,7 +84,7 @@ struct FullyConnectedForward
 };
 
 // -------------------------------------------------------------------
-//                                                           Backward
+//                                                            Backward
 // -------------------------------------------------------------------
 
 template<DeviceType deviceType, DataType dataType>

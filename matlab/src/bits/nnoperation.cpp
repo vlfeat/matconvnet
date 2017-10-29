@@ -50,10 +50,10 @@ vl::ErrorCode ConvolutionLike::setPadding(vector<Int> const& padding)
   }
   // There must one stride per spatial dimension.
   if (Int(padding.size()) == 2*numSpatialDimensions) {
-    copy(begin(padding),end(padding),begin(this->stride)) ;
+    copy(begin(padding),end(padding),begin(this->padding)) ;
   }
   else if (padding.size() == 1) {
-    this->padding.fill(stride[0]) ;
+    this->padding.fill(padding[0]) ;
   }
   else {
     return getContext().setError

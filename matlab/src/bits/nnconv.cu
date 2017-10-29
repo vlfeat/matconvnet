@@ -70,7 +70,7 @@ Convolution::Convolution(Context &context,
 }
 
 Convolution::Convolution(Context &context)
-: ConvolutionLike(context)
+: ConvolutionLike(context,2)
 {
   dilation.fill(1) ;
 }
@@ -93,7 +93,9 @@ Convolution::setDilation(vector<Int> const& dilation)
   }
   else {
     return getContext().setError
-    (VLE_IllegalArgument, "DILATION is neither scalar nor has the same cardinality as the number of spatial dimensions.") ;
+    (VLE_IllegalArgument,
+     "DILATION is neither scalar nor has the same cardinality"
+     "as the number of spatial dimensions.") ;
   }
   return VLE_Success ;
 }
@@ -367,10 +369,10 @@ Convolution::backward(Tensor &derInput,
       (VLE_IllegalArgument,
        "ConvolutionBackward: DERBIAS requested, but the output tensor is null.") ;
     }
-    if (derBias.getNumElements() != input.getNumChannels()) {
+    if (derBias.getNumElements() != derOutput.getNumChannels()) {
       return getContext().setError
       (VLE_IllegalArgument,
-       "ConvolutionBackward: DERBIAS requested, but it has an incorrect size.") ;
+       "ConvolutionBackward: DERBIAS requested, but the output tensro has an incorrect size.") ;
     }
   }
 
@@ -420,6 +422,8 @@ Convolution::backward(Tensor &derInput,
   (*this,derInput,derFilter,derBias,input,filter,derOutput) ;
 }
 
+/// MARK: - Convolution Transpose
+
 ConvolutionTranspose::ConvolutionTranspose(Context &context,
                                            Int upsampleY,
                                            Int upsampleX,
@@ -428,11 +432,160 @@ ConvolutionTranspose::ConvolutionTranspose(Context &context,
                                            Int cropLeft,
                                            Int cropRight)
 :
-Operation(context),
-numSpatialDimensions(2),
-upsample {upsampleY, upsampleX},
-crop {cropTop, cropBottom, cropLeft, cropRight}
+Operation {context},
+numSpatialDimensions {2},
+upsampling {upsampleY, upsampleX},
+cropping {cropTop, cropBottom, cropLeft, cropRight},
+numFilterGroups {1}
 { }
+
+ConvolutionTranspose::ConvolutionTranspose(Context &context)
+: Operation(context),
+numSpatialDimensions(2),
+numFilterGroups(1)
+{
+  cropping.fill(0) ;
+  upsampling.fill(1) ;
+}
+
+vl::ErrorCode
+ConvolutionTranspose::setUpsampling(vector<Int> const& upsampling)
+{
+  // Usampling must be positive.
+  if (any_of(begin(upsampling),end(upsampling),[](Int x){return x <= 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "Convolution: a upsampling parameter is not positive.") ;
+  }
+
+  // There must one upsampling per spatial dimension.
+  if (Int(upsampling.size()) == getNumSpatialDimensions()) {
+    copy(begin(upsampling),end(upsampling),begin(this->upsampling)) ;
+  }
+  else if (upsampling.size() == 1) {
+    this->upsampling.fill(upsampling[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "UPSAMPLING is neither scalar nor has the same"
+     " cardinality as the number of spatial dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+ConvolutionTranspose::setCropping(vector<Int> const& cropping)
+{
+  // Cropping must be non-negative.
+  if (any_of(begin(cropping),end(cropping),[](Int x){return x < 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "An element of CROPPING is less than 0.") ;
+  }
+  // There must one stride per spatial dimension.
+  if (Int(cropping.size()) == 2*numSpatialDimensions) {
+    copy(begin(cropping),end(cropping),begin(this->cropping)) ;
+  }
+  else if (cropping.size() == 1) {
+    this->cropping.fill(cropping[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "CROPPING is neither scalar nor has the cardinality"
+     " of twice the number of spatial dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+ConvolutionTranspose::setNumFilterGroups(Int numFilterGroups)
+{
+  // NumFilterGroups must be non-negative.
+  if (numFilterGroups < 1) {
+    return getContext().setError
+    (VLE_IllegalArgument, "An element of NUMFILTERGROUPS is less than 1.") ;
+  }
+  this->numFilterGroups = numFilterGroups ;
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+ConvolutionTranspose::forwardShape(TensorShape &output,
+                                   TensorShape const& input,
+                                   TensorShape const& filter,
+                                   TensorShape const& bias) const
+{
+  output.clear() ;
+
+  // The input tensor cannot be empty.
+  if (input.isEmpty()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "ConvolutionTranspose: the INPUT tensor is empty.") ;
+  }
+  if (filter.isEmpty()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "ConvolutionTranspose: FILTER is empty.") ;
+  }
+
+  // We pretend all tensors have an infinite number of dimensions,
+  // potentially singleton.
+  Int ns = getNumSpatialDimensions() ;
+
+  // The tensors should have ns+2 dimensions. Todo: we may relax that by implicitly
+  // folding the excess dimensions.
+  if (input.getNumDimensions() > ns + 2) {
+    return getContext().setError(VLE_TensorShapeMismatch,
+                                 "ConvolutionTranspose: INPUT has too many dimensions.") ;
+  }
+  if (filter.getNumDimensions() > ns + 2) {
+    return getContext().setError(VLE_TensorShapeMismatch,
+                                 "ConvolutionTranspose: FILTER has too many dimensions.") ;
+  }
+
+  // Check the filters.
+  if (filter.getCardinality() % getNumFilterGroups() != 0) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "The number of filter groups does not divide the number of channels in FILTERS.") ;
+  }
+  if (filter.getCardinality() != input.getNumChannels()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "The total number of channels in FILTERS is not the same as the number of channels of INPUT.") ;
+  }
+
+  Int inputNumChannels = input.getDimension(ns)  ;
+  Int filterNumChannels = filter.getDimension(ns) ;
+  Int numFilters = filter.getDimension(ns+1) ;
+
+  for (Int d = 0 ; d < ns ; ++d) {
+    Int odim =
+    (input.getDimension(d) - 1) * getUpsampling(d) -
+    (getCropping(2*d) + getCropping(2*d+1)) + filter.getDimension(d) ;
+    if (odim <= 0) {
+      output.clear() ;
+      return getContext().setError
+      (VLE_TensorShapeMismatch,
+       "ConvolutionTranspose: the spatial dimensions of INPUT are"
+       " too small for FILTER and the convolution parameters.") ;
+    }
+    output.setDimension(d,odim) ;
+  }
+  output.setDimension(ns, filter.getNumChannels() * getNumFilterGroups()) ;
+  output.setDimension(ns+1, input.getDimension(ns+1)) ;
+
+  // Check the bias.
+  bool hasBias = !bias.isEmpty() ;
+  if (hasBias) {
+    if (bias.getNumElements() != output.getNumChannels()) {
+      output.clear() ;
+      return getContext().setError
+      (VLE_TensorShapeMismatch,
+       "ConvolutionTranspose: BIAS does not have a number of elements"
+       " equal to the number of output feature channels.") ;
+    }
+  }
+
+  return VLE_Success ;
+}
 
 vl::ErrorCode
 ConvolutionTranspose::forward(Tensor &output,
@@ -440,8 +593,22 @@ ConvolutionTranspose::forward(Tensor &output,
                               Tensor const& filter,
                               Tensor const& bias)
 {
-  return dispatch<ConvolutionTransposeForward>()
-  (*this,output,input,filter,bias) ;
+  VLLOG(*this,1)
+  << "ConvolutionTranspose: forward"
+  << " upsampling=" << pretty(getUpsamplings())
+  << " cropping=" << pretty(getCroppings())
+  << " numFilterGroups=" << getNumFilterGroups() ;
+
+  VLLOG(*this,1)
+  << "ConvolutionTranspose: input=" << pretty(input.getDimensions())
+  << " filter=" << pretty(filter.getDimensions())
+  << " bias=" << pretty(bias.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<ConvolutionTransposeForward>()
+   (*this,output,input,filter,bias),
+   "ConvolutionTransposeForward:") ;
 }
 
 vl::ErrorCode
@@ -452,8 +619,26 @@ ConvolutionTranspose::backward(Tensor &derInput,
                                Tensor const &filter,
                                Tensor const &derOutput)
 {
-  return dispatch<ConvolutionTransposeBackward>()
-  (*this,derInput,derFilter,derBias,input,filter,derOutput) ;
+  VLLOG(*this,1)
+  << "ConvolutionTranspose: backward"
+  << " upsampling=" << pretty(getUpsamplings())
+  << " cropping=" << pretty(getCroppings())
+  << " numFilterGroups=" << getNumFilterGroups() ;
+
+  VLLOG(*this,1)
+  << "ConvolutionTranspose: input=" << pretty(input.getDimensions())
+  << " filter=" << pretty(filter.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  VLLOG(*this,1)
+  << "ConvolutionTranspose: derInput=" << pretty(derInput.getDimensions())
+  << " derFilter=" << pretty(derFilter.getDimensions())
+  << " derBias=" << pretty(derBias.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<ConvolutionTransposeBackward>()
+  (*this,derInput,derFilter,derBias,input,filter,derOutput),
+   "ConvolutionTransposeBackward:") ;
 }
 
 

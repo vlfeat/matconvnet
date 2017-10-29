@@ -71,6 +71,8 @@ namespace vl { namespace nn {
 
   class ConvolutionTranspose : public Operation {
   public:
+    ConvolutionTranspose(Context &context) ;
+
     ConvolutionTranspose(Context &context,
                          Int upsampleY, Int upsampleX,
                          Int cropTop, Int cropBottom,
@@ -80,6 +82,11 @@ namespace vl { namespace nn {
                           vl::Tensor const &input,
                           vl::Tensor const &filter,
                           vl::Tensor const &bias) ;
+
+    vl::ErrorCode forwardShape(TensorShape &output,
+                               TensorShape const& input,
+                               TensorShape const& filter,
+                               TensorShape const& bias) const ;
 
     vl::ErrorCode backward(vl::Tensor &derData,
                            vl::Tensor &derFilter,
@@ -92,31 +99,39 @@ namespace vl { namespace nn {
       return numSpatialDimensions ;
     }
 
-    Int getCrop(Int index) const {
+    vl::ErrorCode setNumFilterGroups(Int numFilterGroups) ;
+
+    Int getNumFilterGroups() const { return numFilterGroups ;}
+
+    vl::ErrorCode setUpsampling(std::vector<Int> const& upsampling) ;
+
+    vl::ErrorCode setCropping(std::vector<Int> const& cropping) ;
+
+    Int getCropping(Int index) const {
       assert(0 <= index && index < 2*as_signed(vl::Tensor::maxNumDimensions)) ;
-      return crop[as_unsigned(index)] ;
+      return cropping[as_unsigned(index)] ;
     }
 
-    Int getUpsample(Int index) const {
+    Int getUpsampling(Int index) const {
       assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
-      return upsample[as_unsigned(index)] ;
+      return upsampling[as_unsigned(index)] ;
     }
 
-    std::vector<Int> getCrops() const {
-      return {begin(crop), begin(crop)+getNumSpatialDimensions()} ;
+    std::vector<Int> getCroppings() const {
+      return {begin(cropping), begin(cropping)+getNumSpatialDimensions()} ;
     }
 
-    std::vector<Int> getUpsamples() const {
-      return {begin(upsample), begin(upsample)+getNumSpatialDimensions()} ;
+    std::vector<Int> getUpsamplings() const {
+      return {begin(upsampling), begin(upsampling)+getNumSpatialDimensions()} ;
     }
 
   private:
     Int numSpatialDimensions ;
-    std::array<Int, vl::Tensor::maxNumDimensions> upsample ;
-    std::array<Int, 2*vl::Tensor::maxNumDimensions> crop ;
+    Int numFilterGroups ;
+    std::array<Int, vl::Tensor::maxNumDimensions> upsampling ;
+    std::array<Int, 2*vl::Tensor::maxNumDimensions> cropping ;
   } ;
 
 } }
-
 
 #endif /* defined(__vl__nnconv__) */

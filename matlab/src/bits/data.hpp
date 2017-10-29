@@ -39,7 +39,7 @@ getContext().passError(code,message)
 
 #define VLLOG(op,level) \
 if ((op).getContext().getLogLevel() < level) { } \
-else (op).getContext().getLogger().getStream()
+else vl::Context::Logger((op).getContext()).getStream()
 
 namespace vl {
 
@@ -219,21 +219,6 @@ namespace vl {
     Context() ;
     ~Context() ;
 
-    class Logger {
-    public:
-      std::ostringstream& getStream() { return logStream ; }
-      ~Logger() {
-        context.log(logStream.str()) ;
-      }
-    private:
-      friend class Context ;
-      Logger(Context &context) : context(context) { }
-      Logger(Logger &&x) : context(x.context), logStream(std::move(x.logStream)) { }
-
-      Context& context ;
-      std::ostringstream logStream ;
-    } ;
-
     void * getWorkspace(DeviceType device, size_t size) ;
     void clearWorkspace(DeviceType device) ;
     void * getAllOnes(DeviceType device, DataType type, size_t size) ;
@@ -249,7 +234,19 @@ namespace vl {
     void clearLog() ;
     std::string const& getLastLoggedMessage() const ;
     std::vector<std::string> const& getLogbook() const ;
-    Logger getLogger() ;
+
+    class Logger {
+    public:
+      Logger(Context &context) : context(context) { }
+      ~Logger() { context.log(logStream.str()) ; }
+      std::ostringstream& getStream() { return logStream ; }
+    private:
+      Logger(Logger &x) = delete ;
+      Logger(Logger &&x) = delete ;
+      Logger& operator=(Logger&) = delete ;
+      Context& context ;
+      std::ostringstream logStream ;
+    } ;
 
     vl::ErrorCode passError(vl::ErrorCode error, char const * message = NULL) ;
     vl::ErrorCode setError(vl::ErrorCode error, char const * message = NULL) ;

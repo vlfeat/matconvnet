@@ -1,9 +1,9 @@
-// @file nnconvt.cu
+// @file vl_nnconvt.cu
 // @brief Convolution transpose block MEX wrapper
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 
 All rights reserved.
 
@@ -14,8 +14,6 @@ the terms of the BSD license (see the COPYING file).
 #include "bits/mexutils.h"
 #include "bits/datamex.hpp"
 #include "bits/nnconv.hpp"
-#include "bits/nnfullyconnected.hpp"
-#include "bits/nnsubsample.hpp"
 
 #if ENABLE_GPU
 #include "bits/datacu.hpp"
@@ -24,10 +22,12 @@ the terms of the BSD license (see the COPYING file).
 #include <memory>
 #include <cassert>
 
+using Int = vl::Int ;
+
 /* option codes */
 enum {
-  opt_upsample = 0,
-  opt_crop,
+  opt_upsampling = 0,
+  opt_cropping,
   opt_verbose,
   opt_num_groups,
   opt_no_der_data,
@@ -40,8 +40,10 @@ enum {
 
 /* options */
 VLMXOption  options [] = {
-  {"Upsample",              1,   opt_upsample              },
-  {"Crop",                  1,   opt_crop                  },
+  {"Upsample",              1,   opt_upsampling            },
+  {"Upsampling",            1,   opt_upsampling            },
+  {"Crop",                  1,   opt_cropping              },
+  {"Cropping",              1,   opt_cropping              },
   {"Verbose",               0,   opt_verbose               },
   {"NumGroups",             1,   opt_num_groups            },
   {"NoDerData",             0,   opt_no_der_data           },
@@ -68,6 +70,12 @@ void atExit()
   context.clear() ;
 }
 
+#define ERR(code,message) \
+context.passError(code,message)
+
+#define CHECK2(x) \
+{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
+
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -80,20 +88,12 @@ enum {
   OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIASES, OUT_END
 } ;
 
-void mexFunction(int nout, mxArray *out[],
-                 int nin, mxArray const *in[])
+vl::ErrorCode
+performConvolutionTranspose(vl::Context& contetx,
+                            int nout, mxArray *out[],
+                            int nin, mxArray const *in[])
 {
-  int upsampleX = 1 ;
-  int upsampleY = 1 ;
-  int cropLeft = 0 ;
-  int cropRight = 0 ;
-  int cropTop = 0 ;
-  int cropBottom = 0 ;
-  int numFilterGroups = 1 ;
-
   bool backMode = false ;
-  bool hasBiases = false ;
-  bool fullyConnectedMode = false ;
   bool computeDerData = true ;
   bool computeDerFilters = true ;
   bool computederBiases = true ;
@@ -103,14 +103,12 @@ void mexFunction(int nout, mxArray *out[],
   int next = IN_END ;
   mxArray const *optarg ;
 
-  /* -------------------------------------------------------------- */
-  /*                                            Check the arguments */
-  /* -------------------------------------------------------------- */
-
-  mexAtExit(atExit) ;
+  context.setLogLevel(verbosity) ;
+  context.clearLog() ;
+  vl::nn::ConvolutionTranspose op(context) ;
 
   if (nin < 3) {
-    mexErrMsgTxt("There are less than three arguments.") ;
+    return ERR(vl::VLE_IllegalArgument, "There are less than three arguments.") ;
   }
 
   if (nin > 3 && vlmxIsString(in[3],-1)) {
@@ -124,66 +122,38 @@ void mexFunction(int nout, mxArray *out[],
     switch (opt) {
       case opt_verbose :
         ++ verbosity ;
+        context.setLogLevel(verbosity) ;
         break ;
 
-      case opt_upsample :
-        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          mexErrMsgTxt("upsample is not a plain matrix.") ;
+      case opt_upsampling : {
+        std::vector<Int> upsampling ;
+        if (context.parse(upsampling,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set UPSAMPLING:") ;
         }
-        switch (mxGetNumberOfElements(optarg)) {
-          case 1:
-            upsampleY = (int)mxGetPr(optarg)[0] ;
-            upsampleX = upsampleY ;
-            break ;
-          case 2:
-            upsampleY = (int)mxGetPr(optarg)[0] ;
-            upsampleX = (int)mxGetPr(optarg)[1] ;
-            break ;
-          default:
-            mexErrMsgTxt("upsample has neither one nor two elements.") ;
-        }
+        CHECK2(op.setUpsampling(upsampling)) ;
         break ;
+      }
 
-      case opt_crop :
-        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          mexErrMsgTxt("crop is not a plain matrix.") ;
+      case opt_cropping : {
+        std::vector<Int> cropping ;
+        if (context.parse(cropping,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set CROPPING:") ;
         }
-        switch (mxGetNumberOfElements(optarg)) {
-          case 1:
-            cropLeft = (int)mxGetPr(optarg)[0] ;
-            cropRight = cropLeft ;
-            cropTop = cropLeft ;
-            cropBottom = cropLeft ;
-            break ;
-          case 4:
-            cropTop = (int)mxGetPr(optarg)[0] ;
-            cropBottom = (int)mxGetPr(optarg)[1] ;
-            cropLeft = (int)mxGetPr(optarg)[2] ;
-            cropRight = (int)mxGetPr(optarg)[3] ;
-            break ;
-          default:
-            mexErrMsgTxt("crop has neither one nor two elements.") ;
-        }
+        CHECK2(op.setCropping(cropping)) ;
         break ;
+      }
 
-      case opt_num_groups :
+      case opt_num_groups : {
         if (!vlmxIsPlainMatrix(optarg,1,1)) {
-          mexErrMsgTxt("NUMGROUPS is not a plain scalar.") ;
+          return ERR(vl::VLE_IllegalArgument, "NUMGROUPS is not a plain scalar.") ;
         }
-        numFilterGroups = (int)mxGetPr(optarg)[0] ;
+        CHECK2(op.setNumFilterGroups((Int)mxGetPr(optarg)[0])) ;
         break;
+      }
 
-      case opt_no_der_data :
-        computeDerData = false ;
-        break ;
-
-      case opt_no_der_filters :
-        computeDerFilters = false ;
-        break ;
-
-      case opt_no_der_biases :
-        computederBiases = false ;
-        break ;
+      case opt_no_der_data : computeDerData = false ; break ;
+      case opt_no_der_filters : computeDerFilters = false ; break ;
+      case opt_no_der_biases : computederBiases = false ; break ;
 
       case opt_no_cudnn :
 #if ENABLE_CUDNN
@@ -202,7 +172,7 @@ void mexFunction(int nout, mxArray *out[],
 #if ENABLE_CUDNN
         double x ;
         if (!vlmxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
-          mexErrMsgTxt("CudnnWorkSpaceLimit is not a non-negative scalar.") ;
+          ERR(vl::VLE_IllegalArgument, "CudnnWorkSpaceLimit is not a non-negative scalar.") ;
         }
         context.getCudaHelper().setCudnnConvolutionFwdPreference
         ((x==mxGetInf() ?
@@ -222,7 +192,6 @@ void mexFunction(int nout, mxArray *out[],
         break ;
 #endif
       }
-
       default: break ;
     }
   }
@@ -230,7 +199,6 @@ void mexFunction(int nout, mxArray *out[],
   vl::MexTensor data(context) ;
   vl::MexTensor filters(context) ;
   vl::MexTensor biases(context) ;
-  vl::MexTensor derOutput(context) ;
 
   data.init(in[IN_DATA]) ;
   data.reshape(4) ;
@@ -240,178 +208,96 @@ void mexFunction(int nout, mxArray *out[],
 
   biases.init(in[IN_BIASES]) ;
 
-  if (backMode) {
-    derOutput.init(in[IN_DEROUTPUT]) ;
-    derOutput.reshape(4) ;
-  }
-
-  hasBiases = !biases.isEmpty() ;
-
-  /* check for GPU/data class consistency */
-  if (! vl::areCompatible(data, filters)) {
-    mexErrMsgTxt("DATA and FILTERS do not have compatible formats.") ;
-  }
-  if (hasBiases && ! vl::areCompatible(data, biases)) {
-    mexErrMsgTxt("DATA and BIASES do not have compatible formats.") ;
-  }
-  if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
-  }
-
-  /* basic argument checks */
-  if (upsampleX < 1 || upsampleY < 1) {
-    mexErrMsgTxt("At least one element of UPSAMPLE is smaller than one.") ;
-  }
-  if (cropLeft < 0 ||
-      cropRight < 0 ||
-      cropTop < 0 ||
-      cropBottom < 0) {
-    mexErrMsgTxt("An element of CROP is negative.") ;
-  }
-
-  /* Get the filter shape */
-  vl::TensorShape filtersShape(filters) ;
-
-  if (filtersShape.getHeight() == 0 || filtersShape.getWidth() == 0 || filtersShape.getNumChannels() == 0) {
-    mexErrMsgTxt("A dimension of FILTERS is void.") ;
-  }
-
-  /* grouped filters */
-  if (numFilterGroups < 1) {
-    mexErrMsgTxt("NUMGROUPS is less than 1.") ;
-  }
-  if (filters.getCardinality() % numFilterGroups != 0) {
-    mexErrMsgTxt("The number of filter groups does not divide the filter bank depth (fourth dimension of FILTERS).") ;
-  }
-  if (filters.getCardinality() != data.getNumChannels()) {
-    mexErrMsgTxt("The filter bank depth (fourth dimension of FILTERS) is not the same as the data depth (third dimension of X).") ;
-  }
-
-  /* Get the output Shapeetry */
-  vl::TensorShape outputShape((data.getHeight()-1)*upsampleY - (cropTop+cropBottom) + filtersShape.getHeight(),
-                                (data.getWidth()-1)*upsampleX  - (cropLeft+cropRight) + filtersShape.getWidth(),
-                                filtersShape.getNumChannels() * numFilterGroups,
-                                data.getCardinality()) ;
-
-  if (outputShape.getHeight() < 1 || outputShape.getWidth() < 1) {
-    mexErrMsgTxt("The output array is empty due to CROP being too large.") ;
-  }
-
-  if (backMode && (derOutput != outputShape)) {
-    mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and FILTERS.") ;
-  }
-
-  /* Check the biases sizes */
-  if (hasBiases) {
-    if (biases.getNumElements() != outputShape.getNumChannels()) {
-      mexErrMsgTxt("The number of elements of BIASES is not the same as the dimenison of the filters.") ;
-    }
-  }
-
-  /* create output buffers */
-  vl::DeviceType deviceType = data.getDeviceType() ;
-  vl::DataType dataType = data.getDataType() ;
-  vl::MexTensor output(context) ;
-  vl::MexTensor derData(context) ;
-  vl::MexTensor derFilters(context) ;
-  vl::MexTensor derBiases(context) ;
+  bool hasFilters = !filters.isEmpty() ;
+  bool hasBiases = !biases.isEmpty() ;
 
   if (!backMode) {
+    // Forward mode.
+    vl::DeviceType deviceType = data.getDeviceType() ;
+    vl::DataType dataType = data.getDataType() ;
+
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
+
+    // Initialize output tensor.
+    vl::MexTensor output(context) ;
     output.init(deviceType, dataType, outputShape) ;
-  } else {
+
+    // Perform calculation.
+    CHECK2(op.forward(output,data,filters,biases)) ;
+
+    // Return results.
+    out[OUT_RESULT] = output.relinquish() ;
+  }
+  else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    derOutput.reshape(4) ;
+    vl::DeviceType deviceType = derOutput.getDeviceType() ;
+    vl::DataType dataType = derOutput.getDataType() ;
+
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
+
+    // Initialize the tensors to be returned.
+    vl::MexTensor derData(context) ;
     if (computeDerData) {
       derData.init(deviceType, dataType, data.getShape()) ;
     }
-    if (computeDerFilters) {
+
+    vl::MexTensor derFilters(context) ;
+    if (computeDerFilters && hasFilters) {
       derFilters.init(deviceType, dataType, filters.getShape()) ;
     }
+
+    vl::MexTensor derBiases(context) ;
     if (computederBiases && hasBiases) {
       derBiases.init(deviceType, dataType, biases.getShape()) ;
     }
-  }
 
-  if (verbosity > 0) {
-    mexPrintf("vl_nnconvt: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::VLDT_GPU) ? "GPU" : "CPU") ;
-    if (data.getDeviceType() == vl::VLDT_GPU) {
-#if ENABLE_CUDNN
-      mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "cuBLAS") ;
-#else
-      mexPrintf("; cuBLAS\n") ;
-#endif
-    } else {
-      mexPrintf("; BLAS\n") ;
+    // Perform calculation.
+    CHECK2(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
+
+    // Return results.
+    out[OUT_RESULT] = derData.relinquish() ;
+    out[OUT_DERFILTERS] = derFilters.relinquish() ;
+    out[OUT_DERBIASES] = derBiases.relinquish() ;
+  }
+  return vl::VLE_Success ;
+}
+
+/* -------------------------------------------------------------- */
+/*                                            Check the arguments */
+/* -------------------------------------------------------------- */
+
+/* -------------------------------------------------------------- */
+/*                                            Check the arguments */
+/* -------------------------------------------------------------- */
+
+/* -------------------------------------------------------------- */
+/*                                            Check the arguments */
+/* -------------------------------------------------------------- */
+
+void mexFunction(int nout, mxArray *out[],
+                 int nin, mxArray const *in[])
+{
+  mexAtExit(atExit) ;
+  vl::ErrorCode error = performConvolutionTranspose(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnconvt\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
     }
-    mexPrintf("vl_nnconvt: upsample: [%d %d], crop: [%d %d %d %d]\n"
-              "vl_nnconvt: num filter groups: %d, has bias: %d, is fully connected: %d\n",
-              upsampleY, upsampleX,
-              cropTop, cropBottom, cropLeft, cropRight,
-              numFilterGroups, hasBiases, fullyConnectedMode) ;
-    vl::print("vl_nnconvt: data: ", data) ;
-    vl::print("vl_nnconvt: filters: ", filters) ;
-    if (hasBiases) { vl::print("vl_nnconvt: biases: ", biases) ; }
-    if (backMode) {
-      vl::print("vl_nnconvt: derOutput: ", derOutput) ;
-      vl::print("vl_nnconvt: derData: ", derData) ;
-      vl::print("vl_nnconvt: derFilters: ", derFilters) ;
-      if (hasBiases) { vl::print("vl_nnconvt: derBiases: ", derBiases) ; }
-    } else {
-      vl::print("vl_nnconvt: output: ", output) ;
-    }
+    context.setLogLevel(0) ;
   }
-
-  /* -------------------------------------------------------------- */
-  /*                                                    Do the work */
-  /* -------------------------------------------------------------- */
-
-  vl::ErrorCode error ;
-  vl::nn::ConvolutionTranspose op(context,
-                                  upsampleY, upsampleX,
-                                  cropTop, cropBottom, cropLeft, cropRight) ;
-
-  /* regular case */
-  if (!backMode) {
-    error = op.forward(output,data,filters,biases) ;
-  } else {
-    error = op.backward(derData,
-                        derFilters,
-                        derBiases,
-                        data,
-                        filters,
-                        derOutput) ;
-  }
-
-  if (verbosity > 0) {
-#if ENABLE_CUDNN
-    if (context.getCudaHelper().getCudnnEnabled()) {
-      mexPrintf("vl_nnconvt: cuDNN workspace used: "
-                "fwd %.6g MB"
-                ", bwd filter %.6g MB"
-                ", bwd data %.6g MB\n",
-                (double)context.getCudaHelper().getCudnnConvolutionFwdWorkSpaceUsed() / (1024*1024),
-                (double)context.getCudaHelper().getCudnnConvolutionBwdFilterWorkSpaceUsed() / (1024*1024),
-                (double)context.getCudaHelper().getCudnnConvolutionBwdDataWorkSpaceUsed() / (1024*1024)) ;
-    }
-#endif
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                        Cleanup */
-  /* -------------------------------------------------------------- */
 
   if (error != vl::VLE_Success) {
-    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
   }
-  if (backMode) {
-    mxClassID classID ;
-    switch (derOutput.getDataType()) {
-      case vl::VLDT_Float: classID = mxSINGLE_CLASS ; break ;
-      case vl::VLDT_Double: classID = mxDOUBLE_CLASS ; break ;
-      default: abort() ;
-    }
-    out[OUT_RESULT] = (computeDerData) ? derData.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;
-    out[OUT_DERFILTERS] = (computeDerFilters)? derFilters.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;
-    out[OUT_DERBIASES] = (computederBiases & hasBiases) ? derBiases.relinquish() : mxCreateNumericMatrix(0,0,classID,mxREAL) ;
-  } else {
-    out[OUT_RESULT] = output.relinquish() ;
-  }
+  return ;
 }
+

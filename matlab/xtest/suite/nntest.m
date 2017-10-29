@@ -66,6 +66,10 @@ classdef nntest < matlab.unittest.TestCase
     end
 
     function eq(test,a,b,tau)
+      if isempty(a) && isempty(b)
+        % Emtpy array match regardless of class or type
+        return
+      end
       a = gather(a) ;
       b = gather(b) ;
       if nargin > 3 && ~isempty(tau) && tau < 0
@@ -83,10 +87,10 @@ classdef nntest < matlab.unittest.TestCase
       if isempty(tau) % can happen if a and b are empty
         tau = 0 ;
       end
-      test.verifyThat(b, matlab.unittest.constraints.IsOfClass(class(a))) ;
       tau = feval(class(a), tau) ; % convert to same type as a
       tol = matlab.unittest.constraints.AbsoluteTolerance(tau) ;
       test.verifyThat(a, matlab.unittest.constraints.IsEqualTo(b, 'Within', tol)) ;
+      test.verifyThat(b, matlab.unittest.constraints.IsOfClass(class(a))) ;
     end
   end
 
