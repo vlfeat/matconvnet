@@ -291,7 +291,7 @@ struct ConvolutionForwardCudnn
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (biasDescInitialized) { cudnnDestroyTensorDescriptor(biasDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error, "ConvolutionForwardCudnn:") ;
   }
 } ;
 
@@ -672,7 +672,7 @@ struct ConvolutionBackwardCudnn
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
     if (derBiasDescInitialized) { cudnnDestroyTensorDescriptor(derBiasDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error, "ConvolutionBackwardCudnn:") ;
   }
 
   } ;

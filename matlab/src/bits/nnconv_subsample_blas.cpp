@@ -9,10 +9,10 @@ struct SubsampleForward<vl::VLDT_CPU, dataType>
                            Tensor &output,
                            Tensor const &input)
   {
-    VLLOG(op,1)
-    << "SubsampleForward: MCN, "
-    << DeviceTypeTraits<VLDT_CPU>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("SubsampleForward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = input.getWidth() ;
@@ -56,10 +56,11 @@ struct SubsampleAndBiasForward
                            Tensor const &input,
                            Tensor const &biases)
   {
-    VLLOG(op,1)
-    << "SubsampleAndBiasForward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+
+    static const std::string signature = std::string("SubsampleForward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     vl::ErrorCode error ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -94,7 +95,7 @@ struct SubsampleAndBiasForward
       }
     }
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -109,10 +110,10 @@ struct SubsampleBackward<vl::VLDT_CPU, dataType>
                            Tensor &derInput,
                            Tensor const &derOutput)
   {
-    VLLOG(op,1)
-    << "SubsampleBackward: MCN, "
-    << DeviceTypeTraits<VLDT_CPU>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("SubsampleBackward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     assert(derInput) ;
     assert(derOutput) ;
@@ -160,10 +161,10 @@ struct SubsampleAndBiasBackward
                            Tensor derBiases,
                            Tensor derOutput)
   {
-    VLLOG(op,1)
-    << "SubsampleAndBiasBackward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("SubsampleAndBiasBackward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     assert(derOutput) ;
 
@@ -204,6 +205,6 @@ struct SubsampleAndBiasBackward
     }
 
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;

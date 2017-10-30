@@ -50,10 +50,10 @@ struct ConvolutionForward
     assert(filter) ;
     assert(input.getNumDimensions() <= 4) ; // Todo: generalize.
 
-    VLLOG(op,1)
-    << "ConvolutionForward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("ConvolutionForward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -132,7 +132,7 @@ struct ConvolutionForward
     }
 
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -152,10 +152,10 @@ struct ConvolutionBackward
    Tensor const &filter,
    Tensor const &derOutput)
   {
-    VLLOG(op,1)
-    << "ConvolutionBackward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("ConvolutionBackward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -307,7 +307,7 @@ struct ConvolutionBackward
       }
     }
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error, signature.c_str()) ;
   }
 } ;
 
@@ -325,10 +325,10 @@ struct ConvolutionTransposeForward
    vl::Tensor const &filter,
    vl::Tensor const &bias)
   {
-    VLLOG(op,1)
-    << "ConvolutionTransposeForward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("ConvolutionTransposeForward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     auto logLevel = op.getContext().getLogLevel() ;
     op.getContext().setLogLevel(0) ;
@@ -377,7 +377,7 @@ struct ConvolutionTransposeForward
     }
   done:
     op.getContext().setLogLevel(logLevel) ;
-    return error ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -397,10 +397,10 @@ struct ConvolutionTransposeBackward
    vl::Tensor const &filter,
    vl::Tensor const &derOutput)
   {
-    VLLOG(op,1)
-    << "ConvolutionTransposeBackward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("ConvolutionTransposeBackward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     auto logLevel = op.getContext().getLogLevel() ;
     op.getContext().setLogLevel(0) ;
@@ -437,7 +437,7 @@ struct ConvolutionTransposeBackward
     }
   done:
     op.getContext().setLogLevel(logLevel) ;
-    return error ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 

@@ -12,10 +12,10 @@ struct FullyConnectedForward
    Tensor const& filter,
    Tensor const& bias)
   {
-    VLLOG(op,1)
-    << "FullyConnectedForward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("FullyConnectedForward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -79,7 +79,7 @@ struct FullyConnectedForward
       if (error != vl::VLE_Success) { goto done ; }
     }
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 };
 
@@ -99,10 +99,10 @@ struct FullyConnectedBackward
    vl::Tensor const &filter,
    vl::Tensor const &derOutput)
   {
-    VLLOG(op,1)
-    << "FullyConnectedBackward: BLAS, "
-    << DeviceTypeTraits<deviceType>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("FullyConnectedBackward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -173,6 +173,6 @@ struct FullyConnectedBackward
 
     }
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 };

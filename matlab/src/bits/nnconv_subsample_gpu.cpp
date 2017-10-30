@@ -85,10 +85,10 @@ struct SubsampleForward<vl::VLDT_GPU, dataType>
                            Tensor &output,
                            Tensor const &input)
   {
-    VLLOG(op,1)
-    << "SubsampleForward: MCN, "
-    << DeviceTypeTraits<VLDT_GPU>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("SubsampleForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int outputVolume = output.getNumElements() ;
@@ -102,7 +102,7 @@ struct SubsampleForward<vl::VLDT_GPU, dataType>
      (int)op.getStride(0), (int)op.getStride(1),
      (int)op.getPadding(0), (int)op.getPadding(2));
 
-    return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(__func__)) ;
+    return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(signature.c_str())) ;
   }
 } ;
 
@@ -114,10 +114,10 @@ struct SubsampleBackward<vl::VLDT_GPU, dataType>
                            Tensor &derInput,
                            Tensor const &derOutput)
   {
-    VLLOG(op,1)
-    << "SubsampleBackward: MCN, "
-    << DeviceTypeTraits<VLDT_GPU>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("SubsampleBackward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int volume = derInput.getNumElements() ;
@@ -131,7 +131,7 @@ struct SubsampleBackward<vl::VLDT_GPU, dataType>
      (int)op.getStride(0), (int)op.getStride(1),
      (int)op.getPadding(0), (int)op.getPadding(2)) ;
 
-    return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(__func__)) ;
+    return op.getContext().setError(op.getContext().getCudaHelper().catchCudaError(signature.c_str())) ;
   }
 } ;
 

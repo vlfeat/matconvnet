@@ -20,6 +20,7 @@ the terms of the BSD license (see the COPYING file).
 #include "impl/copy.hpp"
 #include "impl/im2row.hpp"
 #include <cassert>
+#include <string>
 
 using namespace vl ;
 using namespace vl::nn ;
@@ -207,6 +208,11 @@ Convolution::forward(Tensor &output, double outputMult,
   ErrorCode error ;
 
   // Validate arguments.
+  if (!check_tensor_compatibility(output,input,filter,bias)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionForward: the tensors have mismatching data or device type.") ;
+  }
   TensorShape outputShape ;
   if ((error = forwardShape(outputShape, input, filter, bias)) != VLE_Success) {
     return error ;
@@ -214,32 +220,27 @@ Convolution::forward(Tensor &output, double outputMult,
   if (output != outputShape) {
     return getContext().setError
     (VLE_TensorShapeMismatch,
-     "Convolution: OUTPUT does not have the appropriate dimensions.") ;
+     "ConvolutionForward: OUTPUT does not have the appropriate dimensions.") ;
   }
   if (!input.isEmpty() && input.isNull()) {
     return getContext().setError
     (VLE_IllegalArgument,
-     "Convolution: INPUT is not an empty tensor, but it has no data either.") ;
+     "ConvolutionForward: INPUT is not an empty tensor, but it has no data either.") ;
   }
   if (!output.isEmpty() && output.isNull()) {
     return  getContext().setError
     (VLE_IllegalArgument,
-     "Convolution: OUTPUT is not an empty tensor, but it has no data either.") ;
+     "ConvolutionForward: OUTPUT is not an empty tensor, but it has no data either.") ;
   }
   if (!filter.isEmpty() && filter.isNull()) {
     return getContext().setError
     (VLE_IllegalArgument,
-     "Convolution: FILTER is not an empty tensor, but it has no data either.") ;
+     "ConvolutionForward: FILTER is not an empty tensor, but it has no data either.") ;
   }
   if (!bias.isNull() && bias.isNull()) {
     return getContext().setError
     (VLE_IllegalArgument,
-     "Convolution: BIAS is not an empty tensor, but it has no data either.") ;
-  }
-  if (!check_tensor_compatibility(output,input,filter,bias)) {
-    return getContext().setError
-    (VLE_IllegalArgument,
-     "Convolution: the tensors have mismatching data or device type.") ;
+     "ConvolutionForward: BIAS is not an empty tensor, but it has no data either.") ;
   }
 
   VLLOG(*this,1)
@@ -306,7 +307,9 @@ Convolution::backward(Tensor &derInput,
 
   // Check that all tensors have the same type.
   if (!check_tensor_compatibility(derInput,derFilter,derBias,input,filter,derOutput)) {
-    return getContext().passError(VLE_IllegalArgument, "ConvolutionBackward:") ;
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionBackward: the tensors have mismatching data or device type.") ;
   }
 
   // Check that we have the output derivative.
@@ -610,7 +613,7 @@ ConvolutionTranspose::forward(Tensor &output,
   return getContext().passError
   (dispatch<ConvolutionTransposeForward>()
    (*this,output,input,filter,bias),
-   "ConvolutionTransposeForward:") ;
+   "ConvolutionTransposeForward") ;
 }
 
 vl::ErrorCode

@@ -32,9 +32,9 @@ the terms of the BSD license (see the COPYING file).
 
 using namespace vl ;
 
-/* -------------------------------------------------------------------
- * Helpers
- * ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+/// MARK: - Helpers
+// -------------------------------------------------------------------/
 
 Int vl::gcd(Int a, Int b, Int &u, Int &v)
 {
@@ -264,9 +264,9 @@ vl::impl::Buffer::invalidateGpu()
   }
 }
 
-/* -------------------------------------------------------------------
- * Context
- * ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+/// MARK: - Context
+// -------------------------------------------------------------------
 
 vl::Context::Context()
 :
@@ -338,7 +338,7 @@ vl::Context::passError(vl::ErrorCode error, char const* description)
 {
   if (error != vl::VLE_Success) {
     if (description) {
-      lastErrorMessage = std::string(description) + " " + lastErrorMessage ;
+      lastErrorMessage = std::string(description) + ": " + lastErrorMessage ;
     }
   }
   return error ;
@@ -523,107 +523,101 @@ vl::Context::clearAllOnes(DeviceType deviceType)
   allOnes[deviceType].clear() ;
 }
 
-/* -------------------------------------------------------------------
- *                                                         TensorShape
- * ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+/// MARK: - TensorShape
+// -------------------------------------------------------------------
 
 vl::TensorShape::TensorShape()
-: numDimensions(0)
+: dimensions {}
 { }
 
 vl::TensorShape::TensorShape(TensorShape const & t)
-: numDimensions(t.numDimensions)
 {
-  for (unsigned k = 0 ; k < numDimensions ; ++k) {
-    dimensions[k] = t.dimensions[k] ;
-  }
+  dimensions = t.dimensions ; // copy
+}
+
+vl::TensorShape::TensorShape(TensorShape && t)
+{
+  dimensions = std::move(t.dimensions) ; // move
+}
+
+vl::TensorShape& vl::TensorShape::operator= (TensorShape const& ts)
+{
+  dimensions = ts.dimensions ;
+  return *this ;
 }
 
 vl::TensorShape::TensorShape(const std::initializer_list<Int> &dims)
-: numDimensions(0)
 {
   assert(dims.size() <= maxNumDimensions) ;
-  for (auto d : dims) {
-    dimensions[numDimensions++] = d ;
-  }
+  dimensions = std::vector<Int>(dims) ; // copy
 }
 
 vl::TensorShape::TensorShape(const std::vector<Int> &dims)
-: numDimensions(0)
 {
   assert(dims.size() <= maxNumDimensions) ;
-  for (auto d : dims) {
-    dimensions[numDimensions++] = d ;
-  }
+  dimensions = dims ; // copy
 }
-
 
 vl::TensorShape::TensorShape(Int height, Int width, Int depth, Int size)
-: numDimensions(4)
-{
-  dimensions[0] = height ;
-  dimensions[1] = width ;
-  dimensions[2] = depth ;
-  dimensions[3] = size ;
-}
+: dimensions {height,width,depth,size}
+{ }
 
 void vl::TensorShape::clear()
 {
-  numDimensions = 0 ;
+  dimensions.clear() ;
 }
 
 void vl::TensorShape::setDimensions(Int const * newDimensions, Int newNumDimensions)
 {
   assert(newNumDimensions  <= maxNumDimensions) ;
-  for (Int k = 0 ; k < newNumDimensions ; ++k) {
-    dimensions[k] = newDimensions[k] ;
-  }
-  numDimensions = newNumDimensions ;
+  dimensions = std::vector<Int>{newDimensions, newDimensions + newNumDimensions} ;
 }
 
 void vl::TensorShape::setDimension(Int num, Int dimension)
 {
+  assert(num >= 0) ;
   assert(num + 1 <= maxNumDimensions) ;
-  if (num + 1 > numDimensions) {
-    Int x = (getNumElements() > 0) ;
-    for (Int k = numDimensions ; k < num ; ++k) {
-      dimensions[k] = x ;
+  if (num + 1 > (Int)dimensions.size()) {
+    Int x = (getNumElements() > 0) ; // 0 or 1
+    for (Int k = (Int)dimensions.size() ; k < num + 1 ; ++k) {
+      dimensions.push_back(x) ;
     }
-    numDimensions = num + 1 ;
   }
-  dimensions[num] = dimension ;
+  dimensions[(size_t)num] = dimension ;
 }
 
 Int vl::TensorShape::getDimension(Int num) const
 {
-  if (num + 1 > numDimensions) {
+  assert(num >= 0) ;
+  if (num + 1 > (Int)dimensions.size()) {
     return 1 ;
   }
-  return dimensions[num] ;
+  return dimensions[(size_t)num] ;
 }
 
 Int vl::TensorShape::getNumDimensions() const
 {
-  return numDimensions ;
+  return (Int)dimensions.size() ;
 }
 
 Int const * vl::TensorShape::getDimensionsAsPtr() const
 {
-  return dimensions ;
+  return &dimensions[0] ;
 }
 
-std::vector<Int> vl::TensorShape::getDimensions() const
+std::vector<Int> const& vl::TensorShape::getDimensions() const
 {
-  return {dimensions, dimensions + numDimensions} ;
+   return dimensions ;
 }
 
 Int vl::TensorShape::getNumElements() const
 {
-  if (numDimensions == 0) {
+  if (dimensions.size() == 0) {
     return 0 ;
   }
   Int n = 1 ;
-  for (unsigned k = 0 ; k < numDimensions ; ++k) { n *= dimensions[k] ; }
+  for (size_t k = 0 ; k < dimensions.size() ; ++k) { n *= dimensions[k] ; }
   return n ;
 }
 
@@ -654,15 +648,15 @@ void vl::TensorShape::reshape(Int newNumDimensions)
   Int n = getNumElements() ;
   if (newNumDimensions > 0) {
     setDimension(newNumDimensions - 1, 1) ;
-    numDimensions = newNumDimensions ;
+    dimensions.resize((size_t)newNumDimensions) ;
     Int m = getNumElements() ;
     if (m) {
-      dimensions[newNumDimensions - 1] *= (n / m) ;
+      dimensions[(size_t)newNumDimensions - 1] *= (n / m) ;
     } else if (n == 0) {
-      dimensions[newNumDimensions - 1] = 0  ;
+      dimensions[(size_t)newNumDimensions - 1] = 0  ;
     }
   } else {
-    numDimensions = newNumDimensions ;
+    dimensions.resize(0) ;
   }
 }
 
@@ -671,14 +665,33 @@ void vl::TensorShape::reshape(TensorShape const & newShape)
   operator=(newShape) ;
 }
 
-/* -------------------------------------------------------------------
- *                                                              Tensor
- * ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+/// MARK: - Tensor
+// -------------------------------------------------------------------
 
 vl::Tensor::Tensor()
 : TensorShape(), dataType(VLDT_Float),
   deviceType(VLDT_CPU), memory(NULL), memorySize(0)
 { }
+
+vl::Tensor::Tensor(Tensor &&t)
+: TensorShape(t),
+dataType(t.dataType),
+deviceType(t.deviceType), memory(t.memory), memorySize(t.memorySize)
+{
+  t.memory = NULL ;
+  t.memorySize = 0 ;
+}
+
+vl::Tensor::Tensor(vl::Tensor const &t)
+: TensorShape(t), dataType(t.dataType),
+deviceType(t.deviceType), memory(t.memory), memorySize(t.memorySize)
+{ }
+
+vl::Tensor& vl::Tensor::operator= (vl::Tensor::Tensor const &t)
+{
+  return *this ;
+}
 
 vl::Tensor::Tensor(TensorShape const & shape, DataType dataType,
                    DeviceType deviceType, void * memory, size_t memorySize)

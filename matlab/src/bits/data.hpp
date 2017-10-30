@@ -16,6 +16,7 @@ the terms of the BSD license (see the COPYING file).
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <array>
 #include <sstream>
 
 #include "impl/compat.h"
@@ -112,7 +113,6 @@ namespace vl {
     static constexpr std::size_t size = sizeof(double) ;
     static constexpr auto name = "double" ;
   } ;
-
 
   /// Convert a DataType code to a C++ type.
   template <vl::DeviceType deviceType> struct DeviceTypeTraits { } ;
@@ -277,25 +277,27 @@ namespace vl {
 
     TensorShape() ;
     TensorShape(TensorShape const& t) ;
+    TensorShape(TensorShape &&t) ;
     TensorShape(const std::initializer_list<Int> &dims) ;
     TensorShape(const std::vector<Int> &dims) ;
     TensorShape(Int height, Int width, Int depth, Int size) ;
     TensorShape(Int const * dimensions, Int numDimensions) ;
+    TensorShape& operator= (TensorShape const& ts) ;
 
     void clear() ; // set to empty (numDimensions = 0)
     void setDimension(Int num, Int dimension) ;
     void setDimensions(Int const * dimensions, Int numDimensions) ;
-    void setHeight(Int x) ;
-    void setWidth(Int x) ;
-    void setDepth(Int x) ;
-    void setSize(Int x) ;
+    void setHeight(Int x) ; /// Set the first dimension.
+    void setWidth(Int x) ; /// Set the second dimension.
+    void setDepth(Int x) ; /// Set the third dimension.
+    void setSize(Int x) ; /// Set the fourth dimension.
     void reshape(Int numDimensions) ; // squash or stretch to numDimensions
     void reshape(TensorShape const & shape) ; // same as operator=
 
     Int getDimension(Int num) const ;
     Int const * getDimensionsAsPtr() const ;
     Int getNumDimensions() const ;
-    std::vector<Int> getDimensions() const ;
+    std::vector<Int> const& getDimensions() const ;
     Int getHeight() const ;
     Int getWidth() const ;
     Int getNumChannels() const ;
@@ -305,8 +307,7 @@ namespace vl {
     bool isEmpty() const ;
 
   protected:
-    Int dimensions [maxNumDimensions] ;
-    Int numDimensions ;
+    std::vector<Int> dimensions ;
   } ;
 
   bool operator == (TensorShape const & a, TensorShape const & b) ;
@@ -325,8 +326,10 @@ namespace vl {
   public:
     Tensor() ;
     Tensor(Tensor const &) ;
+    Tensor(Tensor&&) ;
     Tensor(TensorShape const & shape, DataType dataType,
            DeviceType deviceType, void * memory, size_t memorySize) ;
+    Tensor& operator= (Tensor const &t) ;
     void * getMemory() ;
     void const * getMemory() const ;
     DeviceType getDeviceType() const ;
@@ -342,11 +345,6 @@ namespace vl {
     void * memory ;
     size_t memorySize ;
   } ;
-
-  inline Tensor::Tensor(Tensor const& t)
-  : TensorShape(t), dataType(t.dataType), deviceType(t.deviceType),
-  memory(t.memory), memorySize(t.memorySize)
-  { }
 
   inline bool areCompatible(Tensor const & a, Tensor const & b)
   {

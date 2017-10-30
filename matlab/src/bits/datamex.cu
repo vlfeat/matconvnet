@@ -189,7 +189,7 @@ vl::MexTensor::~MexTensor()
 }
 
 /* ---------------------------------------------------------------- */
-/* init with optional zero filling                                  */
+/* Init with optional zero filling                                  */
 /* ---------------------------------------------------------------- */
 
 vl::ErrorCode
@@ -198,13 +198,13 @@ vl::MexTensor::initHelper(DeviceType newDeviceType, DataType newDataType,
 {
   clear() ;
 
-  // assign dimensions
+  // Assign dimensions.
   mwSize dimensions [Tensor::maxNumDimensions] ;
   for (int k = 0 ; k < newShape.getNumDimensions() ; ++k) {
     dimensions[k] = (mwSize)newShape.getDimension(k) ;
   }
 
-  // compute the size in bytes
+  // Compute the size in bytes.
   auto newMemorySize = static_cast<mwSize>(newShape.getNumElements()) ;
   mxClassID classID ;
   switch (newDataType) {
@@ -222,7 +222,7 @@ vl::MexTensor::initHelper(DeviceType newDeviceType, DataType newDataType,
       abort() ;
   }
 
-  // allocate the memory on CPU or GPU
+  // Allocate the memory on CPU or GPU.
   void * newMemory = NULL ;
   mxArray * newArray = NULL ;
 #if ENABLE_GPU
@@ -393,8 +393,8 @@ vl::MexTensor::init(mxArray const * array_)
     mexErrMsgTxt("An input has more than the maximum number of allowed dimensions.") ;
   }
 
-  numDimensions = static_cast<vl::Int>(newNumDimensions) ;
-  for (int k = 0 ; k < numDimensions ; ++k) {
+  dimensions.resize(newNumDimensions) ;
+  for (int k = 0 ; k < dimensions.size() ; ++k) {
     setDimension(k, (Int)newDimensions[k]) ;
   }
 
