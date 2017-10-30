@@ -54,7 +54,7 @@ template<DeviceType deviceType, DataType dataType> struct FullyConnectedBackward
 #endif
 
 // -------------------------------------------------------------------
-/// MARK: - Drivers
+/// MARK: - Convolution
 // -------------------------------------------------------------------
 
 Convolution::Convolution(Context &context,
@@ -424,6 +424,7 @@ Convolution::backward(Tensor &derInput,
 
 /// MARK: - Convolution Transpose
 
+/// Todo: make obsolete
 ConvolutionTranspose::ConvolutionTranspose(Context &context,
                                            Int upsampleY,
                                            Int upsampleX,
@@ -454,7 +455,8 @@ ConvolutionTranspose::setUpsampling(vector<Int> const& upsampling)
   // Usampling must be positive.
   if (any_of(begin(upsampling),end(upsampling),[](Int x){return x <= 0;})) {
     return getContext().setError
-    (VLE_IllegalArgument, "Convolution: a upsampling parameter is not positive.") ;
+    (VLE_IllegalArgument,
+     "ConvolutionTranspose: an element of UPSAMPLING is not positive.") ;
   }
 
   // There must one upsampling per spatial dimension.
@@ -466,7 +468,7 @@ ConvolutionTranspose::setUpsampling(vector<Int> const& upsampling)
   }
   else {
     return getContext().setError
-    (VLE_IllegalArgument, "UPSAMPLING is neither scalar nor has the same"
+    (VLE_IllegalArgument, "ConvolutionTranspose: UPSAMPLING is neither scalar nor has the same"
      " cardinality as the number of spatial dimensions.") ;
   }
   return VLE_Success ;
@@ -478,7 +480,7 @@ ConvolutionTranspose::setCropping(vector<Int> const& cropping)
   // Cropping must be non-negative.
   if (any_of(begin(cropping),end(cropping),[](Int x){return x < 0;})) {
     return getContext().setError
-    (VLE_IllegalArgument, "An element of CROPPING is less than 0.") ;
+    (VLE_IllegalArgument, "ConvolutionTranspose: An element of CROPPING is less than 0.") ;
   }
   // There must one stride per spatial dimension.
   if (Int(cropping.size()) == 2*numSpatialDimensions) {
@@ -489,7 +491,7 @@ ConvolutionTranspose::setCropping(vector<Int> const& cropping)
   }
   else {
     return getContext().setError
-    (VLE_IllegalArgument, "CROPPING is neither scalar nor has the cardinality"
+    (VLE_IllegalArgument, "ConvolutionTranspose: CROPPING is neither scalar nor has the cardinality"
      " of twice the number of spatial dimensions.") ;
   }
   return VLE_Success ;
@@ -501,7 +503,7 @@ ConvolutionTranspose::setNumFilterGroups(Int numFilterGroups)
   // NumFilterGroups must be non-negative.
   if (numFilterGroups < 1) {
     return getContext().setError
-    (VLE_IllegalArgument, "An element of NUMFILTERGROUPS is less than 1.") ;
+    (VLE_IllegalArgument, "ConvolutionTranspose: NUMFILTERGROUPS is less than 1.") ;
   }
   this->numFilterGroups = numFilterGroups ;
   return VLE_Success ;

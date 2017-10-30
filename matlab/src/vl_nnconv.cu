@@ -284,7 +284,7 @@ void mexFunction(int nout, mxArray *out[],
   vl::ErrorCode error = performConvolution(context,nout,out,nin,in) ;
 
   if (context.getLogLevel() > 0) {
-    mexPrintf("vl_nnconv\n") ;
+    mexPrintf("vl_nnconv:\n") ;
     for (auto const & str : context.getLogbook()) {
       mexPrintf("\t%s\n", str.c_str()) ;
     }

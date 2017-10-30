@@ -118,7 +118,7 @@ namespace vl { namespace nn {
     }
 
     std::vector<Int> getCroppings() const {
-      return {begin(cropping), begin(cropping)+getNumSpatialDimensions()} ;
+      return {begin(cropping), begin(cropping)+2*getNumSpatialDimensions()} ;
     }
 
     std::vector<Int> getUpsamplings() const {

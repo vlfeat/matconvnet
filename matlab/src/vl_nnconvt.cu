@@ -269,18 +269,6 @@ performConvolutionTranspose(vl::Context& contetx,
   return vl::VLE_Success ;
 }
 
-/* -------------------------------------------------------------- */
-/*                                            Check the arguments */
-/* -------------------------------------------------------------- */
-
-/* -------------------------------------------------------------- */
-/*                                            Check the arguments */
-/* -------------------------------------------------------------- */
-
-/* -------------------------------------------------------------- */
-/*                                            Check the arguments */
-/* -------------------------------------------------------------- */
-
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
@@ -288,7 +276,7 @@ void mexFunction(int nout, mxArray *out[],
   vl::ErrorCode error = performConvolutionTranspose(context,nout,out,nin,in) ;
 
   if (context.getLogLevel() > 0) {
-    mexPrintf("vl_nnconvt\n") ;
+    mexPrintf("vl_nnconvt:\n") ;
     for (auto const & str : context.getLogbook()) {
       mexPrintf("\t%s\n", str.c_str()) ;
     }
