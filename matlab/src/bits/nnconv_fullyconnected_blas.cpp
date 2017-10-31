@@ -9,8 +9,7 @@ struct FullyConnectedForward
   (Convolution const &op,
    Tensor &output, double outputMult,
    Tensor const& input, double inputMult,
-   Tensor const& filter,
-   Tensor const& bias)
+   Tensor const& filter)
   {
     static const std::string signature = std::string("FullyConnectedForward[BLAS,")
     + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
@@ -58,26 +57,6 @@ struct FullyConnectedForward
        (size_t)input.getNumElements()) ;
     }
 
-    if (bias) {
-      type beta = 1 ;
-      type const* allOnesMemory = (type*)
-      op.getContext().getAllOnes(deviceType,
-                                 dataType,
-                                 (size_t)input.getCardinality()) ;
-      if (allOnesMemory == NULL) {
-        error = op.getContext().getLastError() ;
-        goto done ;
-      }
-      error = vl::impl::blas<deviceType,dataType>::gemm
-      (op.getContext(), 'n', 'n',
-       bias.getNumElements(), input.getCardinality(), 1,
-       alpha,
-       (type*)bias.getMemory(), bias.getNumElements(),
-       allOnesMemory, 1,
-       beta,
-       (type*)output.getMemory(), bias.getNumElements()) ;
-      if (error != vl::VLE_Success) { goto done ; }
-    }
   done:
     return op.getContext().passError(error,signature.c_str()) ;
   }
@@ -94,7 +73,6 @@ struct FullyConnectedBackward
   (Convolution const &op,
    vl::Tensor &derInput,
    vl::Tensor &derFilter,
-   vl::Tensor &derBias,
    vl::Tensor const &input,
    vl::Tensor const &filter,
    vl::Tensor const &derOutput)
@@ -147,31 +125,7 @@ struct FullyConnectedBackward
        (type const*)derOutput.getMemory(),
        (size_t)derOutput.getNumElements()) ;
     }
-
-    if (derBias) {
-      auto allOnesMemory = (type const*)
-      op.getContext().getAllOnes(deviceType,
-                                 dataType,
-                                 (size_t)derOutput.getCardinality()) ;
-      if (allOnesMemory == NULL) {
-        error = op.getContext().getLastError() ;
-        goto done ;
-      }
-
-      error = vl::impl::blas<deviceType, dataType>::gemm
-      (op.getContext(),
-       'n', 't',
-       1,
-       derOutput.getNumChannels(),
-       derOutput.getCardinality(),
-       alpha,
-       (type*)allOnesMemory, 1,
-       (type*)derOutput.getMemory(), derOutput.getNumChannels(),
-       beta,
-       (type*)derBias.getMemory(), 1) ;
-      if (error != vl::VLE_Success) { goto done ; }
-
-    }
+ 
   done:
     return op.getContext().passError(error,signature.c_str()) ;
   }

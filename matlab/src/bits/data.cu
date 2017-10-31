@@ -690,6 +690,11 @@ deviceType(t.deviceType), memory(t.memory), memorySize(t.memorySize)
 
 vl::Tensor& vl::Tensor::operator= (vl::Tensor::Tensor const &t)
 {
+  TensorShape::operator=(t) ;
+  dataType = t.dataType ;
+  deviceType = t.deviceType ;
+  memory = t.memory ;
+  memorySize = t.memorySize ;
   return *this ;
 }
 

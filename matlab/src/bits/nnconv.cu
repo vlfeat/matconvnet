@@ -36,8 +36,6 @@ template<DataType dataType> struct ConvolutionBackwardCudnn ;
 
 template<DeviceType deviceType, DataType dataType> struct SubsampleForward ;
 template<DeviceType deviceType, DataType dataType> struct SubsampleBackward ;
-template<DeviceType deviceType, DataType dataType> struct SubsampleAndBiasForward ;
-template<DeviceType deviceType, DataType dataType> struct SubsampleAndBiasBackward ;
 
 template<DeviceType deviceType, DataType dataType> struct FullyConnectedForward ;
 template<DeviceType deviceType, DataType dataType> struct FullyConnectedBackward ;
@@ -255,13 +253,7 @@ Convolution::forward(Tensor &output, double outputMult,
   << " bias=" << pretty(bias.getDimensions())
   << " output=" << pretty(output.getDimensions()) ;
 
-  // Subsample mode.
-  if (filter.isEmpty()) {
-    return dispatch<SubsampleAndBiasForward>()(*this,output,input,bias) ;
-  }
-
-  // Fully-connected mode.
-  {
+  auto const isFullyConnected = [&](){
     auto isone = [](Int x){return x==1;} ;
     auto iszero = [](Int x){return x==0;} ;
     auto ns = getNumSpatialDimensions() ;
@@ -269,21 +261,37 @@ Convolution::forward(Tensor &output, double outputMult,
     auto paddings = getPaddings() ;
     auto strides = getStrides() ;
     auto dilations = getDilations() ;
-    if (all_of(begin(dims), begin(dims)+ns,isone) &&
-        all_of(begin(strides),end(strides),isone) &&
-        all_of(begin(paddings),end(paddings),iszero) &&
-        all_of(begin(dilations),end(dilations),isone) &&
-        filter.getDimension(ns) == input.getDimension(ns))
-    {
-      return dispatch<FullyConnectedForward>()(*this,output,outputMult,input,inputMult,filter,bias) ;
-    }
+    return (all_of(begin(dims), begin(dims)+ns,isone) &&
+            all_of(begin(strides),end(strides),isone) &&
+            all_of(begin(paddings),end(paddings),iszero) &&
+            all_of(begin(dilations),end(dilations),isone) &&
+            filter.getDimension(ns) == input.getDimension(ns)) ;
+  } ;
+
+  // Filtering.
+  Tensor null ;
+  if (filter.isEmpty()) {
+    // Subsample mode.
+    error = dispatch<SubsampleForward>()(*this,output,input) ;
+  }
+  else if (isFullyConnected()) {
+    // Fully-connected mode.
+    error = dispatch<FullyConnectedForward>()(*this,output,outputMult,input,inputMult,filter) ;
+  } else {
+    // Normal mode.
+    error = dispatch_cudnn<
+    ConvolutionForward,
+    ConvolutionForwardCudnn>()
+    (*this,output,outputMult,input,inputMult,filter) ;
+  }
+  if (error != vl::VLE_Success) { return getContext().passError(error,"Convolution::forward") ; }
+
+  // Bias.
+  if (!bias.isEmpty()) {
+    error = vl::nn::Bias(getContext()).forward(output,1.0,Tensor(),0,bias,1.0);
   }
 
-  // Normal mode.
-  return dispatch_cudnn<
-  ConvolutionForward,
-  ConvolutionForwardCudnn>()
-  (*this,output,outputMult,input,inputMult,filter,bias) ;
+  return getContext().passError(error,"ConvolutionForward") ;
 }
 
 /// * `derOutput` must be a non-empty, non-null tensor.
@@ -365,20 +373,6 @@ Convolution::backward(Tensor &derInput,
     }
   }
 
-  // If the bias derivaties are requested, check that we have what we need.
-  if (!derBias.isEmpty()) {
-    if (derBias.isNull()) {
-      return getContext().setError
-      (VLE_IllegalArgument,
-       "ConvolutionBackward: DERBIAS requested, but the output tensor is null.") ;
-    }
-    if (derBias.getNumElements() != derOutput.getNumChannels()) {
-      return getContext().setError
-      (VLE_IllegalArgument,
-       "ConvolutionBackward: DERBIAS requested, but the output tensro has an incorrect size.") ;
-    }
-  }
-
   VLLOG(*this,1)
   << "Convolution: backward"
   << " stride=" << pretty(getStrides())
@@ -395,13 +389,7 @@ Convolution::backward(Tensor &derInput,
   << " derFilter=" << pretty(derFilter.getDimensions())
   << " derBias=" << pretty(derBias.getDimensions()) ;
 
-  // Subsample mode.
-  if (filter.isEmpty()) {
-    return dispatch<SubsampleAndBiasBackward>()(*this,derInput,derBias,derOutput) ;
-  }
-
-  // Fully-connected mode.
-  {
+  auto const isFullyConnected = [&](){
     auto isone = [](Int x){return x==1;} ;
     auto iszero = [](Int x){return x==0;} ;
     auto ns = getNumSpatialDimensions() ;
@@ -409,20 +397,46 @@ Convolution::backward(Tensor &derInput,
     auto paddings = getPaddings() ;
     auto strides = getStrides() ;
     auto dilations = getDilations() ;
-    if (all_of(begin(dims), begin(dims)+ns,isone) &&
-        all_of(begin(strides),end(strides),isone) &&
-        all_of(begin(paddings),end(paddings),iszero) &&
-        all_of(begin(dilations),end(dilations),isone) &&
-        filter.getDimension(ns) == input.getDimension(ns))
-    {
-      return dispatch<FullyConnectedBackward>()(*this,derInput,derFilter,derBias,input,filter,derOutput) ;
-    }
+    return (all_of(begin(dims), begin(dims)+ns,isone) &&
+            all_of(begin(strides),end(strides),isone) &&
+            all_of(begin(paddings),end(paddings),iszero) &&
+            all_of(begin(dilations),end(dilations),isone) &&
+            filter.getDimension(ns) == input.getDimension(ns)) ;
+  } ;
+
+  // Filtering.
+  Tensor null ;
+  if (filter.isEmpty()) {
+    // Subsample mode.
+    error = dispatch<SubsampleBackward>()(*this,derInput,derOutput) ;
+  }
+  else if (isFullyConnected()) {
+    // Fully-connected mode.
+    error = dispatch<FullyConnectedBackward>()(*this,derInput,derFilter,input,filter,derOutput) ;
+  }
+  else {
+    // Normal mode.
+    error = dispatch_cudnn<
+    ConvolutionBackward,
+    ConvolutionBackwardCudnn>()
+    (*this,derInput,derFilter,input,filter,derOutput) ;
   }
 
-  return dispatch_cudnn<
-  ConvolutionBackward,
-  ConvolutionBackwardCudnn>()
-  (*this,derInput,derFilter,derBias,input,filter,derOutput) ;
+  // If the bias derivaties are requested, check that we have what we need.
+  if (!derBias.isEmpty()) {
+    if (derBias.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERBIAS requested, but the output tensor is null.") ;
+    }
+    if (derBias.getNumElements() != derOutput.getNumChannels()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "ConvolutionBackward: DERBIAS requested, but the output tensro has an incorrect size.") ;
+    }
+    error = vl::nn::Bias(getContext()).backward(null,0,derBias,0,0,1,derOutput) ;
+  }
+  return getContext().passError(error,"ConvolutionBackward") ;
 }
 
 /// MARK: - Convolution Transpose
@@ -643,7 +657,7 @@ ConvolutionTranspose::backward(Tensor &derInput,
   return getContext().passError
   (dispatch<ConvolutionTransposeBackward>()
   (*this,derInput,derFilter,derBias,input,filter,derOutput),
-   "ConvolutionTransposeBackward:") ;
+   "ConvolutionTransposeBackward") ;
 }
 
 

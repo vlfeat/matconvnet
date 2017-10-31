@@ -42,8 +42,7 @@ struct ConvolutionForward
   (Convolution &op,
    Tensor output, double outputMult,
    Tensor const& input, double inputMult,
-   Tensor const& filter,
-   Tensor const& bias)
+   Tensor const& filter)
   {
     assert(output) ;
     assert(input) ;
@@ -67,10 +66,7 @@ struct ConvolutionForward
     type* tempMemory = (type*) op.getContext().getWorkspace
     (deviceType, as_unsigned(tempVolume) * sizeof(type)) ;
 
-    type const* allOnesMemory = (type*) op.getContext().getAllOnes
-    (deviceType, dataType, as_unsigned(numOutputPixels)) ;
-
-    if (tempMemory == NULL || allOnesMemory == NULL) {
+    if (tempMemory == NULL) {
       error = op.getContext().getLastError() ;
       goto done ;
     }
@@ -113,22 +109,6 @@ struct ConvolutionForward
          (type*)output.getMemory() + outputOffset + outputGrpOffset, numOutputPixels) ;
         if (error != vl::VLE_Success) { goto done ; }
       }
-
-      if (bias) {
-        type alpha = 1 ;
-        type beta = 1 ;
-        error = vl::impl::blas<deviceType,dataType>::gemm
-        (op.getContext(),
-         'n', 'n',
-         numOutputPixels,
-         bias.getNumElements(), 1,
-         alpha,
-         allOnesMemory, numOutputPixels,
-         (type*)bias.getMemory(), 1,
-         beta,
-         (type*)output.getMemory() + outputOffset, numOutputPixels) ;
-        if (error != vl::VLE_Success) { goto done ; }
-      }
     }
 
   done:
@@ -147,7 +127,6 @@ struct ConvolutionBackward
   (Convolution &op,
    Tensor &derInput,
    Tensor &derFilter,
-   Tensor &derBias,
    Tensor const &input,
    Tensor const &filter,
    Tensor const &derOutput)
@@ -163,26 +142,12 @@ struct ConvolutionBackward
     Int numGroups = 0 ;
     Int numFiltersPerGroup = 0 ;
     Int filterVolume = 0 ;
-    type const* allOnesMemory = NULL ;
     Int tempVolume = 0 ;
     type* tempMemory = NULL ;
 
     // for all derivatives
     assert(derOutput) ;
     Int numOutputPixels = derOutput.getHeight() * derOutput.getWidth() ;
-
-    if (derBias) {
-      // for derivative w.r.t. bias
-      allOnesMemory = (type*) op.getContext().getAllOnes
-      (deviceType,
-       dataType,
-       as_unsigned(numOutputPixels)) ;
-
-      if (allOnesMemory == NULL) {
-        error = op.getContext().getLastError() ;
-        goto done ;
-      }
-    }
 
     if (derInput) {
       // for derivative w.r.t. data
@@ -211,23 +176,6 @@ struct ConvolutionBackward
     for (Int image = 0 ; image < derOutput.getCardinality() ; ++image) {
 
       Int derOutputOffset = (derOutput.getHeight()*derOutput.getWidth()*derOutput.getNumChannels()) * image ;
-
-      /* compute derInput dz/dbias */
-      if (derBias) {
-        // has derBias, derOutput
-        type alpha = 1 ;
-        type beta = (image > 0) ; /* this saves init. the output array with 0 */
-        error = vl::impl::blas<deviceType,dataType>::gemv
-        (op.getContext(),
-         't',
-         numOutputPixels, derOutput.getNumChannels(),
-         alpha, /* alpha */
-         (type const*)derOutput.getMemory() + derOutputOffset, numOutputPixels,
-         allOnesMemory, 1,
-         beta, /* beta */
-         (type*)derBias.getMemory(), 1) ;
-        if (error != vl::VLE_Success) { return error ; }
-      }
 
       /* compute derInpu dz/dx */
       if (derInput) {
