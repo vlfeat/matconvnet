@@ -15,7 +15,9 @@ the terms of the BSD license (see the COPYING file).
 #include "impl/dispatcher.hpp"
 #include <cassert>
 #include <cmath>
+#include <sstream>
 
+using namespace std ;
 using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;
@@ -25,8 +27,16 @@ template<DeviceType deviceType, DataType dataType> struct BilinearSamplerBackwar
 template<DataType dataType> struct BilinearSamplerForwardCudnn ;
 template<DataType dataType> struct BilinearSamplerBackwardCudnn ;
 
+#if ENABLE_GPU
+#include "impl/nnbilinearsampler_gpu.cu"
+#endif
+
+#if ENABLE_CUDNN
+#include "impl/nnbilinearsampler_cudnn.cu"
+#endif
+
 // -------------------------------------------------------------------
-//                                                             Helpers
+/// MARK: - Helpers
 // -------------------------------------------------------------------
 
 template<typename type, bool backwardData, bool backwardGrid>
@@ -149,7 +159,7 @@ forward_backward
 }
 
 // -------------------------------------------------------------------
-//                                                             Forward
+/// MARK: - Forward
 // -------------------------------------------------------------------
 
 template<DataType dataType>
@@ -161,30 +171,39 @@ struct BilinearSamplerForward<VLDT_CPU,dataType>
    Tensor const &input,
    Tensor const &grid)
   {
+    static const std::string signature = std::string("BilinearSamplerForward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    auto outHeight = output.getHeight() ;
-    auto outWidth = output.getWidth() ;
-    auto outNumChannels = output.getNumChannels() ;
-    auto outCardinality = output.getCardinality() ;
-    auto inHeight = input.getHeight() ;
-    auto inWidth = input.getWidth() ;
-    auto inCardinality = input.getCardinality() ;
+    Int outHeight = output.getHeight() ;
+    Int outWidth = output.getWidth() ;
+    Int outNumChannels = output.getNumChannels() ;
+    Int outCardinality = output.getCardinality() ;
+    Int inHeight = input.getHeight() ;
+    Int inWidth = input.getWidth() ;
+    Int inCardinality = input.getCardinality() ;
+
     auto outputData = (type*)output.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto gridData = (type const*)grid.getMemory() ;
 
-    return forward_backward<type, false, false>
-    (op.getContext(), outputData, NULL, NULL, inputData, gridData, NULL,
-     outHeight, outWidth, outNumChannels, outCardinality,
-     inHeight, inWidth, inCardinality) ;
+    return op.getContext().passError
+    (forward_backward<type, false, false>
+     (op.getContext(), outputData, NULL, NULL, inputData, gridData, NULL,
+      outHeight, outWidth, outNumChannels, outCardinality,
+      inHeight, inWidth, inCardinality),
+     signature.c_str());
   }
 } ;
 
 // -------------------------------------------------------------------
-//                                                            Backward
+/// MARK: - Backward
 // -------------------------------------------------------------------
 
+#undef DISPATCH
 #define DISPATCH(bwData, bwGrid) \
 error = forward_backward<type, bwData, bwGrid> \
 (op.getContext(), NULL, derInputData, derGridData, inputData, gridData, derOutputData, \
@@ -202,6 +221,11 @@ struct BilinearSamplerBackward<VLDT_CPU,dataType>
    Tensor const &grid,
    Tensor const &derOutput)
   {
+    static const std::string signature = std::string("BilinearSamplerBacwkard[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature.c_str() ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
     auto outHeight = derOutput.getHeight() ;
     auto outWidth = derOutput.getWidth() ;
@@ -226,31 +250,88 @@ struct BilinearSamplerBackward<VLDT_CPU,dataType>
     } else if (derInputData && derGridData) {
       DISPATCH(true, true) ;
     }
-    return error ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
 // -------------------------------------------------------------------
-//                                                             Drivers
+/// MARK: - Driver
 // -------------------------------------------------------------------
-
-#if ENABLE_GPU
-#include "nnbilinearsampler_gpu.cu"
-#endif
-
-#if ENABLE_CUDNN
-#include "nnbilinearsampler_cudnn.cu"
-#endif
 
 BilinearSampler::BilinearSampler(Context &context)
 : Operation(context)
 { }
 
 vl::ErrorCode
+BilinearSampler::forwardShape(TensorShape &output,
+                              TensorShape const &input,
+                              TensorShape const &grid)
+{
+  Int inNumChannels = input.getNumChannels();
+  Int inBatch = input.getCardinality();
+
+  // Grid uses the first dimension has channels.
+  Int gridDepth = grid.getDimension(0);
+  Int gridHeight = grid.getDimension(1);
+  Int gridWidth = grid.getDimension(2);
+  Int gridBatch = grid.getDimension(3);
+
+  output.clear() ; // make empty
+
+  if (gridDepth != 2) {
+    auto message = std::ostringstream()<<
+    "BilinearSamplerForwardShape: GRID has " << gridDepth << " channels instead of 2." ;
+    return getContext().setError
+    (VLE_TensorShapeMismatch, message.str().c_str()) ;
+  }
+
+  if ((gridBatch % inBatch) != 0) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "BilinearSamplerForwardShape: The cardinality of GRID is not a multiple of the cardinality of DATA.") ;
+  }
+
+  output = TensorShape(gridHeight, gridWidth, inNumChannels, gridBatch) ;
+  return VLE_Success ;
+}
+
+vl::ErrorCode
 BilinearSampler::forward(Tensor &output,
                          Tensor const &input,
                          Tensor const &grid)
 {
+  ErrorCode error ;
+
+  // Validate arguments.
+  if (!check_tensor_compatibility(output,input,grid)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BilinearSamplerForward: the tensors have mismatching data or device type.") ;
+  }
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape,input,grid)) != VLE_Success) {
+    return error ;
+  }
+  if (output != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "BilinearSamplerForward: OUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (input.isEmpty() | input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BilinearSamplerForward: INPUT is empty or has no data.") ;
+  }
+  if (output.isEmpty() | output.isNull()) {
+    return  getContext().setError
+    (VLE_IllegalArgument,
+     "BilinearSamplerForward: OUTPUT is empty or has no data.") ;
+  }
+
+  VLLOG(*this,1)
+  << "BilinearSamplerForward: input=" << pretty(input.getDimensions())
+  << " gird=" << pretty(grid.getDimensions()) ;
+
   return dispatch_cudnn<
   BilinearSamplerForward,
   BilinearSamplerForwardCudnn>()
@@ -264,6 +345,67 @@ BilinearSampler::backward(Tensor &derInput,
                           Tensor const &grid,
                           Tensor const &derOutput)
 {
+  // Validate arguments.
+  ErrorCode error ;
+
+  if (!check_tensor_compatibility(derInput,derGrid,input,grid,derOutput)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BilinearSamplerBackward: the tensors have mismatching data or device type.") ;
+  }
+
+  // Check that we have the output derivative.
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape,input,grid)) != VLE_Success) {
+    return error ;
+  }
+  if (derOutput != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "BilinearSamplerBackward: DEROUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (derOutput.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BilinearSamplerBackward: DEROUTPUT is null.") ;
+  }
+
+  // The grid is needed for both DERINPUT and DERGRID.
+  if (grid.isEmpty() || grid.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BilinearSamplerBackward: GRID is either empty or null.") ;
+  }
+
+  // If the input derivatives are requested, check that we have what we need.
+  if (!derInput.isEmpty()) {
+    if (derInput.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "BilinearSamplerBackward: DERINPUT requested, but the tensor is null.") ;
+    }
+    if (static_cast<TensorShape>(derInput) != static_cast<TensorShape>(input)) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "BilinearSamplerBackward: DERINPUT requested, but its size is not the same as INPUT.") ;
+    }
+  }
+
+  // If the grid derivatives are requested, check that we have what we need.
+  if (!derGrid.isEmpty()) {
+    if (derGrid.isNull()) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "BilinearSamplerBackward: DERGRID requested, but the tensor is null.") ;
+    }
+    if (static_cast<TensorShape>(derGrid) != static_cast<TensorShape>(grid)) {
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "BilinearSamplerBackward: DERGRID requested, but its size is not the same as GRID.") ;
+    }
+  }
+
+  // Arguments are sane here.
   return dispatch_cudnn<
   BilinearSamplerBackward,
   BilinearSamplerBackwardCudnn>()

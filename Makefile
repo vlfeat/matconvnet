@@ -257,10 +257,10 @@ matlab/mex/.build/bits/impl/imread_quartz.o : matlab/src/bits/impl/imread_helper
 matlab/mex/.build/bits/impl/imread_gdiplus.o : matlab/src/bits/impl/imread_helpers.hpp
 matlab/mex/.build/bits/impl/imread_libjpeg.o : matlab/src/bits/impl/imread_helpers.hpp
 
-matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_cudnn.cpp
-matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_blas.cpp
-matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_subsample_blas.cpp
-matlab/mex/.build/bits/nnconv.o : matlab/src/bits/nnconv_subsample_gpu.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/impl/nnconv_cudnn.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/impl/nnconv_blas.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/impl/nnconv_subsample_blas.cpp
+matlab/mex/.build/bits/nnconv.o : matlab/src/bits/impl/nnconv_subsample_gpu.cpp
 
 # --------------------------------------------------------------------
 #                                                    Compilation rules

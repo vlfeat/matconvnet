@@ -34,6 +34,8 @@ template<DataType dataType> struct PoolingBackwardCudnn ;
 template <typename type>
 struct acc_max
 {
+  static char const* name ;
+
   inline acc_max(Int poolHeight, Int poolWidth, type derOutput = 0)
   :
   value(-std::numeric_limits<type>::infinity()),
@@ -69,6 +71,8 @@ struct acc_max
 template <typename type>
 struct acc_sum
 {
+  static char const* name ;
+
   inline acc_sum(Int poolHeight, Int poolWidth, type derOutput = 0)
   :
   value(0),
@@ -96,6 +100,15 @@ struct acc_sum
   type scale ;
 } ;
 
+template <vl::nn::Pooling::Method method> struct pooling_method_traits {  } ;
+template <> struct pooling_method_traits<vl::nn::Pooling::Average> { static char const* name ; }  ;
+template <> struct pooling_method_traits<vl::nn::Pooling::Max> { static char const* name ; }  ;
+char const *  pooling_method_traits<vl::nn::Pooling::Average>::name = "average" ;
+char const *  pooling_method_traits<vl::nn::Pooling::Max>::name = "max" ;
+
+template <typename type> const char * acc_max<type>::name = "max" ;
+template <typename type> const char * acc_sum<type>::name = "average" ;
+
 // -------------------------------------------------------------------
 //                                                             Forward
 // -------------------------------------------------------------------
@@ -107,6 +120,12 @@ struct PoolingForwardCPU
                            Tensor &output,
                            Tensor const &input)
   {
+    static const std::string signature = std::string("PoolingForward[MCN,")
+    + Accumulator::name + ","
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
@@ -180,11 +199,18 @@ struct PoolingBackwardCPU
                            Tensor const &input,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("PoolingBackward[MCN,")
+    + Accumulator::name + ","
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
-    auto height = input.getHeight() ;
-    auto width = input.getWidth() ;
-    auto depth = input.getNumChannels() ;
-    auto size = input.getCardinality() ;
+    Int height = input.getHeight() ;
+    Int width = input.getWidth() ;
+    Int depth = input.getNumChannels() ;
+    Int size = input.getCardinality() ;
+
     auto derInputData = (type*)derInput.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
@@ -271,29 +297,86 @@ Pooling::Pooling(Context &context,
 }
 
 Pooling::Pooling(Context &context)
-: ConvolutionLike(context), method(Average)
-{
-  shape.fill(1) ;
-}
+: ConvolutionLike(context,2), method(Average),
+shape((size_t)getNumSpatialDimensions(),1)
+{ }
 
 ErrorCode Pooling::setMethod(Method method) {
   if (method != Average && method != Max) {
-    return VLE_IllegalArgument ;
+    return getContext().setError(VLE_IllegalArgument,
+                                 "Pooling: Uknown pooling method") ;
   }
   this->method = method ;
   return VLE_Success ;
 }
 
-ErrorCode Pooling::setShape(std::vector<Int> const& shape) {
-  // There must one shape dimension per spatial dimension.
-  if ((Int)shape.size() != getNumSpatialDimensions()) {
-    return VLE_IllegalArgument ;
-  }
+vl::ErrorCode Pooling::setShape(std::vector<Int> const& shape)
+{
   // Shape must be positive.
-  if (any_of(begin(shape),begin(shape)+getNumSpatialDimensions(),[](Int x){return x <= 0;})) {
-    return VLE_IllegalArgument ;
+  if (any_of(begin(shape),end(shape),[](Int x){return x <= 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "An element of SHAPE is less than 1.") ;
   }
-  copy(begin(shape),begin(shape)+getNumSpatialDimensions(),begin(this->shape)) ;
+  // There must one shape per spatial dimension.
+  if (Int(shape.size()) == getNumSpatialDimensions()) {
+    this->shape = shape ;
+  }
+  else if (shape.size() == 1) {
+    fill(begin(this->shape),end(this->shape),shape[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "SHAPE is neither scalar nor has the same"
+     " cardinality as the number of spatial dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+Pooling::forwardShape(TensorShape& output,
+                      TensorShape const& input) const
+{
+  output.clear() ;
+
+  // The input tensor cannot be empty.
+  if (input.isEmpty()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "PoolingForwardShape: INPUT is empty.") ;
+  }
+
+  // We pretend all tensors have an infinite number of dimensions,
+  // potentially singleton.
+  Int ns = getNumSpatialDimensions() ;
+
+  // The tensors should have ns+2 dimensions. Todo: we may relax that by implicitly
+  // folding the excess dimensions.
+  if (input.getNumDimensions() > ns + 2) {
+    return getContext().setError(VLE_TensorShapeMismatch,
+                                 "PoolingForwardShape: INPUT has too many dimensions.") ;
+  }
+
+  for (Int d = 0 ; d < ns ; ++d) {
+    auto odim = convLikeSizeHelper(input.getDimension(d),
+                                   getShape(d),
+                                   getStride(d),
+                                   {getPadding(2*d),getPadding(2*d+1)},
+                                   1) ;
+    if (odim <= 0) {
+      output.clear() ;
+      return getContext().setError
+      (VLE_TensorShapeMismatch,
+       "PoolingForwardShape: the spatial dimensions of INPUT are too small for FILTER and the convolution parameters.") ;
+    }
+    if (getShape(d) <= getPadding(2*d) || getShape(d) <= getPadding(2*d+1)) {
+      output.clear() ;
+      return getContext().setError
+      (VLE_IllegalArgument,
+       "PoolingForwardShape: an element of SHAPE is not larger than the corresponding PADDING.") ;
+    }
+    output.setDimension(d, odim) ;
+  }
+  output.setDimension(ns,input.getDimension(ns)) ;
+  output.setDimension(ns+1,input.getDimension(ns+1)) ;
   return VLE_Success ;
 }
 
@@ -301,27 +384,48 @@ vl::ErrorCode
 Pooling::forward(Tensor &output,
                  Tensor const &input) const
 {
-  return dispatch_cudnn<PoolingForward,PoolingForwardCudnn>()(*this,output,input) ;
-}
+  ErrorCode error ;
 
-vl::ErrorCode
-Pooling::forwardShape(TensorShape& output,
-                      TensorShape const& input) const
-{
-  output = TensorShape() ; // null
-  if (input.getNumDimensions() < getNumSpatialDimensions()) {
-    return VLE_IllegalArgument ;
+  // Validate arguments.
+  if (!check_tensor_compatibility(output,input)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "PoolingForward: the tensors have mismatching data or device type.") ;
   }
-  output = input ;
-  for (Int d = 0 ; d < getNumSpatialDimensions() ; ++d) {
-    auto odim = convLikeSizeHelper(input.getDimension(d),
-                                   getShape(d),
-                                   getStride(d),
-                                   {getPadding(2*d),getPadding(2*d+1)},
-                                   1) ;
-    output.setDimension(d, odim) ;
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape, input)) != VLE_Success) {
+    return error ;
   }
-  return VLE_Success ;
+  if (output != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "PoolingForward: OUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (input.isEmpty() | input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "PoolingForward: INPUT is emtpy or null.") ;
+  }
+  if (output.isEmpty() | output.isNull()) {
+    return  getContext().setError
+    (VLE_IllegalArgument,
+     "PoolingForward: OUTPUT is empty or null.") ;
+  }
+
+  VLLOG(*this,1)
+  << "Pooling: forward"
+  << " shape=" << pretty(getShape())
+  << " stride=" << pretty(getStrides())
+  << " padding=" << pretty(getPaddings())
+  << " method=" << ((getMethod() == Average) ? "average" : "max") ;
+
+  VLLOG(*this,1)
+  << "Pooling: input=" << pretty(input.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch_cudnn<PoolingForward,PoolingForwardCudnn>()(*this,output,input),
+   "PoolingForawd") ;
 }
 
 vl::ErrorCode
@@ -329,5 +433,50 @@ Pooling::backward(Tensor &derInput,
                   Tensor const &input,
                   Tensor const &derOutput) const
 {
-  return dispatch_cudnn<PoolingBackward,PoolingBackwardCudnn>()(*this,derInput,input,derOutput) ;
+  // Validate arguments.
+  vl::ErrorCode error ;
+  if (!check_tensor_compatibility(derInput,input,derInput)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "PoolingBackward: the tensors have mismatching data or device type.") ;
+  }
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape, input)) != VLE_Success) {
+    return error ;
+  }
+  if (derOutput != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "PoolingBackward: DEROUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (input.isEmpty() | (input.isNull() && getMethod() != Average)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "PoolingBackward: INPUT is emtpy (or null and the pooling method is not Average).") ;
+  }
+  if (derInput.isEmpty() | derInput.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "PoolingBackward: DERINPUT is empty or null.") ;
+  }
+  if (static_cast<TensorShape>(derInput) != static_cast<TensorShape>(input)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionBackward: DERINPUT size is not the same as INPUT.") ;
+  }
+
+  VLLOG(*this,1)
+  << "Pooling: backward"
+  << " stride=" << pretty(getStrides())
+  << " padding=" << pretty(getPaddings())
+  << " method=" << ((getMethod() == Average) ? "average" : "max") ;
+
+  VLLOG(*this,1)
+  << "Pooling: derInput=" << pretty(derInput.getDimensions())
+  << " input=" << pretty(input.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch_cudnn<PoolingBackward,PoolingBackwardCudnn>()(*this,derInput,input,derOutput),
+   "PoolingBackward") ;
 }

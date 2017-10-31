@@ -57,16 +57,16 @@ namespace vl { namespace nn {
     vl::ErrorCode setDilation(std::vector<Int> const& dilation) ;
 
     Int getDilation(Int index) const {
-      assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
+      assert(0 <= index && index < getNumSpatialDimensions()) ;
       return dilation[as_unsigned(index)] ;
     }
 
-    std::vector<Int> getDilations() const {
-      return {begin(dilation), begin(dilation)+getNumSpatialDimensions()} ;
+    std::vector<Int> const & getDilations() const {
+      return dilation ;
     }
 
   private:
-    std::array<Int, vl::Tensor::maxNumDimensions> dilation ;
+    std::vector<Int> dilation ;
   } ;
 
   class ConvolutionTranspose : public Operation {

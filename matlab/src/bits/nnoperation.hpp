@@ -10,6 +10,7 @@
 #define nnoperation_hpp
 
 #include "data.hpp"
+#include <vector>
 #include <array>
 #include <cassert>
 
@@ -36,27 +37,27 @@ namespace vl { namespace nn {
     Int getNumSpatialDimensions() const { return numSpatialDimensions ; }
 
     Int getPadding(Int index) const {
-      assert(0 <= index && index < 2*as_signed(vl::Tensor::maxNumDimensions)) ;
+      assert(0 <= index && index < 2*getNumSpatialDimensions()) ;
       return padding[as_unsigned(index)] ;
     }
 
     Int getStride(Int index) const {
-      assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
+      assert(0 <= index && index < getNumSpatialDimensions()) ;
       return stride[as_unsigned(index)] ;
     }
 
-    std::vector<Int> getStrides() const {
-      return {begin(stride), begin(stride)+numSpatialDimensions} ;
+    std::vector<Int> const& getStrides() const {
+      return stride ;
     }
 
-    std::vector<Int> getPaddings() const {
-      return {begin(padding), begin(padding)+2*numSpatialDimensions} ;
+    std::vector<Int> const& getPaddings() const {
+      return padding ;
     }
 
   private:
     Int numSpatialDimensions ;
-    std::array<Int, vl::Tensor::maxNumDimensions> stride ;
-    std::array<Int, 2*vl::Tensor::maxNumDimensions> padding ;
+    std::vector<Int> stride ;
+    std::vector<Int> padding ;
   } ;
 
   inline Int convLikeSizeHelper(Int inputShape,

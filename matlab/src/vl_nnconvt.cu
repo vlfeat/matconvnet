@@ -103,8 +103,6 @@ performConvolutionTranspose(vl::Context& contetx,
   int next = IN_END ;
   mxArray const *optarg ;
 
-  context.setLogLevel(verbosity) ;
-  context.clearLog() ;
   vl::nn::ConvolutionTranspose op(context) ;
 
   if (nin < 3) {
@@ -238,10 +236,6 @@ performConvolutionTranspose(vl::Context& contetx,
     vl::DeviceType deviceType = derOutput.getDeviceType() ;
     vl::DataType dataType = derOutput.getDataType() ;
 
-    // Compute the size of the output tensor.
-    vl::TensorShape outputShape ;
-    CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
-
     // Initialize the tensors to be returned.
     vl::MexTensor derData(context) ;
     if (computeDerData) {
@@ -273,6 +267,9 @@ void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
   mexAtExit(atExit) ;
+  context.setLogLevel(0) ;
+  context.clearLog() ;
+
   vl::ErrorCode error = performConvolutionTranspose(context,nout,out,nin,in) ;
 
   if (context.getLogLevel() > 0) {

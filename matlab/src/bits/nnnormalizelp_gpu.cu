@@ -52,10 +52,10 @@ GPUVisitPattern getGPUVisitPatternForInput(NormalizeLp const & op, vl::Tensor in
           end(op.getSelectedDimensions()), d) != end(op.getSelectedDimensions())) ;
 
     if (squashed) {
-      dims.push_back(inputDimensions[(size_t)d]) ;
+      dims.push_back((int)inputDimensions[(size_t)d]) ;
       steps.push_back(inputVolume) ;
     } else {
-      ndims.push_back(inputDimensions[(size_t)d]) ;
+      ndims.push_back((int)inputDimensions[(size_t)d]) ;
       nstrides.push_back(inputVolume) ;
       normsVolume *= inputDimensions[(size_t)d] ;
     }

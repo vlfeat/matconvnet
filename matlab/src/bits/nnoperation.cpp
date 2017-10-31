@@ -14,11 +14,10 @@ using namespace vl::nn ;
 using namespace std ;
 
 ConvolutionLike::ConvolutionLike(Context& context, Int numSpatialDimensions)
-: Operation(context), numSpatialDimensions(numSpatialDimensions)
-{
-  stride.fill(1) ;
-  padding.fill(0) ;
-}
+: Operation(context), numSpatialDimensions(numSpatialDimensions),
+stride((size_t)numSpatialDimensions,1),
+padding((size_t)(2*numSpatialDimensions),0)
+{ }
 
 vl::ErrorCode ConvolutionLike::setStride(vector<Int> const& stride)
 {
@@ -28,15 +27,16 @@ vl::ErrorCode ConvolutionLike::setStride(vector<Int> const& stride)
     (VLE_IllegalArgument, "An element of STRIDE is less than 1.") ;
   }
   // There must one stride per spatial dimension.
-  if (Int(stride.size()) == numSpatialDimensions) {
-    copy(begin(stride),end(stride),begin(this->stride)) ;
+  if (Int(stride.size()) == getNumSpatialDimensions()) {
+    this->stride = stride ;
   }
   else if (stride.size() == 1) {
-    this->stride.fill(stride[0]) ;
+    fill(begin(this->stride),end(this->stride),stride[0]) ;
   }
   else {
     return getContext().setError
-    (VLE_IllegalArgument, "STRIDE is neither scalar nor has the same cardinality as the number of spatial dimensions.") ;
+    (VLE_IllegalArgument, "STRIDE is neither scalar nor has the same"
+     " cardinality as the number of spatial dimensions.") ;
   }
   return VLE_Success ;
 }
@@ -49,15 +49,16 @@ vl::ErrorCode ConvolutionLike::setPadding(vector<Int> const& padding)
     (VLE_IllegalArgument, "An element of PADDING is less than 0.") ;
   }
   // There must one stride per spatial dimension.
-  if (Int(padding.size()) == 2*numSpatialDimensions) {
-    copy(begin(padding),end(padding),begin(this->padding)) ;
+  if (Int(padding.size()) == 2*getNumSpatialDimensions()) {
+    this->padding = padding ;
   }
   else if (padding.size() == 1) {
-    this->padding.fill(padding[0]) ;
+    fill(begin(this->padding),end(this->padding),padding[0]) ;
   }
   else {
     return getContext().setError
-    (VLE_IllegalArgument, "PADDING is neither scalar nor has the cardinality of twice the number of spatial dimensions.") ;
+    (VLE_IllegalArgument, "PADDING is neither scalar nor has the cardinality"
+     " of twice the number of spatial dimensions.") ;
   }
   return VLE_Success ;
 }

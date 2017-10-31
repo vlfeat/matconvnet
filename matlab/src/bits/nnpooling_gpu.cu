@@ -274,12 +274,14 @@ struct PoolingForwardGPU
                            Tensor &output,
                            Tensor const &input)
   {
-    // Argument sanity check.
+    static const std::string signature = std::string("PoolingForward[MCN,")
+    + pooling_method_traits<method>::name + ","
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature.c_str() ;
+
     assert(output) ;
     assert(input) ;
-    TensorShape outShape ;
-    op.forwardShape(outShape, input) ;
-    assert(outShape == output) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int outputVolume = output.getNumElements() ;
@@ -310,8 +312,8 @@ struct PoolingForwardGPU
       assert(false) ;
     }
 
-    cudaError_t status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    auto error = op.getContext().getCudaHelper().catchCudaError(signature.c_str()) ;
+    return op.getContext().setError(error) ;
   }
 } ;
 
@@ -338,7 +340,7 @@ struct PoolingForward<VLDT_GPU,dataType>
 } ;
 
 // -------------------------------------------------------------------
-//                                                            Backward
+/// MARK: - Backward
 // -------------------------------------------------------------------
 
 template<DataType dataType, Pooling::Method method>
@@ -349,12 +351,14 @@ struct PoolingBackwardGPU
                            Tensor const &input,
                            Tensor const &derOutput)
   {
-    // Argument sanity check.
+    static const std::string signature = std::string("PoolingBackward[MCN,")
+    + pooling_method_traits<method>::name + ","
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature.c_str() ;
+
     assert(derInput) ;
     assert(derOutput) ;
-    TensorShape outputShape ;
-    op.forwardShape(outputShape,derInput) ;
-    assert(derOutput == outputShape) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int outputVolume = derOutput.getNumElements() ;
@@ -389,8 +393,8 @@ struct PoolingBackwardGPU
       assert(false) ;
     }
 
-    cudaError_t status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    auto error = op.getContext().getCudaHelper().catchCudaError(signature.c_str()) ;
+    return op.getContext().setError(error) ;  
   }
 } ; // pooling_max
 

@@ -3,7 +3,8 @@
 // @author Ankush Gupta
 // @author Andrea Vedaldi
 /*
-Copyright (C) 2016- Ankush Gupta and Andrea Vedaldi.
+Copyright (C) 2016 Ankush Gupta and Andrea Vedaldi.
+Copyright (C) 2017 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -53,6 +54,12 @@ void atExit()
   context.clear() ;
 }
 
+#define ERR(code,message) \
+context.passError(code,message)
+
+#define CHECK2(x) \
+{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
+
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -65,8 +72,10 @@ enum {
   OUT_RESULT = 0, OUT_DERGRID, OUT_END
 } ;
 
-void mexFunction(int nout, mxArray *out[],
-                 int nin, mxArray const *in[])
+vl::ErrorCode
+performBilinearSampler(vl::Context& contetx,
+                       int nout, mxArray *out[],
+                       int nin, mxArray const *in[])
 {
   // whether we are back-propagating or not:
   bool backMode = false ;
@@ -76,11 +85,7 @@ void mexFunction(int nout, mxArray *out[],
   int next = IN_END ;
   mxArray const *optarg ;
 
-  /* -------------------------------------------------------------- */
-  /*                                            Check the arguments */
-  /* -------------------------------------------------------------- */
-
-  mexAtExit(atExit) ;
+  vl::nn::BilinearSampler op(context) ;
 
   // need at least data and grid to operate (2 args minimum)
   if (nin < 2) {
@@ -98,8 +103,9 @@ void mexFunction(int nout, mxArray *out[],
     switch (opt) {
       case opt_verbose :
         ++ verbosity ;
+        context.setLogLevel(verbosity) ;
         break ;
-
+        
       case opt_no_cudnn :
 #if ENABLE_CUDNN
         context.getCudaHelper().setCudnnEnabled(false) ;
@@ -118,108 +124,72 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor grid(context) ;
-  vl::MexTensor derOutput(context) ;
-
   data.init(in[IN_DATA]) ;
   data.reshape(4) ; // -> 4 dimensions
 
+  vl::MexTensor grid(context) ;
   grid.init(in[IN_GRID]);
   grid.reshape(4); // ->  4 dimensions
 
-  if (backMode) {
+  if (!backMode) {
+    // Forward mode.
+    vl::DeviceType deviceType = data.getDeviceType() ;
+    vl::DataType dataType = data.getDataType() ;
+
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    CHECK2(op.forwardShape(outputShape,data,grid)) ;
+
+    // Get output tensors.
+    vl::MexTensor output(context) ;
+    output.initWithZeros(deviceType, dataType, outputShape) ;
+
+    // Perform calculation.
+    CHECK2(op.forward(output,data,grid)) ;
+    out[OUT_RESULT] = output.relinquish() ;
+
+  } else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
     derOutput.init(in[IN_DEROUTPUT]) ;
     derOutput.reshape(4) ; // -> 4 dimensions
-  }
+    vl::DeviceType deviceType = derOutput.getDeviceType() ;
+    vl::DataType dataType = derOutput.getDataType() ;
 
-  if (! vl::areCompatible(data, grid)) {
-    mexErrMsgTxt("DATA and GRID do not have compatible formats.") ;
-  }
-
-  if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
-  }
-
-  /* Basic compatibility of shape */
-  const Int inHeight = data.getHeight(); // spatial dimension 1
-  const Int inWidth = data.getWidth(); // spatial dimension 2
-  const Int inNumChannels = data.getNumChannels(); // number of channels
-  const Int inBatch = data.getCardinality(); // batch-size
-
-  /* Grid dimensions: note that the grid uses the first dimension as channels */
-  const Int gridHeight = grid.getWidth(); // *OUTPUT* spatial dimension
-  const Int gridWidth = grid.getNumChannels(); // *OUTPUT* spatial dimension 2
-  const Int gridDepth = grid.getHeight(); // number of channels :: should be 2
-  const Int gridBatch = grid.getCardinality(); // should be DIVISIBLE by inBatch
-
-  if (gridDepth != 2) {
-    char msg[200];
-    sprintf(msg, "GRID has %d channels; expected 2.\n", (int)gridDepth);
-    mexErrMsgTxt(msg) ;
-  }
-
-  if ((gridBatch % inBatch) != 0) {
-    mexErrMsgTxt("GRID batch-size is not a multiple of DATA batch-size.") ;
-  }
-
-  /* Get the output Shape */
-  vl::TensorShape outputShape(gridHeight, gridWidth, inNumChannels, gridBatch);
-  if (backMode && (derOutput != outputShape)) {
-    mexErrMsgTxt("DEROUTPUT dimensions are incompatible with DATA and GRID.") ;
-  }
-
-  /* Create output buffers */
-  vl::DeviceType deviceType = data.getDeviceType() ;
-  vl::DataType dataType = data.getDataType() ;
-  vl::MexTensor output(context) ;
-  vl::MexTensor derData(context) ;
-  vl::MexTensor derGrid(context) ;
-
-  if (!backMode) {
-    output.initWithZeros(deviceType, dataType, outputShape) ;
-  } else {
+    // Get output tensors.
+    vl::MexTensor derData(context) ;
+    vl::MexTensor derGrid(context) ;
     derData.initWithZeros(deviceType, dataType, data.getShape()) ;
     derGrid.initWithZeros(deviceType, dataType, grid.getShape()) ;
-  }
 
-  // log:
-  if (verbosity > 0) {
-    mexPrintf("vl_nnbilinearsampler: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::VLDT_GPU) ? "GPU" : "CPU") ;
-    mexPrintf("; MatConvNet\n") ;
-    vl::print("vl_nnbilinearsampler: data: ", data) ;
-    vl::print("vl_nnbilinearsampler: grid: ", grid) ;
-    if (backMode) {
-      vl::print("vl_nnbilinearsampler: derOutput: ", derOutput) ;
-      vl::print("vl_nnbilinearsampler: derData: ", derData) ;
-      vl::print("vl_nnbilinearsampler: derGrid: ", derGrid) ;
-    } else {
-      vl::print("vl_nnbilinearsampler: output: ", output) ;
-    }
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                    Do the work */
-  /* -------------------------------------------------------------- */
-
-  vl::ErrorCode error ;
-  vl::nn::BilinearSampler op(context) ;
-  if (!backMode) {
-    error = op.forward(output,data,grid) ;
-  } else {
-    error = op.backward(derData,derGrid,data,grid,derOutput);
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                         Finish */
-  /* -------------------------------------------------------------- */
-
-  if (error != vl::VLE_Success) {
-    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
-  }
-  if (backMode) {
+    // Perform calculation.
+    CHECK2(op.backward(derData,derGrid,data,grid,derOutput)) ;
     out[OUT_RESULT] = derData.relinquish() ;
     out[OUT_DERGRID] = derGrid.relinquish() ;
-  } else {
-    out[OUT_RESULT] = output.relinquish() ;
   }
+  return vl::VLE_Success ;
 }
+
+void mexFunction(int nout, mxArray *out[],
+                 int nin, mxArray const *in[])
+{
+  mexAtExit(atExit) ;
+  context.setLogLevel(0) ;
+  context.clearLog() ;
+
+  vl::ErrorCode error = performBilinearSampler(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnbilinearsampler:\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
+    }
+    context.setLogLevel(0) ;
+  }
+
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
+  }
+  return ;
+}
+

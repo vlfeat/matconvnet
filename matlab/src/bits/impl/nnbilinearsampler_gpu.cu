@@ -4,16 +4,14 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2016- Ankush Gupta and Andrea Vedaldi.
+Copyright (C) 2016-17 Ankush Gupta and Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "nnbilinearsampler.hpp"
-#include "datacu.hpp"
-#include "impl/dispatcher.hpp"
+#include "../datacu.hpp"
 #include <cassert>
 
 // -------------------------------------------------------------------
@@ -262,8 +260,10 @@ forward_backward_gpu
    (int)outHeight, (int)outWidth, (int)outNumChannels, (int)outCardinality,
    (int)inHeight, (int)inWidth, (int)inCardinality) ;
 
-  cudaError_t status = cudaPeekAtLastError() ;
-  if (status != cudaSuccess) { return vl::VLE_Cuda; }
+  auto error = context.getCudaHelper().catchCudaError(__func__) ;
+  if (error != vl::VLE_Success) {
+    return context.setError(error) ;
+  }
 
   if (backwardGrid) {
     // setup and launch kernel for DER-GRID:
@@ -280,10 +280,13 @@ forward_backward_gpu
      derOutput,
      (int)outHeight, (int)outWidth, (int)outNumChannels, (int)outCardinality,
      (int)inHeight, (int)inWidth, (int)inCardinality ) ;
-    status = cudaPeekAtLastError() ;
+
+    auto error = context.getCudaHelper().catchCudaError(__func__) ;
+    if (error != VLE_Success) {
+      return context.setError(error) ;
+    }
   }
-  // catch any errors:
-  return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+  return vl::VLE_Success ;
 }
 
 // -------------------------------------------------------------------
@@ -299,15 +302,22 @@ struct BilinearSamplerForward<VLDT_GPU,dataType>
    Tensor const &input,
    Tensor const &grid)
   {
+    static const std::string signature = std::string("BilinearSamplerForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
-    return forward_backward_gpu<type, false, false>
-    (op.getContext(),
-     (type*)output.getMemory(), NULL, NULL,
-     (type const*)input.getMemory(),
-     (type const*)grid.getMemory(), NULL,
-     (int)output.getHeight(), (int)output.getWidth(),
-     (int)output.getNumChannels(), (int)output.getCardinality(),
-     (int)input.getHeight(), (int)input.getWidth(), (int)input.getCardinality()) ;
+    return op.getContext().passError
+    (forward_backward_gpu<type, false, false>
+     (op.getContext(),
+      (type*)output.getMemory(), NULL, NULL,
+      (type const*)input.getMemory(),
+      (type const*)grid.getMemory(), NULL,
+      (int)output.getHeight(), (int)output.getWidth(),
+      (int)output.getNumChannels(), (int)output.getCardinality(),
+      (int)input.getHeight(), (int)input.getWidth(), (int)input.getCardinality()),
+     signature.c_str()) ;
   }
 } ;
 
@@ -333,20 +343,27 @@ struct BilinearSamplerBackward<VLDT_GPU,dataType>
    Tensor const &grid,
    Tensor const &derOutput)
   {
+    vl::ErrorCode error = VLE_Success ;
+
+    static const std::string signature = std::string("BilinearSamplerForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
-    auto outHeight = derOutput.getHeight() ;
-    auto outWidth = derOutput.getWidth() ;
-    auto outNumChannels = derOutput.getNumChannels() ;
-    auto outCardinality = derOutput.getCardinality() ;
-    auto inHeight = input.getHeight() ;
-    auto inWidth = input.getWidth() ;
-    auto inCardinality = input.getCardinality() ;
+    Int outHeight = derOutput.getHeight() ;
+    Int outWidth = derOutput.getWidth() ;
+    Int outNumChannels = derOutput.getNumChannels() ;
+    Int outCardinality = derOutput.getCardinality() ;
+    Int inHeight = input.getHeight() ;
+    Int inWidth = input.getWidth() ;
+    Int inCardinality = input.getCardinality() ;
+
     auto derInputData = (type*)derInput.getMemory() ;
     auto derGridData = (type*)derGrid.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto gridData = (type const*)grid.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
-    vl::ErrorCode error = VLE_Success ;
 
     // optimized codepaths depending on what needs to be comptued
     if (derInput && !derGrid) {
@@ -356,7 +373,7 @@ struct BilinearSamplerBackward<VLDT_GPU,dataType>
     } else if (derInput && derGrid) {
       DISPATCH(true, true) ;
     }
-    return error ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 

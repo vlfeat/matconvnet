@@ -40,16 +40,16 @@ template<DeviceType deviceType, DataType dataType> struct SubsampleBackward ;
 template<DeviceType deviceType, DataType dataType> struct FullyConnectedForward ;
 template<DeviceType deviceType, DataType dataType> struct FullyConnectedBackward ;
 
-#include "nnconv_blas.cpp"
-#include "nnconv_subsample_blas.cpp"
-#include "nnconv_fullyconnected_blas.cpp"
+#include "impl/nnconv_blas.cpp"
+#include "impl/nnconv_subsample_blas.cpp"
+#include "impl/nnconv_fullyconnected_blas.cpp"
 
 #if ENABLE_GPU
-#include "nnconv_subsample_gpu.cpp"
+#include "impl/nnconv_subsample_gpu.cpp"
 #endif
 
 #if ENABLE_CUDNN
-#include "nnconv_cudnn.cpp"
+#include "impl/nnconv_cudnn.cpp"
 #endif
 
 // -------------------------------------------------------------------
@@ -69,10 +69,8 @@ Convolution::Convolution(Context &context,
 }
 
 Convolution::Convolution(Context &context)
-: ConvolutionLike(context,2)
-{
-  dilation.fill(1) ;
-}
+: ConvolutionLike(context,2), dilation((size_t)getNumSpatialDimensions(),1)
+{ }
 
 vl::ErrorCode
 Convolution::setDilation(vector<Int> const& dilation)
@@ -85,10 +83,11 @@ Convolution::setDilation(vector<Int> const& dilation)
 
   // There must one dilation per spatial dimension.
   if (Int(dilation.size()) == getNumSpatialDimensions()) {
+    this->dilation = dilation ;
     copy(begin(dilation),end(dilation),begin(this->dilation)) ;
   }
   else if (dilation.size() == 1) {
-    this->dilation.fill(dilation[0]) ;
+    fill(begin(this->dilation),end(this->dilation),dilation[0]) ;
   }
   else {
     return getContext().setError
@@ -158,6 +157,13 @@ Convolution::forwardShape(TensorShape &output,
         return  getContext().setError
         (VLE_TensorShapeMismatch,
          "Convolution: the spatial dimensions of INPUT are too small for FILTER and the convolution parameters.") ;
+      }
+      if (filter.getDimension(d) <= getPadding(2*d) ||
+          filter.getDimension(d) <= getPadding(2*d+1)) {
+        output.clear() ;
+        return  getContext().setError
+        (VLE_TensorShapeMismatch,
+         "Convolution: one of FILTER dimensions is not larger than the corresponding PADDING.") ;
       }
       output.setDimension(d,odim) ;
     }
@@ -284,7 +290,7 @@ Convolution::forward(Tensor &output, double outputMult,
     ConvolutionForwardCudnn>()
     (*this,output,outputMult,input,inputMult,filter) ;
   }
-  if (error != vl::VLE_Success) { return getContext().passError(error,"Convolution::forward") ; }
+  if (error != vl::VLE_Success) { return getContext().passError(error,"ConvolutionForward") ; }
 
   // Bias.
   if (!bias.isEmpty()) {
@@ -313,7 +319,7 @@ Convolution::backward(Tensor &derInput,
 {
   ErrorCode error ;
 
-  // Check that all tensors have the same type.
+  // Validate arguments.
   if (!check_tensor_compatibility(derInput,derFilter,derBias,input,filter,derOutput)) {
     return getContext().setError
     (VLE_IllegalArgument,

@@ -199,79 +199,72 @@ vl::ErrorCode performConvolution(vl::Context& contetx,
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor filters(context) ;
-  vl::MexTensor biases(context) ;
-
   data.init(in[IN_DATA]) ;
   data.reshape(4) ;
 
+  vl::MexTensor filters(context) ;
   filters.init(in[IN_FILTERS]) ;
   filters.reshape(4) ;
 
+  vl::MexTensor biases(context) ;
   biases.init(in[IN_BIASES]) ;
 
   bool hasFilters = !filters.isEmpty() ;
   bool hasBiases = !biases.isEmpty() ;
 
-  {
-    if (!backMode) {
-      // Forward mode.
-      vl::DeviceType deviceType = data.getDeviceType() ;
-      vl::DataType dataType = data.getDataType() ;
+  if (!backMode) {
+    // Forward mode.
+    vl::DeviceType deviceType = data.getDeviceType() ;
+    vl::DataType dataType = data.getDataType() ;
 
-      // Compute the size of the output tensor.
-      vl::TensorShape outputShape ;
-      CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
 
-      // Initialize output tensor.
-      vl::MexTensor output(context) ;
-      output.init(deviceType, dataType, outputShape) ;
+    // Initialize output tensor.
+    vl::MexTensor output(context) ;
+    output.init(deviceType, dataType, outputShape) ;
 
-      // Perform calculation.
-      CHECK2(op.forward(output,0,data,1,filters,biases)) ;
+    // Perform calculation.
+    CHECK2(op.forward(output,0,data,1,filters,biases)) ;
 
-      // Return results.
-      out[OUT_RESULT] = output.relinquish() ;
-    }
-    else {
-      // Backward mode.
-      vl::MexTensor derOutput(context) ;
-      derOutput.init(in[IN_DEROUTPUT]) ;
-      derOutput.reshape(4) ;
-      vl::DeviceType deviceType = derOutput.getDeviceType() ;
-      vl::DataType dataType = derOutput.getDataType() ;
-
-      // Compute the size of the output tensor.
-      vl::TensorShape outputShape ;
-      CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
-
-      // Initialize the tensors to be returned.
-      vl::MexTensor derData(context) ;
-      if (computeDerData) {
-        derData.init(deviceType, dataType, data.getShape()) ;
-      }
-
-      vl::MexTensor derFilters(context) ;
-      if (computeDerFilters && hasFilters) {
-        derFilters.init(deviceType, dataType, filters.getShape()) ;
-      }
-
-      vl::MexTensor derBiases(context) ;
-      if (computeDerBiases && hasBiases) {
-        derBiases.init(deviceType, dataType, biases.getShape()) ;
-      }
-
-      // Perform calculation.
-      CHECK2(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
-
-      // Return results.
-      out[OUT_RESULT] = derData.relinquish() ;
-      out[OUT_DERFILTERS] = derFilters.relinquish() ;
-      out[OUT_DERBIASES] = derBiases.relinquish() ;
-    }
-
-    return vl::VLE_Success ;
+    // Return results.
+    out[OUT_RESULT] = output.relinquish() ;
   }
+  else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    derOutput.reshape(4) ;
+    vl::DeviceType deviceType = derOutput.getDeviceType() ;
+    vl::DataType dataType = derOutput.getDataType() ;
+
+    // Initialize the tensors to be returned.
+    vl::MexTensor derData(context) ;
+    if (computeDerData) {
+      derData.init(deviceType, dataType, data.getShape()) ;
+    }
+
+    vl::MexTensor derFilters(context) ;
+    if (computeDerFilters && hasFilters) {
+      derFilters.init(deviceType, dataType, filters.getShape()) ;
+    }
+
+    vl::MexTensor derBiases(context) ;
+    if (computeDerBiases && hasBiases) {
+      derBiases.init(deviceType, dataType, biases.getShape()) ;
+    }
+
+    // Perform calculation.
+    CHECK2(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
+
+    // Return results.
+    out[OUT_RESULT] = derData.relinquish() ;
+    out[OUT_DERFILTERS] = derFilters.relinquish() ;
+    out[OUT_DERBIASES] = derBiases.relinquish() ;
+  }
+
+  return vl::VLE_Success ;
 }
 
 void mexFunction(int nout, mxArray *out[],

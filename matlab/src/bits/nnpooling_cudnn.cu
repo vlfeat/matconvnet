@@ -59,6 +59,11 @@ struct PoolingForwardCudnn
       return vl::VLE_Unsupported ;
     }
 
+    static const std::string signature = std::string("PoolingForward[CuDNN")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
+
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = output.getDataType() ;
     assert(dynDataType == dataType) ;
@@ -117,7 +122,7 @@ struct PoolingForwardCudnn
     if (poolingDescInitialized) { cudnnDestroyPoolingDescriptor(poolingDesc) ; }
     if (inputDescInitialized) { cudnnDestroyTensorDescriptor(inputDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.getContext().passError(error, "nnpooling_cudnn::forward") ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -153,6 +158,11 @@ struct PoolingBackwardCudnn
       // CuDNN bug? Skip.
       return vl::VLE_Unsupported ;
     }
+
+    static const std::string signature = std::string("PoolingBackward[CuDNN")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
     vl::DataType dynDataType = derInput.getDataType() ;
@@ -228,7 +238,7 @@ struct PoolingBackwardCudnn
     if (poolingDescInitialized) { cudnnDestroyPoolingDescriptor(poolingDesc) ; }
     if (inputDescInitialized) { cudnnDestroyTensorDescriptor(inputDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 

@@ -5,6 +5,7 @@
 
 /*
 Copyright (C) 2014-15 Andrea Vedaldi and Karel Lenc.
+Copyright (C) 2017 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -26,7 +27,8 @@ using Int = vl::Int ;
 /* option codes */
 enum {
   opt_stride = 0,
-  opt_pad,
+  opt_padding,
+  opt_shape,
   opt_method,
   opt_verbose,
   opt_cudnn,
@@ -36,7 +38,9 @@ enum {
 /* options */
 VLMXOption  options [] = {
   {"Stride",           1,   opt_stride            },
-  {"Pad",              1,   opt_pad               },
+  {"Pad",              1,   opt_padding           },
+  {"Padding",          1,   opt_padding           },
+  {"Shape",            1,   opt_shape             },
   {"Method",           1,   opt_method            },
   {"Verbose",          0,   opt_verbose           },
   {"CUDNN",            0,   opt_cudnn             },
@@ -50,14 +54,16 @@ VLMXOption  options [] = {
 
 vl::MexContext context ;
 
-/*
- Resetting the context here resolves a crash when MATLAB quits and
- the ~Context function is implicitly called on unloading the MEX file.
- */
 void atExit()
 {
   context.clear() ;
 }
+
+#define ERR(code,message) \
+context.passError(code,message)
+
+#define CHECK2(x) \
+{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
 
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
@@ -71,18 +77,11 @@ enum {
   OUT_RESULT = 0, OUT_END
 } ;
 
-void mexFunction(int nout, mxArray *out[],
-                 int nin, mxArray const *in[])
+vl::ErrorCode
+performPooling(vl::Context& contetx,
+               int nout, mxArray *out[],
+               int nin, mxArray const *in[])
 {
-  Int poolWidth ;
-  Int poolHeight ;
-  Int strideX = 1 ;
-  Int strideY = 1 ;
-  Int padLeft = 0 ;
-  Int padRight = 0 ;
-  Int padTop = 0 ;
-  Int padBottom = 0 ;
-  auto method = vl::nn::Pooling::Max ;
   bool backMode = false ;
 
   int verbosity = 0 ;
@@ -94,10 +93,8 @@ void mexFunction(int nout, mxArray *out[],
   /*                                            Check the arguments */
   /* -------------------------------------------------------------- */
 
-  mexAtExit(atExit) ;
-
   if (nin < 2) {
-    mexErrMsgTxt("The arguments are less than two.") ;
+    return ERR(vl::VLE_IllegalArgument, "There are less than two arguments.") ;
   }
 
   if (nin > 2 && vlmxIsString(in[2],-1)) {
@@ -107,62 +104,63 @@ void mexFunction(int nout, mxArray *out[],
     backMode = (nin >= 3) ;
   }
 
+  vl::nn::Pooling op(context) ;
+
+  {
+    // Set the pooling window shape.
+    std::vector<Int> shape ;
+    if (context.parse(shape,in[IN_SIZE]) != vl::VLE_Success) {
+      return ERR(vl::VLE_IllegalArgument, "Could not set SHAPE:") ;
+    }
+    CHECK2(op.setShape(shape)) ;
+  }
+
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
       case opt_verbose :
         ++ verbosity ;
+        context.setLogLevel(verbosity) ;
         break ;
 
-      case opt_stride :
-        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          mexErrMsgTxt("STRIDE is not a plain matrix.") ;
+      case opt_stride : {
+        std::vector<Int> stride ;
+        if (context.parse(stride,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set STRIDE:") ;
         }
-        switch (mxGetNumberOfElements(optarg)) {
-          case 1:
-            strideY = (Int)mxGetPr(optarg)[0] ;
-            strideX = strideY ;
-            break ;
-          case 2:
-            strideY = (Int)mxGetPr(optarg)[0] ;
-            strideX = (Int)mxGetPr(optarg)[1] ;
-            break ;
-          default:
-            mexErrMsgTxt("STRIDE has neither one nor two elements.") ;
-        }
+        CHECK2(op.setStride(stride)) ;
         break ;
+      }
 
-      case opt_pad :
-        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          mexErrMsgTxt("PAD is not a plain matrix.") ;
+      case opt_padding : {
+        std::vector<Int> padding ;
+        if (context.parse(padding,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set PADDING:") ;
         }
-        switch (mxGetNumberOfElements(optarg)) {
-          case 1:
-            padLeft = (Int)mxGetPr(optarg)[0] ;
-            padRight = padLeft ;
-            padTop = padLeft ;
-            padBottom = padLeft ;
-            break ;
-          case 4:
-            padTop = (Int)mxGetPr(optarg)[0] ;
-            padBottom = (Int)mxGetPr(optarg)[1] ;
-            padLeft = (Int)mxGetPr(optarg)[2] ;
-            padRight = (Int)mxGetPr(optarg)[3] ;
-            break ;
-          default:
-            mexErrMsgTxt("PAD has neither one nor four elements.") ;
+        CHECK2(op.setPadding(padding)) ;
+        break ;
+      }
+
+      case opt_shape: {
+        // Alternative way of setting the pooling window shape.
+        std::vector<Int> shape ;
+        if (context.parse(shape,optarg) != vl::VLE_Success) {
+          return ERR(vl::VLE_IllegalArgument, "Could not set SHAPE:") ;
         }
-        break;
+        CHECK2(op.setShape(shape)) ;
+        break ;
+      }
 
       case opt_method :
         if (!vlmxIsString(optarg,-1)) {
-           vlmxError(VLMXE_IllegalArgument, "METHOD is not a string.") ;
+           return context.setError(vl::VLE_IllegalArgument, "METHOD is not a string.") ;
         }
         if (vlmxIsEqualToStringI(optarg, "max")) {
-          method = vl::nn::Pooling::Max ;
+          op.setMethod(vl::nn::Pooling::Max) ;
         } else if (vlmxIsEqualToStringI(optarg, "avg")) {
-          method = vl::nn::Pooling::Average;
+          op.setMethod(vl::nn::Pooling::Average) ;
         } else {
-          vlmxError(VLMXE_IllegalArgument, "METHOD is not a supported method.") ;
+          return context.setError(vl::VLE_IllegalArgument,
+                                  "The value of METHOD is not a supported method.") ;
         }
         break;
 
@@ -184,136 +182,71 @@ void mexFunction(int nout, mxArray *out[],
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor derOutput(context) ;
-
   data.init(in[IN_DATA]) ;
-  data.reshape(4) ; // -> 4 dimensions
-
-  if (backMode) {
-    derOutput.init(in[IN_DEROUTPUT]) ;
-    derOutput.reshape(4) ; // -> 4 dimensions
-  }
-
-  if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
-  }
-
-  if (!vlmxIsPlainMatrix(in[IN_SIZE],-1,-1)) {
-    mexErrMsgTxt("SIZE is not a plain matrix.") ;
-  }
-  switch (mxGetNumberOfElements(in[IN_SIZE])) {
-    case 1:
-      poolHeight = (Int)mxGetPr(in[IN_SIZE])[0] ;
-      poolWidth = poolHeight ;
-      break ;
-    case 2:
-      poolHeight = (Int)mxGetPr(in[IN_SIZE])[0] ;
-      poolWidth = (Int)mxGetPr(in[IN_SIZE])[1] ;
-      break ;
-    default:
-      mexErrMsgTxt("SIZE has neither one nor two elements.") ;
-  }
-
-  /* Basic compatibility of Shape */
-  if (strideX < 1 || strideY < 1) {
-    mexErrMsgTxt("At least one element of STRIDE is smaller than one.") ;
-  }
-  if (poolHeight == 0 || poolWidth == 0) {
-    mexErrMsgTxt("A dimension of the pooling SIZE is void.") ;
-  }
-  if ((Int)data.getHeight() + (padTop+padBottom) < poolHeight ||
-      (Int)data.getWidth() + (padLeft+padRight) < poolWidth) {
-    mexErrMsgTxt("The pooling window is larger than the DATA (including padding).") ;
-  }
-  if (padLeft < 0 ||
-      padRight < 0 ||
-      padTop < 0 ||
-      padBottom < 0) {
-    mexErrMsgTxt("An element of PAD is negative.") ;
-  }
-  if (padLeft >= poolWidth ||
-      padRight >= poolWidth ||
-      padTop >= poolHeight  ||
-      padBottom >= poolHeight) {
-    mexErrMsgTxt("A padding value is larger or equal to the size of the pooling window.") ;
-  }
-
-  /* Get the output Shape */
-  vl::ErrorCode error ;
-  vl::nn::Pooling op(context,
-                     poolHeight, poolWidth,
-                     strideY, strideX,
-                     padTop, padBottom, padLeft, padRight,
-                     method) ;
-
-  vl::TensorShape outputShape ;
-  op.forwardShape(outputShape, data);
-//  ((data.getHeight() + (padTop+padBottom) - poolHeight)/strideY + 1,
-//                              (data.getWidth()  + (padLeft+padRight) - poolWidth)/strideX + 1,
-//                              data.getNumChannels(),
-//                              data.getCardinality()) ;
-
-  if (backMode && (derOutput != outputShape)) {
-    mexErrMsgTxt("DEROUTPUT dimensions are incompatible with X and POOL.") ;
-  }
-
-  /* Create output buffers */
-  vl::DeviceType deviceType = data.getDeviceType() ;
-  vl::DataType dataType = data.getDataType() ;
-  vl::MexTensor output(context) ;
-  vl::MexTensor derData(context) ;
+  data.reshape(4) ;
 
   if (!backMode) {
+    // Forward mode.
+    vl::DeviceType deviceType = data.getDeviceType() ;
+    vl::DataType dataType = data.getDataType() ;
+
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    CHECK2(op.forwardShape(outputShape,data)) ;
+
+    // Initialize output tensor.
+    vl::MexTensor output(context) ;
     output.initWithZeros(deviceType, dataType, outputShape) ;
-  } else {
-    derData.initWithZeros(deviceType, dataType, data.getShape()) ;
-  }
 
-  if (verbosity > 0) {
-    mexPrintf("vl_nnpool: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::VLDT_GPU) ? "GPU" : "CPU") ;
-    if (data.getDeviceType() == vl::VLDT_GPU) {
-#if ENABLE_CUDNN
-      mexPrintf("; %s\n", context.getCudaHelper().getCudnnEnabled() ? "cuDNN" : "MatConvNet") ;
-#else
-      mexPrintf("; MatConvNet\n") ;
-#endif
-    } else {
-      mexPrintf("; MatConvNet\n") ;
-    }
-    mexPrintf("vl_nnpool: stride: [%d %d], pad: [%d %d %d %d]\n",
-              strideY, strideX,
-              padTop, padBottom, padLeft, padRight) ;
-    vl::print("vl_nnpool: data: ", data) ;
-    mexPrintf("vl_nnpool: pooling: %d x %d\n", poolHeight, poolWidth);
-    mexPrintf("vl_nnpool: method: %s\n", (method == vl::nn::Pooling::Max) ? "max" : "avg") ;
-    if (backMode) {
-      vl::print("vl_nnpool: derOutput: ", derOutput) ;
-      vl::print("vl_nnpool: derData: ", derData) ;
-    } else {
-      vl::print("vl_nnpool: output: ", output) ;
-    }
-  }
+    // Perform calculation.
+    CHECK2(op.forward(output,data)) ;
 
-  /* -------------------------------------------------------------- */
-  /*                                                    Do the work */
-  /* -------------------------------------------------------------- */
-
-  if (!backMode) {
-    error = op.forward(output, data) ;
-  } else {
-    error = op.backward(derData, data, derOutput) ;
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                         Finish */
-  /* -------------------------------------------------------------- */
-
-  if (error != vl::VLE_Success) {
-    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
-  }
-  if (backMode) {
-    out[OUT_RESULT] = derData.relinquish() ;
-  } else {
+    // Return results.
     out[OUT_RESULT] = output.relinquish() ;
   }
+  else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    derOutput.reshape(4) ;
+    vl::DeviceType deviceType = derOutput.getDeviceType() ;
+    vl::DataType dataType = derOutput.getDataType() ;
+
+    // Initialize the tensors to be returned.
+    vl::MexTensor derData(context) ;
+    derData.initWithZeros(deviceType, dataType, data.getShape()) ;
+    derData.reshape(4) ;
+
+    // Perform calculation.
+    CHECK2(op.backward(derData,data,derOutput)) ;
+
+    // Return results.
+    out[OUT_RESULT] = derData.relinquish() ;
+  }
+
+  return vl::VLE_Success ;
 }
+
+void mexFunction(int nout, mxArray *out[],
+                 int nin, mxArray const *in[])
+{
+  mexAtExit(atExit) ;
+  context.setLogLevel(0) ;
+  context.clearLog() ;
+
+  vl::ErrorCode error = performPooling(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnpool:\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
+    }
+    context.setLogLevel(0) ;
+  }
+
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
+  }
+  return ;
+}
+

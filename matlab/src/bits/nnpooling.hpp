@@ -45,16 +45,18 @@ namespace vl { namespace nn {
     vl::ErrorCode setShape(std::vector<Int> const& shape) ;
 
     Int getShape(Int index) const {
-      assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
+      assert(0 <= index && index < getNumSpatialDimensions()) ;
       return shape[as_unsigned(index)] ;
     }
+
+    std::vector<Int> const& getShape() const { return shape ; }
 
     vl::ErrorCode setMethod(Method method) ;
 
     Method getMethod() const { return method ; }
 
   private:
-    std::array<Int, vl::Tensor::maxNumDimensions> shape ;
+    std::vector<Int> shape ;
     Method method ;
   } ;
   

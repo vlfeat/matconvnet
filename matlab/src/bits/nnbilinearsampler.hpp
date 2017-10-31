@@ -23,15 +23,19 @@ namespace vl { namespace nn {
   public:
     BilinearSampler(Context &context) ;
 
-    vl::ErrorCode forward(vl::Tensor &output,
-                          vl::Tensor const &input,
-                          vl::Tensor const &grid) ;
+    ErrorCode forward(Tensor &output,
+                      Tensor const &input,
+                      Tensor const &grid) ;
 
-    vl::ErrorCode backward(vl::Tensor &derInput,
-                           vl::Tensor &derGrid,
-                           vl::Tensor const &input,
-                           vl::Tensor const &grid,
-                           vl::Tensor const &derOutput) ;
+    ErrorCode forwardShape(TensorShape &output,
+                           TensorShape const &input,
+                           TensorShape const &grid) ;
+
+    ErrorCode backward(Tensor &derInput,
+                       Tensor &derGrid,
+                       Tensor const &input,
+                       Tensor const &grid,
+                       Tensor const &derOutput) ;
   } ;
 
 } }

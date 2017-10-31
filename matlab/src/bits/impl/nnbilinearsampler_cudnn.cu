@@ -10,16 +10,10 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-#include "nnbilinearsampler.hpp"
-#include "datacu.hpp"
-#include "impl/cudnnhelper.hpp"
+#include "../datacu.hpp"
+#include "cudnnhelper.hpp"
 #include <cassert>
 #include <algorithm>
-
-using namespace std ;
-using namespace vl ;
-using namespace vl::nn ;
-using namespace vl::impl ;
 
 #if CUDNN_VERSION < 5000
 #warning "bilinearsampler_cudnn.cu will be disabled as it requires CUDNN v5 or higher."

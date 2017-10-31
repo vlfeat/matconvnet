@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -14,9 +14,8 @@ the terms of the BSD license (see the COPYING file).
 #error "nnconv_cudnn.hpp cannot be compiled without GPU and CUDNN support."
 #endif
 
-#include "nnconv.hpp"
-#include "datacu.hpp"
-#include "impl/cudnnhelper.hpp"
+#include "../datacu.hpp"
+#include "cudnnhelper.hpp"
 #include <cassert>
 #include <algorithm>
 
@@ -71,19 +70,20 @@ struct ConvolutionForwardCudnn
     if (filter.getHeight() > input.getHeight()) return vl::VLE_Unsupported ;
     if (filter.getWidth() > input.getWidth()) return vl::VLE_Unsupported ;
 
-    VLLOG(op,1)
-    << "ConvolutionForward: CuDNN, "
-    << DeviceTypeTraits<VLDT_GPU>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+
+    static const std::string signature = std::string("ConvolutionForward[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
     vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
-    // Get CuDNN
+    // Get CuDNN.
     CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
-    // Get tensor descripotrs
+    // Get tensor descripotrs.
     CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
     outputDescInitialized = true ;
     CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
@@ -132,7 +132,7 @@ struct ConvolutionForwardCudnn
                                      (int)filter.getWidth(),
                                      (int)filter.getHeight())) ;
 
-    // Get convolution descriptor
+    // Get convolution descriptor.
     CHECK(cudnnCreateConvolutionDescriptor(&convDesc)) ;
     convDescInitialized = true ;
     CHECK(cudnnSetConvolution2dDescriptor(convDesc,
@@ -172,7 +172,7 @@ struct ConvolutionForwardCudnn
     op.getContext().getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed = 0 ;
 
     if (!op.getContext().getCudaHelper().cudnnConvolutionFwdSpecificAlgo) {
-      // Determine algorithm automatically
+      // Determine algorithm automatically.
       CHECK(cudnnGetConvolutionForwardAlgorithm(handle,
                                                 dataDesc,
                                                 filterDesc,
@@ -183,7 +183,7 @@ struct ConvolutionForwardCudnn
                                                 &op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo)) ;
     }
 
-    // Get workspace size
+    // Get workspace size.
     CHECK(cudnnGetConvolutionForwardWorkspaceSize(handle,
                                                   dataDesc,
                                                   filterDesc,
@@ -192,7 +192,7 @@ struct ConvolutionForwardCudnn
                                                   op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo,
                                                   &op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed)) ;
 
-    // Get workspace
+    // Get workspace.
     if (op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed > 0) {
       workSpace = op.getContext().getWorkspace(vl::VLDT_GPU, op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed) ;
       if (workSpace == NULL) {
@@ -201,7 +201,7 @@ struct ConvolutionForwardCudnn
       }
     }
 
-    // Perform convolution for each filter group
+    // Perform convolution.
 #if (CUDNN_VERSION < 7000)
     for (int g = 0  ; g < numGroups ; ++g) {
       Int dataGrpOffset = (input.getHeight() * input.getWidth() * filter.getNumChannels()) *  g ;
@@ -237,13 +237,13 @@ struct ConvolutionForwardCudnn
 #endif
 
 
-    /* cleanup */
+    // Cleanup.
   done:
     if (convDescInitialized) { cudnnDestroyConvolutionDescriptor(convDesc) ; }
     if (filterDescInitialized) { cudnnDestroyFilterDescriptor(filterDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.getContext().passError(error, "ConvolutionForwardCudnn") ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -288,10 +288,10 @@ struct ConvolutionBackwardCudnn
     if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
     if (op.getPadding(0) != op.getPadding(1)) return vl::VLE_Unsupported ;
 
-    VLLOG(op,1)
-    << "ConvolutionBackward: CuDNN, "
-    << DeviceTypeTraits<VLDT_GPU>::name << ", "
-    << DataTypeTraits<dataType>::name ;
+    static const std::string signature = std::string("ConvolutionBackward[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
+    VLLOG(op,1) << signature ;
 
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
     vl::ErrorCode error = vl::VLE_Success ;
@@ -580,7 +580,7 @@ struct ConvolutionBackwardCudnn
     if (filterDescInitialized) { cudnnDestroyFilterDescriptor(filterDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    return op.getContext().passError(error, "ConvolutionBackwardCudnn") ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
             
