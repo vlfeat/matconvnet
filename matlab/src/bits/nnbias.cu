@@ -43,6 +43,9 @@ struct BiasForward
                            Tensor const &input, double inputMult,
                            Tensor const &bias, double biasMult)
   {
+    static const std::string signature = std::string("BiasForward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
     vl::ErrorCode error = VLE_Success ;
     auto numOutputPixels = output.getHeight() * output.getWidth() ;
 
@@ -89,7 +92,7 @@ struct BiasForward
     }
 
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -107,6 +110,9 @@ struct BiasBackward
                            Tensor const &derOutput)
   {
     assert(derOutput) ;
+
+    static const std::string signature = std::string("BiasBackward[BLAS,")
+    + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
 
     vl::ErrorCode error = VLE_Success ;
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -169,7 +175,7 @@ struct BiasBackward
     }
 
   done:
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -190,6 +196,7 @@ Bias::forward(vl::Tensor &output, double outputMult,
               vl::Tensor const &input, double inputMult,
               vl::Tensor const &bias, double biasMult)
 {
+  // Todo: argument sanity.
   return dispatch_cudnn<
   BiasForward,
   BiasForwardCudnn>()
@@ -202,6 +209,7 @@ Bias::backward(vl::Tensor &derInput, double derInputMult,
                double inputMult, double biasMult,
                vl::Tensor const &derOutput)
 {
+  // Todo: argument sanity.
   return dispatch_cudnn<
   BiasBackward,
   BiasBackwardCudnn>()

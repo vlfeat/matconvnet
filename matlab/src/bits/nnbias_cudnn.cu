@@ -41,6 +41,9 @@ struct BiasForwardCudnn
                            Tensor const &input, double inputMult,
                            Tensor const &bias, double biasMult)
   {
+    static const std::string signature = std::string("BiasForward[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
 
     cudnnTensorDescriptor_t outputDesc, biasDesc, dataDesc ;
@@ -131,10 +134,9 @@ struct BiasForwardCudnn
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (biasDescInitialized) { cudnnDestroyTensorDescriptor(biasDesc) ; }
     if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
-
 
 // -------------------------------------------------------------------
 //                                                            Backward
@@ -149,6 +151,9 @@ struct BiasBackwardCudnn
                            double inputMult, double biasMult,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("BiasBackward[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
 
     /* no derInputDesc needed as same as dataDesc */
@@ -230,6 +235,6 @@ struct BiasBackwardCudnn
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
     if (derBiasDescInitialized) { cudnnDestroyTensorDescriptor(derBiasDesc) ; }
     if (derInputDescInitialized) { cudnnDestroyTensorDescriptor(derInputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
