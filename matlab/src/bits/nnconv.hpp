@@ -100,11 +100,8 @@ namespace vl { namespace nn {
     }
 
     vl::ErrorCode setNumFilterGroups(Int numFilterGroups) ;
-
-    Int getNumFilterGroups() const { return numFilterGroups ;}
-
+    Int getNumFilterGroups() const { return numFilterGroups ; }
     vl::ErrorCode setUpsampling(std::vector<Int> const& upsampling) ;
-
     vl::ErrorCode setCropping(std::vector<Int> const& cropping) ;
 
     Int getCropping(Int index) const {

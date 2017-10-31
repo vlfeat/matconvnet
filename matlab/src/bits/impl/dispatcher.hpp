@@ -144,12 +144,8 @@ struct dispatch_cudnn
 // or only store shape information.
 static inline
 std::tuple<bool, bool, vl::DeviceType, vl::DataType>
-check_tensor_compatibility_impl(vl::Tensor const &t) {
-  if (t.isEmpty()) {
-    return {true,false,VLDT_CPU,VLDT_Float} ; // CPU/Float are placeholder values
-  } else {
-    return {true,true,t.getDeviceType(),t.getDataType()} ;
-  }
+check_tensor_compatibility_impl() {
+  return {true,false,VLDT_CPU,VLDT_Float} ; // CPU/Float are placeholder values
 }
 
 template <typename ... Types>
