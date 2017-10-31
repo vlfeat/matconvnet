@@ -39,7 +39,7 @@ template<DeviceType deviceType, DataType dataType>
 struct ConvolutionForward
 {
   vl::ErrorCode operator()
-  (Convolution &op,
+  (Convolution const &op,
    Tensor output, double outputMult,
    Tensor const& input, double inputMult,
    Tensor const& filter)
@@ -124,7 +124,7 @@ template<DeviceType deviceType, DataType dataType>
 struct ConvolutionBackward
 {
   vl::ErrorCode operator()
-  (Convolution &op,
+  (Convolution const &op,
    Tensor &derInput,
    Tensor &derFilter,
    Tensor const &input,
@@ -267,7 +267,7 @@ template<DeviceType deviceType, DataType dataType>
 struct ConvolutionTransposeForward
 {
   vl::ErrorCode operator()
-  (ConvolutionTranspose &op,
+  (ConvolutionTranspose const &op,
    vl::Tensor &output,
    vl::Tensor const &input,
    vl::Tensor const &filter,
@@ -337,7 +337,7 @@ template<DeviceType deviceType, DataType dataType>
 struct ConvolutionTransposeBackward
 {
   vl::ErrorCode operator()
-  (ConvolutionTranspose &op,
+  (ConvolutionTranspose const &op,
    vl::Tensor &derInput,
    vl::Tensor &derFilter,
    vl::Tensor &derBias,

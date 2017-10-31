@@ -35,7 +35,7 @@ namespace vl { namespace nn {
     vl::ErrorCode forward(vl::Tensor &output, double outputMult,
                           vl::Tensor const& input, double inputMult,
                           vl::Tensor const& filter,
-                          vl::Tensor const& bias) ;
+                          vl::Tensor const& bias) const ;
 
     vl::ErrorCode forwardShape(vl::TensorShape &output,
                                vl::TensorShape const& input,
@@ -47,12 +47,12 @@ namespace vl { namespace nn {
                            vl::Tensor &derBias,
                            vl::Tensor const &input,
                            vl::Tensor const &filter,
-                           vl::Tensor const &derOutput) ;
+                           vl::Tensor const &derOutput) const ;
 
     vl::ErrorCode backwardShape(vl::Tensor &output, double outputMult,
                                 vl::Tensor const& input, double inputMult,
                                 vl::Tensor const& filter,
-                                vl::Tensor const& bias) ;
+                                vl::Tensor const& bias) const ;
 
     vl::ErrorCode setDilation(std::vector<Int> const& dilation) ;
 
@@ -81,7 +81,7 @@ namespace vl { namespace nn {
     vl::ErrorCode forward(vl::Tensor &output,
                           vl::Tensor const &input,
                           vl::Tensor const &filter,
-                          vl::Tensor const &bias) ;
+                          vl::Tensor const &bias) const ;
 
     vl::ErrorCode forwardShape(TensorShape &output,
                                TensorShape const& input,
@@ -93,7 +93,7 @@ namespace vl { namespace nn {
                            vl::Tensor &derBias,
                            vl::Tensor const &input,
                            vl::Tensor const &filter,
-                           vl::Tensor const &derOutput);
+                           vl::Tensor const &derOutput) const ;
 
     Int getNumSpatialDimensions() const {
       return numSpatialDimensions ;

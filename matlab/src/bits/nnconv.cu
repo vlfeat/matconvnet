@@ -201,7 +201,7 @@ vl::ErrorCode
 Convolution::forward(Tensor &output, double outputMult,
                      Tensor const& input, double inputMult,
                      Tensor const& filter,
-                     Tensor const& bias)
+                     Tensor const& bias) const
 {
   ErrorCode error ;
 
@@ -309,7 +309,7 @@ Convolution::backward(Tensor &derInput,
                       Tensor &derBias,
                       Tensor const &input,
                       Tensor const &filter,
-                      Tensor const &derOutput)
+                      Tensor const &derOutput) const
 {
   ErrorCode error ;
 
@@ -610,7 +610,7 @@ vl::ErrorCode
 ConvolutionTranspose::forward(Tensor &output,
                               Tensor const& input,
                               Tensor const& filter,
-                              Tensor const& bias)
+                              Tensor const& bias) const
 {
   VLLOG(*this,1)
   << "ConvolutionTranspose: forward"
@@ -636,7 +636,7 @@ ConvolutionTranspose::backward(Tensor &derInput,
                                Tensor &derBias,
                                Tensor const &input,
                                Tensor const &filter,
-                               Tensor const &derOutput)
+                               Tensor const &derOutput) const
 {
   VLLOG(*this,1)
   << "ConvolutionTranspose: backward"
