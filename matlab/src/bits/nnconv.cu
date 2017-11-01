@@ -248,13 +248,14 @@ Convolution::forward(Tensor &output, double outputMult,
   }
 
   VLLOG(*this,1)
-  << "Convolution: forward"
+  << "ConvolutionForward:"
   << " stride=" << pretty(getStrides())
   << " padding=" << pretty(getPaddings())
   << " dilation=" << pretty(getDilations()) ;
 
   VLLOG(*this,1)
-  << "Convolution: input=" << pretty(input.getDimensions())
+  << "ConvolutionForward:"
+  << " input=" << pretty(input.getDimensions())
   << " filter=" << pretty(filter.getDimensions())
   << " bias=" << pretty(bias.getDimensions())
   << " output=" << pretty(output.getDimensions()) ;

@@ -30,14 +30,17 @@ template<DeviceType deviceType, DataType dataType> struct BiasBackward ;
 template<DataType dataType> struct BiasForwardCudnn ;
 template<DataType dataType> struct BiasBackwardCudnn ;
 
+#if ENABLE_CUDNN
+#include "nnbias_cudnn.cu"
+#endif
+
 // -------------------------------------------------------------------
-//                                                             Forward
+/// MARK: - Forward
 // -------------------------------------------------------------------
 
 template<DeviceType deviceType, DataType dataType>
 struct BiasForward
 {
-  // output <- outputMult * output + inputMult * input + biasMult * bias
   vl::ErrorCode operator()(Bias & op,
                            Tensor &output, double outputMult,
                            Tensor const &input, double inputMult,
@@ -97,7 +100,7 @@ struct BiasForward
 } ;
 
 // -------------------------------------------------------------------
-//                                                            Backward
+/// MARK: - Backward
 // -------------------------------------------------------------------
 
 template<DeviceType deviceType, DataType dataType>
@@ -180,12 +183,8 @@ struct BiasBackward
 } ;
 
 // -------------------------------------------------------------------
-//                                                              Driver
+/// MARK: - Driver
 // -------------------------------------------------------------------
-
-#if ENABLE_CUDNN
-#include "nnbias_cudnn.cu"
-#endif
 
 Bias::Bias(Context &context)
 : Operation(context)
@@ -196,11 +195,43 @@ Bias::forward(vl::Tensor &output, double outputMult,
               vl::Tensor const &input, double inputMult,
               vl::Tensor const &bias, double biasMult)
 {
-  // Todo: argument sanity.
-  return dispatch_cudnn<
-  BiasForward,
-  BiasForwardCudnn>()
-  (*this,output,outputMult,input,inputMult,bias,biasMult) ;
+  VLLOG(*this,1) << "BiasForward:"
+  << " input=" << pretty(input.getDimensions())
+  << " bias=" << pretty(bias.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  // Check data.
+  if (!check_tensor_compatibility(output,input)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BiasForward: the tensors have mismatching data or device type.") ;
+  }
+  if (output.isEmpty() | output.isNull()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "BiasForward: OUTPUT is empty or null.") ;
+  }
+  if (!input.isEmpty() && input.isNull()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "BiasForward: INPUT is not empty but null.") ;
+  }
+
+  // Check shapes.
+  if (!input.isEmpty() && (input.getShape() != output.getShape())) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "BiasForward: OUTPUT has not the same dimensions as INPUT.") ;
+  }
+  if (bias.getNumElements() != output.getNumChannels()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "BiasForward: BIAS has not a number of elements"
+     " equal to the number of channels of INPUT.") ;
+  }
+
+  return getContext().passError
+  (dispatch_cudnn<
+   BiasForward,
+   BiasForwardCudnn>()
+   (*this,output,outputMult,input,inputMult,bias,biasMult),
+   "BiasForward") ;
 }
 
 vl::ErrorCode
@@ -209,9 +240,45 @@ Bias::backward(vl::Tensor &derInput, double derInputMult,
                double inputMult, double biasMult,
                vl::Tensor const &derOutput)
 {
-  // Todo: argument sanity.
-  return dispatch_cudnn<
+  VLLOG(*this,1) << "BiasBackward:"
+  << " derInput=" << pretty(derInput.getDimensions())
+  << " derBias=" << pretty(derBias.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  // Check data.
+  if (!check_tensor_compatibility(derInput,derBias,derOutput)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "BiasBackward: the tensors have mismatching data or device type.") ;
+  }
+  if (!derInput.isEmpty() && derInput.isNull()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "BiasBackward: DERINPUT is not empty but null.") ;
+  }
+  if (!derBias.isEmpty() && derBias.isNull()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "BiasBackward: DERBIAS is not empty but null.") ;
+  }
+
+  // Check shapes.
+  if (!derInput.isEmpty()) {
+    if (derOutput.getShape() != derInput.getShape()) {
+      return getContext().setError
+      (VLE_TensorShapeMismatch, "BiasBackward: DEROUTPUT has not the same dimensions as DERINPUT.") ;
+    }
+  }
+  if (!derBias.isEmpty()) {
+    if (derBias.getNumElements() != derOutput.getNumChannels()) {
+      return getContext().setError
+      (VLE_TensorShapeMismatch, "BiasForward: DERBIAS has not a number of elements"
+       " equal to the number of channels of DEROUTPUT.") ;
+    }
+  }
+
+  return getContext().passError
+  (dispatch_cudnn<
   BiasBackward,
   BiasBackwardCudnn>()
-  (*this,derInput,derInputMult,derBias,derBiasMult,inputMult,biasMult,derOutput) ;
+  (*this,derInput,derInputMult,derBias,derBiasMult,inputMult,biasMult,derOutput),
+   "BiasBackward") ;
 }

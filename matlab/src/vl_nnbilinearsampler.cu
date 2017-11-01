@@ -11,8 +11,6 @@ This file is part of the VLFeat library and is made available under
 the terms of the BSD license (see the COPYING file).
 */
 
-/** this is the mex-wrapper -- entry-point from matlab to cuda */
-
 #include "bits/mexutils.h"
 #include "bits/datamex.hpp"
 #include "bits/nnbilinearsampler.hpp"
@@ -147,8 +145,8 @@ performBilinearSampler(vl::MexContext& context,
     // Perform calculation.
     CHECK2(op.forward(output,data,grid)) ;
     out[OUT_RESULT] = output.relinquish() ;
-
-  } else {
+  }
+  else {
     // Backward mode.
     vl::MexTensor derOutput(context) ;
     derOutput.init(in[IN_DEROUTPUT]) ;

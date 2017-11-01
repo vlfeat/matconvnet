@@ -19,17 +19,25 @@ namespace vl { namespace nn {
 
   class Bias : public Operation {
   public:
-    Bias(vl::Context &context) ;
+    Bias(Context &context) ;
 
-    // output <- outputMult * output + inputMult * input + biasMult * bias
-    vl::ErrorCode forward(vl::Tensor &output, double outputMult,
-                          vl::Tensor const &input, double inputMult,
-                          vl::Tensor const &bias, double biasMult) ;
+    ErrorCode forwardShape(TensorShape &output, TensorShape const& input) {
+      output = input ;
+      return VLE_Success ;
+    }
 
-    vl::ErrorCode backward(vl::Tensor &derInput, double derInputMult,
-                           vl::Tensor &derBias, double derBiasMult,
-                           double inputMult, double biasMult,
-                           vl::Tensor const &derOutput) ;
+    /// Compute output <- outputMult * output + inputMult * input + biasMult * bias.
+    /// input can be empty, in which case it is dropped from the calculation.
+    ErrorCode forward(Tensor &output, double outputMult,
+                      Tensor const &input, double inputMult,
+                      Tensor const &bias, double biasMult) ;
+
+    // derInput and derBias can be empty to skip the calculation of the
+    // corresponding derivative.
+    ErrorCode backward(Tensor &derInput, double derInputMult,
+                       Tensor &derBias, double derBiasMult,
+                       double inputMult, double biasMult,
+                       Tensor const &derOutput) ;
   } ;
   
 } }

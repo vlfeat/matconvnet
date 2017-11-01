@@ -304,7 +304,6 @@ struct BilinearSamplerForward<VLDT_GPU,dataType>
   {
     static const std::string signature = std::string("BilinearSamplerForward[MCN,")
     + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
-
     VLLOG(op,1) << signature ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
@@ -347,7 +346,6 @@ struct BilinearSamplerBackward<VLDT_GPU,dataType>
 
     static const std::string signature = std::string("BilinearSamplerForward[MCN,")
     + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
-
     VLLOG(op,1) << signature ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
