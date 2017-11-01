@@ -7,8 +7,7 @@
 
  Filters are (optionally) divided in to groups, one for each group of dimensions.
 
-
-                 patchVolume                  numFilters
+                 patchVolume                   numFilters
                  +-------------------------+   +-----------------------+
 
                  filterVolume              numFiltersPerGroup
@@ -273,7 +272,7 @@ struct ConvolutionTransposeForward
    vl::Tensor const &filter,
    vl::Tensor const &bias)
   {
-    static const std::string signature = std::string("ConvolutionTransposeForward[BLAS,")
+    static const std::string signature = std::string("ConvolutionTransposeForward[")
     + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
 
     VLLOG(op,1) << signature ;
@@ -345,9 +344,8 @@ struct ConvolutionTransposeBackward
    vl::Tensor const &filter,
    vl::Tensor const &derOutput)
   {
-    static const std::string signature = std::string("ConvolutionTransposeBackward[BLAS,")
+    static const std::string signature = std::string("ConvolutionTransposeBackward[")
     + DeviceTypeTraits<deviceType>::name + "," + DataTypeTraits<dataType>::name + "]" ;
-
     VLLOG(op,1) << signature ;
 
     auto logLevel = op.getContext().getLogLevel() ;

@@ -277,8 +277,8 @@ Bias::backward(vl::Tensor &derInput, double derInputMult,
 
   return getContext().passError
   (dispatch_cudnn<
-  BiasBackward,
-  BiasBackwardCudnn>()
-  (*this,derInput,derInputMult,derBias,derBiasMult,inputMult,biasMult,derOutput),
+   BiasBackward,
+   BiasBackwardCudnn>()
+   (*this,derInput,derInputMult,derBias,derBiasMult,inputMult,biasMult,derOutput),
    "BiasBackward") ;
 }

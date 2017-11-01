@@ -158,13 +158,6 @@ Convolution::forwardShape(TensorShape &output,
         (VLE_TensorShapeMismatch,
          "Convolution: the spatial dimensions of INPUT are too small for FILTER and the convolution parameters.") ;
       }
-      if (filter.getDimension(d) <= getPadding(2*d) ||
-          filter.getDimension(d) <= getPadding(2*d+1)) {
-        output.clear() ;
-        return  getContext().setError
-        (VLE_TensorShapeMismatch,
-         "Convolution: one of FILTER dimensions is not larger than the corresponding PADDING.") ;
-      }
       output.setDimension(d,odim) ;
     }
     output.setDimension(ns, numFilters) ;
