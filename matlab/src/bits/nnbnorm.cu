@@ -4,12 +4,14 @@
 // @author Andrea Vedaldi
 
 /*
- Copyright (C) 2015-17 Sebastien Ehrhardt and Andrea Vedaldi.
- All rights reserved.
+Copyright (C) 2015-17 Sebastien Ehrhardt and Andrea Vedaldi.
+Copyright (C) 2017 Andrea Vedaldi.
 
- This file is part of the VLFeat library and is made available under
- the terms of the BSD license (see the COPYING file).
- */
+All rights reserved.
+
+This file is part of the VLFeat library and is made available under
+the terms of the BSD license (see the COPYING file).
+*/
 
 #include "nnbnorm.hpp"
 #include "impl/dispatcher.hpp"
@@ -34,6 +36,14 @@ template<DataType dataType> struct BatchNormForwardCudnn ;
 template<DataType dataType> struct BatchNormForwardWithMomentCudnn ;
 template<DataType dataType> struct BatchNormBackwardCudnn ;
 template<DataType dataType> struct BatchNormBackwardWithMomentCudnn ;
+
+#if ENABLE_GPU
+#include "nnbnorm_gpu.cu"
+#endif
+
+#if ENABLE_CUDNN
+#include "nnbnorm_cudnn.cu"
+#endif
 
 // -------------------------------------------------------------------
 //                                                             Helpers
@@ -166,19 +176,23 @@ batch_normalize_backward(T * derData,
 }
 
 // -------------------------------------------------------------------
-//                                                             Forward
+/// MARK: - Forward
 // -------------------------------------------------------------------
 
 template<DataType dataType>
 struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &output,
                            Tensor const &moment,
                            Tensor const &input,
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
+    static const std::string signature = std::string("BatchNormForwardWithMoments[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
@@ -192,7 +206,13 @@ struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto biasData = (type const*)bias.getMemory() ;
 
-    for(decltype(numChannels) channel = 0; channel < numChannels; ++channel) {
+    assert(outputData) ;
+    assert(momentData) ;
+    assert(inputData) ;
+    assert(multiplierData) ;
+    assert(biasData) ;
+
+    for(Int channel = 0; channel < numChannels; ++channel) {
       type mean = momentData[channel] ;
       type sigma = momentData[channel + numChannels] ;
       type bias = biasData[channel];
@@ -212,14 +232,17 @@ struct BatchNormForwardWithMoment<VLDT_CPU, dataType>
 template<DataType dataType>
 struct BatchNormForward<VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &output,
                            Tensor &moment,
                            Tensor const &input,
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
-    vl::ErrorCode error = VLE_Success ;
+    static const std::string signature = std::string("BatchNormForward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
@@ -227,44 +250,42 @@ struct BatchNormForward<VLDT_CPU, dataType>
     Int cardinality = input.getCardinality() ;
     auto inputData = (type const*)input.getMemory() ;
 
-    // Compute the moments.
+    assert(inputData) ;
+
+    // Allocate memory for the moments if needed.
     Tensor ownMoment(moment) ;
-    if (ownMoment.getMemory() == NULL) {
+    if (ownMoment.isNull()) {
       auto * buffer = (type*)op.getContext().getWorkspace
       (vl::VLDT_CPU, sizeof(type)*2*size_t(numChannels)) ;
       if (!buffer) {
-        error = VLE_OutOfMemory ;
-        goto done ;
+        return op.getContext().setError
+        (VLE_OutOfMemory, "BatchNormForward: could not allocate enough memory.") ;
       }
       ownMoment.setMemory(buffer) ;
     }
 
-    {
-      auto momentData = (type*)ownMoment.getMemory() ;
-      compute_moment<type>(momentData, inputData,
-                           width*height, numChannels, cardinality,
-                           (type)op.getEpsilon()) ;
-    }
+    // Compute the moments.
+    auto momentData = (type*)ownMoment.getMemory() ;
+    compute_moment<type>(momentData, inputData,
+                         width*height, numChannels, cardinality,
+                         (type)op.getEpsilon()) ;
 
     // Compute output.
-    error = BatchNormForwardWithMoment<vl::VLDT_CPU,dataType>()
-    (op,output,ownMoment,input,multiplier,bias) ;
-
-    // Finish.
-  done:
-    return error ;
+    return op.getContext().passError
+    (BatchNormForwardWithMoment<vl::VLDT_CPU,dataType>()
+     (op,output,ownMoment,input,multiplier,bias),
+     signature.c_str()) ;
   }
 } ;
 
-
 // -------------------------------------------------------------------
-//                                                            Backward
+/// MARK: - Backward
 // -------------------------------------------------------------------
 
 template<DataType dataType>
 struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &derInput,
                            Tensor &derMultiplier,
                            Tensor &derBias,
@@ -274,6 +295,10 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("BatchNormBackwardWithMoment[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
@@ -288,6 +313,14 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
     auto inputData = (type const*)input.getMemory() ;
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
+
+    assert(derInputData) ;
+    assert(derMultiplierData) ;
+    assert(derBiasData) ;
+    assert(momentData) ;
+    assert(inputData) ;
+    assert(multiplierData) ;
+    assert(derOutputData) ;
 
     // Compute derMultipliers, derBiases, muz, and moments.
     compute_ders<type>(derMultiplierData, derBiasData,
@@ -308,7 +341,7 @@ struct BatchNormBackwardWithMoment<VLDT_CPU, dataType>
 template<DataType dataType>
 struct BatchNormBackward<VLDT_CPU, dataType>
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &derInput,
                            Tensor &derMultiplier,
                            Tensor &derBias,
@@ -318,7 +351,10 @@ struct BatchNormBackward<VLDT_CPU, dataType>
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
-    vl::ErrorCode error = VLE_Success ;
+    static const std::string signature = std::string("BatchNormBackward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
@@ -333,69 +369,243 @@ struct BatchNormBackward<VLDT_CPU, dataType>
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto derOutputData = (type const*)derOutput.getMemory() ;
 
-    // Get workspace if needed.
+     // Allocate memory for the moments if needed.
     Tensor ownMoment(moment) ;
     if (ownMoment.getMemory() == NULL) {
       auto buffer = (type*)op.getContext().getWorkspace
       (vl::VLDT_CPU, sizeof(type)*2*size_t(numChannels)) ;
       if (!buffer) {
-        error = VLE_OutOfMemory ;
-        goto done ;
+        return op.getContext().setError
+        (VLE_OutOfMemory, "BatchNormBackward: could not allocate enough memory.") ;
       }
       ownMoment.setMemory(buffer) ;
     }
+    auto momentData = (type*)ownMoment.getMemory() ;
 
-    {
-      auto momentData = (type*)ownMoment.getMemory() ;
+    // Compute derMultipliers, derBiases, and moments.
+    compute_ders_and_moments<type>(derMultiplierData, derBiasData, momentData,
+                                   inputData, derOutputData,
+                                   WH, numChannels, cardinality,
+                                   (type)op.getEpsilon());
 
-      // Compute derMultipliers, derBiases, and moments.
-      compute_ders_and_moments<type>(derMultiplierData, derBiasData, momentData,
-                                     inputData, derOutputData,
-                                     WH, numChannels, cardinality,
-                                     (type)op.getEpsilon());
-
-      // Compute derData.
-      batch_normalize_backward<type>(derInputData,
-                                     momentData, inputData,
-                                     multiplierData,
-                                     derMultiplierData, derBiasData, derOutputData,
-                                     WH, numChannels, cardinality);
-    }
-  done:;
-    return error ;
+    // Compute derData.
+    batch_normalize_backward<type>(derInputData,
+                                   momentData, inputData,
+                                   multiplierData,
+                                   derMultiplierData, derBiasData, derOutputData,
+                                   WH, numChannels, cardinality);
+    return VLE_Success ;
   }
 } ;
 
 // -------------------------------------------------------------------
-//                                                              Driver
+/// MARK: - Driver
 // -------------------------------------------------------------------
-
-#if ENABLE_GPU
-#include "nnbnorm_gpu.cu"
-#endif
-
-#if ENABLE_CUDNN
-#include "nnbnorm_cudnn.cu"
-#endif
 
 BatchNorm::BatchNorm(Context &context,
                      double epsilon)
-:
-Operation(context),
-epsilon(epsilon)
+: Operation(context), epsilon(epsilon)
 { }
+
+BatchNorm::BatchNorm(Context &context)
+: Operation(context), epsilon(1e-4)
+{ }
+
+vl::ErrorCode
+BatchNorm::setEpsilon(double epsilon) {
+  if (epsilon < 0) {
+    return getContext().setError(VLE_IllegalArgument, "EPSILON is negative.") ;
+  }
+  this->epsilon = epsilon ;
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+BatchNorm::forwardShape(vl::TensorShape &output,
+                        vl::TensorShape &moments,
+                        vl::TensorShape const &input) const
+{
+  output.clear() ;
+  moments.clear() ;
+  Int const ns = 2 ;
+  if (input.getNumDimensions() > ns + 2) {
+    return getContext().setError(VLE_TensorShapeMismatch,
+                                 "INPUT has too many dimensions.") ;
+  }
+  output = input ;
+  moments = {input.getNumChannels(), 2} ;
+  return VLE_Success ;
+}
+
+template <bool optionalMoments>
+static vl::ErrorCode
+check_helper(BatchNorm const& op,
+             Tensor const &output,
+             Tensor const &moment,
+             Tensor const &input,
+             Tensor const &multiplier,
+             Tensor const &bias)
+{
+  // Check the tensor consistency.
+  if (!check_tensor_compatibility(output,moment,input,multiplier,bias)) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "The tensors have mismatching data or device type.") ;
+  }
+
+  // Check the data.
+  if (output.isEmpty() | output.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "OUTPUT or DEROUTPUT is empty or null.") ;
+  }
+  if (optionalMoments) {
+    if (!moment.isEmpty() && moment.isNull()) {
+      return op.getContext().setError
+      (VLE_IllegalArgument,
+       "MOMENT is non empty but null.") ;
+    }
+  } else {
+    if (moment.isEmpty() || moment.isNull()) {
+      return op.getContext().setError
+      (VLE_IllegalArgument,
+      "MOMENT is empty or null.") ;
+    }
+  }
+  if (input.isEmpty() | input.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "INPUT is emtpy or null.") ;
+  }
+  if (multiplier.isEmpty() | multiplier.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "MULTIPLIER is emtpy or null.") ;
+  }
+  if (bias.isEmpty() | bias.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "BIAS is emtpy or null.") ;
+  }
+
+  // Check the tensor shape.
+  vl::ErrorCode error ;
+  TensorShape outputShape ;
+  TensorShape momentShape ;
+  if ((error = op.forwardShape(outputShape, momentShape, input.getShape())) != VLE_Success) {
+    return error ;
+  }
+  if (output.getShape() != outputShape) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "OUTPUT or DEROUTPUT do not have the appropriate dimensions.") ;
+  }
+  if (!moment.isEmpty() && (moment.getNumElements() != momentShape.getNumElements())) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "MOMENT does not have the appropriate dimensions.") ;
+  }
+  if (bias.getNumElements() != input.getNumChannels()) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "BIAS does not have the appropriate dimensions.") ;
+  }
+  if (multiplier.getNumElements() != input.getNumChannels()) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "MULTIPLIER does not have the appropriate dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+template <bool optionalMoments>
+static vl::ErrorCode
+check_helper_backward(BatchNorm const& op,
+                      Tensor const &derInput,
+                      Tensor const &derMultiplier,
+                      Tensor const &derBias,
+                      Tensor const &moment,
+                      Tensor const &input,
+                      Tensor const &multiplier,
+                      Tensor const &bias,
+                      Tensor const &derOutput)
+{
+  vl::ErrorCode error = check_helper<optionalMoments>(op,derOutput,moment,input,multiplier,bias) ;
+  if (error != vl::VLE_Success) {
+    return error ;
+  }
+  // Check the tensor consistency.
+  if (!check_tensor_compatibility(derInput,derMultiplier,derBias,derOutput)) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "The tensors have mismatching data or device type.") ;
+  }
+
+  // Check the data.
+  if (derInput.isEmpty() | derInput.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "DERINPUT is empty or null.") ;
+  }
+  if (derMultiplier.isEmpty() | derMultiplier.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "DERMULTIPLIER is emtpy or null.") ;
+  }
+  if (derBias.isEmpty() | derBias.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "DERBIAS is emtpy or null.") ;
+  }
+
+  // Check the tensor shape.
+  if (derInput.getShape() != input.getShape()) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "DERINPUT does not have the appropriate dimensions.") ;
+  }
+  if (derBias.getNumElements() != input.getNumChannels()) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "DERBIAS does not have the appropriate dimensions.") ;
+  }
+  if (derMultiplier.getNumElements() != input.getNumChannels()) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "DERMULTIPLIER does not have the appropriate dimensions.") ;
+  }
+  return VLE_Success ;
+}
 
 vl::ErrorCode
 BatchNorm::forward(Tensor &output,
                    Tensor &moment,
                    Tensor const &input,
                    Tensor const &multiplier,
-                   Tensor const &bias)
+                   Tensor const &bias) const
 {
-  return dispatch_cudnn<
-  BatchNormForward,
-  BatchNormForwardCudnn>()
-  (*this,output,moment,input,multiplier,bias) ;
+  vl::ErrorCode error = check_helper<true>(*this,output,moment,input,multiplier,bias) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"BatchNormForward") ;
+  }
+
+  VLLOG(*this,1)
+  << "BatchNormForward: forward"
+  << " epsilon=" << getEpsilon()
+  << " moment=" << pretty(moment.getDimensions())
+  << " input=" << pretty(input.getDimensions()) ;
+
+  VLLOG(*this,1)
+  << "BatchNormForward:"
+  << " multiplier=" << pretty(multiplier.getDimensions())
+  << " bias=" << pretty(bias.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch_cudnn<
+   BatchNormForward,
+   BatchNormForwardCudnn>()
+   (*this,output,moment,input,multiplier,bias),
+   "BatchNormForward") ;
 }
 
 vl::ErrorCode
@@ -403,13 +613,32 @@ BatchNorm::forwardWithMoment(Tensor &output,
                              Tensor const &moment,
                              Tensor const &input,
                              Tensor const &multiplier,
-                             Tensor const &bias)
+                             Tensor const &bias) const
 {
-  return dispatch_cudnn<
+  vl::ErrorCode error = check_helper<false>(*this,output,moment,input,multiplier,bias) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"BatchNormForwardWithMoments") ;
+  }
+
+  VLLOG(*this,1)
+  << "BatchNormForwardWithMoment:"
+  << " epsilon=" << getEpsilon()
+  << " moment=" << pretty(moment.getDimensions())
+  << " input=" << pretty(input.getDimensions()) ;
+
+  VLLOG(*this,1)
+  << "BatchNormForwardWithMoment:"
+  << " multiplier=" << pretty(multiplier.getDimensions())
+  << " bias=" << pretty(bias.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch_cudnn<
   BatchNormForwardWithMoment,
   BatchNormForwardWithMomentCudnn>()
-  (*this,output,moment,input,multiplier,bias) ;
+  (*this,output,moment,input,multiplier,bias),
+   "BatchNormForwardWithMoment") ;
 }
+
 
 vl::ErrorCode
 BatchNorm::backward(Tensor &derInput,
@@ -419,12 +648,35 @@ BatchNorm::backward(Tensor &derInput,
                     Tensor const &input,
                     Tensor const &multiplier,
                     Tensor const &bias,
-                    Tensor const &derOutput)
+                    Tensor const &derOutput) const
 {
-  return dispatch_cudnn<
-  BatchNormBackward,
-  BatchNormBackwardCudnn>()
+  vl::ErrorCode error = check_helper_backward<true>
   (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"BatchNormBackward") ;
+  }
+
+  VLLOG(*this,1)
+  << "BatchNormBackward:"
+  << " epsilon=" << getEpsilon()
+  << " derInput=" << pretty(derInput.getDimensions())
+  << " derMultiplier=" << pretty(derMultiplier.getDimensions())
+  << " derBias=" << pretty(derBias.getDimensions())
+  << " moment=" << pretty(derBias.getDimensions()) ;
+
+  VLLOG(*this,1)
+  << "BatchNormBackward:"
+  << " input=" << pretty(input.getDimensions())
+  << " multiplier=" << pretty(multiplier.getDimensions())
+  << " bias=" << pretty(bias.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch_cudnn<
+   BatchNormBackward,
+   BatchNormBackwardCudnn>()
+   (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput),
+   "BatchNormBackward") ;
 }
 
 vl::ErrorCode
@@ -435,10 +687,33 @@ BatchNorm::backwardWithMoment(Tensor &derInput,
                               Tensor const &input,
                               Tensor const &multiplier,
                               Tensor const &bias,
-                              Tensor const &derOutput)
+                              Tensor const &derOutput) const
 {
-  return dispatch_cudnn<
+  vl::ErrorCode error = check_helper_backward<false>
+  (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"BatchNormBackwardWithMoments") ;
+  }
+
+  VLLOG(*this,1)
+  << "BatchNormBackwardWithMoments:"
+  << " epsilon=" << getEpsilon()
+  << " derInput=" << pretty(derInput.getDimensions())
+  << " derMultiplier=" << pretty(derMultiplier.getDimensions())
+  << " derBias=" << pretty(derBias.getDimensions())
+  << " moment=" << pretty(derBias.getDimensions()) ;
+
+  VLLOG(*this,1)
+  << "BatchNormBackwardWithMoments:"
+  << " input=" << pretty(input.getDimensions())
+  << " multiplier=" << pretty(multiplier.getDimensions())
+  << " bias=" << pretty(bias.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch_cudnn<
   BatchNormBackwardWithMoment,
   BatchNormBackwardWithMomentCudnn>()
-  (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput) ;
+  (*this,derInput,derMultiplier,derBias,moment,input,multiplier,bias,derOutput),
+   "BatchNormBackwardWithMoments") ;
 }

@@ -25,17 +25,17 @@ namespace vl { namespace nn {
 
     ErrorCode forward(Tensor &output,
                       Tensor const &input,
-                      Tensor const &grid) ;
+                      Tensor const &grid) const ;
 
     ErrorCode forwardShape(TensorShape &output,
                            TensorShape const &input,
-                           TensorShape const &grid) ;
+                           TensorShape const &grid) const ;
 
     ErrorCode backward(Tensor &derInput,
                        Tensor &derGrid,
                        Tensor const &input,
                        Tensor const &grid,
-                       Tensor const &derOutput) ;
+                       Tensor const &derOutput) const ;
   } ;
 
 } }

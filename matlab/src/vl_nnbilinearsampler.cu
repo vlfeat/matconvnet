@@ -73,7 +73,7 @@ enum {
 } ;
 
 vl::ErrorCode
-performBilinearSampler(vl::Context& contetx,
+performBilinearSampler(vl::MexContext& context,
                        int nout, mxArray *out[],
                        int nin, mxArray const *in[])
 {

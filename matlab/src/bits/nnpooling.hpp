@@ -48,11 +48,9 @@ namespace vl { namespace nn {
       assert(0 <= index && index < getNumSpatialDimensions()) ;
       return shape[as_unsigned(index)] ;
     }
-
     std::vector<Int> const& getShape() const { return shape ; }
 
     vl::ErrorCode setMethod(Method method) ;
-
     Method getMethod() const { return method ; }
 
   private:

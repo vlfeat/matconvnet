@@ -81,21 +81,21 @@ const char *
 vl::getErrorMessage(ErrorCode error)
 {
   static char const * messages[] = {
-    "success",
-    "unsupported feature error",
+    "Success",
+    "Unsupported feature error",
     "CUDA error",
-    "cuDNN error",
-    "cuBLAS error",
-    "out of memory error",
-    "out of GPU memory error",
-    "illegal argument error",
-    "timeout error",
-    "missing data arror",
-    "illegal message error",
-    "interrupted error",
-    "tensor shape mismatch error",
-    "tensor type mismatch error",
-    "unknown error",
+    "CuDNN error",
+    "CuBLAS error",
+    "Out of memory error",
+    "Out of GPU memory error",
+    "Illegal argument error",
+    "Timeout error",
+    "Missing data arror",
+    "Illegal message error",
+    "Interrupted error",
+    "Tensor shape mismatch error",
+    "Tensor type mismatch error",
+    "Unknown error",
   } ;
   if (error < VLE_Success || error > VLE_Unknown) {
     error = VLE_Unknown ;

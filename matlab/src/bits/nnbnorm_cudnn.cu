@@ -84,12 +84,16 @@ struct BatchNormForwardWithMomentCudnn
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
+    static const std::string signature = std::string("BatchNormForwardWithMoment[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
+    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
+
     assert(output) ;
     assert(input) ;
     assert(multiplier) ;
     assert(bias) ;
-
-    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
     size_t workspaceSize ;
@@ -160,7 +164,7 @@ struct BatchNormForwardWithMomentCudnn
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error, signature.c_str()) ;
   }
 } ;
 
@@ -174,12 +178,16 @@ struct BatchNormForwardCudnn
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
+    static const std::string signature = std::string("BatchNormForward[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
+    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
+
     assert(output) ;
     assert(input) ;
     assert(multiplier) ;
     assert(bias) ;
-
-    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
@@ -261,7 +269,7 @@ struct BatchNormForwardCudnn
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
 
@@ -272,7 +280,7 @@ struct BatchNormForwardCudnn
 template<DataType dataType>
 struct BatchNormBackwardWithMomentCudnn
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &derInput,
                            Tensor &derMultiplier,
                            Tensor &derBias,
@@ -282,6 +290,12 @@ struct BatchNormBackwardWithMomentCudnn
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("BatchNormBackwardWithMoment[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
+    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
+
     assert(derInput) ;
     assert(derMultiplier) ;
     assert(derBias) ;
@@ -290,8 +304,6 @@ struct BatchNormBackwardWithMomentCudnn
     assert(multiplier) ;
     assert(bias) ;
     assert(derOutput) ;
-
-    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
     size_t workspaceSize ;
@@ -380,14 +392,14 @@ struct BatchNormBackwardWithMomentCudnn
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error, signature.c_str()) ;
   }
 } ;
 
 template<DataType dataType>
 struct BatchNormBackwardCudnn
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &derInput,
                            Tensor &derMultiplier,
                            Tensor &derBias,
@@ -397,6 +409,12 @@ struct BatchNormBackwardCudnn
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("BatchNormBackward[CuDNN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
+    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
+
     assert(derInput) ;
     assert(derMultiplier) ;
     assert(derBias) ;
@@ -404,8 +422,6 @@ struct BatchNormBackwardCudnn
     assert(multiplier) ;
     assert(bias) ;
     assert(derOutput) ;
-
-    if (op.getEpsilon() < CUDNN_BN_MIN_EPSILON) { return VLE_Unsupported ; }
 
     typedef typename DataTypeTraits<dataType>::type type ;
     size_t workspaceSize ;
@@ -498,7 +514,7 @@ struct BatchNormBackwardCudnn
   done:
     if (momentDescInitialized) { cudnnDestroyTensorDescriptor(momentDesc) ; }
     if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return op.getContext().passError(error, signature.c_str()) ;
   }
 } ;
 

@@ -815,8 +815,12 @@ __global__ void batch_normalize_backward(T * derData,
 }
 
 // -------------------------------------------------------------------
-//                                                             Forward
+/// MARK: - Forward
 // -------------------------------------------------------------------
+
+#define CHECKCUDA \
+{ auto error = op.getContext().getCudaHelper().catchCudaError(signature.c_str()) ; \
+if (error != vl::VLE_Success) { return op.getContext().setError(error) ; } }
 
 template<DataType dataType>
 struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
@@ -828,20 +832,24 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
-    cudaError_t status ;
+    static const std::string signature = std::string("BatchNormForwardWithMoment[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
+
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int numChannels = input.getNumChannels() ;
     Int cardinality = input.getCardinality() ;
+    Int planeArea = height * width ;
+    Int numPlanes = numChannels * cardinality ;
+
     auto outputData = (type*)output.getMemory() ;
     auto momentData = (type const*)moment.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto biasData = (type const*)bias.getMemory() ;
-
-    Int planeArea = height * width ;
-    Int numPlanes = numChannels * cardinality ;
 
     // Compute number compute chunks.
     unsigned blockSize = getBlockSize(planeArea) ;
@@ -860,35 +868,38 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
     (outputData, momentData, inputData, multiplierData, biasData,
      (int)planeArea, (int)numPlanes, (int)numChannels) ;
 
-    status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    CHECKCUDA ;
+
+    return VLE_Success ;
   }
 } ;
 
 template<DataType dataType>
 struct BatchNormForward<VLDT_GPU, dataType>
 {
-  vl::ErrorCode operator()(BatchNorm &op,
+  vl::ErrorCode operator()(BatchNorm const &op,
                            Tensor &output,
                            Tensor &moment,
                            Tensor const &input,
                            Tensor const &multiplier,
                            Tensor const &bias)
   {
-    cudaError_t status ;
+    static const std::string signature = std::string("BatchNormForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int height = input.getHeight() ;
     Int width = input.getWidth() ;
     Int numChannels = input.getNumChannels() ;
     Int cardinality = input.getCardinality() ;
+    Int planeArea = height * width ;
+    Int numPlanes = numChannels * cardinality ;
 
     auto outputData = (type*)output.getMemory() ;
     auto inputData = (type const*)input.getMemory() ;
     auto multiplierData = (type const*)multiplier.getMemory() ;
     auto biasData = (type const*)bias.getMemory() ;
-
-    Int planeArea = height * width ;
-    Int numPlanes = numChannels * cardinality ;
 
     // Compute number compute chunks.
     unsigned blockSize = getBlockSize(planeArea) ;
@@ -927,16 +938,16 @@ struct BatchNormForward<VLDT_GPU, dataType>
        (int)numChannels,
        (int)numBlocksPerChannel) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
 
       // Total.
       unsigned blockSizeForSum = getBlockSize(numBlocksPerChannel) ;
       accumulate_moments_finish
       <<< 2*(unsigned)numChannels, blockSizeForSum, blockSizeForSum*sizeof(type) >>>
       (momentData, accumulatorData, (int)numBlocksPerChannel) ;
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+
+      CHECKCUDA ;
+
     } else {
       // Total directly.
       accumulate_moments_partial
@@ -947,6 +958,8 @@ struct BatchNormForward<VLDT_GPU, dataType>
        (int)numPlanes,
        (int)numChannels,
        1) ;
+
+      CHECKCUDA ;
     }
 
     // Normalize moments.
@@ -963,13 +976,14 @@ struct BatchNormForward<VLDT_GPU, dataType>
      (int)numPlanes,
      (int)numChannels) ;
 
-    status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    CHECKCUDA ;
+
+    return VLE_Success ;
   }
 } ;
 
 // -------------------------------------------------------------------
-//                                                            Backward
+/// MARK: - Backward
 // -------------------------------------------------------------------
 
 template<DataType dataType>
@@ -985,7 +999,10 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
-    cudaError_t status ;
+    static const std::string signature = std::string("BatchNormBackwardWithMoment[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
     Int height = input.getHeight() ;
@@ -1037,8 +1054,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
        (int)numChannels,
        (int)numBlocksPerChannel) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
 
       // Total.
       unsigned blockSizeSum = getBlockSize(numBlocksPerChannel) ;
@@ -1046,8 +1062,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
       <<< 2*(unsigned)numChannels, blockSizeSum, blockSizeSum*sizeof(type) >>>
       (derMultiplierData, derBiasData, accumulatorData, (int)numBlocksPerChannel, (int)numChannels) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
     }
     else {
       // Total.
@@ -1059,8 +1074,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
        (int)numChannels,
        1) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
     }
 
     // Normalize derMultiplier and derBias.
@@ -1077,13 +1091,11 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
      (int)planeArea, (int)numPlanes, (int)numChannels,
      (type)mass) ;
 
-    status = cudaPeekAtLastError() ;
-    if (status != cudaSuccess) return vl::VLE_Cuda ;
+    CHECKCUDA ;
 
     return VLE_Success ;
   }
 } ;
-
 
 template<DataType dataType>
 struct BatchNormBackward<VLDT_GPU, dataType>
@@ -1098,7 +1110,10 @@ struct BatchNormBackward<VLDT_GPU, dataType>
                            Tensor const &bias,
                            Tensor const &derOutput)
   {
-    cudaError_t status ;
+    static const std::string signature = std::string("BatchNormBackward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
 
     Int height = input.getHeight() ;
@@ -1155,8 +1170,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
        (int)numChannels,
        (int)numBlocksPerChannel) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
 
       // Total.
       unsigned blockSizeSum = getBlockSize(numBlocksPerChannel) ;
@@ -1165,8 +1179,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
       (derMultiplierData, derBiasData, momentData, accumulatorData,
        (int)numBlocksPerChannel, (int)numChannels) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
     }
     else {
       // Total.
@@ -1180,8 +1193,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
        (int)numChannels,
        1) ;
 
-      status = cudaPeekAtLastError() ;
-      if (status != cudaSuccess) return vl::VLE_Cuda ;
+      CHECKCUDA ;
     }
 
     // Normalize derMultiplier and derBias.
@@ -1203,8 +1215,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
      (int)planeArea, (int)numPlanes, (int)numChannels,
      (type)mass) ;
 
-    status = cudaPeekAtLastError() ;
-    if (status != cudaSuccess) return vl::VLE_Cuda ;
+    CHECKCUDA ;
 
     return VLE_Success ;
   }

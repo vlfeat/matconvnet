@@ -166,7 +166,7 @@ template<DataType dataType>
 struct BilinearSamplerForward<VLDT_CPU,dataType>
 {
   vl::ErrorCode operator()
-  (BilinearSampler &op,
+  (BilinearSampler const &op,
    Tensor &output,
    Tensor const &input,
    Tensor const &grid)
@@ -214,7 +214,7 @@ template<DataType dataType>
 struct BilinearSamplerBackward<VLDT_CPU,dataType>
 {
   vl::ErrorCode operator()
-  (BilinearSampler &op,
+  (BilinearSampler const &op,
    Tensor &derInput,
    Tensor &derGrid,
    Tensor const &input,
@@ -265,7 +265,7 @@ BilinearSampler::BilinearSampler(Context &context)
 vl::ErrorCode
 BilinearSampler::forwardShape(TensorShape &output,
                               TensorShape const &input,
-                              TensorShape const &grid)
+                              TensorShape const &grid) const
 {
   Int inNumChannels = input.getNumChannels();
   Int inBatch = input.getCardinality();
@@ -298,7 +298,7 @@ BilinearSampler::forwardShape(TensorShape &output,
 vl::ErrorCode
 BilinearSampler::forward(Tensor &output,
                          Tensor const &input,
-                         Tensor const &grid)
+                         Tensor const &grid) const
 {
   ErrorCode error ;
 
@@ -343,7 +343,7 @@ BilinearSampler::backward(Tensor &derInput,
                           Tensor &derGrid,
                           Tensor const &input,
                           Tensor const &grid,
-                          Tensor const &derOutput)
+                          Tensor const &derOutput) const
 {
   // Validate arguments.
   ErrorCode error ;

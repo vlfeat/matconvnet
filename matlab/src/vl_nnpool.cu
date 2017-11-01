@@ -78,7 +78,7 @@ enum {
 } ;
 
 vl::ErrorCode
-performPooling(vl::Context& contetx,
+performPooling(vl::MexContext& context,
                int nout, mxArray *out[],
                int nin, mxArray const *in[])
 {

@@ -92,7 +92,7 @@ enum {
   OUT_RESULT = 0, OUT_DERFILTERS, OUT_DERBIASES, OUT_END
 } ;
 
-vl::ErrorCode performConvolution(vl::Context& contetx,
+vl::ErrorCode performConvolution(vl::MexContext& context,
                                  int nout, mxArray *out[],
                                  int nin, mxArray const *in[])
 {

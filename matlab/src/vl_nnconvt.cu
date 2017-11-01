@@ -89,7 +89,7 @@ enum {
 } ;
 
 vl::ErrorCode
-performConvolutionTranspose(vl::Context& contetx,
+performConvolutionTranspose(vl::MexContext& context,
                             int nout, mxArray *out[],
                             int nin, mxArray const *in[])
 {
