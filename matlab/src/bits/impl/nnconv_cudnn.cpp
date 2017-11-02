@@ -50,7 +50,9 @@ struct ConvolutionForwardCudnn
     Int numGroups = input.getNumChannels() / filter.getNumChannels() ;
     Int numFiltersPerGroup = filter.getCardinality() / numGroups ;
 
+#if CUDNN_VERSION < 6000
     if (op.getDilation(1) != 1 || op.getDilation(0) != 1) return vl::VLE_Unsupported ;
+#endif
     if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
     if (op.getPadding(0) != op.getPadding(1)) return vl::VLE_Unsupported ;
     if (filter.getHeight() > input.getHeight()) return vl::VLE_Unsupported ;
@@ -102,7 +104,7 @@ struct ConvolutionForwardCudnn
     CKCUDNN(cudnnSetConvolution2dDescriptor(convDesc,
                                             (int)op.getPadding(2), (int)op.getPadding(0),
                                             (int)op.getStride(1), (int)op.getStride(0),
-                                            1,1, // upscale
+                                            (int)op.getDilation(1), (int)op.getDilation(0),
                                             CUDNN_CROSS_CORRELATION
                                             IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::dataType))) ;
 
@@ -240,7 +242,9 @@ struct ConvolutionBackwardCudnn
     Int filterVolume = 0 ;
 #endif
 
+#if CUDNN_VERSION < 6000
     if (op.getDilation(1) != 1 || op.getDilation(0) != 1) return vl::VLE_Unsupported ;
+#endif
     if (op.getPadding(2) != op.getPadding(3)) return vl::VLE_Unsupported ;
     if (op.getPadding(0) != op.getPadding(1)) return vl::VLE_Unsupported ;
 
@@ -311,7 +315,7 @@ struct ConvolutionBackwardCudnn
     CKCUDNN(cudnnSetConvolution2dDescriptor(convDesc,
                                             (int)op.getPadding(2), (int)op.getPadding(0),
                                             (int)op.getStride(1), (int)op.getStride(0),
-                                            1,1, // upscale
+                                            (int)op.getDilation(1), (int)op.getDilation(0),
                                             CUDNN_CROSS_CORRELATION
                                             IF_CUDNN_GE6(COMMA DataTypeToCudnn<dataType>::dataType))) ;
 
