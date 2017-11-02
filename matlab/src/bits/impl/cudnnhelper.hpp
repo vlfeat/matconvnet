@@ -48,6 +48,13 @@ the terms of the BSD license (see the COPYING file).
 #define IF_CUDNN_GE3_LT4(x)
 #endif
 
+#define CKCUDNN(x) \
+{ \
+cudnnStatus_t cudnnError = (x) ; \
+if (cudnnError != CUDNN_STATUS_SUCCESS) { \
+return op.getContext().setError(op.getContext().getCudaHelper().catchCudnnError(cudnnError, \
+STRINGIZE(__LINE__) ":" STRINGIZE(__FILE__))) ; \
+} }
 
 namespace vl { namespace impl {
 
@@ -62,6 +69,30 @@ namespace vl { namespace impl {
       case VLDT_Double: return DataTypeToCudnn<vl::VLDT_Double>::dataType ;
       default: assert(false) ; return CUDNN_DATA_FLOAT ; // bogus
     }
+  }
+
+  // -------------------------------------------------------------------
+  /// MARK: - Defer
+  // ----------------------------------------------------------------
+
+  template <typename F>
+  class deferred {
+  public:
+    explicit deferred(F f) : f(std::move(f)) { }
+    deferred(const deferred&) = delete ;
+    deferred(deferred&& d) : f(std::move(d.f)) { d.armed = false ; }
+    deferred& operator= (deferred const &) = delete ;
+    deferred& operator= (deferred&&) = delete ;
+    ~deferred() { f() ; }
+
+  private:
+    F f ;
+    bool armed = true ;
+  } ;
+
+  template <typename F>
+  deferred<F> defer(F f) {
+    return deferred<F>(std::move(f)) ;
   }
 
   // -------------------------------------------------------------------
@@ -132,46 +163,6 @@ namespace vl { namespace impl {
     return desc ;
   }
 
-//  vl::ErrorCode createCudnnDescriptorFromTensor(Context & context,
-//                                            cudnnTensorDescriptor_t * desriptor,
-//                                            Tensor & const tensor)
-//  {
-//    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-//    cudnnDataType_t cudnnDataType = dataTypeToCudnn(tensor.getDataType()) ;
-//
-//    cudnnError = cudnnCreateTensorDescriptor(descriptor) ;
-//    if (cudnnError != CUDNN_STATUS_SUCCESS) {
-//      return context.setError
-//      (context.getCudaHelper().catchCudnnError(cudnnError, __func__)) ;
-//    }
-//
-//    if (tensor.getNumDimensions() <= 4) {
-//      size_t size = tensor.getCardinality() ;
-//      size_t depth = tensor.getNumChannels() ;
-//      size_t width = tensor.getWidth() ;
-//      size_t height = tensor.getHeight() ;
-//      cudnnError = cudnnSetTensor4dDescriptorExt(descriptor,
-//                                                 CUDNN_TENSOR_NCHW,
-//                                                 cudnnDataType,
-//                                                 size, depth, width, height,
-//                                                 depth * width * height, // strides
-//                                                 width * height,
-//                                                 height,
-//                                                 1) ;
-//    } else {
-//      // todo: unimplemented
-//      assert(false) ;
-//    }
-//    if (cudnnError != CUDNN_STATUS_SUCCESS) {
-//      cudnnDestroyTensorDescriptor(descriptor) ;
-//      return context.setError
-//      (context.getCudaHelper().catchCudnnError(cudnnError, __func__)) ;
-//    }
-//    return vl::VLE_Success ;
-//  }
-
 } }
-
-
 
 #endif /* cudnnhelper_h */
