@@ -59,12 +59,6 @@ void atExit()
   context.clear() ;
 }
 
-#define ERR(code,message) \
-context.passError(code,message)
-
-#define CHECK2(x) \
-{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
-
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -94,7 +88,7 @@ performPooling(vl::MexContext& context,
   /* -------------------------------------------------------------- */
 
   if (nin < 2) {
-    return ERR(vl::VLE_IllegalArgument, "There are less than two arguments.") ;
+    return context.setError(vl::VLE_IllegalArgument, "There are less than two arguments.") ;
   }
 
   if (nin > 2 && vlmxIsString(in[2],-1)) {
@@ -107,49 +101,16 @@ performPooling(vl::MexContext& context,
   vl::nn::Pooling op(context) ;
 
   {
-    // Set the pooling window shape.
-    std::vector<Int> shape ;
-    if (context.parse(shape,in[IN_SIZE]) != vl::VLE_Success) {
-      return ERR(vl::VLE_IllegalArgument, "Could not set SHAPE:") ;
-    }
-    CHECK2(op.setShape(shape)) ;
+    optarg = in[IN_SIZE] ;
+    MXOPTIVEC(SHAPE,setShape)
   }
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
-      case opt_verbose :
-        ++ verbosity ;
-        context.setLogLevel(verbosity) ;
-        break ;
-
-      case opt_stride : {
-        std::vector<Int> stride ;
-        if (context.parse(stride,optarg) != vl::VLE_Success) {
-          return ERR(vl::VLE_IllegalArgument, "Could not set STRIDE:") ;
-        }
-        CHECK2(op.setStride(stride)) ;
-        break ;
-      }
-
-      case opt_padding : {
-        std::vector<Int> padding ;
-        if (context.parse(padding,optarg) != vl::VLE_Success) {
-          return ERR(vl::VLE_IllegalArgument, "Could not set PADDING:") ;
-        }
-        CHECK2(op.setPadding(padding)) ;
-        break ;
-      }
-
-      case opt_shape: {
-        // Alternative way of setting the pooling window shape.
-        std::vector<Int> shape ;
-        if (context.parse(shape,optarg) != vl::VLE_Success) {
-          return ERR(vl::VLE_IllegalArgument, "Could not set SHAPE:") ;
-        }
-        CHECK2(op.setShape(shape)) ;
-        break ;
-      }
-
+      case opt_verbose : context.setLogLevel(++verbosity) ; break ;
+      case opt_stride : MXOPTIVEC(STRIDE,setStride) ; break ;
+      case opt_padding : MXOPTIVEC(PADDING,setPadding) ; break ;
+      case opt_shape: MXOPTIVEC(SHAPE,setShape) ; break ;
       case opt_method :
         if (!vlmxIsString(optarg,-1)) {
            return context.setError(vl::VLE_IllegalArgument, "METHOD is not a string.") ;
@@ -192,14 +153,14 @@ performPooling(vl::MexContext& context,
 
     // Compute the size of the output tensor.
     vl::TensorShape outputShape ;
-    CHECK2(op.forwardShape(outputShape,data)) ;
+    MXCHECK(op.forwardShape(outputShape,data)) ;
 
     // Initialize output tensor.
     vl::MexTensor output(context) ;
     output.initWithZeros(deviceType, dataType, outputShape) ;
 
     // Perform calculation.
-    CHECK2(op.forward(output,data)) ;
+    MXCHECK(op.forward(output,data)) ;
 
     // Return results.
     out[OUT_RESULT] = output.relinquish() ;
@@ -218,7 +179,7 @@ performPooling(vl::MexContext& context,
     derData.reshape(4) ;
 
     // Perform calculation.
-    CHECK2(op.backward(derData,data,derOutput)) ;
+    MXCHECK(op.backward(derData,data,derOutput)) ;
 
     // Return results.
     out[OUT_RESULT] = derData.relinquish() ;

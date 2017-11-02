@@ -52,12 +52,6 @@ void atExit()
   context.clear() ;
 }
 
-#define ERR(code,message) \
-context.passError(code,message)
-
-#define CHECK2(x) \
-{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
-
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -136,14 +130,14 @@ performBilinearSampler(vl::MexContext& context,
 
     // Compute the size of the output tensor.
     vl::TensorShape outputShape ;
-    CHECK2(op.forwardShape(outputShape,data,grid)) ;
+    MXCHECK(op.forwardShape(outputShape,data,grid)) ;
 
     // Get output tensors.
     vl::MexTensor output(context) ;
     output.initWithZeros(deviceType, dataType, outputShape) ;
 
     // Perform calculation.
-    CHECK2(op.forward(output,data,grid)) ;
+    MXCHECK(op.forward(output,data,grid)) ;
     out[OUT_RESULT] = output.relinquish() ;
   }
   else {
@@ -161,7 +155,7 @@ performBilinearSampler(vl::MexContext& context,
     derGrid.initWithZeros(deviceType, dataType, grid.getShape()) ;
 
     // Perform calculation.
-    CHECK2(op.backward(derData,derGrid,data,grid,derOutput)) ;
+    MXCHECK(op.backward(derData,derGrid,data,grid,derOutput)) ;
     out[OUT_RESULT] = derData.relinquish() ;
     out[OUT_DERGRID] = derGrid.relinquish() ;
   }

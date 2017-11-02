@@ -73,9 +73,6 @@ void atExit()
 #define ERR(code,message) \
 context.passError(code,message)
 
-#define CHECK2(x) \
-{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
-
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -128,7 +125,7 @@ performConvolutionTranspose(vl::MexContext& context,
         if (context.parse(upsampling,optarg) != vl::VLE_Success) {
           return ERR(vl::VLE_IllegalArgument, "Could not set UPSAMPLING:") ;
         }
-        CHECK2(op.setUpsampling(upsampling)) ;
+        MXCHECK(op.setUpsampling(upsampling)) ;
         break ;
       }
 
@@ -137,7 +134,7 @@ performConvolutionTranspose(vl::MexContext& context,
         if (context.parse(cropping,optarg) != vl::VLE_Success) {
           return ERR(vl::VLE_IllegalArgument, "Could not set CROPPING:") ;
         }
-        CHECK2(op.setCropping(cropping)) ;
+        MXCHECK(op.setCropping(cropping)) ;
         break ;
       }
 
@@ -145,7 +142,7 @@ performConvolutionTranspose(vl::MexContext& context,
         if (!vlmxIsPlainMatrix(optarg,1,1)) {
           return ERR(vl::VLE_IllegalArgument, "NUMGROUPS is not a plain scalar.") ;
         }
-        CHECK2(op.setNumFilterGroups((Int)mxGetPr(optarg)[0])) ;
+        MXCHECK(op.setNumFilterGroups((Int)mxGetPr(optarg)[0])) ;
         break;
       }
 
@@ -216,14 +213,14 @@ performConvolutionTranspose(vl::MexContext& context,
 
     // Compute the size of the output tensor.
     vl::TensorShape outputShape ;
-    CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
+    MXCHECK(op.forwardShape(outputShape,data,filters,biases)) ;
 
     // Initialize output tensor.
     vl::MexTensor output(context) ;
     output.init(deviceType, dataType, outputShape) ;
 
     // Perform calculation.
-    CHECK2(op.forward(output,data,filters,biases)) ;
+    MXCHECK(op.forward(output,data,filters,biases)) ;
 
     // Return results.
     out[OUT_RESULT] = output.relinquish() ;
@@ -253,7 +250,7 @@ performConvolutionTranspose(vl::MexContext& context,
     }
 
     // Perform calculation.
-    CHECK2(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
+    MXCHECK(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
 
     // Return results.
     out[OUT_RESULT] = derData.relinquish() ;

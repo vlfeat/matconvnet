@@ -57,12 +57,6 @@ void atExit()
   context.clear() ;
 }
 
-#define ERR(code,message) \
-context.passError(code,message)
-
-#define CHECK2(x) \
-{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
-
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -97,7 +91,7 @@ performBatchNorm(vl::MexContext& context,
   /* -------------------------------------------------------------- */
 
   if (nin < 3) {
-    mexErrMsgTxt("The arguments are less than three.") ;
+    return context.setError(VLE_IllegalArgument, "The arguments are less than three.") ;
   }
   if (nin > 3 && vlmxIsString(in[3],-1)) {
     next = 3 ;
@@ -111,23 +105,9 @@ performBatchNorm(vl::MexContext& context,
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
-
-      case opt_verbose :
-        ++ verbosity ;
-        break ;
-
-      case opt_epsilon :
-        if (!vlmxIsPlainScalar(optarg)) {
-          return ERR(vl::VLE_IllegalArgument, "EPSILON is not a plain scalar.") ;
-        }
-        CHECK2(op.setEpsilon(mxGetPr(optarg)[0])) ;
-        break ;
-
-      case opt_moments:
-        momentsArray = optarg ;
-        givenMomentsMode = true ;
-        break ;
-
+      case opt_verbose : context.setLogLevel(++verbosity) ; break ;
+      case opt_epsilon : MXOPTDSCAL(EPSILON,setEpsilon) ; break ;
+      case opt_moments : momentsArray = optarg ; givenMomentsMode = true ; break ;
       case opt_no_cudnn:
 #if ENABLE_CUDNN
         context.getCudaHelper().setCudnnEnabled(false) ;
@@ -162,7 +142,7 @@ performBatchNorm(vl::MexContext& context,
   vl::DataType dataType = data.getDataType() ;
   vl::TensorShape outputShape ;
   vl::TensorShape momentShape ;
-  CHECK2(op.forwardShape(outputShape,momentShape,data)) ;
+  MXCHECK(op.forwardShape(outputShape,momentShape,data)) ;
 
   // Get moments.
   vl::MexTensor moments(context) ;
@@ -183,9 +163,9 @@ performBatchNorm(vl::MexContext& context,
 
     // Perform calculation.
     if (givenMomentsMode) {
-      CHECK2(op.forwardWithMoment(output,moments,data,multipliers,biases)) ;
+      MXCHECK(op.forwardWithMoment(output,moments,data,multipliers,biases)) ;
     } else {
-      CHECK2(op.forward(output,moments,data,multipliers,biases)) ;
+      MXCHECK(op.forward(output,moments,data,multipliers,biases)) ;
     }
 
     // Return results.
@@ -209,10 +189,10 @@ performBatchNorm(vl::MexContext& context,
 
     // Perform calculation.
     if (givenMomentsMode) {
-      CHECK2(op.backwardWithMoment
+      MXCHECK(op.backwardWithMoment
              (derData,derMultiplier,derBias,moments,data,multipliers,biases,derOutput)) ;
     } else {
-      CHECK2(op.backward
+      MXCHECK(op.backward
              (derData,derMultiplier,derBias,moments,data,multipliers,biases,derOutput)) ;
     }
     out[OUT_RESULT] = derData.relinquish() ;
@@ -224,135 +204,6 @@ performBatchNorm(vl::MexContext& context,
   }
   return VLE_Success ;
 }
-
-
-#if 0
-
-
-  if (givenMomentsMode) {
-    moments.init(momentsArray) ;
-    moments.reshape(2) ;
-  }
-
-  /* Check for GPU/data class consistency */
-  if (! vl::areCompatible(data, multipliers)) {
-    mexErrMsgTxt("DATA and MULTIPLIERS do not have compatible formats.") ;
-  }
-  if (! vl::areCompatible(data, biases)) {
-    mexErrMsgTxt("DATA and BIASES do not have compatible formats.") ;
-  }
-  if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
-  }
-  if (backMode && (data.getShape() != derOutput.getShape())) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have the same size.") ;
-  }
-  if (givenMomentsMode && ! vl::areCompatible(data, moments))
-  {
-    mexErrMsgTxt("DATA and MOMENTS do not have compatible formats.") ;
-  }
-
-  /* Get the filter geometry */
-  vl::TensorShape multipliersGeom(multipliers) ;
-  if (multipliersGeom.getHeight() != data.getNumChannels()) {
-    mexErrMsgTxt("The MULTIPLIERS size does not match the DATA depth.") ;
-  }
-  vl::TensorShape biasesGeom(biases);
-  if (biasesGeom.getHeight() != data.getNumChannels()) {
-    mexErrMsgTxt("The BIASES size does not match the DATA depth.") ;
-  }
-  if (givenMomentsMode) {
-    vl::TensorShape momentsGeom(moments) ;
-    if (momentsGeom.getNumElements() != 2*data.getNumChannels()) {
-      mexErrMsgTxt("The MOMENTS size does not match the DATA depth.") ;
-    }
-  }
-
-  /* Create output buffers */
-  vl::DeviceType deviceType = data.getDeviceType() ;
-  vl::DataType dataType = data.getDataType() ;
-  vl::MexTensor output(context) ;
-  vl::MexTensor derData(context) ;
-  vl::MexTensor derMultipliers(context) ;
-  vl::MexTensor derBiases(context) ;
-
-  if (returnMomentsMode & !givenMomentsMode) {
-    vl::TensorShape momentsGeom(data.getNumChannels(), 2, 1, 1) ;
-    moments.init(deviceType, dataType, momentsGeom) ;
-  }
-
-  if (!backMode) {
-    output.init(deviceType, dataType, data.getShape()) ;
-  } else {
-    if (computeDerData) {
-      derData.init(deviceType, dataType, data.getShape()) ;
-    }
-    if (computeDerMultipliers) {
-      derMultipliers.init(deviceType, dataType, multipliers.getShape()) ;
-    }
-    if (computeDerBiases) {
-      derBiases.init(deviceType, dataType, biases.getShape()) ;
-    }
-  }
-
-  if (verbosity > 0) {
-    mexPrintf("vl_nnbnorm: mode %s; %s; moments %s/%s\n",
-              (data.getDeviceType()==vl::VLDT_GPU)?"gpu":"cpu",
-              backMode?"backward":"forward",
-              givenMomentsMode?"given":"computed",
-              returnMomentsMode?"returned":"discared") ;
-    vl::print("vl_nnbnorm: data: ", data) ;
-    vl::print("vl_nnbnorm: multipliers: ", multipliers) ;
-    vl::print("vl_nnbnorm: biases: ", biases) ;
-    if (backMode) {
-      vl::print("vl_nnbnorm: derOutput: ", derOutput) ;
-      vl::print("vl_nnbnorm: derData: ", derData) ;
-      vl::print("vl_nnbnorm: derMultipliers: ", derMultipliers) ;
-      vl::print("vl_nnbnorm: derBiases: ", derBiases) ;
-    } else {
-      vl::print("vl_nnbnorm: output: ", output) ;
-    }
-    if (moments) { vl::print("vl_nnbnorm: moments: ", moments) ; }
-    mexPrintf("vl_nnbnorm: epsilon: %f\n", epsilon) ;
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                    Do the work */
-  /* -------------------------------------------------------------- */
-
-  vl::ErrorCode error ;
-  vl::nn::BatchNorm op(context,epsilon) ;
-
-  if (!backMode) {
-    if (!givenMomentsMode) {
-      error = op.forward(output,moments,data,multipliers,biases) ;
-    } else {
-      error = op.forwardWithMoment(output,moments,data,multipliers,biases) ;
-    }
-  } else {
-    if (!givenMomentsMode) {
-      error = op.backward(derData,
-                          derMultipliers,
-                          derBiases,
-                          moments,
-                          data,
-                          multipliers,
-                          biases,
-                          derOutput) ;
-    } else {
-      error = op.backwardWithMoment(derData,
-                                    derMultipliers,
-                                    derBiases,
-                                    moments,
-                                    data,
-                                    multipliers,
-                                    biases,
-                                    derOutput) ;
-    }
-    return vl::VLE_Success ;
-  }
-}
-#endif
 
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])

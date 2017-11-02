@@ -54,10 +54,6 @@ VLMXOption  options [] = {
 
 vl::MexContext context ;
 
-/*
-   Resetting the context here resolves a crash when MATLAB quits and
-   the ~Context function is implicitly called on unloading the MEX file.
- */
 void atExit()
 {
   context.clear() ;

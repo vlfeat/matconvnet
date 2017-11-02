@@ -29,11 +29,17 @@ the terms of the BSD license (see the COPYING file).
 #define MXCHECK(x) \
 { vl::ErrorCode error = (x) ; if (error != vl::VLE_Success) { return error ; } }
 
-#define MXOPTVEC(x,y) \
+#define MXOPTIVEC(x,y) \
 { std::vector<Int> x ; \
 if (context.parse(x,optarg) != vl::VLE_Success) { \
 return context.passError(vl::VLE_IllegalArgument, "Could not set " #x ":") ; } \
 vl::ErrorCode error = (op.y(x)) ; \
+if (error != vl::VLE_Success) { return error ; } }
+
+#define MXOPTDSCAL(x,y) \
+{ if (!vlmxIsPlainScalar(optarg)) { \
+return context.passError(vl::VLE_IllegalArgument, #x "is not a plain scalar.") ; } \
+vl::ErrorCode error = (op.y(mxGetScalar(optarg))) ; \
 if (error != vl::VLE_Success) { return error ; } }
 
 namespace vl {
