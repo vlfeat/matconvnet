@@ -21,19 +21,6 @@ using namespace vl ;
 using namespace vl::nn ;
 using namespace vl::impl ;
 
-#define CHECKCUDA \
-{ auto error = op.getContext().getCudaHelper().catchCudaError(signature.c_str()) ; \
-if (error != vl::VLE_Success) { return op.getContext().setError(error) ; } }
-
-#define CHECK(x) \
-{ \
-cudnnError = x ; \
-if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = op.getContext().setError(op.getContext().getCudaHelper().catchCudnnError(cudnnError, \
-STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__))) ; \
-goto done ; \
-} }
-
 // -------------------------------------------------------------------
 //                                                             Kernels
 // -------------------------------------------------------------------
@@ -100,27 +87,21 @@ struct BatchNormForwardWithMomentCudnn
     assert(bias) ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
-    size_t workspaceSize ;
-    type * workspace ;
-
-    CudnnTensorDescriptor dataDesc, momentDesc ;
-    vl::DataType dynDataType = output.getDataType() ;
-    assert(dynDataType == dataType) ;
-
-    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
-    cudnnHandle_t handle ;
 
     // Get CuDNN.
-    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
+    cudnnHandle_t handle ;
+    CKCUDNN(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descripotrs.
-    CHECK(dataDesc.init(dataType,input.getShape())) ;
-    CHECK(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
+    CudnnTensorDescriptor dataDesc ;
+    CKCUDNN(dataDesc.init(dataType,input.getShape())) ;
+
+    CudnnTensorDescriptor momentDesc ;
+    CKCUDNN(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
 
     // Allocate workspace.
-    workspaceSize = (size_t)input.getNumChannels() ;
-    workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
+    size_t workspaceSize = (size_t)input.getNumChannels() ;
+    type * workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
     // Run CuDNN batch normalization implementation.
     {
@@ -135,20 +116,19 @@ struct BatchNormForwardWithMomentCudnn
       <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
       (varMemory, stdMemory, (unsigned)input.getNumChannels(), (type)CUDNN_BN_MIN_EPSILON) ;
 
-      CHECK(cudnnBatchNormalizationForwardInference
-            (handle,
-             CUDNN_BATCHNORM_SPATIAL,
-             &alpha,
-             &beta,
-             dataDesc.get(), input.getMemory(),
-             dataDesc.get(), output.getMemory(),
-             momentDesc.get(), multiplier.getMemory(), bias.getMemory(),
-             meanMemory, varMemory, CUDNN_BN_MIN_EPSILON)) ;
+      CKCUDNN(cudnnBatchNormalizationForwardInference
+              (handle,
+               CUDNN_BATCHNORM_SPATIAL,
+               &alpha,
+               &beta,
+               dataDesc.get(), input.getMemory(),
+               dataDesc.get(), output.getMemory(),
+               momentDesc.get(), multiplier.getMemory(), bias.getMemory(),
+               meanMemory, varMemory, CUDNN_BN_MIN_EPSILON)) ;
     }
 
     // Finish.
-  done:
-    return op.getContext().passError(error, signature.c_str()) ;
+    return VLE_Success ;
   }
 } ;
 
@@ -175,20 +155,18 @@ struct BatchNormForwardCudnn
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    CudnnTensorDescriptor dataDesc, momentDesc ;
     vl::DataType dynDataType = output.getDataType() ;
-    assert(dynDataType == dataType) ;
-
-    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
-    cudnnHandle_t handle ;
 
     // Get CuDNN.
-    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
+    cudnnHandle_t handle ;
+    CKCUDNN(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descripotrs.
-    CHECK(dataDesc.init(dataType,input.getShape())) ;
-    CHECK(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
+    CudnnTensorDescriptor dataDesc ;
+    CKCUDNN(dataDesc.init(dataType,input.getShape())) ;
+
+    CudnnTensorDescriptor momentDesc ;
+    CKCUDNN(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
 
     // Run CuDNN batch normalization implementation.
     {
@@ -204,7 +182,7 @@ struct BatchNormForwardCudnn
         (meanMemory, 2 * size_t(input.getNumChannels()) * sizeof(type), 0) ;
       }
 
-      CHECK(cudnnBatchNormalizationForwardTraining
+      CKCUDNN(cudnnBatchNormalizationForwardTraining
             (handle,
              CUDNN_BATCHNORM_SPATIAL,
              &alpha, &beta,
@@ -234,8 +212,7 @@ struct BatchNormForwardCudnn
     }
 
     // Finish.
-  done:
-    return op.getContext().passError(error,signature.c_str()) ;
+    return VLE_Success ;
   }
 } ;
 
@@ -272,43 +249,42 @@ struct BatchNormBackwardWithMomentCudnn
     assert(derOutput) ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
-    size_t workspaceSize ;
-    type * workspace ;
-
-    CudnnTensorDescriptor derOutputDesc, dataDesc, momentDesc ;
-    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
-    cudnnHandle_t handle ;
 
     // Get CuDNN.
-    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
+    cudnnHandle_t handle ;
+    CKCUDNN(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descripotrs.
-    CHECK(derOutputDesc.init(dataType,derOutput.getShape())) ;
-    CHECK(dataDesc.init(dataType,input.getShape())) ;
-    CHECK(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
+    CudnnTensorDescriptor derOutputDesc ;
+    CKCUDNN(derOutputDesc.init(dataType,derOutput.getShape())) ;
+
+    CudnnTensorDescriptor dataDesc ;
+    CKCUDNN(dataDesc.init(dataType,input.getShape())) ;
+
+    CudnnTensorDescriptor momentDesc ;
+    CKCUDNN(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
 
     // Scrarch space to provide moments in CuDNN format.
-    workspaceSize = (size_t)derInput.getNumChannels() ;
-    workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
+    size_t workspaceSize = (size_t)derInput.getNumChannels() ;
+    type * workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
-    {
-      type alpha = 1.0f ;
-      type beta = 0.0f ;
-      type * meanMemory = (type*)moment.getMemory() ;
-      type * stdMemory = meanMemory + input.getNumChannels() ;
-      type * istdMemory = workspace ;
+    // Do calculations.
+    type alpha = 1.0f ;
+    type beta = 0.0f ;
+    type * meanMemory = (type*)moment.getMemory() ;
+    type * stdMemory = meanMemory + input.getNumChannels() ;
+    type * istdMemory = workspace ;
 
-      // The CuDNN manual describes the varMemory output above
-      // as inverse variance, but it is the inverse standard deviation instead.
-      auto blockSize = VL_CUDA_NUM_THREADS ;
-      inverse<type>
-      <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
-      (istdMemory, stdMemory, (unsigned)input.getNumChannels()) ;
+    // The CuDNN manual describes the varMemory output above
+    // as inverse variance, but it is the inverse standard deviation instead.
+    auto blockSize = VL_CUDA_NUM_THREADS ;
+    inverse<type>
+    <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
+    (istdMemory, stdMemory, (unsigned)input.getNumChannels()) ;
 
-      CHECKCUDA ;
+    CHECKCUDA ;
 
-      CHECK(cudnnBatchNormalizationBackward
+    CKCUDNN(cudnnBatchNormalizationBackward
             (handle,
              CUDNN_BATCHNORM_SPATIAL,
              &alpha, &beta, // data
@@ -321,11 +297,8 @@ struct BatchNormBackwardWithMomentCudnn
              derBias.getMemory(), // output
              op.getEpsilon(),
              meanMemory, istdMemory)) ;
-    }
 
-    // Finish.
-  done:
-    return op.getContext().passError(error, signature.c_str()) ;
+    return VLE_Success ;
   }
 } ;
 
@@ -357,38 +330,33 @@ struct BatchNormBackwardCudnn
     assert(derOutput) ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
-    size_t workspaceSize ;
-    type * workspace ;
-    size_t volume ;
-
-    CudnnTensorDescriptor derOutputDesc, momentDesc ;
-    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
-    cudnnHandle_t handle ;
 
     // Get CuDNN.
-    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
+    cudnnHandle_t handle ;
+    CKCUDNN(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
-    // Get tensor descripotrs.
-    CHECK(derOutputDesc.init(dataType,derOutput.getShape())) ;
-    CHECK(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
+    // Get tensor descriptors.
+    CudnnTensorDescriptor derOutputDesc ;
+    CKCUDNN(derOutputDesc.init(dataType,derOutput.getShape())) ;
+
+    CudnnTensorDescriptor momentDesc ;
+    CKCUDNN(momentDesc.init(dataType,{1,1,input.getNumChannels(),1})) ;
 
     // Compute moment using CuDNN. Unfortunately CuDNN does not expose
     // the values of the moment in the backward pass, so we need to run
     // the forward code to get them.
+    size_t volume = (size_t)derInput.getNumElements() ;
+    size_t workspaceSize = (moment ? 0 : size_t(2 * derInput.getNumChannels()) + volume) ;
+    type *  workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
 
-    volume = (size_t)derInput.getNumElements() ;
-    workspaceSize = (moment ? 0 : size_t(2 * derInput.getNumChannels()) + volume) ;
-    workspace = (type*)op.getContext().getWorkspace(vl::VLDT_GPU, workspaceSize * sizeof(type)) ;
+    // Perform calculation.
+    type alpha = 1.0f ;
+    type beta = 0.0f ;
+    type * outMemory = workspace ;
+    type * meanMemory = moment ? (type*)moment.getMemory() : workspace + volume ;
+    type * varMemory = meanMemory + input.getNumChannels() ;
 
-    {
-      type alpha = 1.0f ;
-      type beta = 0.0f ;
-      type * outMemory = workspace ;
-      type * meanMemory = moment ? (type*)moment.getMemory() : workspace + volume ;
-      type * varMemory = meanMemory + input.getNumChannels() ;
-
-      CHECK(cudnnBatchNormalizationForwardTraining
+    CKCUDNN(cudnnBatchNormalizationForwardTraining
             (handle,
              CUDNN_BATCHNORM_SPATIAL,
              &alpha, &beta,
@@ -400,7 +368,7 @@ struct BatchNormBackwardCudnn
              op.getEpsilon(),
              meanMemory, varMemory)) ;
 
-      CHECK(cudnnBatchNormalizationBackward
+    CKCUDNN(cudnnBatchNormalizationBackward
             (handle,
              CUDNN_BATCHNORM_SPATIAL,
              &alpha, &beta, // data
@@ -414,19 +382,16 @@ struct BatchNormBackwardCudnn
              op.getEpsilon(),
              meanMemory, varMemory)) ;
 
-      // The CuDNN manual describes the varMemory output above
-      // as inverse variance, but it is the inverse standard deviation instead.
-      auto blockSize = VL_CUDA_NUM_THREADS ;
-      inverse<type>
-      <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
-      (varMemory, (unsigned)input.getNumChannels()) ;
+    // The CuDNN manual describes the varMemory output above
+    // as inverse variance, but it is the inverse standard deviation instead.
+    auto blockSize = VL_CUDA_NUM_THREADS ;
+    inverse<type>
+    <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
+    (varMemory, (unsigned)input.getNumChannels()) ;
 
-      CHECKCUDA ;
-    }
+    CHECKCUDA ;
 
-    // Finish.
-  done:
-    return op.getContext().passError(error, signature.c_str()) ;
+    return VLE_Success ;
   }
 } ;
 

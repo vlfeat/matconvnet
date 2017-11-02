@@ -22,9 +22,9 @@ namespace vl { namespace impl {
   template<vl::DataType dataType>
   vl::ErrorCode
   vl::impl::nnbilinearsampler_cudnn<dataType>::forward(Context& op.getContext(),
-                                                       Tensor output,
-                                                       Tensor data,
-                                                       Tensor grid)
+                                                       Tensor const &output,
+                                                       Tensor const &data,
+                                                       Tensor const &grid)
   {
     return vl::VLE_Unsupported ;
   }
@@ -32,26 +32,16 @@ namespace vl { namespace impl {
   template<vl::DataType dataType>
   vl::ErrorCode
   vl::impl::nnbilinearsampler_cudnn<dataType>::backward(Context& op.getContext(),
-                                                        Tensor derInputData,
-                                                        Tensor derGrid,
-                                                        Tensor data,
-                                                        Tensor grid,
-                                                        Tensor derOutput)
+                                                        Tensor &derInputData,
+                                                        Tensor &derGrid,
+                                                        Tensor const &data,
+                                                        Tensor const &grid,
+                                                        Tensor const &derOutput)
   {
     return vl::VLE_Unsupported ;
   }
 }}
-#else // CUDNN_VERSION
-
-// check if the descriptors, etc. were successfully created:
-#define CHECK(x) \
-{ \
-cudnnError = x ; \
-if (cudnnError != CUDNN_STATUS_SUCCESS) { \
-error = op.getContext().setError(op.getContext().getCudaHelper().catchCudnnError(cudnnError, \
-STRINGIZE(__FILE__) ":" STRINGIZE(__LINE__))) ; \
-goto done ; \
-} }
+#else
 
 // -------------------------------------------------------------------
 //                                                             Forward
@@ -65,105 +55,72 @@ struct BilinearSamplerForwardCudnn
                            Tensor const &input,
                            Tensor const &grid)
   {
+    static const std::string signature = std::string("BilinearSamplerForward[CuDNN")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     assert(output) ;
     assert(input) ;
     assert(grid) ;
 
     typedef typename DataTypeTraits<dataType>::type type ;
-
-    cudnnTensorDescriptor_t outputDesc, dataDesc ;
-    cudnnSpatialTransformerDescriptor_t samplerDesc ;
-    bool outputDescInitialized = false ;
-    bool dataDescInitialized = false ;
-    bool samplerDescInitialized = false ;
-
-    // get the sizes:
-    int inCardinality = (int)input.getCardinality();
-    int inNumChannels = (int)input.getNumChannels();
-    int inHeight = (int)input.getHeight();
-    int inWidth = (int)input.getWidth();
-
-    int outCardinality = (int)output.getCardinality();
-    int outNumChannels = (int)output.getNumChannels();
-    int outWidth = (int)output.getWidth();
-    int outHeight = (int)output.getHeight();
-
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
-    vl::DataType dynDataType = output.getDataType() ;
-    assert(dynDataType == dataType) ;
-
-    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
-    cudnnHandle_t handle ;
-
-    // get number of transforms/image == groupSize:
-    int groupSize = (int)(outCardinality / inCardinality) ;
-    int dimOut[4] = { 1, (int)outNumChannels, (int)outWidth, (int)outHeight } ; // one-image
+    Int inCardinality = input.getCardinality();
+    Int inNumChannels = input.getNumChannels();
+    Int inHeight = input.getHeight();
+    Int inWidth = input.getWidth();
+    Int outCardinality = output.getCardinality();
+    Int outNumChannels = output.getNumChannels();
+    Int outWidth = output.getWidth();
+    Int outHeight = output.getHeight();
+    Int groupSize = outCardinality / inCardinality ;
 
     // Get CuDNN
-    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
+    cudnnHandle_t handle ;
+    CKCUDNN(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
-    // Get tensor descriptors:
-    CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
-    outputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
-                                       cudnnDataType,
-                                       1, outNumChannels, outWidth, outHeight, // sizes: n,c,w,h
-                                       outHeight * outWidth * outNumChannels, //strides
-                                       outHeight * outWidth,
-                                       outHeight,
-                                       1)) ;
+    // Get tensor descriptors.
+    CudnnTensorDescriptor outputDesc ;
+    CKCUDNN(outputDesc.init(dataType,{outHeight,outWidth,outNumChannels,1})) ;
 
-    CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-    dataDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                       cudnnDataType,
-                                       1, inNumChannels, inWidth, inHeight, // sizes: n,c,w,h
-                                       inHeight * inWidth * inNumChannels, //strides
-                                       inHeight * inWidth,
-                                       inHeight,
-                                       1)) ;
+    CudnnTensorDescriptor dataDesc ;
+    CKCUDNN(dataDesc.init(dataType,{inHeight,inWidth,inNumChannels,1})) ;
 
-    // Get bilinear-sampler descriptor:
-    CHECK(cudnnCreateSpatialTransformerDescriptor(&samplerDesc)) ;
-    samplerDescInitialized = true ;
-    CHECK(cudnnSetSpatialTransformerNdDescriptor(samplerDesc,
-                                                 CUDNN_SAMPLER_BILINEAR,
-                                                 cudnnDataType,
-                                                 4,
-                                                 dimOut)) ;
+    // Get bilinear-sampler descriptor.
+    cudnnSpatialTransformerDescriptor_t samplerDesc ;
+    CKCUDNN(cudnnCreateSpatialTransformerDescriptor(&samplerDesc)) ;
+    auto transformerDescDeleter = defer([&]{cudnnDestroySpatialTransformerDescriptor(samplerDesc);}) ;
+    int dimOut[4] = {1, (int)outNumChannels, (int)outWidth, (int)outHeight} ;
+    CKCUDNN(cudnnSetSpatialTransformerNdDescriptor(samplerDesc,
+                                                   CUDNN_SAMPLER_BILINEAR,
+                                                   DataTypeToCudnn<dataType>::dataType,
+                                                   4,
+                                                   dimOut)) ;
 
-    {
-      type alpha = 1.0f ;
-      type beta = 0.0f ;
-      const Int dataOffset = inHeight * inWidth * inNumChannels ;
-      const Int gridOffset = 2 * outWidth * outHeight ;
-      const Int outOffset = outHeight * outWidth * outNumChannels ;
-      type const* data_ptr = (type const*) input.getMemory() ;
-      type const* grid_ptr = (type const*) grid.getMemory() ;
-      type * out_ptr = (type *) output.getMemory() ;
+    type alpha = 1.0f ;
+    type beta = 0.0f ;
+    type const* data_ptr = (type const*) input.getMemory() ;
+    type const* grid_ptr = (type const*) grid.getMemory() ;
+    type * out_ptr = (type *) output.getMemory() ;
 
-      for (int im=0; im < inCardinality; im++) {
-        for (int ig=0; ig < groupSize; ig++) {
-          cudnnSpatialTfSamplerForward(handle,
-                                       samplerDesc,
-                                       &alpha,
-                                       dataDesc, data_ptr,
-                                       grid_ptr,
-                                       &beta,
-                                       outputDesc, out_ptr) ;
-          grid_ptr += gridOffset ;
-          out_ptr += outOffset ;
-        }
-        data_ptr += dataOffset ;
+    // Todo: make faster, we should not need soo many loops.
+    Int dataOffset = inHeight * inWidth * inNumChannels ;
+    Int gridOffset = 2 * outWidth * outHeight ;
+    Int outOffset = outHeight * outWidth * outNumChannels ;
+    for (Int im=0; im < inCardinality; im++) {
+      for (Int ig=0; ig < groupSize; ig++) {
+        CKCUDNN(cudnnSpatialTfSamplerForward(handle,
+                                             samplerDesc,
+                                             &alpha,
+                                             dataDesc.get(), data_ptr,
+                                             grid_ptr,
+                                             &beta,
+                                             outputDesc.get(), out_ptr)) ;
+        grid_ptr += gridOffset ;
+        out_ptr += outOffset ;
       }
+      data_ptr += dataOffset ;
     }
-
-  done:
-    if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return VLE_Success ;
   }
 };
 
@@ -182,111 +139,77 @@ struct BilinearSamplerBackwardCudnn
    Tensor const &grid,
    Tensor const &derOutput)
   {
+    static const std::string signature = std::string("BilinearSamplerBackwardCuDNN")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename DataTypeTraits<dataType>::type type ;
-
-    // No derInputDataDesc needed as same as dataDesc.
-    cudnnTensorDescriptor_t dataDesc, derOutputDesc ;
-    cudnnSpatialTransformerDescriptor_t samplerDesc ;
-    bool dataDescInitialized = false ;
-    bool derOutputDescInitialized = false ;
-    bool samplerDescInitialized = false ;
-
-    int inCardinality = (int)derInput.getCardinality();
-    int inNumChannels = (int)derInput.getNumChannels();
-    int inHeight = (int)derInput.getHeight();
-    int inWidth = (int)derInput.getWidth();
-
-    int outCardinality = (int)derOutput.getCardinality();
-    int outNumChannels = (int)derOutput.getNumChannels();
-    int outWidth = (int)derOutput.getWidth();
-    int outHeight = (int)derOutput.getHeight();
-
-    cudnnDataType_t cudnnDataType = DataTypeToCudnn<dataType>::dataType ;
-    vl::DataType dynDataType = derOutput.getDataType() ;
-    assert(dynDataType == dataType) ;
-
-    cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
-    vl::ErrorCode error = vl::VLE_Success ;
-    cudnnHandle_t handle ;
-
-    // Get number of transforms/image == groupSize.
-    int groupSize = (int)(outCardinality / inCardinality) ;
-    int dimOut[4] = { 1, (int)outNumChannels, (int)outWidth, (int)outHeight };
+    Int inCardinality = derInput.getCardinality();
+    Int inNumChannels = derInput.getNumChannels();
+    Int inHeight = derInput.getHeight();
+    Int inWidth = derInput.getWidth();
+    Int outCardinality = derOutput.getCardinality();
+    Int outNumChannels = derOutput.getNumChannels();
+    Int outWidth = derOutput.getWidth();
+    Int outHeight = derOutput.getHeight();
+    Int groupSize = (int)(outCardinality / inCardinality) ;
 
     // Get CuDNN.
-    CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
+    cudnnHandle_t handle ;
+    CKCUDNN(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descriptors.
-    CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
-    derOutputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
-                                       cudnnDataType,
-                                       1, outNumChannels, outWidth, outHeight, // sizes: n,c,w,h
-                                       outHeight * outWidth * outNumChannels, //strides
-                                       outHeight * outWidth,
-                                       outHeight,
-                                       1)) ;
+    CudnnTensorDescriptor derOutputDesc ;
+    CKCUDNN(derOutputDesc.init(dataType,{outHeight,outWidth,outNumChannels,1})) ;
 
-    CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-    dataDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                       cudnnDataType,
-                                       1, inNumChannels, inWidth, inHeight, // sizes: n,c,w,h
-                                       inHeight * inWidth * inNumChannels, //strides
-                                       inHeight * inWidth,
-                                       inHeight,
-                                       1)) ;
+    CudnnTensorDescriptor dataDesc ;
+    CKCUDNN(dataDesc.init(dataType,{inHeight,inWidth,inNumChannels,1})) ;
 
-    // Get bilinear-sampler descriptor:
-    CHECK(cudnnCreateSpatialTransformerDescriptor(&samplerDesc)) ;
-    samplerDescInitialized = true ;
-    CHECK(cudnnSetSpatialTransformerNdDescriptor(samplerDesc,
-                                                 CUDNN_SAMPLER_BILINEAR,
-                                                 cudnnDataType,
-                                                 4,
-                                                 dimOut));
-    /* do the work */
-    {
-      type alpha = 1.0f ;
-      type dataBeta = 1.0f ; // assuming that the derInputData has been initialized to zero
-      type gridBeta = 0.0f ;
-      int const dataOffset = inHeight * inWidth * inNumChannels ;
-      int const gridOffset = 2 * outWidth * outHeight ;
-      int const outOffset = outHeight * outWidth * outNumChannels ;
-      type const* data_ptr = (type const*) input.getMemory() ;
-      type * derInputData_ptr = (type *) derInput.getMemory() ;
-      type const* grid_ptr = (type const*) grid.getMemory() ;
-      type * derGrid_ptr = (type *) derGrid.getMemory() ;
-      type * derOut_ptr = (type *) derOutput.getMemory() ;
+    // Get bilinear sampler descriptor.
+    cudnnSpatialTransformerDescriptor_t samplerDesc ;
+    CKCUDNN(cudnnCreateSpatialTransformerDescriptor(&samplerDesc)) ;
+    auto transformerDescDeleter = defer([&]{cudnnDestroySpatialTransformerDescriptor(samplerDesc);}) ;
+    int dimOut[4] = {1, (int)outNumChannels, (int)outWidth, (int)outHeight};
+    CKCUDNN(cudnnSetSpatialTransformerNdDescriptor(samplerDesc,
+                                                   CUDNN_SAMPLER_BILINEAR,
+                                                   DataTypeToCudnn<dataType>::dataType,
+                                                   4,
+                                                   dimOut));
 
-      for (int im=0; im < inCardinality; im++) {
-        for (int ig=0; ig < groupSize; ig++) {
-        cudnnSpatialTfSamplerBackward(handle,
-                                      samplerDesc,
-                                      &alpha,
-                                      dataDesc, data_ptr,
-                                      &dataBeta,
-                                      dataDesc, derInputData_ptr,
-                                      &alpha,
-                                      derOutputDesc, derOut_ptr,
-                                      grid_ptr,
-                                      &gridBeta,
-                                      derGrid_ptr) ;
-          grid_ptr += gridOffset ;
-          derGrid_ptr += gridOffset ;
-          derOut_ptr += outOffset ;
-        }
-        data_ptr += dataOffset ;
-        derInputData_ptr += dataOffset ;
+    // Perform calculations.
+    type alpha = 1.0f ;
+    type dataBeta = 1.0f ; // assuming that the derInputData has been initialized to zero
+    type gridBeta = 0.0f ;
+    Int dataOffset = inHeight * inWidth * inNumChannels ;
+    Int gridOffset = 2 * outWidth * outHeight ;
+    Int outOffset = outHeight * outWidth * outNumChannels ;
+    type const* data_ptr = (type const*) input.getMemory() ;
+    type * derInputData_ptr = (type *) derInput.getMemory() ;
+    type const* grid_ptr = (type const*) grid.getMemory() ;
+    type * derGrid_ptr = (type *) derGrid.getMemory() ;
+    type * derOut_ptr = (type *) derOutput.getMemory() ;
+
+    for (Int im=0; im < inCardinality; im++) {
+      for (Int ig=0; ig < groupSize; ig++) {
+        CKCUDNN(cudnnSpatialTfSamplerBackward(handle,
+                                              samplerDesc,
+                                              &alpha,
+                                              dataDesc.get(), data_ptr,
+                                              &dataBeta,
+                                              dataDesc.get(), derInputData_ptr,
+                                              &alpha,
+                                              derOutputDesc.get(), derOut_ptr,
+                                              grid_ptr,
+                                              &gridBeta,
+                                              derGrid_ptr)) ;
+        grid_ptr += gridOffset ;
+        derGrid_ptr += gridOffset ;
+        derOut_ptr += outOffset ;
       }
+      data_ptr += dataOffset ;
+      derInputData_ptr += dataOffset ;
     }
-
-  /* cleanup */
-  done:
-    if (samplerDescInitialized) { cudnnDestroySpatialTransformerDescriptor(samplerDesc) ; }
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    return op.getContext().passError(error, __func__) ;
+    return VLE_Success ;
   }
 } ;
 
