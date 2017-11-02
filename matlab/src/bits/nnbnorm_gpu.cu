@@ -818,10 +818,6 @@ __global__ void batch_normalize_backward(T * derData,
 /// MARK: - Forward
 // -------------------------------------------------------------------
 
-#define CHECKCUDA \
-{ auto error = op.getContext().getCudaHelper().catchCudaError(signature.c_str()) ; \
-if (error != vl::VLE_Success) { return op.getContext().setError(error) ; } }
-
 template<DataType dataType>
 struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
 {
@@ -868,7 +864,7 @@ struct BatchNormForwardWithMoment<VLDT_GPU, dataType>
     (outputData, momentData, inputData, multiplierData, biasData,
      (int)planeArea, (int)numPlanes, (int)numChannels) ;
 
-    CHECKCUDA ;
+    CKCUDA ;
 
     return VLE_Success ;
   }
@@ -938,7 +934,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
        (int)numChannels,
        (int)numBlocksPerChannel) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
 
       // Total.
       unsigned blockSizeForSum = getBlockSize(numBlocksPerChannel) ;
@@ -946,7 +942,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
       <<< 2*(unsigned)numChannels, blockSizeForSum, blockSizeForSum*sizeof(type) >>>
       (momentData, accumulatorData, (int)numBlocksPerChannel) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
 
     } else {
       // Total directly.
@@ -959,7 +955,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
        (int)numChannels,
        1) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
     }
 
     // Normalize moments.
@@ -976,7 +972,7 @@ struct BatchNormForward<VLDT_GPU, dataType>
      (int)numPlanes,
      (int)numChannels) ;
 
-    CHECKCUDA ;
+    CKCUDA ;
 
     return VLE_Success ;
   }
@@ -1054,7 +1050,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
        (int)numChannels,
        (int)numBlocksPerChannel) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
 
       // Total.
       unsigned blockSizeSum = getBlockSize(numBlocksPerChannel) ;
@@ -1062,7 +1058,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
       <<< 2*(unsigned)numChannels, blockSizeSum, blockSizeSum*sizeof(type) >>>
       (derMultiplierData, derBiasData, accumulatorData, (int)numBlocksPerChannel, (int)numChannels) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
     }
     else {
       // Total.
@@ -1074,7 +1070,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
        (int)numChannels,
        1) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
     }
 
     // Normalize derMultiplier and derBias.
@@ -1091,7 +1087,7 @@ struct BatchNormBackwardWithMoment<VLDT_GPU, dataType>
      (int)planeArea, (int)numPlanes, (int)numChannels,
      (type)mass) ;
 
-    CHECKCUDA ;
+    CKCUDA ;
 
     return VLE_Success ;
   }
@@ -1170,7 +1166,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
        (int)numChannels,
        (int)numBlocksPerChannel) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
 
       // Total.
       unsigned blockSizeSum = getBlockSize(numBlocksPerChannel) ;
@@ -1179,7 +1175,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
       (derMultiplierData, derBiasData, momentData, accumulatorData,
        (int)numBlocksPerChannel, (int)numChannels) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
     }
     else {
       // Total.
@@ -1193,7 +1189,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
        (int)numChannels,
        1) ;
 
-      CHECKCUDA ;
+      CKCUDA ;
     }
 
     // Normalize derMultiplier and derBias.
@@ -1215,7 +1211,7 @@ struct BatchNormBackward<VLDT_GPU, dataType>
      (int)planeArea, (int)numPlanes, (int)numChannels,
      (type)mass) ;
 
-    CHECKCUDA ;
+    CKCUDA ;
 
     return VLE_Success ;
   }

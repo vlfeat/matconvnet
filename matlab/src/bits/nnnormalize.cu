@@ -23,6 +23,10 @@ using namespace vl::impl ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNForward ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct LRNBackward ;
 
+#if ENABLE_GPU
+#include "nnnormalize_gpu.cu"
+#endif
+
 // -------------------------------------------------------------------
 //                                Fast approximated numerical routines
 // -------------------------------------------------------------------
@@ -143,6 +147,10 @@ struct LRNForward<vl::VLDT_CPU, dataType>
                            vl::Tensor &output,
                            vl::Tensor const &input)
   {
+    static const std::string signature = std::string("LRNForward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = output.getWidth() ;
     Int height = output.getHeight() ;
@@ -238,6 +246,10 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
                            vl::Tensor const &input,
                            vl::Tensor const &derOutput)
   {
+    static const std::string signature = std::string("LRNBackward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int width = derOutput.getWidth() ;
     Int height = derOutput.getHeight() ;
@@ -402,10 +414,6 @@ struct LRNBackward<vl::VLDT_CPU, dataType>
 /*                                                           Driver */
 /* ---------------------------------------------------------------- */
 
-#if ENABLE_GPU
-#include "nnnormalize_gpu.cu"
-#endif
-
 LRN::LRN(vl::Context &context,
          Int normDepth,
          double kappa,
@@ -414,11 +422,66 @@ LRN::LRN(vl::Context &context,
 : Operation(context), normDepth(normDepth), kappa(kappa), alpha(alpha), beta(beta)
 { }
 
+LRN::LRN(vl::Context &context)
+: Operation(context)
+{ }
+
+vl::ErrorCode
+LRN::setParameters(Int normDepth, double kappa, double alpha, double beta)
+{
+  // Dilation must be positive.
+  if (normDepth < 1) {
+    return getContext().setError
+    (VLE_IllegalArgument, "LRN: NORMDEPTH is less than 1.") ;
+  }
+  this->normDepth = normDepth ;
+  this->kappa = kappa ;
+  this->alpha = alpha ;
+  this->beta = beta ;
+  return VLE_Success ;
+}
+
 vl::ErrorCode
 LRN::forward(vl::Tensor &output,
              vl::Tensor const &input) const
 {
-  return dispatch<LRNForward>()(*this,output,input) ;
+  // Validate arguments.
+  if (!check_tensor_compatibility(output,input)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: the tensors have mismatching data or device type.") ;
+  }
+  if (input.isEmpty() || input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: INPUT is empty or null.") ;
+  }
+  if (output.isEmpty() || output.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: OUTPUT is empty or null.") ;
+  }
+  if (input.getShape() != output.getShape()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: OUTPUT has not the same shape as INPUT.") ;
+  }
+
+  VLLOG(*this,1)
+  << "LRNForward:"
+  << " normDepth=" << getNormDepth()
+  << " kappa=" << getKappa()
+  << " alpha=" << getAlpha()
+  << " beta=" << getBeta() ;
+
+  VLLOG(*this,1)
+  << "LRNForward:"
+  << " input=" << pretty(input.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<LRNForward>()(*this,output,input),
+   "LRNForward") ;
 }
 
 vl::ErrorCode
@@ -426,5 +489,47 @@ LRN::backward(vl::Tensor &derInput,
               vl::Tensor const &input,
               vl::Tensor const &derOutput) const
 {
-  return dispatch<LRNBackward>()(*this,derInput,input,derOutput) ;
+  // Validate arguments.
+  if (!check_tensor_compatibility(derInput,input,derOutput)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: the tensors have mismatching data or device type.") ;
+  }
+  if (input.isEmpty() || input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: INPUT is empty or null.") ;
+  }
+  if (derOutput.isEmpty() || derOutput.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: OUTPUT is empty or null.") ;
+  }
+  if (derOutput.getShape() != input.getShape()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: INPUT has not the same shape as DEROUTPUT.") ;
+  }
+  if (derOutput.getShape() != derInput.getShape()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "LRN: DERINPUT has not the same shape as DEROUTPUT.") ;
+  }
+
+  VLLOG(*this,1)
+  << "LRNBackward:"
+  << " normDepth=" << getNormDepth()
+  << " kappa=" << getKappa()
+  << " alpha=" << getAlpha()
+  << " beta=" << getBeta() ;
+
+  VLLOG(*this,1)
+  << "LRNBackward:"
+  << " derInput=" << pretty(derInput.getDimensions())
+  << " input=" << pretty(input.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<LRNBackward>()(*this,derInput,input,derOutput),
+   "LRNBackward") ;
 }

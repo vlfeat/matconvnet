@@ -42,9 +42,6 @@ struct ConvolutionForwardCudnn
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    cudnnFilterDescriptor_t filterDesc ;
-    cudnnConvolutionDescriptor_t convDesc ;
-
     void* workSpace = NULL ;
 
     Int numGroups = input.getNumChannels() / filter.getNumChannels() ;
@@ -83,7 +80,7 @@ struct ConvolutionForwardCudnn
     CKCUDNN(outputDesc.init(dataType, output.getShape())) ;
     CKCUDNN(dataDesc.init(dataType, input.getShape())) ;
 #endif
-
+    cudnnFilterDescriptor_t filterDesc ;
     CKCUDNN(cudnnCreateFilterDescriptor(&filterDesc)) ;
     auto filterDescDeleter = defer([&]{cudnnDestroyFilterDescriptor(filterDesc);}) ;
     CKCUDNN(cudnnSetFilter4dDescriptor(filterDesc,
@@ -99,6 +96,7 @@ struct ConvolutionForwardCudnn
                                        (int)filter.getHeight())) ;
 
     // Get convolution descriptor.
+    cudnnConvolutionDescriptor_t convDesc ;
     CKCUDNN(cudnnCreateConvolutionDescriptor(&convDesc)) ;
     auto convDescDeleter = defer([&]{cudnnDestroyConvolutionDescriptor(convDesc);}) ;
     CKCUDNN(cudnnSetConvolution2dDescriptor(convDesc,

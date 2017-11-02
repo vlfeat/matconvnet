@@ -87,7 +87,6 @@ struct SubsampleForward<vl::VLDT_GPU, dataType>
   {
     static const std::string signature = std::string("SubsampleForward[MCN,")
     + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
-
     VLLOG(op,1) << signature ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;

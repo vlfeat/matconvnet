@@ -3,7 +3,7 @@
 // @author Andrea Vedaldi
 
 /*
-Copyright (C) 2015-16 Andrea Vedaldi.
+Copyright (C) 2015-17 Andrea Vedaldi.
 All rights reserved.
 
 This file is part of the VLFeat library and is made available under
@@ -25,6 +25,16 @@ the terms of the BSD license (see the COPYING file).
 
 #include "data.hpp"
 #include "mexutils.h"
+
+#define MXCHECK(x) \
+{ vl::ErrorCode error = (x) ; if (error != vl::VLE_Success) { return error ; } }
+
+#define MXOPTVEC(x,y) \
+{ std::vector<Int> x ; \
+if (context.parse(x,optarg) != vl::VLE_Success) { \
+return context.passError(vl::VLE_IllegalArgument, "Could not set " #x ":") ; } \
+vl::ErrorCode error = (op.y(x)) ; \
+if (error != vl::VLE_Success) { return error ; } }
 
 namespace vl {
 
@@ -88,13 +98,7 @@ namespace vl {
   } ;
 
   void print(char const * str, MexTensor const & tensor) ;
-
   void mexThrowError(Context const& context, vl::ErrorCode error) ;
-
-
-
-
 }
-
 
 #endif /* defined(__vl__datamex__) */

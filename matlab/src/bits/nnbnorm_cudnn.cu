@@ -207,7 +207,7 @@ struct BatchNormForwardCudnn
         <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
         (varMemory, (unsigned)input.getNumChannels()) ;
 
-        CHECKCUDA ;
+        CKCUDA ;
       }
     }
 
@@ -282,7 +282,7 @@ struct BatchNormBackwardWithMomentCudnn
     <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
     (istdMemory, stdMemory, (unsigned)input.getNumChannels()) ;
 
-    CHECKCUDA ;
+    CKCUDA ;
 
     CKCUDNN(cudnnBatchNormalizationBackward
             (handle,
@@ -389,7 +389,7 @@ struct BatchNormBackwardCudnn
     <<< divideAndRoundUp((unsigned)input.getNumChannels(),blockSize),blockSize >>>
     (varMemory, (unsigned)input.getNumChannels()) ;
 
-    CHECKCUDA ;
+    CKCUDA ;
 
     return VLE_Success ;
   }

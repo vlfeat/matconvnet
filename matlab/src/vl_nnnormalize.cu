@@ -60,13 +60,10 @@ enum {
   OUT_RESULT = 0, OUT_END
 } ;
 
-void mexFunction(int nout, mxArray *out[],
-                 int nin, mxArray const *in[])
+vl::ErrorCode performLRN(vl::MexContext& context,
+                         int nout, mxArray *out[],
+                         int nin, mxArray const *in[])
 {
-  Int normDepth ;
-  double normAlpha ;
-  double normKappa ;
-  double normBeta ;
   bool backMode = false ;
 
   int verbosity = 0 ;
@@ -89,96 +86,91 @@ void mexFunction(int nout, mxArray *out[],
     backMode = (nin >= 3) ;
   }
 
+  vl::nn::LRN op(context) ;
+
+  if (!mxIsNumeric(in[IN_PARAM]) ||
+      mxGetClassID(in[IN_PARAM]) != mxDOUBLE_CLASS ||
+      mxIsComplex(in[IN_PARAM]) ||
+      mxGetNumberOfElements(in[IN_PARAM]) != 4)
+  {
+    return context.setError(vl::VLE_IllegalArgument, "PARAM is not a plain 4 vector.")  ;
+  }
+  {
+    double const * params = mxGetPr(in[IN_PARAM]) ;
+    MXCHECK(op.setParameters((Int)params[0],params[1],params[2],params[3])) ;
+  }
+
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
-      case opt_verbose :
-        ++ verbosity ;
-        break ;
+      case opt_verbose : context.setLogLevel(++verbosity) ; break ;
       default: break ;
     }
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor derOutput(context) ;
-
   data.init(in[IN_DATA]) ;
   data.reshape(4) ;
 
-  if (backMode) {
+  if (!backMode) {
+    // Forward mode.
+    vl::DeviceType deviceType = data.getDeviceType() ;
+    vl::DataType dataType = data.getDataType() ;
+
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    MXCHECK(op.forwardShape(outputShape,data)) ;
+
+    // Initialize output tensor.
+    vl::MexTensor output(context) ;
+    output.init(deviceType, dataType, outputShape) ;
+
+    // Perform calculation.
+    MXCHECK(op.forward(output,data)) ;
+
+    // Return results.
+    out[OUT_RESULT] = output.relinquish() ;
+  } else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
     derOutput.init(in[IN_DEROUTPUT]) ;
     derOutput.reshape(4) ;
-  }
+    vl::DeviceType deviceType = derOutput.getDeviceType() ;
+    vl::DataType dataType = derOutput.getDataType() ;
 
-  if (backMode && ! vl::areCompatible(data, derOutput)) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
-  }
-  if (backMode && (data.getShape() != derOutput.getShape())) {
-    mexErrMsgTxt("DATA and DEROUTPUT do not have the same size.") ;
-  }
-
-  if (!mxIsNumeric(in[IN_PARAM]) ||
-       mxGetClassID(in[IN_PARAM]) != mxDOUBLE_CLASS ||
-       mxIsComplex(in[IN_PARAM]) ||
-       mxGetNumberOfElements(in[IN_PARAM]) != 4)
-  {
-    mexErrMsgTxt("PARAM is not a plain 4 vector.") ;
-  }
-  normDepth = (Int)mxGetPr(in[IN_PARAM])[0]  ;
-  normKappa = mxGetPr(in[IN_PARAM])[1]  ;
-  normAlpha = mxGetPr(in[IN_PARAM])[2]  ;
-  normBeta = mxGetPr(in[IN_PARAM])[3]  ;
-  if (normDepth < 1) {
-    mexErrMsgTxt("The normalization depth is smaller than 1.") ;
-  }
-
-  /* Create output buffers */
-  vl::DeviceType deviceType = data.getDeviceType() ;
-  vl::DataType dataType = data.getDataType() ;
-  vl::MexTensor output(context) ;
-  vl::MexTensor derData(context) ;
-  if (!backMode) {
-    output.init(deviceType, dataType, data.getShape()) ;
-  } else {
+    // Initialize the tensors to be returned.
+    vl::MexTensor derData(context) ;
     derData.init(deviceType, dataType, data.getShape()) ;
-  }
 
-  if (verbosity > 0) {
-    mexPrintf("vl_nnnormalize: mode %s; %s\n",  (data.getDeviceType()==vl::VLDT_GPU)?"gpu":"cpu", backMode?"backward":"forward") ;
-    mexPrintf("vl_nnnormalize: (depth,kappa,alpha,beta): (%d,%g,%g,%g)\n",
-              normDepth, normKappa, normAlpha, normBeta) ;
-    vl::print("vl_nnnormalize: data: ", data) ;
-    if (backMode) {
-      vl::print("vl_nnnormalize: derOutput: ", derOutput) ;
-      vl::print("vl_nnnormalize: derData: ", derData) ;
-    } else {
-      vl::print("vl_nnnormalize: output: ", output) ;
+    // Perform calculation.
+    MXCHECK(op.backward(derData,data,derOutput)) ;
+
+    // Return results.
+    out[OUT_RESULT] = derData.relinquish() ;
+  }
+  return vl::VLE_Success ;
+}
+
+void mexFunction(int nout, mxArray *out[],
+                 int nin, mxArray const *in[])
+{
+  mexAtExit(atExit) ;
+  context.setLogLevel(0) ;
+  context.clearLog() ;
+
+  vl::ErrorCode error = performLRN(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnnormalize:\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
     }
+    context.setLogLevel(0) ;
   }
-
-  /* -------------------------------------------------------------- */
-  /*                                                    Do the work */
-  /* -------------------------------------------------------------- */
-
-  vl::ErrorCode error ;
-
-  vl::nn::LRN op(context,normDepth,normKappa,normAlpha,normBeta) ;
-
-  if (!backMode) {
-    error = op.forward(output,data) ;
-  } else {
-    error = op.backward(derData,data,derOutput) ;
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                         Finish */
-  /* -------------------------------------------------------------- */
 
   if (error != vl::VLE_Success) {
-    mexErrMsgTxt(context.getLastErrorMessage().c_str()) ;
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
   }
-  if (backMode) {
-    out[OUT_RESULT] = derData.relinquish() ;
-  } else {
-    out[OUT_RESULT] = output.relinquish() ;
-  }
+  return ;
 }
+
+

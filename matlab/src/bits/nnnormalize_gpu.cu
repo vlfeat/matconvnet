@@ -128,6 +128,10 @@ struct LRNForward<vl::VLDT_GPU, dataType>
                            vl::Tensor &output,
                            vl::Tensor const &input)
   {
+    static const std::string signature = std::string("LRNForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto volume = input.getNumElements() ;
 
@@ -142,8 +146,8 @@ struct LRNForward<vl::VLDT_GPU, dataType>
      (type)op.getAlpha(),
      (type)op.getBeta()) ;
 
-    cudaError_t status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    CKCUDA ;
+    return VLE_Success ;
   }
 } ;
 
@@ -159,10 +163,14 @@ struct LRNBackward<vl::VLDT_GPU, dataType>
                            vl::Tensor const &input,
                            vl::Tensor const &derOutput)
   {
+    static const std::string signature = std::string("LRNBackward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     auto volume = derOutput.getNumElements() ;
 
-    normalize_backward_kernel<type >
+    normalize_backward_kernel<type>
     <<< divideAndRoundUp((unsigned)volume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     ((type*)derInput.getMemory(),
      (type const*)input.getMemory(),
@@ -174,8 +182,8 @@ struct LRNBackward<vl::VLDT_GPU, dataType>
      (type)op.getAlpha(),
      (type)op.getBeta()) ;
 
-    cudaError_t status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    CKCUDA ;
+    return VLE_Success ;
   }
 } ;
 

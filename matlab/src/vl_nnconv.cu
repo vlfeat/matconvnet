@@ -74,12 +74,6 @@ void atExit()
   context.clear() ;
 }
 
-#define ERR(code,message) \
-context.passError(code,message)
-
-#define CHECK2(x) \
-{ vl::ErrorCode err = (x) ; if (err != vl::VLE_Success) { return err ; } }
-
 /* ---------------------------------------------------------------- */
 /*                                                       MEX driver */
 /* ---------------------------------------------------------------- */
@@ -109,7 +103,7 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
   vl::nn::Convolution op(context) ;
 
   if (nin < 3) {
-    return ERR(vl::VLE_IllegalArgument, "There are less than three arguments.") ;
+    return context.passError(vl::VLE_IllegalArgument, "There are less than three arguments.") ;
   }
 
   if (nin > 3 && vlmxIsString(in[3],-1)) {
@@ -121,60 +115,28 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
-      case opt_verbose :
-        ++ verbosity ;
-        context.setLogLevel(verbosity) ;
-        break ;
-
-      case opt_stride : {
-        std::vector<Int> stride ;
-        if (context.parse(stride,optarg) != vl::VLE_Success) {
-          return ERR(vl::VLE_IllegalArgument, "Could not set STRIDE:") ;
-        }
-        CHECK2(op.setStride(stride)) ;
-        break ;
-      }
-
-      case opt_padding : {
-        std::vector<Int> padding ;
-        if (context.parse(padding,optarg) != vl::VLE_Success) {
-          return ERR(vl::VLE_IllegalArgument, "Could not set PADDING:") ;
-        }
-        CHECK2(op.setPadding(padding)) ;
-        break ;
-      }
-
-      case opt_dilation: {
-        std::vector<Int> dilation ;
-        if (context.parse(dilation,optarg) != vl::VLE_Success) {
-          return ERR(vl::VLE_IllegalArgument, "Could not set DILATION:") ;
-        }
-        CHECK2(op.setDilation(dilation)) ;
-        break ;
-      }
-
+      case opt_verbose : context.setLogLevel(++verbosity) ; break ;
+      case opt_stride : MXOPTVEC(STRIDE,setStride) ; break ;
+      case opt_padding : MXOPTVEC(PADDING,setPadding) ; break ;
+      case opt_dilation: MXOPTVEC(DILATION,setDilation) ; break ;
       case opt_no_der_data : computeDerData = false ; break ;
       case opt_no_der_filters : computeDerFilters = false ; break ;
       case opt_no_der_biases : computeDerBiases = false ; break ;
-
       case opt_no_cudnn :
 #if ENABLE_CUDNN
         context.getCudaHelper().setCudnnEnabled(false) ;
 #endif
         break ;
-
       case opt_cudnn :
 #if ENABLE_CUDNN
         context.getCudaHelper().setCudnnEnabled(true) ;
 #endif
         break ;
-
-      case opt_cudnn_workspace_limit :
-      {
+      case opt_cudnn_workspace_limit : {
 #if ENABLE_CUDNN
         double x ;
         if (!vlmxIsScalar(optarg) || (x = mxGetScalar(optarg)) < 0) {
-          ERR(vl::VLE_IllegalArgument, "CudnnWorkSpaceLimit is not a non-negative scalar.") ;
+          context.passError(vl::VLE_IllegalArgument, "CudnnWorkSpaceLimit is not a non-negative scalar.") ;
         }
         context.getCudaHelper().setCudnnConvolutionFwdPreference
         ((x==mxGetInf() ?
@@ -191,8 +153,8 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
           CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST :
           CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT),
          (size_t)x) ;
-        break ;
 #endif
+        break ;
       }
       default: break ;
     }
@@ -219,14 +181,14 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
 
     // Compute the size of the output tensor.
     vl::TensorShape outputShape ;
-    CHECK2(op.forwardShape(outputShape,data,filters,biases)) ;
+    MXCHECK(op.forwardShape(outputShape,data,filters,biases)) ;
 
     // Initialize output tensor.
     vl::MexTensor output(context) ;
     output.init(deviceType, dataType, outputShape) ;
 
     // Perform calculation.
-    CHECK2(op.forward(output,0,data,1,filters,biases)) ;
+    MXCHECK(op.forward(output,0,data,1,filters,biases)) ;
 
     // Return results.
     out[OUT_RESULT] = output.relinquish() ;
@@ -256,14 +218,13 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
     }
 
     // Perform calculation.
-    CHECK2(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
+    MXCHECK(op.backward(derData,derFilters,derBiases,data,filters,derOutput)) ;
 
     // Return results.
     out[OUT_RESULT] = derData.relinquish() ;
     out[OUT_DERFILTERS] = derFilters.relinquish() ;
     out[OUT_DERBIASES] = derBiases.relinquish() ;
   }
-
   return vl::VLE_Success ;
 }
 

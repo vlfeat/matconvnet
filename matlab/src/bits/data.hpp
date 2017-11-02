@@ -42,6 +42,10 @@ getContext().passError(code,message)
 if ((op).getContext().getLogLevel() < level) { } \
 else vl::Context::Logger((op).getContext()).getStream()
 
+#define CKCUDA \
+{ auto error = op.getContext().getCudaHelper().catchCudaError(signature.c_str()) ; \
+if (error != vl::VLE_Success) { return op.getContext().setError(error) ; } }
+
 namespace vl {
 
   /// Basic integral type.
