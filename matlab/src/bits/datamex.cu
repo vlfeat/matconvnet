@@ -15,6 +15,10 @@ the terms of the BSD license (see the COPYING file).
 #include "datacu.hpp"
 #endif
 
+#if ENABLE_CUDNN
+#include "impl/cudnnhelper.hpp"
+#endif
+
 #include <cassert>
 #ifndef NDEBUG
 #include<iostream>
@@ -89,9 +93,9 @@ vl::MexContext::initGpu()
 }
 #endif
 
-/* ---------------------------------------------------------------- */
-/*                                                        MexTensor */
-/* ---------------------------------------------------------------- */
+// -------------------------------------------------------------------
+/// MARK: - MexTensor
+// -------------------------------------------------------------------
 
 /*
  The MexTensor class helps handling MATLAB CPU and GPU arrays.

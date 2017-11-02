@@ -46,71 +46,41 @@ struct BiasForwardCudnn
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    cudnnTensorDescriptor_t outputDesc, biasDesc, dataDesc ;
-    bool outputDescInitialized = false ;
-    bool biasDescInitialized = false ;
-    bool dataDescInitialized = false ;
-
+    CudnnTensorDescriptor outputDesc, biasDesc, dataDesc ;
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
     vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
-    // Get CuDNN
+    // Get CuDNN.
     CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
-    // Get output tensor descripotr
+    // Get output tensor descripotr.
     assert(output) ;
-    CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
-    outputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptor(outputDesc,
-                                     CUDNN_TENSOR_NCHW,
-                                     DataTypeToCudnn<dataType>::dataType,
-                                     (int)output.getCardinality(),
-                                     (int)output.getNumChannels(),
-                                     (int)output.getWidth(),
-                                     (int)output.getHeight())) ;
+    CHECK(outputDesc.init(dataType, output.getShape())) ;
 
     if (bias) {
-      CHECK(cudnnCreateTensorDescriptor(&biasDesc)) ;
-      biasDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(biasDesc,
-                                       CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::dataType,
-                                       1,
-                                       (int)bias.getNumElements(),
-                                       1,
-                                       1)) ;
-
+      CHECK(biasDesc.init(dataType,{1,1,bias.getNumElements(),1})) ;
       auto alpha = static_cast<type>(biasMult) ;
       auto beta = static_cast<type>(outputMult) ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_SAME_C,
                            &alpha,
-                           biasDesc, bias.getMemory(),
+                           biasDesc.get(), bias.getMemory(),
                            &beta,
-                           outputDesc, output.getMemory())) ;
+                           outputDesc.get(), output.getMemory())) ;
 #else
       CHECK(cudnnAddTensor(handle,
                            &alpha,
-                           biasDesc, bias.getMemory(),
+                           biasDesc.get(), bias.getMemory(),
                            &beta,
-                           outputDesc, output.getMemory())) ;
+                           outputDesc.get(), output.getMemory())) ;
 #endif
       outputMult = 1 ;
     }
 
     if (input) {
-      CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-      dataDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(dataDesc,
-                                       CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::dataType,
-                                       (int)input.getCardinality(),
-                                       (int)input.getNumChannels(),
-                                       (int)input.getWidth(),
-                                       (int)input.getHeight())) ;
-
+      CHECK(dataDesc.init(dataType,input.getShape())) ;
       auto alpha = static_cast<type>(biasMult) ;
       auto beta = static_cast<type>(outputMult) ;
 #if (CUDNN_VERSION < 4000)
@@ -123,17 +93,14 @@ struct BiasForwardCudnn
 #else
       CHECK(cudnnAddTensor(handle,
                            &alpha,
-                           dataDesc, input.getMemory(),
+                           dataDesc.get(), input.getMemory(),
                            &beta,
-                           outputDesc, output.getMemory()));
+                           outputDesc.get(), output.getMemory())) ;
 #endif
     }
 
     /* cleanup */
   done:
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    if (biasDescInitialized) { cudnnDestroyTensorDescriptor(biasDesc) ; }
-    if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
     return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
@@ -156,85 +123,52 @@ struct BiasBackwardCudnn
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    /* no derInputDesc needed as same as dataDesc */
-    cudnnTensorDescriptor_t derInputDesc, derBiasDesc, derOutputDesc ;
-    bool derInputDescInitialized = false ;
-    bool derBiasDescInitialized = false ;
-    bool derOutputDescInitialized = false ;
-
+    // no derInputDesc needed as same as dataDesc.
+    CudnnTensorDescriptor derInputDesc, derBiasDesc, derOutputDesc ;
     cudnnStatus_t cudnnError = CUDNN_STATUS_SUCCESS ;
     vl::ErrorCode error = vl::VLE_Success ;
     cudnnHandle_t handle ;
 
-    // Get CuDNN
+    // Get CuDNN.
     CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Must have derOutput for all derivatives
     assert(derOutput) ;
-    CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
-    derOutputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptor(derOutputDesc,
-                                     CUDNN_TENSOR_NCHW,
-                                     DataTypeToCudnn<dataType>::dataType,
-                                     (int)derOutput.getCardinality(),
-                                     (int)derOutput.getNumChannels(),
-                                     (int)derOutput.getWidth(),
-                                     (int)derOutput.getHeight())) ;
+    CHECK(derOutputDesc.init(dataType,derOutput.getShape())) ;
 
-    // for derivatives w.r.t. bias
     if (derBias) {
-      CHECK(cudnnCreateTensorDescriptor(&derBiasDesc)) ;
-      derBiasDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(derBiasDesc,
-                                       CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::dataType,
-                                       1,
-                                       (int)derBias.getNumElements(),
-                                       1,
-                                       1)) ;
-
+      CHECK(derBiasDesc.init(dataType,{1,1,derBias.getNumElements(),1})) ;
       auto alpha = static_cast<type>(biasMult) ;
       auto beta = static_cast<type>(derBiasMult) ;
       CHECK(cudnnConvolutionBackwardBias
             (handle,
              &alpha,
-             derOutputDesc, (type const*)derOutput.getMemory(),
+             derOutputDesc.get(), (type const*)derOutput.getMemory(),
              &beta,
-             derBiasDesc, (type*)derBias.getMemory())) ;
+             derBiasDesc.get(), (type*)derBias.getMemory())) ;
     }
 
     if (derInput) {
-      CHECK(cudnnCreateTensorDescriptor(&derInputDesc)) ;
-      derInputDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptor(derInputDesc,
-                                       CUDNN_TENSOR_NCHW,
-                                       DataTypeToCudnn<dataType>::dataType,
-                                       (int)derInput.getCardinality(),
-                                       (int)derInput.getNumChannels(),
-                                       (int)derInput.getWidth(),
-                                       (int)derInput.getHeight())) ;
+      CHECK(derInputDesc.init(dataType,derInput.getShape())) ;
       auto alpha = static_cast<type>(biasMult) ;
       auto beta = static_cast<type>(derBiasMult) ;
 #if (CUDNN_VERSION < 4000)
       CHECK(cudnnAddTensor(handle,
                            CUDNN_ADD_SAME_C,
                            &alpha,
-                           biasDesc, bias.getMemory(),
+                           biasDesc.get(), bias.getMemory(),
                            &beta,
-                           derInputDesc, derInput.getMemory())) ;
+                           derInputDesc.get(), derInput.getMemory())) ;
 #else
       CHECK(cudnnAddTensor(handle,
                            &alpha,
-                           derOutputDesc, derOutput.getMemory(),
+                           derOutputDesc.get(), derOutput.getMemory(),
                            &beta,
-                           derInputDesc, derInput.getMemory())) ;
+                           derInputDesc.get(), derInput.getMemory())) ;
 #endif
     }
 
   done:
-    if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    if (derBiasDescInitialized) { cudnnDestroyTensorDescriptor(derBiasDesc) ; }
-    if (derInputDescInitialized) { cudnnDestroyTensorDescriptor(derInputDesc) ; }
     return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;

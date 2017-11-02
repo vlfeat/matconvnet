@@ -64,6 +64,74 @@ namespace vl { namespace impl {
     }
   }
 
+  // -------------------------------------------------------------------
+  /// MARK: - CudnnTensorDescripor
+  // -------------------------------------------------------------------
+
+  class CudnnTensorDescriptor
+  {
+  public:
+    CudnnTensorDescriptor() : desc(0), initialized(false) { }
+    ~CudnnTensorDescriptor() ;
+    cudnnStatus_t init(DataType dataType, TensorShape const & shape) ;
+    cudnnTensorDescriptor_t get() const ;
+    void clear() ;
+    operator bool() { return initialized ; }
+  private:
+    cudnnTensorDescriptor_t desc ;
+    bool initialized ;
+  } ;
+
+  inline CudnnTensorDescriptor::~CudnnTensorDescriptor()
+  {
+    clear() ;
+  }
+
+  inline void CudnnTensorDescriptor::clear()
+  {
+    if (initialized) {
+      cudnnDestroyTensorDescriptor(desc) ;
+      desc = NULL ;
+      initialized = false ;
+    }
+  }
+
+  inline cudnnStatus_t
+  CudnnTensorDescriptor::init(DataType dataType, TensorShape const & shape)
+  {
+    cudnnDataType_t dt ;
+    switch (dataType) {
+      case VLDT_Float: dt = DataTypeToCudnn<VLDT_Float>::dataType ; break ;
+      case VLDT_Double: dt = DataTypeToCudnn<VLDT_Double>::dataType ; break ;
+      default: assert(false) ;
+    }
+
+    auto status = cudnnCreateTensorDescriptor(&desc) ;
+    if (status != CUDNN_STATUS_SUCCESS) {
+      return status ;
+    }
+    initialized = true ;
+
+    status = cudnnSetTensor4dDescriptorEx
+    (desc, dt,
+     (int)shape.getCardinality(),
+     (int)shape.getNumChannels(),
+     (int)shape.getWidth(),
+     (int)shape.getHeight(),
+     (int)(shape.getHeight()*shape.getWidth()*shape.getNumChannels()), //strides
+     (int)(shape.getHeight()*shape.getWidth()),
+     (int)shape.getHeight(),
+     1) ;
+
+    return status ;
+  }
+
+  inline cudnnTensorDescriptor_t
+  CudnnTensorDescriptor::get() const
+  {
+    return desc ;
+  }
+
 //  vl::ErrorCode createCudnnDescriptorFromTensor(Context & context,
 //                                            cudnnTensorDescriptor_t * desriptor,
 //                                            Tensor & const tensor)

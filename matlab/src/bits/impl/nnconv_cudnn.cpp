@@ -51,11 +51,9 @@ struct ConvolutionForwardCudnn
 
     typedef typename DataTypeTraits<dataType>::type type ;
 
-    cudnnTensorDescriptor_t outputDesc, dataDesc ;
+    CudnnTensorDescriptor outputDesc, dataDesc ;
     cudnnFilterDescriptor_t filterDesc ;
     cudnnConvolutionDescriptor_t convDesc ;
-    bool outputDescInitialized = false ;
-    bool dataDescInitialized = false ;
     bool filterDescInitialized = false ;
     bool convDescInitialized = false ;
 
@@ -70,7 +68,6 @@ struct ConvolutionForwardCudnn
     if (filter.getHeight() > input.getHeight()) return vl::VLE_Unsupported ;
     if (filter.getWidth() > input.getWidth()) return vl::VLE_Unsupported ;
 
-
     static const std::string signature = std::string("ConvolutionForward[CuDNN,")
     + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
 
@@ -84,39 +81,21 @@ struct ConvolutionForwardCudnn
     CHECK(op.getContext().getCudaHelper().getCudnnHandle(&handle)) ;
 
     // Get tensor descripotrs.
-    CHECK(cudnnCreateTensorDescriptor(&outputDesc)) ;
-    outputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(outputDesc,
-                                       DataTypeToCudnn<dataType>::dataType ,
-                                       (int)output.getCardinality(), // sizes
 #if CUDNN_VERSION < 7000
-                                       (int)numFiltersPerGroup,
+    {
+      TensorShape sliceShape = output.getShape() ;
+      sliceShape.setDimension(2,numFiltersPerGroup) ;
+      CHECK(outputDesc.init(dataType,sliceShape)) ;
+    }
+    {
+      TensorShape sliceShape = data.getShape() ;
+      sliceShape.setDimension(2,input.getNumChannels() / numGroups) ;
+      CHECK(dataDesc.init(dataType,sliceShape)) ;
+    }
 #else
-                                       (int)output.getNumChannels(),
+    CHECK(outputDesc.init(dataType, output.getShape())) ;
+    CHECK(dataDesc.init(dataType, input.getShape())) ;
 #endif
-                                       (int)output.getWidth(),
-                                       (int)output.getHeight(),
-                                       (int)(output.getHeight()*output.getWidth()*output.getNumChannels()), //strides
-                                       (int)(output.getHeight()*output.getWidth()),
-                                       (int)output.getHeight(),
-                                       1)) ;
-
-    CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-    dataDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                       DataTypeToCudnn<dataType>::dataType,
-                                       (int)input.getCardinality(),
-#if CUDNN_VERSION < 7000
-                                       (int)(input.getNumChannels() / numGroups),
-#else
-                                       (int)input.getNumChannels(),
-#endif
-                                       (int)input.getWidth(),
-                                       (int)input.getHeight(),
-                                       (int)(input.getHeight()*input.getWidth()*input.getNumChannels()), //strides
-                                       (int)(input.getHeight()*input.getWidth()),
-                                       (int)input.getHeight(),
-                                       1)) ;
 
     CHECK(cudnnCreateFilterDescriptor(&filterDesc)) ;
     filterDescInitialized = true ;
@@ -151,7 +130,7 @@ struct ConvolutionForwardCudnn
     {
       int n, c, h, w ;
       cudnnGetConvolution2dForwardOutputDim(convDesc,
-                                            dataDesc,
+                                            dataDesc.get(),
                                             filterDesc,
                                             &n, &c, &w, &h) ;
       bool sane =
@@ -174,10 +153,10 @@ struct ConvolutionForwardCudnn
     if (!op.getContext().getCudaHelper().cudnnConvolutionFwdSpecificAlgo) {
       // Determine algorithm automatically.
       CHECK(cudnnGetConvolutionForwardAlgorithm(handle,
-                                                dataDesc,
+                                                dataDesc.get(),
                                                 filterDesc,
                                                 convDesc,
-                                                outputDesc,
+                                                outputDesc.get(),
                                                 op.getContext().getCudaHelper().cudnnConvolutionFwdPreference,
                                                 op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceLimit,
                                                 &op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo)) ;
@@ -185,10 +164,10 @@ struct ConvolutionForwardCudnn
 
     // Get workspace size.
     CHECK(cudnnGetConvolutionForwardWorkspaceSize(handle,
-                                                  dataDesc,
+                                                  dataDesc.get(),
                                                   filterDesc,
                                                   convDesc,
-                                                  outputDesc,
+                                                  outputDesc.get(),
                                                   op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo,
                                                   &op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed)) ;
 
@@ -212,13 +191,13 @@ struct ConvolutionForwardCudnn
       auto beta = static_cast<type>(outputMult) ;
       CHECK(cudnnConvolutionForward(handle,
                                     &alpha,
-                                    dataDesc, (type const*)input.getMemory() + dataGrpOffset,
+                                    dataDesc.get(), (type const*)input.getMemory() + dataGrpOffset,
                                     filterDesc, (type const*)filter.getMemory() + filterGrpOffset,
                                     convDesc,
                                     op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo,
                                     workSpace, op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed,
                                     &beta,
-                                    outputDesc, (type*)output.getMemory() + outputGrpOffset)) ;
+                                    outputDesc.get(), (type*)output.getMemory() + outputGrpOffset)) ;
     }
 #else
     {
@@ -226,13 +205,13 @@ struct ConvolutionForwardCudnn
       auto beta = static_cast<type>(outputMult) ;
       CHECK(cudnnConvolutionForward(handle,
                                     &alpha,
-                                    dataDesc, (type const*)input.getMemory(),
+                                    dataDesc.get(), (type const*)input.getMemory(),
                                     filterDesc, (type const*)filter.getMemory(),
                                     convDesc,
                                     op.getContext().getCudaHelper().cudnnConvolutionFwdAlgo,
                                     workSpace, op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed,
                                     &beta,
-                                    outputDesc, (type*)output.getMemory())) ;
+                                    outputDesc.get(), (type*)output.getMemory())) ;
     }
 #endif
 
@@ -241,8 +220,6 @@ struct ConvolutionForwardCudnn
   done:
     if (convDescInitialized) { cudnnDestroyConvolutionDescriptor(convDesc) ; }
     if (filterDescInitialized) { cudnnDestroyFilterDescriptor(filterDesc) ; }
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
-    if (outputDescInitialized) { cudnnDestroyTensorDescriptor(outputDesc) ; }
     return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;
@@ -265,11 +242,9 @@ struct ConvolutionBackwardCudnn
     typedef typename DataTypeTraits<dataType>::type type ;
 
     /* no derInputDesc needed as same as dataDesc */
-    cudnnTensorDescriptor_t dataDesc, derOutputDesc ;
+    CudnnTensorDescriptor dataDesc, derOutputDesc ;
     cudnnFilterDescriptor_t filterDesc ;
     cudnnConvolutionDescriptor_t convDesc ;
-    bool dataDescInitialized = false ;
-    bool derOutputDescInitialized = false ;
     bool filterDescInitialized = false ;
     bool convDescInitialized = false ;
 
@@ -310,24 +285,14 @@ struct ConvolutionBackwardCudnn
 #if CUDNN_VERSION < 7000
       numFiltersPerGroup = filter.getCardinality() / numGroups ;
       filterVolume = filter.getHeight() * filter.getWidth() * filter.getNumChannels() ;
-#endif
-
-      CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-      dataDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                         DataTypeToCudnn<dataType>::dataType ,
-                                         (int)derInput.getCardinality(),
-#if CUDNN_VERSION < 7000
-                                         (int)(derInput.getNumChannels() / numGroups),
+      {
+        TensorShape sliceShape = derInput.getShape() ;
+        sliceShape.setDimension(2,derInput.getNumChannels() / numGroups) ;
+        CHECK(dataDesc.init(dataType,sliceShape)) ;
+      }
 #else
-                                         (int)derInput.getNumChannels(),
+      CHECK(dataDesc.init(dataType,derInput.getShape())) ;
 #endif
-                                         (int)derInput.getWidth(),
-                                         (int)derInput.getHeight(),
-                                         (int)(derInput.getHeight()*derInput.getWidth()*derInput.getNumChannels()), //strides
-                                         (int)(derInput.getHeight()*derInput.getWidth()),
-                                         (int)derInput.getHeight(),
-                                         1)) ;
 
       CHECK(cudnnCreateFilterDescriptor(&filterDesc)) ;
       filterDescInitialized = true ;
@@ -348,24 +313,14 @@ struct ConvolutionBackwardCudnn
 #if CUDNN_VERSION < 7000
       numFiltersPerGroup = derFilter.getCardinality() / numGroups ;
       filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getNumChannels() ;
-#endif
-
-      CHECK(cudnnCreateTensorDescriptor(&dataDesc)) ;
-      dataDescInitialized = true ;
-      CHECK(cudnnSetTensor4dDescriptorEx(dataDesc,
-                                         DataTypeToCudnn<dataType>::dataType ,
-                                         (int)input.getCardinality(),
-#if CUDNN_VERSION < 7000
-                                         (int)(input.getNumChannels() / numGroups),
+      {
+        TensorShape sliceShape = input.getShape() ;
+        sliceShape.setDimension(2,input.getNumChannels() / numGroups) ;
+        CHECK(outputDesc.init(dataType,sliceShape)) ;
+      }
 #else
-                                         (int)input.getNumChannels(),
+      CHECK(dataDesc.init(dataType,input.getShape())) ;
 #endif
-                                         (int)input.getWidth(),
-                                         (int)input.getHeight(),
-                                         (int)(input.getHeight()*input.getWidth()*input.getNumChannels()), //strides
-                                         (int)(input.getHeight()*input.getWidth()),
-                                         (int)(input.getHeight()),
-                                         1)) ;
 
       CHECK(cudnnCreateFilterDescriptor(&filterDesc)) ;
       filterDescInitialized = true ;
@@ -397,22 +352,17 @@ struct ConvolutionBackwardCudnn
 
     // Must have derOutput for all derivatives
     assert(derOutput) ;
-    CHECK(cudnnCreateTensorDescriptor(&derOutputDesc)) ;
-    derOutputDescInitialized = true ;
-    CHECK(cudnnSetTensor4dDescriptorEx(derOutputDesc,
-                                       DataTypeToCudnn<dataType>::dataType ,
-                                       (int)derOutput.getCardinality(), // sizes
 #if CUDNN_VERSION < 7000
-                                       (int)numFiltersPerGroup,
+    numFiltersPerGroup = derFilter.getCardinality() / numGroups ;
+    filterVolume = derFilter.getHeight() * derFilter.getWidth() * derFilter.getNumChannels() ;
+    {
+      TensorShape sliceShape = derOutput.getShape() ;
+      sliceShape.setDimension(2,numFiltersPerGroup) ;
+      CHECK(derOutputDesc.init(dataType,sliceShape)) ;
+    }
 #else
-                                       (int)derOutput.getNumChannels(),
+    CHECK(derOutputDesc.init(dataType,derOutput.getShape())) ;
 #endif
-                                       (int)derOutput.getWidth(),
-                                       (int)derOutput.getHeight(),
-                                       (int)(derOutput.getHeight()*derOutput.getWidth()*derOutput.getNumChannels()), //strides
-                                       (int)(derOutput.getHeight()*derOutput.getWidth()),
-                                       (int)derOutput.getHeight(),
-                                       1)) ;
 
     op.getContext().getCudaHelper().cudnnConvolutionFwdWorkSpaceUsed = 0 ;
     op.getContext().getCudaHelper().cudnnConvolutionBwdFilterWorkSpaceUsed = 0 ;
@@ -424,8 +374,8 @@ struct ConvolutionBackwardCudnn
       // Get filter derivatives algorithm
       CHECK(cudnnGetConvolutionBackwardFilterAlgorithm
             (handle,
-             dataDesc,
-             derOutputDesc,
+             dataDesc.get(),
+             derOutputDesc.get(),
              convDesc,
              filterDesc,
              op.getContext().getCudaHelper().cudnnConvolutionBwdFilterPreference,
@@ -435,8 +385,8 @@ struct ConvolutionBackwardCudnn
       // Get workspace size
       CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize
             (handle,
-             dataDesc,
-             derOutputDesc,
+             dataDesc.get(),
+             derOutputDesc.get(),
              convDesc,
              filterDesc,
              op.getContext().getCudaHelper().cudnnConvolutionBwdFilterAlgo,
@@ -449,9 +399,9 @@ struct ConvolutionBackwardCudnn
       CHECK(cudnnGetConvolutionBackwardDataAlgorithm
             (handle,
              filterDesc,
-             derOutputDesc,
+             derOutputDesc.get(),
              convDesc,
-             dataDesc,
+             dataDesc.get(),
              op.getContext().getCudaHelper().cudnnConvolutionBwdDataPreference,
              op.getContext().getCudaHelper().cudnnConvolutionBwdDataWorkSpaceLimit,
              &op.getContext().getCudaHelper().cudnnConvolutionBwdDataAlgo)) ;
@@ -460,9 +410,9 @@ struct ConvolutionBackwardCudnn
       CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize
             (handle,
              filterDesc,
-             derOutputDesc,
+             derOutputDesc.get(),
              convDesc,
-             dataDesc,
+             dataDesc.get(),
              op.getContext().getCudaHelper().cudnnConvolutionBwdDataAlgo,
              &op.getContext().getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed)) ;
       workSpaceSize = std::max(workSpaceSize, op.getContext().getCudaHelper().cudnnConvolutionBwdDataWorkSpaceUsed) ;
@@ -494,8 +444,8 @@ struct ConvolutionBackwardCudnn
               IF_CUDNN_GE3_LT4(cudnnConvolutionBackwardFilter_v3)
               (handle,
                &alpha,
-               dataDesc, (type const*)input.getMemory() + dataGrpOffset,
-               derOutputDesc, (type const*)derOutput.getMemory() + derOutputGrpOffset,
+               dataDesc.get(), (type const*)input.getMemory() + dataGrpOffset,
+               derOutputDesc.get(), (type const*)derOutput.getMemory() + derOutputGrpOffset,
                convDesc,
                op.getContext().getCudaHelper().cudnnConvolutionBwdFilterAlgo,
                workSpace, workSpaceSize,
@@ -505,8 +455,8 @@ struct ConvolutionBackwardCudnn
         CHECK(cudnnConvolutionBackwardFilter
               (handle,
                &alpha,
-               dataDesc, (type const*)input.getMemory() + dataGrpOffset,
-               derOutputDesc, (type const*)derOutput.getMemory() + derOutputGrpOffset,
+               dataDesc.get(), (type const*)input.getMemory() + dataGrpOffset,
+               derOutputDesc.get(), (type const*)derOutput.getMemory() + derOutputGrpOffset,
                convDesc,
                &beta,
                filterDesc, (type*)derFilter.getMemory() + filterGrpOffset)) ;
@@ -550,8 +500,8 @@ struct ConvolutionBackwardCudnn
       CHECK(cudnnConvolutionBackwardFilter
             (handle,
              &alpha,
-             dataDesc, (type const*)input.getMemory(),
-             derOutputDesc, (type const*)derOutput.getMemory(),
+             dataDesc.get(), (type const*)input.getMemory(),
+             derOutputDesc.get(), (type const*)derOutput.getMemory(),
              convDesc,
              op.getContext().getCudaHelper().cudnnConvolutionBwdFilterAlgo,
              workSpace, workSpaceSize,
@@ -566,20 +516,18 @@ struct ConvolutionBackwardCudnn
             (handle,
              &alpha,
              filterDesc, (type const*)filter.getMemory(),
-             derOutputDesc, (type const*)derOutput.getMemory(),
+             derOutputDesc.get(), (type const*)derOutput.getMemory(),
              convDesc,
              op.getContext().getCudaHelper().cudnnConvolutionBwdDataAlgo,
              workSpace, workSpaceSize,
              &beta,
-             dataDesc, (type*)derInput.getMemory())) ;
+             dataDesc.get(), (type*)derInput.getMemory())) ;
     }
 #endif
 
   done:
     if (convDescInitialized) { cudnnDestroyConvolutionDescriptor(convDesc) ; }
     if (filterDescInitialized) { cudnnDestroyFilterDescriptor(filterDesc) ; }
-    if (derOutputDescInitialized) { cudnnDestroyTensorDescriptor(derOutputDesc) ; }
-    if (dataDescInitialized) { cudnnDestroyTensorDescriptor(dataDesc) ; }
     return op.getContext().passError(error,signature.c_str()) ;
   }
 } ;

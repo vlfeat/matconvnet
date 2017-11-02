@@ -19,6 +19,10 @@ the terms of the BSD license (see the COPYING file).
 #include "gpu/mxGPUArray.h"
 #endif
 
+#if ENABLE_CUDNN
+#include "cudnn.h"
+#endif
+
 #include "data.hpp"
 #include "mexutils.h"
 
@@ -56,6 +60,9 @@ namespace vl {
   {
   public:
     MexTensor(MexContext & context) ;
+    MexTensor(MexTensor const &) = delete ;
+    MexTensor & operator= (MexTensor & tensor) = delete ;
+
     vl::ErrorCode init(mxArray const * array) ;
     vl::ErrorCode init(DeviceType deviceType, DataType dataType, TensorShape const & shape) ;
     vl::ErrorCode initWithZeros(DeviceType deviceType, DataType dataType, TensorShape const & shape) ;
@@ -76,9 +83,7 @@ namespace vl {
 #endif
     bool isArrayOwner ;
 
-  private: // prevention
-    MexTensor(MexTensor const &) ;
-    MexTensor & operator= (MexTensor & tensor) ;
+  private:
     vl::ErrorCode initHelper(DeviceType deviceType, DataType dataType, TensorShape const & shape, bool fillWithZeros = false) ;
   } ;
 
