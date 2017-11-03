@@ -69,12 +69,10 @@ enum {
   OUT_RESULT = 0, OUT_END
 } ;
 
-void mexFunction(int nout, mxArray *out[],
-                 int nin, mxArray const *in[])
+vl::ErrorCode performROIPooling(vl::MexContext& context,
+                                int nout, mxArray *out[],
+                                int nin, mxArray const *in[])
 {
-  std::array<vl::Int,2> subdivisions {1, 1} ;
-  std::array<double,6> transform {1., 0., 0., 1., 0., 0.} ;
-  vl::nn::ROIPooling::Method method = vl::nn::ROIPooling::Max ;
   bool backMode = false ;
   int verbosity = 0 ;
   int opt ;
@@ -85,10 +83,8 @@ void mexFunction(int nout, mxArray *out[],
   /*                                            Check the arguments */
   /* -------------------------------------------------------------- */
 
-  mexAtExit(atExit) ;
-
   if (nin < 2) {
-    vlmxError(VLMXE_IllegalArgument, "There are less than two arguments.") ;
+    return context.passError(vl::VLE_IllegalArgument, "There are less than two arguments.") ;
   }
 
   if (nin > 2 && vlmxIsString(in[2],-1)) {
@@ -98,92 +94,94 @@ void mexFunction(int nout, mxArray *out[],
     backMode = (nin >= 3) ;
   }
 
+  vl::nn::ROIPooling op(context) ;
+
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
-      case opt_verbose : {
-        ++ verbosity ;
-        break ;
-      }
-
+      case opt_verbose : context.setLogLevel(++verbosity) ; break ;
+      case opt_subdivisions : MXOPTIVEC(SUBDIVISIONS,setSubdivisions) ; break ;
+      case opt_transform: MXOPTDVEC(TRANSFORM,setTransform) ; break ;
       case opt_method : {
         if (!vlmxIsString(optarg,-1)) {
           vlmxError(VLMXE_IllegalArgument, "METHOD is not a string.") ;
         }
-        if (vlmxIsEqualToStringI(optarg, "max")) {
-          method = vl::nn::ROIPooling::Max ;
-        } else if (vlmxIsEqualToStringI(optarg, "avg")) {
-          method = vl::nn::ROIPooling::Average ;
-        } else {
-          vlmxError(VLMXE_IllegalArgument, "METHOD is not a supported method.") ;
-        }
+        if (vlmxIsEqualToStringI(optarg, "max")) { op.setMethod(vl::nn::ROIPooling::Max) ; }
+        else if (vlmxIsEqualToStringI(optarg, "avg")) { op.setMethod(vl::nn::ROIPooling::Average) ; }
+        else context.setError(vl::VLE_IllegalArgument, "METHOD is not a supported method.") ;
         break ;
       }
-
-      case opt_subdivisions : {
-        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          vlmxError(VLMXE_IllegalArgument, "SUBDIVISIONS is not a plain matrix.") ;
-        }
-        switch (mxGetNumberOfElements(optarg)) {
-          case 1:
-            subdivisions[0] = (vl::Int)mxGetPr(optarg)[0] ;
-            subdivisions[1] = (vl::Int)mxGetPr(optarg)[0] ;
-
-          case 2:
-            subdivisions[0] = (vl::Int)mxGetPr(optarg)[0] ;
-            subdivisions[1] = (vl::Int)mxGetPr(optarg)[1] ;
-            break ;
-
-          default:
-            vlmxError(VLMXE_IllegalArgument, "SUBDIVISIONS does not have one or two elements.") ;
-            break ;
-        }
-        if (subdivisions[0] < 1 || subdivisions[1] < 1) {
-          vlmxError(VLMXE_IllegalArgument, "SUBDIVISIONS has an element smaller than 1.") ;
-        }
-        break ;
-      }
-
-      case opt_transform : {
-        if (!vlmxIsPlainMatrix(optarg,-1,-1)) {
-          vlmxError(VLMXE_IllegalArgument, "TRANSFORM is not a plain matrix.") ;
-        }
-        int n = (int) mxGetNumberOfElements(optarg) ;
-        switch (n) {
-          case 1: case 2:
-            transform[0] = mxGetPr(optarg)[std::min(n - 1, 0)] ;
-            transform[3] = mxGetPr(optarg)[std::min(n - 1, 1)] ;
-            transform[4] = 1. - transform[0] ;
-            transform[5] = 1. - transform[3] ;
-            break ;
-
-          case 6:
-            std::copy(mxGetPr(optarg), mxGetPr(optarg) + transform.size(),
-                      transform.begin()) ;
-            break ;
-
-          default:
-            vlmxError(VLMXE_IllegalArgument, "TRANSFORM is neither a 1 x 1, 2 x 1, or 2 x 3 matrix.") ;
-        }
-        break ;
-      }
-
-      default:
-        break ;
+      default: assert(false) ; break ;
     }
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor derOutput(context) ;
-  vl::MexTensor rois(context) ;
-
-  /* Get data */
-  rois.init(in[IN_ROIS]);
   data.init(in[IN_DATA]) ;
-  if (backMode) { derOutput.init(in[IN_DEROUTPUT]) ; }
 
-  if (backMode && ! vl::areCompatible(data, derOutput)) {
-    vlmxError(VLMXE_IllegalArgument, "DATA and DEROUTPUT do not have compatible formats.") ;
+  vl::MexTensor rois(context) ;
+  rois.init(in[IN_ROIS]);
+
+  if (!backMode) {
+    // Forward mode.
+    vl::DeviceType deviceType = data.getDeviceType() ;
+    vl::DataType dataType = data.getDataType() ;
+
+    // Compute the size of the output tensor.
+    vl::TensorShape outputShape ;
+    MXCHECK(op.forwardShape(outputShape,data,rois)) ;
+
+    // Initialize output tensor.
+    vl::MexTensor output(context) ;
+    output.initWithZeros(deviceType, dataType, outputShape) ;
+
+    // Perform calculation.
+    MXCHECK(op.forward(output,data,rois)) ;
+
+    // Return results.
+    out[OUT_RESULT] = output.relinquish() ;
+  } else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    vl::DeviceType deviceType = derOutput.getDeviceType() ;
+    vl::DataType dataType = derOutput.getDataType() ;
+
+    // Initialize the tensors to be returned.
+    vl::MexTensor derData(context) ;
+    derData.initWithZeros(deviceType, dataType, data.getShape()) ;
+
+    // Perform calculation.
+    MXCHECK(op.backward(derData,data,rois,derOutput)) ;
+
+    // Return results.
+    out[OUT_RESULT] = derData.relinquish() ;
   }
+  return vl::VLE_Success ;
+}
+
+void mexFunction(int nout, mxArray *out[],
+                 int nin, mxArray const *in[])
+{
+  mexAtExit(atExit) ;
+  context.setLogLevel(0) ;
+  context.clearLog() ;
+
+  vl::ErrorCode error = performROIPooling(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnroipoool:\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
+    }
+    context.setLogLevel(0) ;
+  }
+
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
+  }
+  return ;
+}
+
+#if 0
 
   Int numROIs = rois.getNumElements() / 5 ;
 
@@ -271,3 +269,4 @@ void mexFunction(int nout, mxArray *out[],
     out[OUT_RESULT] = output.relinquish() ;
   }
 }
+#endif

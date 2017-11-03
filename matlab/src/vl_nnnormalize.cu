@@ -76,7 +76,7 @@ vl::ErrorCode performLRN(vl::MexContext& context,
   /* -------------------------------------------------------------- */
 
   if (nin < 2) {
-    mexErrMsgTxt("The arguments are less than two.") ;
+    return context.passError(vl::VLE_IllegalArgument, "There are less than two arguments.") ;
   }
 
   if (nin > 2 && vlmxIsString(in[2],-1)) {

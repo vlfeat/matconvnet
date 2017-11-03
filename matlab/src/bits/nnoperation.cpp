@@ -1,10 +1,6 @@
-//
-//  nnoperation.cpp
-//  mcn-lib-cpu
-//
-//  Created by Andrea Vedaldi on 16/10/2017.
-//  Copyright © 2017 Andrea Vedaldi. All rights reserved.
-//
+// @file nnoperation.cpp
+// @brief Operation base class
+// @author Andrea Vedaldi
 
 #include "nnoperation.hpp"
 #include <algorithm>

@@ -16,7 +16,7 @@ the terms of the BSD license (see the COPYING file).
 #define __vl__nnroipooling__
 
 #include "nnoperation.hpp"
-#include <array>
+#include <vector>
 
 namespace vl { namespace nn {
 
@@ -24,33 +24,43 @@ namespace vl { namespace nn {
   public:
     enum Method { Max, Average } ;
 
-    ROIPooling(vl::Context &context,
-               std::array<Int,2> subdivisions,
-               std::array<double,6> transform,
+    ROIPooling(Context &context) ;
+    ROIPooling(Context &context,
+               std::vector<Int> const &subdivisions,
+               std::vector<double> const &transform,
                Method method) ;
 
-    vl::ErrorCode forward(vl::Tensor &output,
-                          vl::Tensor const &input,
-                          vl::Tensor const &rois) const ;
+    ErrorCode forwardShape(TensorShape &output,
+                           TensorShape const &input,
+                           TensorShape const &rois) const ;
 
-    vl::ErrorCode backward(vl::Tensor &derInput,
-                           vl::Tensor const &input,
-                           vl::Tensor const &rois,
-                           vl::Tensor const &derOutput) const ;
+    ErrorCode forward(Tensor &output,
+                      Tensor const &input,
+                      Tensor const &rois) const ;
 
-    std::array<Int,2> const& getSubdivisions() const {
+    ErrorCode backward(Tensor &derInput,
+                       Tensor const &input,
+                       Tensor const &rois,
+                       Tensor const &derOutput) const ;
+
+    ErrorCode setSubdivisions(std::vector<Int> const &subdivisions) ;
+    std::vector<Int> const& getSubdivisions() const {
       return subdivisions ;
     }
 
-    std::array<double,6> const& getTransform() const {
+    ErrorCode setTransform(std::vector<double> const &transform) ;
+    std::vector<double> const& getTransform() const {
       return transform ;
     }
 
+    ErrorCode setMethod(Method method) ;
     Method getMethod() const { return method ; }
 
+    Int getNumSpatialDimensions() const { return 2 ; }
+
   private:
-    std::array<Int,2> subdivisions ;
-    std::array<double,6> transform ;
+    std::vector<Int> subdivisions ;
+    std::vector<double> transform ;
     Method method ;
   } ;
   

@@ -27,6 +27,10 @@ using namespace vl::impl ;
 template<DeviceType deviceType, DataType dataType> struct ROIPoolingForward ;
 template<DeviceType deviceType, DataType dataType> struct ROIPoolingBackward ;
 
+#if ENABLE_GPU
+#include "nnroipooling_gpu.cu"
+#endif
+
 // -------------------------------------------------------------------
 //                                                             Helpers
 // -------------------------------------------------------------------
@@ -107,6 +111,10 @@ struct ROIPoolingForwardCPU
                            Tensor const &input,
                            Tensor const &rois)
   {
+    static const std::string signature = std::string("ROIPoolingForward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int numROIs = rois.getNumElements() / 5 ;
     Int height = input.getHeight() ;
@@ -224,6 +232,10 @@ struct ROIPoolingBackwardCPU
                            Tensor const &rois,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("ROIPoolingBackward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int numROIs = rois.getNumElements() / 5 ;
     Int height = input.getHeight() ;
@@ -329,16 +341,12 @@ struct ROIPoolingBackward<VLDT_CPU,dataType>
 } ;
 
 // -------------------------------------------------------------------
-//                                                              Driver
+/// MARK: - Driver
 // -------------------------------------------------------------------
 
-#if ENABLE_GPU
-#include "nnroipooling_gpu.cu"
-#endif
-
 ROIPooling::ROIPooling(Context &context,
-                       std::array<Int,2> subdivisions,
-                       std::array<double,6> transform,
+                       std::vector<Int> const& subdivisions,
+                       std::vector<double> const& transform,
                        Method method) :
 Operation(context),
 subdivisions(subdivisions),
@@ -346,12 +354,153 @@ transform(transform),
 method(method)
 { }
 
+ROIPooling::ROIPooling(Context &context)
+:
+Operation(context),
+subdivisions {1,1},
+transform {1., 0., 0., 1., 0., 0.},
+method (Max)
+{ }
+
+ErrorCode ROIPooling::setSubdivisions(std::vector<Int> const& subdivisions) {
+  // Stride must be positive.
+  if (any_of(begin(subdivisions),end(subdivisions),[](Int x){return x <= 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "An element of SUBDIVISIONS is less than 1.") ;
+  }
+  // There must one stride per spatial dimension.
+  if (Int(subdivisions.size()) == getNumSpatialDimensions()) {
+    this->subdivisions = subdivisions ;
+  }
+  else if (subdivisions.size() == 1) {
+    fill(begin(this->subdivisions),end(this->subdivisions),subdivisions[0]) ;
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "SUBDIVISIONS is neither scalar nor has the same"
+     " cardinality as the number of spatial dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+ErrorCode ROIPooling::setTransform(std::vector<double> const& transform)
+{
+  // There must one stride per spatial dimension.
+  Int ns = getNumSpatialDimensions() ;
+  if (Int(transform.size()) == (ns)*(ns+1)) {
+    this->transform = transform ;
+  }
+  else if ((Int)transform.size() == 2*ns) {
+    fill(begin(this->transform),end(this->transform),.0) ;
+    for (Int i = 0 ; i < ns ; ++i) {
+      this->transform[size_t(i + ns*i)] = transform[size_t(i)] ;
+      this->transform[size_t(i + ns*ns)] = transform[size_t(i+ns)] ;
+    }
+  }
+  else if (transform.size() == 1) {
+    fill(begin(this->transform),end(this->transform),.0) ;
+    for (Int i = 0 ; i < ns ; ++i) {
+      this->transform[size_t(i + ns*i)] = transform[0] ;
+    }
+  }
+  else {
+    return getContext().setError
+    (VLE_IllegalArgument, "TRANSFORMS is neither scalar nor has the the "
+     "appropriate size for the number of spatial dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+ErrorCode ROIPooling::setMethod(Method method) {
+  if (method != Average && method != Max) {
+    return getContext().setError(VLE_IllegalArgument, "Unknown METHOD.") ;
+  }
+  this->method = method ;
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+ROIPooling::forwardShape(TensorShape &output,
+                         TensorShape const& input,
+                         TensorShape const& rois) const
+{
+  output.clear() ;
+  auto ns = getNumSpatialDimensions() ;
+
+  // INPUT must have spatial dimensions, channels, and instances.
+  if (input.getNumDimensions() > ns+2) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "ROIPooling: INPUT has too many dimensions.") ;
+  }
+
+  // ROIS must contain an integer number of ROI specifications.
+  Int numROIs = rois.getNumElements() / 5 ;
+  if (numROIs * 5 != rois.getNumElements()) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch, "ROIPooling: the number of elements of ROI is not a multiple of 5.") ;
+  }
+
+  // Output has size SUBD... x INPUT_CHANNELS x NUMROIS.
+  std::vector<Int> dims (size_t(ns + 2)) ;
+  copy(begin(subdivisions),end(subdivisions),begin(dims)) ;
+  dims[size_t(ns)] = input.getDimension(ns) ;
+  dims[size_t(ns)+1] = numROIs ;
+
+  output = dims ;
+  return VLE_Success ;
+}
+
 vl::ErrorCode
 ROIPooling::forward(Tensor &output,
                     Tensor const &input,
                     Tensor const &rois) const
 {
-  return dispatch<ROIPoolingForward>()(*this,output,input,rois) ;
+  // Validate arguments.
+  ErrorCode error ;
+  if (!check_tensor_compatibility(output,input,rois)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: the tensors have mismatching data or device type.") ;
+  }
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape, input, rois)) != VLE_Success) {
+    return error ;
+  }
+  if (output != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "ROIPoolingForward: OUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (input.isEmpty() || input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: INPUT is empty or null.") ;
+  }
+  if (input.isEmpty() || input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: OUTPUT is empty or null.") ;
+  }
+  if (rois.isEmpty() || rois.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: ROI is empty or null.") ;
+  }
+
+  VLLOG(*this,1)
+  << "ROIPoolingForward:"
+  << " subdivisions=" << pretty(getSubdivisions())
+  << " transform=" << pretty(getTransform()) ;
+
+  VLLOG(*this,1)
+  << "ROIPoolingForward:"
+  << " input=" << pretty(input.getDimensions())
+  << " rois=" << pretty(rois.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<ROIPoolingForward>()(*this,output,input,rois),
+   "ROIPoolingForward") ;
 }
 
 vl::ErrorCode
@@ -360,5 +509,57 @@ ROIPooling::backward(Tensor &derInput,
                      Tensor const &rois,
                      Tensor const &derOutput) const
 {
-  return dispatch<ROIPoolingBackward>()(*this,derInput,input,rois,derOutput) ;
+  // Validate arguments.
+  ErrorCode error ;
+  if (!check_tensor_compatibility(derInput,input,rois,derOutput)) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: the tensors have mismatching data or device type.") ;
+  }
+  TensorShape outputShape ;
+  if ((error = forwardShape(outputShape, input, rois)) != VLE_Success) {
+    return error ;
+  }
+  if (derOutput != outputShape) {
+    return getContext().setError
+    (VLE_TensorShapeMismatch,
+     "ROIPoolingForward: OUTPUT does not have the appropriate dimensions.") ;
+  }
+  if (input.isEmpty() || input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: INPUT is empty or null.") ;
+  }
+  if (input.isEmpty() || input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: OUTPUT is empty or null.") ;
+  }
+  if (rois.isEmpty() || rois.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ROIPoolingForward: ROI is empty or null.") ;
+  }
+
+  VLLOG(*this,1)
+  << "ROIPoolingBackward:"
+  << " subdivisions=" << pretty(getSubdivisions())
+  << " transform=" << pretty(getTransform())
+  << " method=" << (getMethod() == Average ? "Average" : "Max") ;
+
+  VLLOG(*this,1)
+  << "ROIPoolingBackward:"
+  << " derInput=" << pretty(derInput.getDimensions())
+  << " input=" << pretty(input.getDimensions())
+  << " rois=" << pretty(rois.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<ROIPoolingBackward>()(*this,derInput,input,rois,derOutput),
+   "ROIPoolingBackward") ;
 }
+
+
+
+
+

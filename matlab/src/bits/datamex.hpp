@@ -29,12 +29,15 @@ the terms of the BSD license (see the COPYING file).
 #define MXCHECK(x) \
 { vl::ErrorCode error = (x) ; if (error != vl::VLE_Success) { return error ; } }
 
-#define MXOPTIVEC(x,y) \
-{ std::vector<Int> x ; \
+#define MXOPTxVEC(T,x,y) \
+{ std::vector<T> x ; \
 if (context.parse(x,optarg) != vl::VLE_Success) { \
 return context.passError(vl::VLE_IllegalArgument, "Could not set " #x ":") ; } \
 vl::ErrorCode error = (op.y(x)) ; \
 if (error != vl::VLE_Success) { return error ; } }
+
+#define MXOPTIVEC(x,y) MXOPTxVEC(Int,x,y)
+#define MXOPTDVEC(x,y) MXOPTxVEC(double,x,y)
 
 #define MXOPTDSCAL(x,y) \
 { if (!vlmxIsPlainScalar(optarg)) { \
@@ -52,11 +55,12 @@ namespace vl {
     MexContext() ;
     ~MexContext() ;
 
-    ErrorCode parse(std::vector<Int>& vec, mxArray const* array) {
+    template <typename type>
+    ErrorCode parse(std::vector<type>& vec, mxArray const* array) {
       if (!vlmxIsPlainMatrix(array,-1,-1)) {
         return setError(vl::VLE_IllegalArgument, "Not a plain vector.") ;
       }
-      vec = std::move(std::vector<Int>{
+      vec = std::move(std::vector<type>{
         mxGetPr(array), mxGetPr(array) + mxGetNumberOfElements(array)}) ;
       return VLE_Success ;
     }

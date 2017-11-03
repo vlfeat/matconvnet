@@ -254,6 +254,10 @@ struct ROIPoolingForwardGPU
                            Tensor const &input,
                            Tensor const &rois)
   {
+    static const std::string signature = std::string("ROIPoolingForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int numROIs = rois.getNumElements() / 5 ;
     Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getNumChannels() * numROIs ;
@@ -264,15 +268,24 @@ struct ROIPoolingForwardGPU
     }
     else { assert(method == ROIPooling::Max) ; }
 
+    std::array<Int,2> subdivisions {} ;
+    assert(op.getSubdivisions().size() == 2) ;
+    copy(begin(op.getSubdivisions()),end(op.getSubdivisions()),begin(subdivisions)) ;
+
+    std::array<double,6> transform {} ;
+    assert(op.getTransform().size() == 6) ;
+    copy(begin(op.getTransform()),end(op.getTransform()),begin(transform)) ;
+
     func <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     ((type*)output.getMemory(),
      (type const*)input.getMemory(),
      (int)input.getHeight(),(int)input.getWidth(),(int)input.getNumChannels(),(int)input.getCardinality(),
      (type const*)rois.getMemory(), (int)numROIs,
-     Geom<type>(op.getSubdivisions(),op.getTransform())) ;
+     Geom<type>(subdivisions,transform)) ;
 
-    cudaError_t status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    CKCUDA ;
+
+    return VLE_Success ;
   }
 } ;
 
@@ -309,6 +322,10 @@ struct ROIPoolingBackwardGPU
                            Tensor const &rois,
                            Tensor const &derOutput)
   {
+    static const std::string signature = std::string("ROIPoolingBackward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     typedef typename vl::DataTypeTraits<dataType>::type type ;
     Int numROIs = rois.getNumElements() / 5 ;
     Int outputVolume = op.getSubdivisions()[0] * op.getSubdivisions()[1] * input.getNumChannels() * numROIs ;
@@ -319,16 +336,25 @@ struct ROIPoolingBackwardGPU
     }
     else { assert(method == ROIPooling::Max) ; }
 
+    std::array<Int,2> subdivisions {} ;
+    assert(op.getSubdivisions().size() == 2) ;
+    copy(begin(op.getSubdivisions()),end(op.getSubdivisions()),begin(subdivisions)) ;
+
+    std::array<double,6> transform {} ;
+    assert(op.getTransform().size() == 6) ;
+    copy(begin(op.getTransform()),end(op.getTransform()),begin(transform)) ;
+
     func <<< divideAndRoundUp((unsigned)outputVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     ((type*)derInput.getMemory(),
      (type const*)input.getMemory(),
      (int)input.getHeight(), (int)input.getWidth(), (int)input.getNumChannels(), (int)input.getCardinality(),
      (type const*)rois.getMemory(), (int)numROIs,
      (type const*)derOutput.getMemory(),
-     Geom<type>(op.getSubdivisions(),op.getTransform())) ;
+     Geom<type>(subdivisions,transform)) ;
 
-    cudaError_t status = cudaPeekAtLastError() ;
-    return (status == cudaSuccess) ? vl::VLE_Success : vl::VLE_Cuda ;
+    CKCUDA ;
+
+    return VLE_Success ;
   }
 } ;
 
