@@ -100,7 +100,15 @@ vl::ErrorCode performNormalizeLp(vl::MexContext& context,
       case opt_norms : normsArray = optarg ; givenNormsMode = true ; break ;
       case opt_epsilon : MXOPTDSCAL(EPSILON,setEpsilon) ; break ;
       case opt_exponent : MXOPTDSCAL(EXPONENT,setExponent) ; break ;
-      case opt_dimensions : MXOPTIVEC(DIMENSIONS,setSelectedDimensions) ; break;
+      case opt_dimensions : {
+        std::vector<Int> dims ;
+        if (context.parse(dims,optarg) != vl::VLE_Success) {
+          return context.passError(vl::VLE_IllegalArgument, "Could not set SELECTEDDIMENSIONS:") ;
+        }
+        for (auto& dim : dims) dim-- ;
+        MXCHECK(op.setSelectedDimensions(dims)) ;
+        break ;
+      }
       case opt_spatial : op.setSelectedDimensions({0,1}) ; break ;
       case opt_no_cudnn:
 #if ENABLE_CUDNN
