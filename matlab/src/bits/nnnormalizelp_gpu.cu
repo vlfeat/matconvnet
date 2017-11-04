@@ -282,6 +282,10 @@ struct NormalizeLpForwardGPU
                            typename NormAgrument<givenNorms>::type norms,
                            Tensor const &input)
   {
+    static const std::string signature = std::string("NormalizeLpForward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     assert(norms || !givenNorms) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -303,6 +307,8 @@ struct NormalizeLpForwardGPU
       computeNorms<type>
       <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
       (normsData,inputData,(type)op.getExponent(),(type)op.getEpsilon(),vp) ;
+
+      CKCUDA ;
     }
 
     // Divide by them.
@@ -311,7 +317,8 @@ struct NormalizeLpForwardGPU
     <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     (outputData,inputData,normsData,vp) ;
 
-    //cout << "n vol " << vp.normsVolume << endl ;
+    CKCUDA ;
+
     return vl::VLE_Success ;
   }
 } ;
@@ -339,6 +346,10 @@ struct NormalizeLpBackwardGPU
                            Tensor const &input,
                            Tensor const& derOutput)
   {
+    static const std::string signature = std::string("NormalizeLpBackward[MCN,")
+    + DeviceTypeTraits<VLDT_GPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     assert(norms || !givenNorms) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -365,6 +376,8 @@ struct NormalizeLpBackwardGPU
       computeNorms<type>
       <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
       (normsData,inputData,(type)op.getExponent(),(type)op.getEpsilon(),vp) ;
+
+      CKCUDA ;
     }
 
     // Compute sum(derOutput .* input).
@@ -373,11 +386,15 @@ struct NormalizeLpBackwardGPU
     <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     (scratchData,inputData,derOutputData,vp) ;
 
+    CKCUDA ;
+
     // Compute derInputs.
     type * derInputData = (type*)derInput.getMemory() ;
     computeDerInput<type>
     <<< divideAndRoundUp((unsigned)vp.normsVolume,VL_CUDA_NUM_THREADS),VL_CUDA_NUM_THREADS >>>
     (derInputData,inputData,normsData,derOutputData,scratchData,(type)op.getExponent(),vp) ;
+
+    CKCUDA ;
 
     return vl::VLE_Success ;
   }

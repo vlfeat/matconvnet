@@ -148,6 +148,10 @@ struct NormalizeLpForwardCPU
                            typename NormAgrument<givenNorms>::type norms,
                            vl::Tensor const &input)
   {
+    static const std::string signature = std::string("NormalizeLpForward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     assert(norms || !givenNorms) ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -216,6 +220,10 @@ struct NormalizeLpBackwardCPU
                            vl::Tensor const &input,
                            vl::Tensor const& derOutput)
   {
+    static const std::string signature = std::string("NormalizeLpBackward[MCN,")
+    + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
+    VLLOG(op,1) << signature ;
+
     assert(norms || !givenNorms) ;
 
     // Compute tensor geometry.
