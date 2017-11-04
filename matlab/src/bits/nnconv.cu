@@ -101,23 +101,16 @@ Convolution::setDilation(vector<Int> const& dilation)
 vl::ErrorCode
 Convolution::forwardShape(TensorShape &output,
                           TensorShape const& input,
-                          TensorShape const& filter,
-                          TensorShape const& bias) const
+                          TensorShape const& filter) const
 {
   output.clear() ;
 
-  // The input tensor cannot be empty.
+  // Check the data shape.
   if (input.isEmpty()) {
     return getContext().setError
     (VLE_TensorShapeMismatch, "Convolution: the INPUT tensor is empty.") ;
   }
-
-  // We pretend all tensors have an infinite number of dimensions,
-  // potentially singleton.
   Int ns = getNumSpatialDimensions() ;
-
-  // The tensors should have ns+2 dimensions. Todo: we may relax that by implicitly
-  // folding the excess dimensions.
   if (input.getNumDimensions() > ns + 2) {
     return getContext().setError(VLE_TensorShapeMismatch,
                                  "Convolution: INPUT has too many dimensions.") ;
@@ -162,8 +155,9 @@ Convolution::forwardShape(TensorShape &output,
     }
     output.setDimension(ns, numFilters) ;
     output.setDimension(ns+1, input.getDimension(ns+1)) ;
-  } else {
-    // Bias / subsample mode.
+  }
+  else {
+    // Identity filters mode.
     for (Int d = 0 ; d < ns ; ++d) {
       Int odim = convLikeSizeHelper(input.getDimension(d),
                                     1,
@@ -181,18 +175,6 @@ Convolution::forwardShape(TensorShape &output,
     output.setDimension(ns, input.getDimension(ns)) ;
     output.setDimension(ns+1, input.getDimension(ns+1)) ;
   }
-
-  // Check the bias.
-  bool hasBias = !bias.isEmpty() ;
-  if (hasBias) {
-    if (bias.getNumElements() != output.getNumChannels()) {
-      output.clear() ;
-      return  getContext().setError
-      (VLE_TensorShapeMismatch,
-       "Convolution: BIAS does not have a number of elements equal to the number of output feature channels.") ;
-    }
-  }
-
   return VLE_Success ;
 }
 
@@ -204,14 +186,35 @@ Convolution::forward(Tensor &output, double outputMult,
 {
   ErrorCode error ;
 
-  // Validate arguments.
-  if (!check_tensor_compatibility(output,input,filter,bias)) {
+  // Check data format.
+  if (!check_tensor_compatibility(output,input,filter)) {
     return getContext().setError
     (VLE_IllegalArgument,
      "ConvolutionForward: the tensors have mismatching data or device type.") ;
   }
+  if (!input.isEmpty() && input.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionForward: INPUT is not empty but null.") ;
+  }
+  if (!output.isEmpty() && output.isNull()) {
+    return  getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionForward: OUTPUT is not empty but null..") ;
+  }
+  if (!filter.isEmpty() && filter.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionForward: FILTER is not empty but null.") ;
+  }
+  if (!bias.isNull() && bias.isNull()) {
+    return getContext().setError
+    (VLE_IllegalArgument,
+     "ConvolutionForward: BIAS is not empty but null.") ;
+  }
+  // Check data shape.
   TensorShape outputShape ;
-  if ((error = forwardShape(outputShape, input, filter, bias)) != VLE_Success) {
+  if ((error = forwardShape(outputShape, input, filter)) != VLE_Success) {
     return error ;
   }
   if (output != outputShape) {
@@ -219,25 +222,16 @@ Convolution::forward(Tensor &output, double outputMult,
     (VLE_TensorShapeMismatch,
      "ConvolutionForward: OUTPUT does not have the appropriate dimensions.") ;
   }
-  if (!input.isEmpty() && input.isNull()) {
-    return getContext().setError
-    (VLE_IllegalArgument,
-     "ConvolutionForward: INPUT is not an empty tensor, but it has no data either.") ;
-  }
-  if (!output.isEmpty() && output.isNull()) {
-    return  getContext().setError
-    (VLE_IllegalArgument,
-     "ConvolutionForward: OUTPUT is not an empty tensor, but it has no data either.") ;
-  }
-  if (!filter.isEmpty() && filter.isNull()) {
-    return getContext().setError
-    (VLE_IllegalArgument,
-     "ConvolutionForward: FILTER is not an empty tensor, but it has no data either.") ;
-  }
-  if (!bias.isNull() && bias.isNull()) {
-    return getContext().setError
-    (VLE_IllegalArgument,
-     "ConvolutionForward: BIAS is not an empty tensor, but it has no data either.") ;
+  // Check the bias.
+  if (!bias.isEmpty()) {
+    // Has bias.
+    if (bias.getNumElements() != output.getNumChannels()) {
+      output.clear() ;
+      return  getContext().setError
+      (VLE_TensorShapeMismatch,
+       "ConvolutionForward: BIAS does not have a number of elements equal to"
+       " the number of output feature channels.") ;
+    }
   }
 
   VLLOG(*this,1)
@@ -322,7 +316,7 @@ Convolution::backward(Tensor &derInput,
 
   // Check that we have the output derivative.
   TensorShape outputShape ;
-  if ((error = forwardShape(outputShape, input, filter, TensorShape())) != VLE_Success) {
+  if ((error = forwardShape(outputShape, input, filter)) != VLE_Success) {
     return error ;
   }
   if (derOutput != outputShape) {
@@ -441,6 +435,15 @@ Convolution::backward(Tensor &derInput,
 
 /// MARK: - Convolution Transpose
 
+ConvolutionTranspose::ConvolutionTranspose(Context &context)
+: Operation(context),
+numSpatialDimensions(2),
+numFilterGroups(1)
+{
+  cropping.fill(0) ;
+  upsampling.fill(1) ;
+}
+
 /// Todo: make obsolete
 ConvolutionTranspose::ConvolutionTranspose(Context &context,
                                            Int upsampleY,
@@ -456,15 +459,6 @@ upsampling {upsampleY, upsampleX},
 cropping {cropTop, cropBottom, cropLeft, cropRight},
 numFilterGroups {1}
 { }
-
-ConvolutionTranspose::ConvolutionTranspose(Context &context)
-: Operation(context),
-numSpatialDimensions(2),
-numFilterGroups(1)
-{
-  cropping.fill(0) ;
-  upsampling.fill(1) ;
-}
 
 vl::ErrorCode
 ConvolutionTranspose::setUpsampling(vector<Int> const& upsampling)
@@ -529,12 +523,11 @@ ConvolutionTranspose::setNumFilterGroups(Int numFilterGroups)
 vl::ErrorCode
 ConvolutionTranspose::forwardShape(TensorShape &output,
                                    TensorShape const& input,
-                                   TensorShape const& filter,
-                                   TensorShape const& bias) const
+                                   TensorShape const& filter) const
 {
   output.clear() ;
 
-  // The input tensor cannot be empty.
+  // Check data shape.
   if (input.isEmpty()) {
     return getContext().setError
     (VLE_TensorShapeMismatch, "ConvolutionTranspose: the INPUT tensor is empty.") ;
@@ -543,13 +536,7 @@ ConvolutionTranspose::forwardShape(TensorShape &output,
     return getContext().setError
     (VLE_TensorShapeMismatch, "ConvolutionTranspose: FILTER is empty.") ;
   }
-
-  // We pretend all tensors have an infinite number of dimensions,
-  // potentially singleton.
   Int ns = getNumSpatialDimensions() ;
-
-  // The tensors should have ns+2 dimensions. Todo: we may relax that by implicitly
-  // folding the excess dimensions.
   if (input.getNumDimensions() > ns + 2) {
     return getContext().setError(VLE_TensorShapeMismatch,
                                  "ConvolutionTranspose: INPUT has too many dimensions.") ;
@@ -558,8 +545,7 @@ ConvolutionTranspose::forwardShape(TensorShape &output,
     return getContext().setError(VLE_TensorShapeMismatch,
                                  "ConvolutionTranspose: FILTER has too many dimensions.") ;
   }
-
-  // Check the filters.
+  // Note that channels and cardinality are transposed for FILTER.
   if (filter.getCardinality() % getNumFilterGroups() != 0) {
     return getContext().setError
     (VLE_TensorShapeMismatch,
@@ -568,12 +554,8 @@ ConvolutionTranspose::forwardShape(TensorShape &output,
   if (filter.getCardinality() != input.getNumChannels()) {
     return getContext().setError
     (VLE_TensorShapeMismatch,
-     "The total number of channels in FILTERS is not the same as the number of channels of INPUT.") ;
+     "The total number of channels in FILTERS is not the same as the number of channels in INPUT.") ;
   }
-
-  Int inputNumChannels = input.getDimension(ns)  ;
-  Int filterNumChannels = filter.getDimension(ns) ;
-  Int numFilters = filter.getDimension(ns+1) ;
 
   for (Int d = 0 ; d < ns ; ++d) {
     Int odim =
@@ -590,18 +572,6 @@ ConvolutionTranspose::forwardShape(TensorShape &output,
   }
   output.setDimension(ns, filter.getNumChannels() * getNumFilterGroups()) ;
   output.setDimension(ns+1, input.getDimension(ns+1)) ;
-
-  // Check the bias.
-  bool hasBias = !bias.isEmpty() ;
-  if (hasBias) {
-    if (bias.getNumElements() != output.getNumChannels()) {
-      output.clear() ;
-      return getContext().setError
-      (VLE_TensorShapeMismatch,
-       "ConvolutionTranspose: BIAS does not have a number of elements"
-       " equal to the number of output feature channels.") ;
-    }
-  }
 
   return VLE_Success ;
 }

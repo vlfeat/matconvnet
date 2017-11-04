@@ -24,37 +24,35 @@ namespace vl { namespace nn {
 
   class Convolution : public ConvolutionLike {
   public:
+    Convolution(Context &context) ;
     Convolution(Context &context,
                 Int strideY, Int strideX,
                 Int padTop, Int padBottom,
                 Int padLeft, Int padRight,
                 Int dilateY, Int dilateX) ;
 
-    Convolution(Context &context) ;
+    ErrorCode forwardShape(TensorShape &output,
+                           TensorShape const& input,
+                           TensorShape const& filter) const ;
 
-    vl::ErrorCode forward(vl::Tensor &output, double outputMult,
-                          vl::Tensor const& input, double inputMult,
-                          vl::Tensor const& filter,
-                          vl::Tensor const& bias) const ;
+    ErrorCode forward(Tensor &output, double outputMult,
+                      Tensor const& input, double inputMult,
+                      Tensor const& filter,
+                      Tensor const& bias) const ;
 
-    vl::ErrorCode forwardShape(vl::TensorShape &output,
-                               vl::TensorShape const& input,
-                               vl::TensorShape const& filter,
-                               vl::TensorShape const& bias) const ;
+    ErrorCode backward(Tensor &derInput,
+                       Tensor &derFilter,
+                       Tensor &derBias,
+                       Tensor const &input,
+                       Tensor const &filter,
+                       Tensor const &derOutput) const ;
 
-    vl::ErrorCode backward(vl::Tensor &derInput,
-                           vl::Tensor &derFilter,
-                           vl::Tensor &derBias,
-                           vl::Tensor const &input,
-                           vl::Tensor const &filter,
-                           vl::Tensor const &derOutput) const ;
+    ErrorCode backwardShape(Tensor &output, double outputMult,
+                            Tensor const& input, double inputMult,
+                            Tensor const& filter,
+                            Tensor const& bias) const ;
 
-    vl::ErrorCode backwardShape(vl::Tensor &output, double outputMult,
-                                vl::Tensor const& input, double inputMult,
-                                vl::Tensor const& filter,
-                                vl::Tensor const& bias) const ;
-
-    vl::ErrorCode setDilation(std::vector<Int> const& dilation) ;
+    ErrorCode setDilation(std::vector<Int> const& dilation) ;
 
     Int getDilation(Int index) const {
       assert(0 <= index && index < getNumSpatialDimensions()) ;
@@ -78,39 +76,38 @@ namespace vl { namespace nn {
                          Int cropTop, Int cropBottom,
                          Int cropLeft, Int cropRight) ;
 
-    vl::ErrorCode forward(vl::Tensor &output,
-                          vl::Tensor const &input,
-                          vl::Tensor const &filter,
-                          vl::Tensor const &bias) const ;
+    ErrorCode forwardShape(TensorShape &output,
+                           TensorShape const& input,
+                           TensorShape const& filter) const ;
 
-    vl::ErrorCode forwardShape(TensorShape &output,
-                               TensorShape const& input,
-                               TensorShape const& filter,
-                               TensorShape const& bias) const ;
+    ErrorCode forward(Tensor &output,
+                      Tensor const &input,
+                      Tensor const &filter,
+                      Tensor const &bias) const ;
 
-    vl::ErrorCode backward(vl::Tensor &derData,
-                           vl::Tensor &derFilter,
-                           vl::Tensor &derBias,
-                           vl::Tensor const &input,
-                           vl::Tensor const &filter,
-                           vl::Tensor const &derOutput) const ;
+    ErrorCode backward(Tensor &derData,
+                       Tensor &derFilter,
+                       Tensor &derBias,
+                       Tensor const &input,
+                       Tensor const &filter,
+                       Tensor const &derOutput) const ;
 
     Int getNumSpatialDimensions() const {
       return numSpatialDimensions ;
     }
 
-    vl::ErrorCode setNumFilterGroups(Int numFilterGroups) ;
+    ErrorCode setNumFilterGroups(Int numFilterGroups) ;
     Int getNumFilterGroups() const { return numFilterGroups ; }
-    vl::ErrorCode setUpsampling(std::vector<Int> const& upsampling) ;
-    vl::ErrorCode setCropping(std::vector<Int> const& cropping) ;
+    ErrorCode setUpsampling(std::vector<Int> const& upsampling) ;
+    ErrorCode setCropping(std::vector<Int> const& cropping) ;
 
     Int getCropping(Int index) const {
-      assert(0 <= index && index < 2*as_signed(vl::Tensor::maxNumDimensions)) ;
+      assert(0 <= index && index < 2*as_signed(Tensor::maxNumDimensions)) ;
       return cropping[as_unsigned(index)] ;
     }
 
     Int getUpsampling(Int index) const {
-      assert(0 <= index && index < as_signed(vl::Tensor::maxNumDimensions)) ;
+      assert(0 <= index && index < as_signed(Tensor::maxNumDimensions)) ;
       return upsampling[as_unsigned(index)] ;
     }
 
@@ -125,8 +122,8 @@ namespace vl { namespace nn {
   private:
     Int numSpatialDimensions ;
     Int numFilterGroups ;
-    std::array<Int, vl::Tensor::maxNumDimensions> upsampling ;
-    std::array<Int, 2*vl::Tensor::maxNumDimensions> cropping ;
+    std::array<Int, Tensor::maxNumDimensions> upsampling ;
+    std::array<Int, 2*Tensor::maxNumDimensions> cropping ;
   } ;
 
 } }
