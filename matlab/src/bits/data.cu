@@ -93,8 +93,8 @@ vl::getErrorMessage(ErrorCode error)
     "Missing data arror",
     "Illegal message error",
     "Interrupted error",
-    "Tensor shape mismatch error",
-    "Tensor type mismatch error",
+    "Tensor shape error",
+    "Tensor type rror",
     "Unknown error",
   } ;
   if (error < VLE_Success || error > VLE_Unknown) {
