@@ -25,6 +25,10 @@ the terms of the BSD license (see the COPYING file).
 
 using Int = vl::Int ;
 
+/* ---------------------------------------------------------------- */
+/*                                                       MEX driver */
+/* ---------------------------------------------------------------- */
+
 /* option codes */
 enum {
   opt_method = 0,
@@ -41,25 +45,6 @@ VLMXOption  options [] = {
   {"Verbose",          0,   opt_verbose      },
   {0,                  0,   0                }
 } ;
-
-/* ---------------------------------------------------------------- */
-/*                                                          Context */
-/* ---------------------------------------------------------------- */
-
-vl::MexContext context ;
-
-/*
- Resetting the context here resolves a crash when MATLAB quits and
- the ~Context function is implicitly called on unloading the MEX file.
- */
-void atExit()
-{
-  context.clear() ;
-}
-
-/* ---------------------------------------------------------------- */
-/*                                                       MEX driver */
-/* ---------------------------------------------------------------- */
 
 enum {
   IN_DATA = 0, IN_ROIS, IN_DEROUTPUT, IN_END
@@ -158,6 +143,16 @@ vl::ErrorCode performROIPooling(vl::MexContext& context,
   return vl::VLE_Success ;
 }
 
+/* ---------------------------------------------------------------- */
+/*                                                            Entry */
+/* ---------------------------------------------------------------- */
+
+vl::MexContext context ;
+void atExit()
+{
+  context.clear() ;
+}
+
 void mexFunction(int nout, mxArray *out[],
                  int nin, mxArray const *in[])
 {
@@ -181,92 +176,3 @@ void mexFunction(int nout, mxArray *out[],
   return ;
 }
 
-#if 0
-
-  Int numROIs = rois.getNumElements() / 5 ;
-
-  if (! vl::areCompatible(data, rois)) {
-    vlmxError(VLMXE_IllegalArgument, "DATA and ROI do not have compatible formats.") ;
-  }
-
-  if (rois.getNumElements() != numROIs * 5 || numROIs == 0) {
-    vlmxError(VLMXE_IllegalArgument, "ROI is not a 5 x K array with K >= 1.") ;
-  }
-  rois.reshape(vl::TensorShape(1, 1, 5, numROIs)) ;
-
-  vl::TensorShape dataShape = data.getShape();
-  dataShape.reshape(4);
-
-  /* Get the output geometry */
-  vl::TensorShape outputShape(subdivisions[0],
-                              subdivisions[1],
-                              dataShape.getNumChannels(),
-                              numROIs) ;
-
-  vl::TensorShape derOutputShape = derOutput.getShape();
-  /* in case there is only one roi */ 
-  derOutputShape.reshape(4);
-
-  if (backMode) {
-    if (derOutputShape != outputShape) {
-      vlmxError(VLMXE_IllegalArgument, "The shape of DEROUTPUT is incorrect.") ;
-    }
-  }
-
-  /* Create output buffers */
-  vl::DeviceType deviceType = data.getDeviceType() ;
-  vl::DataType dataType = data.getDataType() ;
-  vl::MexTensor output(context) ;
-  vl::MexTensor derData(context) ;
-
-  if (!backMode) {
-    output.initWithZeros(deviceType, dataType, outputShape) ;
-  } else {
-    derData.initWithZeros(deviceType, dataType, dataShape) ;
-  }
-
-  if (verbosity > 0) {
-    mexPrintf("vl_nnroipool: %s; %s", backMode?"backward":"forward", (data.getDeviceType()==vl::VLDT_GPU) ? "GPU" : "CPU") ;
-    mexPrintf("\nvl_nnroipool: method: %d; num ROIs: %d\n", method, numROIs);
-    mexPrintf("vl_nnroipool: subdivisions: [%d x %d]\n", subdivisions[0], subdivisions[1]) ;
-    mexPrintf("vl_nnroipool: transform: [%g %g %g ; %g %g %g]\n",
-              transform[0], transform[2], transform[4],
-              transform[1], transform[3], transform[5]) ;
-
-    vl::print("vl_nnroipool: data: ", data) ;
-    if (backMode) {
-      vl::print("vl_nnroipool: derOutput: ", derOutput) ;
-      vl::print("vl_nnroipool: derData: ", derData) ;
-    } else {
-      vl::print("vl_nnroipool: output: ", output) ;
-      vl::print("vl_nnroipool: rois: ", rois) ;
-    }
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                    Do the work */
-  /* -------------------------------------------------------------- */
-
-  vl::ErrorCode error ;
-  vl::nn::ROIPooling op(context,subdivisions,transform,method) ;
-
-  if (!backMode) {
-    error = op.forward(output, data, rois) ;
-  } else {
-    error = op.backward(derData, data, rois, derOutput) ;
-  }
-
-  /* -------------------------------------------------------------- */
-  /*                                                         Finish */
-  /* -------------------------------------------------------------- */
-
-  if (error != vl::VLE_Success) {
-    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
-  }
-  if (backMode) {
-    out[OUT_RESULT] = derData.relinquish() ;
-  } else {
-    out[OUT_RESULT] = output.relinquish() ;
-  }
-}
-#endif

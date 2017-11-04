@@ -118,7 +118,7 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
       case opt_verbose : context.setLogLevel(++verbosity) ; break ;
       case opt_stride : MXOPTIVEC(STRIDE,setStride) ; break ;
       case opt_padding : MXOPTIVEC(PADDING,setPadding) ; break ;
-      case opt_dilation: MXOPTIVEC(DILATION,setDilation) ; break ;
+      case opt_dilation : MXOPTIVEC(DILATION,setDilation) ; break ;
       case opt_no_der_data : computeDerData = false ; break ;
       case opt_no_der_filters : computeDerFilters = false ; break ;
       case opt_no_der_biases : computeDerBiases = false ; break ;

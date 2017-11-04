@@ -1,6 +1,5 @@
 // @file nnnormalizelp.hpp
-// @brief Batch normalizatoion block
-// @author Sebastien Ehrhardt
+// @brief Lp normalization block
 // @author Andrea Vedaldi
 
 /*
@@ -21,37 +20,50 @@ namespace vl { namespace nn {
 
   class NormalizeLp : public Operation {
   public:
-    NormalizeLp(vl::Context &context,
+    NormalizeLp(Context &context) ;
+    NormalizeLp(Context &context,
                 std::vector<Int> const& selectedDimensions,
                 double exponent = 2.0,
                 double epsilon = 1e-3) ;
 
-    vl::TensorShape getNormsShapeForData(vl::Tensor const &data) ;
+    ErrorCode forward(Tensor &output,
+                      Tensor &norms,
+                      Tensor const &data) const ;
 
-    vl::ErrorCode forward(vl::Tensor &output,
-                          vl::Tensor &norms,
-                          vl::Tensor const &data) ;
+    ErrorCode forwardShape(TensorShape &output,
+                           TensorShape &norms,
+                           TensorShape const &data) const ;
 
-    vl::ErrorCode forwardWithNorms(vl::Tensor &output,
-                                   vl::Tensor const &norms,
-                                   vl::Tensor const &data) ;
+    ErrorCode forwardWithNorms(Tensor &output,
+                               Tensor const &norms,
+                               Tensor const &data) const ;
 
-    vl::ErrorCode backward(vl::Tensor &derData,
-                           vl::Tensor &moments,
-                           vl::Tensor const &data,
-                           vl::Tensor const &derOutput) ;
+    ErrorCode backward(Tensor &derData,
+                       Tensor &moments,
+                       Tensor const &data,
+                       Tensor const &derOutput) const ;
 
-    vl::ErrorCode backwardWithNorms(vl::Tensor &derData,
-                                    vl::Tensor const &norms,
-                                    vl::Tensor const &data,
-                                    vl::Tensor const &derOutput) ;
-
+    ErrorCode backwardWithNorms(Tensor &derData,
+                                Tensor const &norms,
+                                Tensor const &data,
+                                Tensor const &derOutput) const ;
 
     double getExponent() const { return exponent ; }
+    ErrorCode setExponent(double exponent) {
+      this->exponent = exponent ;
+      return VLE_Success ;
+    }
+
     double getEpsilon() const { return epsilon ; }
+    ErrorCode setEpsilon(double epsilon) {
+      this->epsilon = epsilon ;
+      return VLE_Success ;
+    }
+
     std::vector<Int> const& getSelectedDimensions() const {
       return selectedDimensions ;
     }
+    ErrorCode setSelectedDimensions(std::vector<Int> const&) ;
 
   private:
     std::vector<Int> selectedDimensions ;

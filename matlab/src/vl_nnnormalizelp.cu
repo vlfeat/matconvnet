@@ -22,6 +22,12 @@ the terms of the BSD license (see the COPYING file).
 #include <cassert>
 #include <vector>
 
+using Int = vl::Int ;
+
+/* ---------------------------------------------------------------- */
+/*                                                       MEX driver */
+/* ---------------------------------------------------------------- */
+
 /* option codes */
 enum {
   opt_verbose = 0,
@@ -48,21 +54,6 @@ VLMXOption  options [] = {
   {0,                  0,   0                     }
 } ;
 
-/* ---------------------------------------------------------------- */
-/*                                                          Context */
-/* ---------------------------------------------------------------- */
-
-vl::MexContext context ;
-
-void atExit()
-{
-  context.clear() ;
-}
-
-/* ---------------------------------------------------------------- */
-/*                                                       MEX driver */
-/* ---------------------------------------------------------------- */
-
 enum {
   IN_DATA = 0, IN_DEROUTPUT, IN_END
 } ;
@@ -72,16 +63,11 @@ enum {
   OUT_END
 } ;
 
-void mexFunction(int nout, mxArray *out[],
-                 int nin, mxArray const *in[])
+vl::ErrorCode performNormalizeLp(vl::MexContext& context,
+                                 int nout, mxArray *out[],
+                                 int nin, mxArray const *in[])
 {
   bool backMode = false ;
-  double epsilon = 1e-2 ;
-  double exponent = 2.0 ;
-  std::vector<vl::Int> dimensions = {2} ;
-
-  // For the moment true need to be fixed
-  bool computeDerData = true ;
   bool givenNormsMode = false ;
   bool returnNormsMode = false ;
   mxArray const* normsArray ;
@@ -90,6 +76,8 @@ void mexFunction(int nout, mxArray *out[],
   int opt ;
   int next = IN_END ;
   mxArray const *optarg ;
+
+  vl::nn::NormalizeLp op(context) ;
 
   /* -------------------------------------------------------------- */
   /*                                            Check the arguments */
@@ -108,48 +96,12 @@ void mexFunction(int nout, mxArray *out[],
 
   while ((opt = vlmxNextOption (in, nin, options, &next, &optarg)) >= 0) {
     switch (opt) {
-
-      case opt_verbose :
-        ++ verbosity ;
-        break ;
-
-      case opt_epsilon :
-        if (!vlmxIsPlainScalar(optarg)) {
-          mexErrMsgTxt("EPSILON is not a plain scalar.") ;
-        }
-        epsilon = mxGetPr(optarg)[0] ;
-        break ;
-
-      case opt_norms:
-        normsArray = optarg ;
-        givenNormsMode = true ;
-        break ;
-
-      case opt_exponent :
-        if (!vlmxIsPlainScalar(optarg)) {
-          mexErrMsgTxt("EXPONENT is not a plain scalar.") ;
-        }
-        exponent = mxGetPr(optarg)[0] ;
-        break ;
-
-      case opt_spatial :
-        dimensions = {0,1} ;
-        break ;
-
-      case opt_dimensions :
-        if (!vlmxIsPlainVector(optarg,-1)) {
-          mexErrMsgTxt("DIMENSIONS is not a plain vector.") ;
-        }
-        dimensions.clear() ;
-        for (int i = 0 ; i < mxGetNumberOfElements(optarg) ; ++i) {
-          int d = (int)(mxGetPr(optarg)[i]) ;
-          if (d < 1) {
-            mexErrMsgTxt("DIMENSIONS contains an index less than 1.") ;
-          }
-          dimensions.push_back(d - 1) ;
-        }
-        break ;
-
+      case opt_verbose : context.setLogLevel(++verbosity) ; break ;
+      case opt_norms : normsArray = optarg ; givenNormsMode = true ; break ;
+      case opt_epsilon : MXOPTDSCAL(EPSILON,setEpsilon) ; break ;
+      case opt_exponent : MXOPTDSCAL(EXPONENT,setExponent) ; break ;
+      case opt_dimensions : MXOPTIVEC(DIMENSIONS,setSelectedDimensions) ; break;
+      case opt_spatial : op.setSelectedDimensions({0,1}) ; break ;
       case opt_no_cudnn:
 #if ENABLE_CUDNN
         context.getCudaHelper().setCudnnEnabled(false) ;
@@ -167,25 +119,59 @@ void mexFunction(int nout, mxArray *out[],
     }
   }
 
-  vl::nn::NormalizeLp op(context,dimensions,exponent,epsilon) ;
-
   vl::MexTensor data(context) ;
-  vl::MexTensor derOutput(context) ;
-  vl::MexTensor norms(context) ;
-
   data.init(in[IN_DATA]) ;
   data.reshape(4) ;
 
-  if (backMode) {
-    derOutput.init(in[IN_DEROUTPUT]) ;
-    derOutput.reshape(4) ;
-  }
+  vl::DeviceType deviceType = data.getDeviceType() ;
+  vl::DataType dataType = data.getDataType() ;
+  vl::TensorShape outputShape, normShape ;
+  MXCHECK(op.forwardShape(outputShape,normShape,data)) ;
 
+  vl::MexTensor norms(context) ;
   if (givenNormsMode) {
     norms.init(normsArray) ;
     norms.reshape(2) ;
   }
+  else if (returnNormsMode) {
+    norms.init(deviceType, dataType, normShape) ;
+  }
 
+  if (!backMode) {
+    // Forward mode.
+    // Initialize output tensor.
+    vl::MexTensor output(context) ;
+    output.init(deviceType, dataType, outputShape) ;
+
+    // Perform calculation.
+    if (!givenNormsMode) { MXCHECK(op.forward(output,norms,data)) ; }
+    else { MXCHECK(op.forwardWithNorms(output,norms,data)) ; }
+
+    // Return results.
+    out[OUT_RESULT] = output.relinquish() ;
+  }
+  else {
+    // Backward mode.
+    vl::MexTensor derOutput(context) ;
+    derOutput.init(in[IN_DEROUTPUT]) ;
+    derOutput.reshape(4) ;
+
+    // Initialize the tensors to be returned.
+    vl::MexTensor derData(context) ;
+    derData.init(deviceType, dataType, data.getShape()) ;
+
+    // Perform calculation.
+    if (!givenNormsMode) { MXCHECK(op.backward(derData,norms,data,derOutput)) ; }
+    else { MXCHECK(op.backwardWithNorms(derData,norms,data,derOutput)) ; }
+
+    // Return results.
+    out[OUT_RESULT] = derData.relinquish() ;
+  }
+  out[OUT_RESULT+1] = norms.relinquish() ;
+  return vl::VLE_Success ;
+}
+
+#if 0
   // Check for GPU/data class consistency.
   if (backMode && ! vl::areCompatible(data, derOutput)) {
     mexErrMsgTxt("DATA and DEROUTPUT do not have compatible formats.") ;
@@ -286,3 +272,36 @@ void mexFunction(int nout, mxArray *out[],
     out[OUT_RESULT + 1] = norms.relinquish() ;
   }
 }
+#endif
+
+/* ---------------------------------------------------------------- */
+/*                                                          Context */
+/* ---------------------------------------------------------------- */
+
+vl::MexContext context ;
+void atExit() { context.clear() ; }
+
+void mexFunction(int nout, mxArray *out[],
+                 int nin, mxArray const *in[])
+{
+  mexAtExit(atExit) ;
+  context.setLogLevel(0) ;
+  context.clearLog() ;
+
+  vl::ErrorCode error = performNormalizeLp(context,nout,out,nin,in) ;
+
+  if (context.getLogLevel() > 0) {
+    mexPrintf("vl_nnnormalizelp:\n") ;
+    for (auto const & str : context.getLogbook()) {
+      mexPrintf("\t%s\n", str.c_str()) ;
+    }
+    context.setLogLevel(0) ;
+  }
+
+  if (error != vl::VLE_Success) {
+    vlmxError(VLMXE_IllegalArgument, context.getLastErrorMessage().c_str()) ;
+  }
+  return ;
+}
+
+

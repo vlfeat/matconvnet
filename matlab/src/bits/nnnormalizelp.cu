@@ -27,6 +27,14 @@ template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpFor
 template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackward ;
 template<vl::DeviceType deviceType, vl::DataType dataType> struct NormalizeLpBackwardWithNorms ;
 
+template<bool givenNomrs> struct NormAgrument ;
+template<> struct NormAgrument<true> { typedef vl::Tensor const &type ; } ;
+template<> struct NormAgrument<false> { typedef vl::Tensor &type ; } ;
+
+#if ENABLE_GPU
+#include "nnnormalizelp_gpu.cu"
+#endif
+
 // -------------------------------------------------------------------
 //                                                             Helpers
 // -------------------------------------------------------------------
@@ -128,20 +136,14 @@ void computeNorms(NormalizeLp const & op,
     normsData[i] = std::pow(normsData[i] + (type)epsilon, static_cast<type>(1.0/exponent)) ;
   }
 }
-
 // -------------------------------------------------------------------
 //                                                         CPU forward
 // -------------------------------------------------------------------
 
-
-template<bool givenNomrs> struct NormAgrument ;
-template<> struct NormAgrument<true> { typedef vl::Tensor const &type ; } ;
-template<> struct NormAgrument<false> { typedef vl::Tensor &type ; } ;
-
 template<vl::DataType dataType, bool givenNorms>
 struct NormalizeLpForwardCPU
 {
-  vl::ErrorCode operator()(vl::nn::NormalizeLp & op,
+  vl::ErrorCode operator()(vl::nn::NormalizeLp const& op,
                            vl::Tensor &output,
                            typename NormAgrument<givenNorms>::type norms,
                            vl::Tensor const &input)
@@ -208,7 +210,7 @@ struct NormalizeLpForwardWithNorms<vl::VLDT_CPU, dataType>
 template<vl::DataType dataType, bool givenNorms>
 struct NormalizeLpBackwardCPU
 {
-  vl::ErrorCode operator()(vl::nn::NormalizeLp &op,
+  vl::ErrorCode operator()(vl::nn::NormalizeLp const&op,
                            vl::Tensor &derInput,
                            typename NormAgrument<givenNorms>::type norms,
                            vl::Tensor const &input,
@@ -312,10 +314,6 @@ struct NormalizeLpBackwardWithNorms<vl::VLDT_CPU, dataType>
 //                                                              Driver
 // -------------------------------------------------------------------
 
-#if ENABLE_GPU
-#include "nnnormalizelp_gpu.cu"
-#endif
-
 NormalizeLp::NormalizeLp(vl::Context &context,
                          std::vector<Int> const& selectedDimensions,
                          double exponent,
@@ -326,50 +324,249 @@ exponent(exponent),
 epsilon(epsilon)
 { }
 
-vl::TensorShape
-NormalizeLp::getNormsShapeForData(vl::Tensor const &data)
+NormalizeLp::NormalizeLp(vl::Context& context)
+:
+Operation(context),
+selectedDimensions(1,2),
+epsilon(1e-2),
+exponent(2.0)
+{ }
+
+ErrorCode NormalizeLp::setSelectedDimensions(std::vector<Int> const& sel)
 {
+  // Selector must be non-negative.
+  if (any_of(begin(sel),end(sel),[](Int x){return x < 0;})) {
+    return getContext().setError
+    (VLE_IllegalArgument, "ConvolutionTranspose: An element of SELECTEDIMENSIONS is less than 0.") ;
+  }
+  selectedDimensions = sel ;
+  sort(begin(selectedDimensions),end(selectedDimensions)) ;
+  selectedDimensions.erase
+  (unique(begin(selectedDimensions),end(selectedDimensions)),
+   end(selectedDimensions)) ;
+  return VLE_Success ;
+}
+
+vl::ErrorCode
+NormalizeLp::forwardShape(vl::TensorShape &output,
+                          vl::TensorShape &norms,
+                          vl::TensorShape const &data) const
+{
+  output = data ;
+  norms = data ;
   vl::TensorShape shape(data) ;
-  auto n = shape.getNumDimensions() ;
+  auto n = norms.getNumDimensions() ;
   for (size_t d = 0 ; d < size_t(n) ; ++d) {
     bool squashed =
     (find(selectedDimensions.begin(), selectedDimensions.end(), d) !=
      selectedDimensions.end()) ;
-    if (squashed) { shape.setDimension((Int)d, 1) ; }
+    if (squashed) { norms.setDimension((Int)d, 1) ; }
   }
-  return shape ;
+  return vl::VLE_Success ;
+}
+
+template <bool optionalNorms>
+static vl::ErrorCode
+check_helper(NormalizeLp const& op,
+             vl::Tensor const &output,
+             vl::Tensor const &norms,
+             vl::Tensor const &input)
+{
+  // Check the tensor consistency.
+  if (!check_tensor_compatibility(output,norms,input)) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "The tensors have mismatching data or device type.") ;
+  }
+
+  // Check the data.
+  if (output.isEmpty() | output.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "OUTPUT or DEROUTPUT is empty or null.") ;
+  }
+  if (optionalNorms) {
+    if (!norms.isEmpty() && norms.isNull()) {
+      return op.getContext().setError
+      (VLE_IllegalArgument,
+       "NORMS is non empty but null.") ;
+    }
+  } else {
+    if (norms.isEmpty() || norms.isNull()) {
+      return op.getContext().setError
+      (VLE_IllegalArgument,
+       "NORMS is empty or null.") ;
+    }
+  }
+  if (input.isEmpty() | input.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "INPUT is emtpy or null.") ;
+  }
+
+  // Check the tensor shape.
+  vl::ErrorCode error ;
+  TensorShape outputShape ;
+  TensorShape normShape ;
+  if ((error = op.forwardShape(outputShape, normShape, input.getShape())) != VLE_Success) {
+    return error ;
+  }
+  if (output.getShape() != outputShape) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "OUTPUT or DEROUTPUT do not have the appropriate dimensions.") ;
+  }
+  if (!norms.isEmpty() && (norms.getNumElements() != normShape.getNumElements())) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "NORMS does not have the appropriate dimensions.") ;
+  }
+  return VLE_Success ;
+}
+
+template <bool optionalNorms>
+static vl::ErrorCode
+check_helper_backward(NormalizeLp const& op,
+                      Tensor const &derInput,
+                      Tensor const &norm,
+                      Tensor const &input,
+                      Tensor const &derOutput)
+{
+  vl::ErrorCode error = check_helper<optionalNorms>(op,derOutput,norm,input) ;
+  if (error != vl::VLE_Success) {
+    return error ;
+  }
+  // Check the tensor consistency.
+  if (!check_tensor_compatibility(derInput,norm,input,derOutput)) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "The tensors have mismatching data or device type.") ;
+  }
+
+  // Check the data.
+  if (derInput.isEmpty() | derInput.isNull()) {
+    return op.getContext().setError
+    (VLE_IllegalArgument,
+     "DERINPUT is empty or null.") ;
+  }
+
+  // Check the tensor shape.
+  if (derInput.getShape() != input.getShape()) {
+    return op.getContext().setError
+    (VLE_TensorShapeMismatch,
+     "DERINPUT does not have the appropriate dimensions.") ;
+  }
+  return VLE_Success ;
 }
 
 vl::ErrorCode
 NormalizeLp::forward(vl::Tensor &output,
                      vl::Tensor &norms,
-                     vl::Tensor const &data)
+                     vl::Tensor const &data) const
 {
-  return dispatch<NormalizeLpForward>()(*this,output,norms,data) ;
+  vl::ErrorCode error = check_helper<true>(*this,output,norms,data) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"NormalizeLpForward") ;
+  }
+
+  VLLOG(*this,1)
+  << "NormalizeLpForward:"
+  << " selected dims=" << pretty(getSelectedDimensions())
+  << " exponent=" << getExponent()
+  << " epsilon=" << getEpsilon() ;
+
+  VLLOG(*this,1)
+  << "NormalizeLpForward:"
+  << " data=" << pretty(data.getDimensions())
+  << " norms=" << pretty(norms.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<NormalizeLpForward>()(*this,output,norms,data),
+   "NormalizeLpForward") ;
 }
 
 vl::ErrorCode
 NormalizeLp::forwardWithNorms(vl::Tensor &output,
                               vl::Tensor const &norms,
-                              vl::Tensor const &data)
+                              vl::Tensor const &data) const
 {
-  return dispatch<NormalizeLpForwardWithNorms>()(*this,output,norms,data) ;
+  vl::ErrorCode error = check_helper<false>(*this,output,norms,data) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"NormalizeLpForwardWithNorms") ;
+  }
+
+  VLLOG(*this,1)
+  << "NormalizeLpForwardWithNorms:"
+  << " selected dims=" << pretty(getSelectedDimensions())
+  << " exponent=" << getExponent()
+  << " epsilon=" << getEpsilon() ;
+
+  VLLOG(*this,1)
+  << "NormalizeLpForwardWithNorms:"
+  << " data=" << pretty(data.getDimensions())
+  << " norms=" << pretty(norms.getDimensions())
+  << " output=" << pretty(output.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<NormalizeLpForwardWithNorms>()(*this,output,norms,data),
+   "NormalizeLpForwardWithNorms") ;
 }
 
 vl::ErrorCode
 NormalizeLp::backward(vl::Tensor &derData,
                       vl::Tensor &norms,
                       vl::Tensor const &data,
-                      vl::Tensor const &derOutput)
+                      vl::Tensor const &derOutput) const
 {
-  return dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput) ;
+  vl::ErrorCode error = check_helper_backward<true>(*this,derData,norms,data,derOutput) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"NormalizeLpBackward") ;
+  }
+
+  VLLOG(*this,1)
+  << "NormalizeLpBackward:"
+  << " selected dims=" << pretty(getSelectedDimensions())
+  << " exponent=" << getExponent()
+  << " epsilon=" << getEpsilon() ;
+
+  VLLOG(*this,1)
+  << "NormalizeLpBackward:"
+  << " derData=" << pretty(derData.getDimensions())
+  << " norms=" << pretty(norms.getDimensions())
+  << " data=" << pretty(data.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<NormalizeLpBackward>()(*this,derData,norms,data,derOutput),
+   "NormalizeLpBackward");
 }
 
 vl::ErrorCode
 NormalizeLp::backwardWithNorms(vl::Tensor &derData,
                                vl::Tensor const &norms,
                                vl::Tensor const &data,
-                               vl::Tensor const &derOutput)
+                               vl::Tensor const &derOutput) const
 {
-  return dispatch<NormalizeLpBackwardWithNorms>()(*this,derData,norms,data,derOutput) ;
+  vl::ErrorCode error = check_helper_backward<false>(*this,derData,norms,data,derOutput) ;
+  if (error != VLE_Success) {
+    return getContext().passError(error,"NormalizeLpBackwardWithNorms") ;
+  }
+
+  VLLOG(*this,1)
+  << "NormalizeLpBackwardWithNorms:"
+  << " selected dims=" << pretty(getSelectedDimensions())
+  << " exponent=" << getExponent()
+  << " epsilon=" << getEpsilon() ;
+
+  VLLOG(*this,1)
+  << "NormalizeLpBackwardWithNorms:"
+  << " derData=" << pretty(derData.getDimensions())
+  << " norms=" << pretty(norms.getDimensions())
+  << " data=" << pretty(data.getDimensions())
+  << " derOutput=" << pretty(derOutput.getDimensions()) ;
+
+  return getContext().passError
+  (dispatch<NormalizeLpBackwardWithNorms>()(*this,derData,norms,data,derOutput),
+   "NormalizeLpBackwardWithNorms") ;
 }
