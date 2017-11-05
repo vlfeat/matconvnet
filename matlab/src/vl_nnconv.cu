@@ -181,7 +181,7 @@ vl::ErrorCode performConvolution(vl::MexContext& context,
 
     // Compute the size of the output tensor.
     vl::TensorShape outputShape ;
-    MXCHECK(op.forwardShape(outputShape,data,filters,biases)) ;
+    MXCHECK(op.forwardShape(outputShape,data,filters)) ;
 
     // Initialize output tensor.
     vl::MexTensor output(context) ;

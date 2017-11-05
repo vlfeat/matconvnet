@@ -192,18 +192,16 @@ performConvolutionTranspose(vl::MexContext& context,
   }
 
   vl::MexTensor data(context) ;
-  vl::MexTensor filters(context) ;
-  vl::MexTensor biases(context) ;
-
   data.init(in[IN_DATA]) ;
   data.reshape(4) ;
 
+  vl::MexTensor filters(context) ;
   filters.init(in[IN_FILTERS]) ;
   filters.reshape(4) ;
-
-  biases.init(in[IN_BIASES]) ;
-
   bool hasFilters = !filters.isEmpty() ;
+
+  vl::MexTensor biases(context) ;
+  biases.init(in[IN_BIASES]) ;
   bool hasBiases = !biases.isEmpty() ;
 
   if (!backMode) {
@@ -213,7 +211,7 @@ performConvolutionTranspose(vl::MexContext& context,
 
     // Compute the size of the output tensor.
     vl::TensorShape outputShape ;
-    MXCHECK(op.forwardShape(outputShape,data,filters,biases)) ;
+    MXCHECK(op.forwardShape(outputShape,data,filters)) ;
 
     // Initialize output tensor.
     vl::MexTensor output(context) ;

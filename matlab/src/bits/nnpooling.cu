@@ -123,7 +123,6 @@ struct PoolingForwardCPU
     static const std::string signature = std::string("PoolingForward[MCN,")
     + Accumulator::name + ","
     + DeviceTypeTraits<VLDT_CPU>::name + "," + DataTypeTraits<dataType>::name + "]" ;
-
     VLLOG(op,1) << signature ;
 
     typedef typename vl::DataTypeTraits<dataType>::type type ;
@@ -297,7 +296,7 @@ Pooling::Pooling(Context &context,
 }
 
 Pooling::Pooling(Context &context)
-: ConvolutionLike(context,2), method(Average),
+: ConvolutionLike(context,2), method(Max),
 shape((size_t)getNumSpatialDimensions(),1)
 { }
 
