@@ -477,10 +477,6 @@ if doder
           vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
                      'epsilon', l.epsilon, ...
                      bnormCudnn{:}) ;
-        % multiply the moments update by the number of images in the batch
-        % this is required to make the update additive for subbatches
-        % and will eventually be normalized away
-        dzdw{3} = dzdw{3} * size(res(i).x,4) ;
 
       case 'pdist'
         res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...

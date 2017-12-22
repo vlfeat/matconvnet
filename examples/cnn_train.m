@@ -359,14 +359,14 @@ for t=1:params.batchSize:numel(subset)
 
     % accumulate errors
     error = sum([error, [...
-      sum(double(gather(res(end).x))) ;
+      sum(size(res(end-1).x,4) * double(gather(res(end).x))) ;
       reshape(params.errorFunction(params, labels, res),[],1) ; ]],2) ;
   end
 
   % accumulate gradient
   if strcmp(mode, 'train')
     if ~isempty(parserv), parserv.sync() ; end
-    [net, res, state] = accumulateGradients(net, res, state, params, batchSize, parserv) ;
+    [net, res, state] = accumulateGradients(net, res, state, params, parserv) ;
   end
 
   % get statistics

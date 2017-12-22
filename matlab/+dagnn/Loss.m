@@ -22,10 +22,10 @@ classdef Loss < dagnn.ElementWise
       n = obj.numAveraged ;
       m = n + size(inputs{1}, 1) *  size(inputs{1}, 2) * size(inputs{1}, 4);
       if obj.normalise
-        obj.average = bsxfun(@plus, n * obj.average, gather(outputs{1})) / m ;
-      else
         obj.average = bsxfun(@plus, n * obj.average, size(inputs{1}, 4) * ...
           gather(outputs{1})) / m ;
+      else
+        obj.average = bsxfun(@plus, n * obj.average, gather(outputs{1})) / m ;
       end
       obj.numAveraged = m ;
     end
