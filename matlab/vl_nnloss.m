@@ -137,6 +137,7 @@ opts.instanceWeights = [] ;
 opts.classWeights = [] ;
 opts.threshold = 0 ;
 opts.loss = 'softmaxlog' ;
+opts.normalise = true ;
 opts.topK = 5 ;
 opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
@@ -264,6 +265,11 @@ if nargin <= 2 || isempty(dzdy)
   else
     y = sum(t(:));
   end
+  
+  if opts.normalise && numel(size(x))==4
+    y = y ./ size(x,4) ;
+  end
+  
 else
   if ~isempty(instanceWeights)
     dzdy = dzdy * instanceWeights ;
@@ -303,6 +309,11 @@ else
     case 'hinge'
       y = - dzdy .* c .* (c.*x < 1) ;
   end
+  
+  if opts.normalise && numel(size(x))==4
+    y = y ./ size(x,4) ;
+  end
+  
 end
 
 % --------------------------------------------------------------------

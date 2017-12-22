@@ -31,10 +31,6 @@ classdef BatchNorm < dagnn.ElementWise
                    'moments', obj.moments, ...
                    obj.opts{:}) ;
       obj.moments = [] ;
-      % multiply the moments update by the number of images in the batch
-      % this is required to make the update additive for subbatches
-      % and will eventually be normalized away
-      derParams{3} = derParams{3} * size(inputs{1},4) ;
     end
 
     % ---------------------------------------------------------------------
