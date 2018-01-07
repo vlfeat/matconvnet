@@ -422,8 +422,8 @@ function saveState_newly(modelDir,fileName, net_, state)
 % -------------------------------------------------------------------------
 net = net_.saveobj() ;
 %state.r = [];
-deleteOldModels(modelDir);
 save(fileName, 'net', 'state') ;  % save the newly trained models
+deleteOldModels(modelDir);
 
 % -------------------------------------------------------------------------
 function deleteOldModels(modelDir)
