@@ -255,7 +255,7 @@ By applying the chain rule and by using the matrix notation introduced above, th
 \end{equation}
 where the derivatives are computed at the working point determined by the input $\bx_0$ and the current value of the parameters. 
 
-Note that, since the network output $x_l$ is a \emph{scalar} quantity, the target derivative $df/d(\vv \bw_l)^\top$ has the same number of elements of the parameter vector $\bw_l$, which is moderate. However, the intermediate Jacobian factors have, as seen above, an unmanageable size. In order to avoid computing these factor explicitly, we can proceed as follows.
+Note that, since the network output $x_L$ is a \emph{scalar} quantity, the target derivative $df/d(\vv \bw_l)^\top$ has the same number of elements of the parameter vector $\bw_l$, which is moderate. However, the intermediate Jacobian factors have, as seen above, an unmanageable size. In order to avoid computing these factor explicitly, we can proceed as follows.
 
 Start by multiplying the output of the last layer by a tensor $p_L=1$ (note that this tensor is a scalar just like the variable $x_L$):
 \begin{align*}
