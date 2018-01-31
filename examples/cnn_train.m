@@ -359,14 +359,14 @@ for t=1:params.batchSize:numel(subset)
 
     % accumulate errors
     error = sum([error, [...
-      sum(double(gather(res(end).x))) ;
+      sum(size(res(end-1).x,4) * double(gather(res(end).x))) ;
       reshape(params.errorFunction(params, labels, res),[],1) ; ]],2) ;
   end
 
   % accumulate gradient
   if strcmp(mode, 'train')
     if ~isempty(parserv), parserv.sync() ; end
-    [net, res, state] = accumulateGradients(net, res, state, params, batchSize, parserv) ;
+    [net, res, state] = accumulateGradients(net, res, state, params, parserv) ;
   end
 
   % get statistics
@@ -448,10 +448,11 @@ end
 net = vl_simplenn_move(net, 'cpu') ;
 
 % -------------------------------------------------------------------------
-function [net, res, state] = accumulateGradients(net, res, state, params, batchSize, parserv)
+function [net, res, state] = accumulateGradients(net, res, state, params, parserv)
 % -------------------------------------------------------------------------
 numGpus = numel(params.gpus) ;
 otherGpus = setdiff(1:numGpus, labindex) ;
+numWorkers = max(1,numGpus) * params.numSubBatches ;
 
 for l=numel(net.layers):-1:1
   for j=numel(res(l).dzdw):-1:1
@@ -469,7 +470,7 @@ for l=numel(net.layers):-1:1
       net.layers{l}.weights{j} = vl_taccum(...
         1 - thisLR, ...
         net.layers{l}.weights{j}, ...
-        thisLR / batchSize, ...
+        thisLR / numWorkers, ...
         parDer) ;
     else
       % Standard gradient training.
@@ -478,7 +479,7 @@ for l=numel(net.layers):-1:1
 
       if thisLR>0 || thisDecay>0
         % Normalize gradient and incorporate weight decay.
-        parDer = vl_taccum(1/batchSize, parDer, ...
+        parDer = vl_taccum(1/numWorkers, parDer, ...
                            thisDecay, net.layers{l}.weights{j}) ;
 
         if isempty(params.solver)

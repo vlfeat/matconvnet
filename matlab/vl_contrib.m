@@ -86,14 +86,19 @@ if nargin < 2, module = ''; end;
 persistent contribs;
 if isempty(contribs)
   contrib_repo = repo_factory(opts.contribUrl);
-  contribs_raw = webread(contrib_repo.readme_url);
+  try 
+    contribs_raw = webread(contrib_repo.readme_url);
+    write_file(fullfile(opts.contribDir, 'contribs.txt'),contribs_raw) ;
+  catch
+    contribs_raw = read_file(fullfile(opts.contribDir, 'contribs.txt')) ;
+  end
   contribs = parse_contributions(contribs_raw);
 end
 
 % Setup a module structure
 if nargin > 1
   [module_found, module_id] = ismember(module, {contribs.name});
-  if ~module_found, error('Unknown module %s.'); end
+  if ~module_found, error('Unknown module ''%s''.', module); end
   module = module_init(contribs(module_id), opts);
 end
 
@@ -190,7 +195,7 @@ function module_get(module, opts)
 if exist(module.path, 'dir')
   method = get_module_type(module);
   if isempty(method)
-    error('Module %s does not seem to be managed by vl_contrib.', ...
+    error('Module ''%s'' does not seem to be managed by vl_contrib.', ...
       module.name);
   end;
 else
@@ -202,7 +207,7 @@ switch method
   case 'zip'
     zip_get_module(module, opts);
   otherwise
-    error('Unknown method %s.', opts.method);
+    error('Unknown method ''%s''.', opts.method);
 end
 fprintf('Module %s updated.\n', module.name);
 if opts.showlinks
@@ -305,9 +310,12 @@ if exist(module.path, 'dir')
     error('Module %s in %s is not a git repo. Change method?', ...
       module.name, module.path)
   end
-  git('--git-dir', fullfile(module.path, '.git'), 'pull');
+  git(...
+    '--git-dir', fullfile(module.path, '.git'), ...
+    '--work-tree', module.path, ...
+    'pull');
 else
-  fprintf('Initialising git repository %s.\n', module.path);
+  fprintf('Initialising git repository ''%s''.\n', module.path);
   git('clone', module.repo.git_url, module.path);
 end
 end
@@ -329,7 +337,7 @@ function res = zip_get_module(module, opts)
       if ~verify_user(question), return; end;
     end
     unloaded = module_unload(module);
-    fprintf('Donwloading %s... ', module.name);
+    fprintf('Donwloading ''%s''... ', module.name);
     tmp_p = tempname();
     mkdir(tmp_p);
     unzip(module.repo.tarball_url, tmp_p);
@@ -426,6 +434,23 @@ function method = get_module_type(module)
 if is_git(module), method = 'git'; return; end;
 if is_zip(module), method = 'zip'; return; end;
 method = '';
+end
+
+% --------------------------------------------------------------------
+function data = read_file(filePath)
+% --------------------------------------------------------------------
+f = fopen(filePath,'r');
+data = fread(f, +inf, 'uint8=>char') ;
+fclose(f) ;
+data = data(:)' ;
+end
+
+% --------------------------------------------------------------------
+function data = write_file(filePath,data)
+% --------------------------------------------------------------------
+f = fopen(filePath,'w');
+fwrite(f, data, 'char') ;
+fclose(f) ;
 end
 
 % --------------------------------------------------------------------

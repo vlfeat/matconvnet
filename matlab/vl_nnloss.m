@@ -137,6 +137,7 @@ opts.instanceWeights = [] ;
 opts.classWeights = [] ;
 opts.threshold = 0 ;
 opts.loss = 'softmaxlog' ;
+opts.normalise = true ;
 opts.topK = 5 ;
 opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
@@ -202,7 +203,7 @@ if ~isempty(opts.instanceWeights)
   % important: this code needs to broadcast opts.instanceWeights to
   % an array of the same size as c
   if isempty(instanceWeights)
-    instanceWeights = bsxfun(@times, onesLike(c), opts.instanceWeights) ;
+    instanceWeights = bsxfun(@times, onesLike(x, size(c)), opts.instanceWeights) ;
   else
     instanceWeights = bsxfun(@times, instanceWeights, opts.instanceWeights);
   end
@@ -222,7 +223,9 @@ switch lower(opts.loss)
     n = reshape(0:numPixels-1,labelSize) ;
     offset = 1 + mod(n, numPixelsPerImage) + ...
              imageVolume * fix(n / numPixelsPerImage) ;
-    ci = offset + numPixelsPerImage * max(c - 1,0) ;
+
+    % ensure indexes are int64, to prevent loss of precision on + operator
+    ci = uint64(offset) + numPixelsPerImage * uint64(c - 1) ;
 end
 
 if nargin <= 2 || isempty(dzdy)
@@ -262,6 +265,11 @@ if nargin <= 2 || isempty(dzdy)
   else
     y = sum(t(:));
   end
+  
+  if opts.normalise && numel(size(x))==4
+    y = y ./ size(x,4) ;
+  end
+  
 else
   if ~isempty(instanceWeights)
     dzdy = dzdy * instanceWeights ;
@@ -301,6 +309,11 @@ else
     case 'hinge'
       y = - dzdy .* c .* (c.*x < 1) ;
   end
+  
+  if opts.normalise && numel(size(x))==4
+    y = y ./ size(x,4) ;
+  end
+  
 end
 
 % --------------------------------------------------------------------
@@ -313,10 +326,10 @@ else
 end
 
 % --------------------------------------------------------------------
-function y = onesLike(x)
+function y = onesLike(x, sz)
 % --------------------------------------------------------------------
 if isa(x,'gpuArray')
-  y = gpuArray.ones(size(x),classUnderlying(x)) ;
+  y = gpuArray.ones(sz,classUnderlying(x)) ;
 else
-  y = ones(size(x),'like',x) ;
+  y = ones(sz,'like',x) ;
 end

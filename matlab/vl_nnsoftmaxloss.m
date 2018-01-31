@@ -81,3 +81,4 @@ else
   y(c_) = y(c_) - 1;
   y = bsxfun(@times, y, bsxfun(@times, mass, dzdy)) ;
 end
+y = y / sz(4) ;

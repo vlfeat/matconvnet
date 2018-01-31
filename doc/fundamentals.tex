@@ -223,7 +223,7 @@ In order to understand backpropagation, consider first a simple CNN terminating 
 \node (w1) [data, below of=f1] {$\bw_1$};
 \node (w2) [data, below of=f2] {$\bw_2$};
 \node (wL) [data, below of=fL] {$\bw_L$};
-\node (xL) [data, right of=fL] {$x_l\in\real$};
+\node (xL) [data, right of=fL] {$x_L\in\real$};
 \draw [to] (x0.east) -- (f1.west) {};
 \draw [to] (f1.east) -- node {$\bx_1$} (f2.west);
 \draw [to] (f2.east) -- node {$\bx_2$} (dots.west) {};
@@ -255,7 +255,7 @@ By applying the chain rule and by using the matrix notation introduced above, th
 \end{equation}
 where the derivatives are computed at the working point determined by the input $\bx_0$ and the current value of the parameters. 
 
-Note that, since the network output $x_l$ is a \emph{scalar} quantity, the target derivative $df/d(\vv \bw_l)^\top$ has the same number of elements of the parameter vector $\bw_l$, which is moderate. However, the intermediate Jacobian factors have, as seen above, an unmanageable size. In order to avoid computing these factor explicitly, we can proceed as follows.
+Note that, since the network output $x_L$ is a \emph{scalar} quantity, the target derivative $df/d(\vv \bw_l)^\top$ has the same number of elements of the parameter vector $\bw_l$, which is moderate. However, the intermediate Jacobian factors have, as seen above, an unmanageable size. In order to avoid computing these factor explicitly, we can proceed as follows.
 
 Start by multiplying the output of the last layer by a tensor $p_L=1$ (note that this tensor is a scalar just like the variable $x_L$):
 \begin{align*}
