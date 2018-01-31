@@ -31,13 +31,13 @@ classdef LossSmoothL1 < dagnn.Loss
       absDelta(~linearRegion) = 0.5 * sigma2 * absDelta(~linearRegion).^2 ;
 
       % Mutliply by instance weights and sum.
-      outputs{1} = inputs{3}(:)' * absDelta(:) ;
+      outputs{1} = inputs{3}(:)' * absDelta(:) / size(inputs{1},4);
 
       % Accumulate loss statistics.
-      if obj.ignoreAverage, return; end;
+      if obj.ignoreAverage, return; end
       n = obj.numAveraged ;
       m = n + gather(sum(inputs{3}(:))) + 1e-9 ;
-      obj.average = (n * obj.average + gather(outputs{1})) / m ;
+      obj.average = (n * obj.average + size(inputs{1},4) * gather(outputs{1})) / m ;
       obj.numAveraged = m ;
     end
 
@@ -56,7 +56,7 @@ classdef LossSmoothL1 < dagnn.Loss
       delta(linearRegion) = sign(delta(linearRegion));
       delta(~linearRegion) = sigma2 * delta(~linearRegion) ;
 
-      derInputs = {inputs{3} .* delta .* derOutputs{1}, [], []} ;
+      derInputs = {inputs{3} .* delta .* derOutputs{1} / size(inputs{1},4), [], []} ;
       derParams = {} ;
     end
 
