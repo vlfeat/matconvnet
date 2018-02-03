@@ -2,6 +2,7 @@ classdef ReLU < dagnn.ElementWise
   properties
     useShortCircuit = true
     leak = 0
+    method = 'relu';
     opts = {}
   end
 
@@ -14,6 +15,7 @@ classdef ReLU < dagnn.ElementWise
     function [derInputs, derParams] = backward(obj, inputs, params, derOutputs)
       derInputs{1} = vl_nnrelu(inputs{1}, derOutputs{1}, ...
                                'leak', obj.leak, ...
+                               'type', obj.type, ...
                                obj.opts{:}) ;
       derParams = {} ;
     end
@@ -22,6 +24,8 @@ classdef ReLU < dagnn.ElementWise
       if ~obj.useShortCircuit || ~obj.net.conserveMemory
         forwardAdvanced@dagnn.Layer(obj, layer) ;
         return ;
+      elseif strcmp(obj.method,'elu') && obj.useShortCircuit
+        error('useShortCircuit is set to true. When ReLU layer method is elu, useShortCircuit must be set to false.')
       end
       net = obj.net ;
       in = layer.inputIndexes ;
@@ -63,6 +67,10 @@ classdef ReLU < dagnn.ElementWise
     end
 
     function obj = ReLU(varargin)
+      ind = find(strcmpi(varargin,'method'));
+      if ~isempty(ind) && strcmpi(varargin{ind+1},'elu')
+          obj.useShortCircuit = false;
+      end
       obj.load(varargin) ;
     end
   end
