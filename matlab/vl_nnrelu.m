@@ -16,6 +16,16 @@ function y = vl_nnrelu(x,varargin)
 %      zero; for values greater than that one obtains the leaky ReLU
 %      unit.
 %
+%   'Method':: 'relu'
+%      Can be set to either 'relu' or 'elu', where 'elu' is the exponential
+%      linear unit from Clevert et al. When 'Method' is set to 'elu', then
+%      'Leak' is the alpha parameter. ELU is similar to ReLU in Y is equal
+%      to X if X is not smaller than zero. However, when X is less than 0,
+%      Y = Leak*(exp(x)-1).
+%      Note: If 'Method' is set to 'elu' and 'Leak' is not set, then this
+%      function operates identically to 'relu'.
+%      https://arxiv.org/pdf/1511.07289.pdf
+%
 %   ADVANCED USAGE
 %
 %   As a further optimization, in the backward computation it is
@@ -38,6 +48,7 @@ else
 end
 
 opts.leak = 0 ;
+opts.method = 'relu';
 opts = vl_argparse(opts, varargin, 'nonrecursive') ;
 
 if opts.leak == 0
@@ -47,9 +58,23 @@ if opts.leak == 0
     y = dzdy .* (x > 0) ;
   end
 else
-  if nargin <= 1 || isempty(dzdy)
-    y = x .* (opts.leak + (1 - opts.leak) * (x > 0)) ;
-  else
-    y = dzdy .* (opts.leak + (1 - opts.leak) * (x > 0)) ;
+  switch opts.method
+    case 'relu'
+      if nargin <= 1 || isempty(dzdy)
+        y = x .* (opts.leak + (1 - opts.leak) * (x > 0)) ;
+      else
+        y = dzdy .* (opts.leak + (1 - opts.leak) * (x > 0)) ;
+      end
+    case 'elu'
+      ind = x<0;
+      if nargin <= 1 || isempty(dzdy)
+        y = x;
+        y(ind) = opts.leak .* (exp(x(ind)) - 1) ;
+      else
+        y = dzdy;
+        y(ind) = dzdy(ind) .* opts.leak .* exp(x(ind)) ;
+      end
+    otherwise
+      error('Unrecognized activation method. Must be either elu or relu.')
   end
 end
