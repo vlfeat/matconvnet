@@ -20,8 +20,6 @@ function Y = vl_nnsoftmax(X,dzdY)
 % the terms of the BSD license (see the COPYING file).
 
 E = exp(bsxfun(@minus, X, max(X,[],3))) ;
-E(E==0) = 10^-10;
-E(E>10^10) = 10^10;
 L = sum(E,3) ;
 Y = bsxfun(@rdivide, E, L) ;
 
