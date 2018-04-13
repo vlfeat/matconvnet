@@ -88,6 +88,7 @@ if isempty(contribs)
   contrib_repo = repo_factory(opts.contribUrl);
   try 
     contribs_raw = webread(contrib_repo.readme_url);
+    mkdir(opts.contribDir) ;
     write_file(fullfile(opts.contribDir, 'contribs.txt'),contribs_raw) ;
   catch
     contribs_raw = read_file(fullfile(opts.contribDir, 'contribs.txt')) ;
