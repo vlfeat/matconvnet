@@ -72,8 +72,12 @@ end
 
 d = bsxfun(@minus, x, x0) ;
 
-if ~isempty(dzdy) && ~isempty(opts.instanceWeights)
-  dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
+if ~isempty(opts.instanceWeights)
+  if isempty(dzdy)
+    d = bsxfun(@times, opts.instanceWeights, d) ;
+  else
+    dzdy = bsxfun(@times, opts.instanceWeights, dzdy) ;
+  end
 end
 
 if ~opts.noRoot
@@ -122,9 +126,6 @@ else
 end
 
 if isempty(dzdy)
-  if ~isempty(opts.instanceWeights)
-    y1 = bsxfun(@times, opts.instanceWeights, y1) ;
-  end
   if opts.aggregate
     y1 = sum(y1(:)) ;
   end
