@@ -672,7 +672,7 @@ x_{k+1} = f^{-1} (A/x_k + f(x_k)).
 \]
 There are two degrees of freedom: the number of subdivisions $K$ and the point $x_1$. Given $K$, the goal is to choose $x_1$ such that the $K$-th points $x_K=0$ lands on zero, enclosing tightly $f(x)$. The required value of $x_1$ is easily found using bisection and, for $K=256$, is $x_1=3.655420419026953$. Given $x_1$, $A$ and all other points in the sequence can be derived easily using the formulas above.
 
-The Ziggurath can be used to quickly sample from the Normal distribution. In order to do so, one first samples a point $(x,y)$ uniformly at random from the Ziggurat $\cup_{k=0}^K R_k$ and then rejects pairs $(x,y)$ that do not belong to the graph of $f(x)$, i.e.\ $y > f(x)$. Specifically:
+The Ziggurat can be used to quickly sample from the Normal distribution. In order to do so, one first samples a point $(x,y)$ uniformly at random from the Ziggurat $\cup_{k=0}^K R_k$ and then rejects pairs $(x,y)$ that do not belong to the graph of $f(x)$, i.e.\ $y > f(x)$. Specifically:
 \begin{enumerate}
 \item Sample a point $(x,y)$ uniformly from the Ziggurat. To do so, sample uniformly at random an index $k \in\{0,1,\dots,K-1\}$ and two scalars $u,v$ in the interval $[0,1)$. Then, for $k\geq 1$, set $x = u x_k$ and $y = v f(x_{k+1}) + (1-v)f(x_k)$ (for $k=0$ see below). Since all regions $R_k$ have the same area and $(x,y)$ are then drawn uniformly form the selected rectangle, this samples a point $(x,y)$ from the Ziggurat uniformly at random.
 \item If $y \leq f(x)$, accept $x$ as a sample; otherwise, sample again. Note that, when $x \leq x_{k+1}$, the test $y \leq f(x_{k+1}) < f(x)$ is always successful, and the variable $y$ and test can be skipped in the step above.
