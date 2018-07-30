@@ -1,5 +1,9 @@
-function res = vl_simplenn(net, x, dzdy, res, varargin)
-%VL_SIMPLENN  Evaluate a SimpleNN network.
+function res = vl_simplenn_dah(net, x, dzdy, res, varargin)
+%VL_SIMPLENN_DAH  Evaluate a SimpleNN network. This is an extension of
+%VL_SIMPLENN for domain adaptation. It invokes the forward and backward
+%propagation for a few layers introduced by the da_hash. 
+%These are:  lmmd, tanh, hash_entropy_loss, softmaxloss_entropyloss
+%The original documentation of the RES follows
 %   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
 %   derivative on data X and output derivative DZDY (foward+bacwkard pass).
@@ -196,8 +200,45 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %     the P-th power (e.g. `false`).
 %     - `layer.epsilon` is the regularization parameter for the derivatives.
 %
+%   lmmd layer::
+%     This layer wraps VL_NNLINEARMMDLOSS(). It needs the fields:
+%
+%     - `lopts.K` the K parameter for the da_hash
+%     - `lopts.gamma` Weight for linearMMD Loss
+%     - `lopts.C` the labels in the dataset (1,2,...,C)
+%     - `labels` the labels of the data-batch
+%
+%   tanh layer::
+%     This layer wraps the VL_NNTANH().
+%
+%   hash_entropy_loss layer::
+%     This layer wraps HASH_ENTROPY_LOSS(). It has fields:
+%     
+%     - `layer.class` contains the ground-truth class labels.
+%
+%     It needs the fields:
+%
+%     - `lopts.K` the K parameter for the da_hash
+%     - `lopts.C` the labels in the dataset (1,2,...,C)
+%     - `lopts.l1` Weight for hash loss
+%     - `lopts.entpW` Weight for entropy loss
+%     - `lopts.beta` Weight for Euclidean loss
+%     - `lopts.supHashW` Weight for supervised positive samples
+%
+%   softmaxloss_entropyloss layer::
+%     This layer wraps VL_NNSOFTMAXLOSS_ENTROPYLOSS. It has fields:
+%
+%     - `layer.class` contains the ground-truth class labels.
+%
+%     It needs fields:
+%
+%     - `lopts.K` the K parameter for the da_hash
+%     - `lopts.C` the labels in the dataset (1,2,...,C)
+%     - `lopts.l1` Weight for hash loss
+%     - `lopts.entpW` Weight for entropy loss
+%
 %   Custom layer::
-%     This can be used to specify custom layers.
+%     This can be used to specify custom layers. 
 %
 %     - `layer.type` contains the string `'custom'`.
 %     - `layer.forward` is  a function handle computing the block.
@@ -219,6 +260,7 @@ function res = vl_simplenn(net, x, dzdy, res, varargin)
 %   VL_SIMPLENN_DISPLAY(), VL_SIMPLENN_MOVE().
 
 % Copyright (C) 2014-15 Andrea Vedaldi.
+% Modified by Hemanth Venkateswara
 % All rights reserved.
 %
 % This file is part of the VLFeat library and is made available under
@@ -372,10 +414,33 @@ for i=1:n
 
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
-     
+    
+    case 'lmmd'
+      lopts.K = net.meta.trainOpts.K;
+      lopts.gamma = net.meta.trainOpts.gamma;
+      lopts.C = net.meta.classes.name;
+      labels = net.layers{end}.class;
+      res(i+1).x = vl_nnlinearMmdLoss(res(i).x, labels, lopts);
+      
     case 'tanh'
       res(i+1).x = vl_nntanh(res(i).x) ;
+      
+    case 'hash_entropy_loss'
+      lopts.K = net.meta.trainOpts.K;
+      lopts.C = net.meta.classes.name;
+      lopts.l1 = net.meta.trainOpts.l1;
+      lopts.entpW = net.meta.trainOpts.entpW;
+      lopts.beta = net.meta.trainOpts.beta;
+      lopts.supHashW = net.meta.trainOpts.supHashW;
+      res(i+1).x = hash_entropy_loss(res(i).x, l.class, lopts) ;
 
+    case 'softmaxloss_entropyloss'
+      lopts.K = net.meta.trainOpts.K;
+      lopts.C = net.meta.classes.name;
+      lopts.l1 = net.meta.trainOpts.l1;
+      lopts.entpW = net.meta.trainOpts.entpW;
+      res(i+1).x = vl_nnsoftmaxloss_entropyloss(res(i).x, l.class, lopts) ;
+      
     otherwise
       error('Unknown layer type ''%s''.', l.type) ;
   end
@@ -387,7 +452,10 @@ for i=1:n
     lp = net.layers{i-1} ;
     % forget RELU input, even for BPROP
     forget = forget && (~needsBProp || (strcmp(l.type, 'relu') && ~lp.precious)) ;
+    forget = forget && (~needsBProp || (strcmp(l.type, 'lmmd') && ~lp.precious)) ;
     forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss')) ;
+    forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'hash_entropy_loss')) ;
+    forget = forget && ~(strcmp(lp.type, 'loss') || strcmp(lp.type, 'softmaxloss_entropyloss')) ;
     forget = forget && ~lp.precious ;
   end
   if forget
@@ -480,6 +548,10 @@ if doder
           vl_nnbnorm(res(i).x, l.weights{1}, l.weights{2}, res(i+1).dzdx, ...
                      'epsilon', l.epsilon, ...
                      bnormCudnn{:}) ;
+        % multiply the moments update by the number of images in the batch
+        % this is required to make the update additive for subbatches
+        % and will eventually be normalized away
+        dzdw{3} = dzdw{3} * size(res(i).x,4) ;
 
       case 'pdist'
         res(i).dzdx = vl_nnpdist(res(i).x, l.class, ...
@@ -491,9 +563,32 @@ if doder
 
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
+        
+      case 'lmmd'
+        lopts.K = net.meta.trainOpts.K;
+        lopts.gamma = net.meta.trainOpts.gamma;
+        lopts.C = net.meta.classes.name;
+        labels = net.layers{end}.class;
+        res(i).dzdx = vl_nnlinearMmdLoss(res(i).x, labels, lopts, res(i+1).dzdx) ;
 
       case 'tanh'
         res(i).dzdx = vl_nntanh(res(i).x, res(i+1).dzdx) ;
+        
+      case 'hash_entropy_loss'
+        lopts.K = net.meta.trainOpts.K;
+        lopts.C = net.meta.classes.name;
+        lopts.l1 = net.meta.trainOpts.l1;
+        lopts.entpW = net.meta.trainOpts.entpW;
+        lopts.beta = net.meta.trainOpts.beta;
+        lopts.supHashW = net.meta.trainOpts.supHashW;
+        res(i).dzdx = hash_entropy_loss(res(i).x, l.class, lopts, res(i+1).dzdx) ;
+
+      case 'softmaxloss_entropyloss'
+        lopts.K = net.meta.trainOpts.K;
+        lopts.C = net.meta.classes.name;
+        lopts.l1 = net.meta.trainOpts.l1;
+        lopts.entpW = net.meta.trainOpts.entpW;
+        res(i).dzdx = vl_nnsoftmaxloss_entropyloss(res(i).x, l.class, lopts, res(i+1).dzdx) ;
         
     end % layers
 
