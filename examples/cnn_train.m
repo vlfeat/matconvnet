@@ -93,7 +93,7 @@ end
 
 % setup error calculation function
 hasError = true ;
-if isstr(opts.errorFunction)
+if ischar(opts.errorFunction)
   switch opts.errorFunction
     case 'none'
       opts.errorFunction = @error_none ;
