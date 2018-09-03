@@ -336,7 +336,7 @@ Here $\bx \in \mathbb{R}^{H \times W \times C \times N}$ and $\bc \in \{1, \dots
 
 Unless otherwise noted, we drop the other indices and denote by $\bx$ and $c$  the slice $\bx_{ij:n}$ and the scalar $c_{ij1n}$. !vl_nnloss! automatically skips all samples such that $c=0$, which can be used as an ``ignore'' label.
 
-\paragraph{Classification error.} The classification error is zero if class $c$ is assigned the largest score and zero otherwise:
+\paragraph{Classification error.} The classification error is zero if class $c$ is assigned the largest score and one otherwise:
 \begin{equation}\label{e:loss-classerror}
 \ell(\bx,c) = \mathbf{1}\left[c \not= \argmax_k x_c\right].
 \end{equation}
