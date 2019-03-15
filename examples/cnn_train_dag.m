@@ -105,7 +105,7 @@ for epoch=start+1:opts.numEpochs
     [net, state] = processEpoch(net, state, params, 'train') ;
     [net, state] = processEpoch(net, state, params, 'val') ;
     if ~evaluateMode
-      saveState(modelPath(epoch), net, state) ;
+      saveState_newly(opts.expDir,modelPath(epoch), net, state) ; % only save three newly trained model
     end
     lastStats = state.stats ;
   else
@@ -113,7 +113,7 @@ for epoch=start+1:opts.numEpochs
       [net, state] = processEpoch(net, state, params, 'train') ;
       [net, state] = processEpoch(net, state, params, 'val') ;
       if labindex == 1 && ~evaluateMode
-        saveState(modelPath(epoch), net, state) ;
+        saveState_newly(opts.expDir,modelPath(epoch), net, state) ; % only save three newly trained model
       end
       lastStats = state.stats ;
     end
@@ -419,10 +419,30 @@ for i = 1:numel(sel)
 end
 
 % -------------------------------------------------------------------------
-function saveState(fileName, net_, state)
+function saveState_newly(modelDir,fileName, net_, state)
 % -------------------------------------------------------------------------
 net = net_.saveobj() ;
-save(fileName, 'net', 'state') ;
+%state.r = [];
+save(fileName, 'net', 'state') ;  % save the newly trained models
+deleteOldModels(modelDir);
+
+% -------------------------------------------------------------------------
+function deleteOldModels(modelDir)
+% -------------------------------------------------------------------------
+list = dir(fullfile(modelDir, 'net-epoch-*.mat')) ;
+tokens = regexp({list.name}, 'net-epoch-([\d]+).mat', 'tokens') ;
+epoch = cellfun(@(x) sscanf(x{1}{1}, '%d'), tokens) ;
+FTepoch = min(epoch) ;
+LTepoch = max(epoch) ;
+if(LTepoch-FTepoch==3)
+    ftmodelPath = fullfile(modelDir, sprintf('net-epoch-%d.mat', FTepoch));
+    delete(ftmodelPath);
+elseif (numel(epoch)>3)
+    for i=FTepoch:LTepoch-3
+        ftmodelPath = fullfile(modelDir, sprintf('net-epoch-%d.mat', i));
+        delete(ftmodelPath);
+    end
+end
 
 % -------------------------------------------------------------------------
 function saveStats(fileName, stats)
