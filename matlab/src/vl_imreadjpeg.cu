@@ -264,7 +264,7 @@ Batch::Item::Item(Batch const & batch)
   state(ready),
   flip(false)
 {
-  memset(errorMessage,sizeof(errorMessage),0) ;
+  memset(errorMessage,0,sizeof(errorMessage)) ;
 }
 
 mxArray * Batch::Item::relinquishArray()
