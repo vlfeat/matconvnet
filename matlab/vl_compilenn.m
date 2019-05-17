@@ -337,7 +337,7 @@ if opts.debug
   flags.base{end+1} = '-g' ;
   flags.base{end+1} = '-DDEBUG' ;
 else
-  flags.base{end+1} = '-O' ;
+  flags.base{end+1} = '-O0' ;
   flags.base{end+1} = '-DNDEBUG' ;
 end
 
