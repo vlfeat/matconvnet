@@ -104,7 +104,7 @@ while ai <= numel(args)
     continue ;
   end
 
-  if ~isstr(args{ai})
+  if ~ischar(args{ai})
     error('Expected either a param-value pair or a structure.') ;
   end
 
